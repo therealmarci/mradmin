@@ -1,0 +1,104 @@
+name: MRadmin
+version: '${version}'
+main: at.marcelr.mradmin.MRAdmin
+api-version: '${mcVersion}'
+softdepend: [LuckPerms]
+author: _therealmarci
+website: https://github.com/${githubRepository}
+description: Admin-Werkzeuge - Wartungsmodus mit Uptime-Kuma-Anbindung, Ankündigungen und Admin-Modus.
+
+commands:
+  mradmin:
+    description: Verwaltung von MRadmin (Ankündigungen, Admin-Modus, Wartung).
+    usage: /mradmin <announce|mode|menu|player|tp|status|reports|maintenance|discord|reload|version>
+    aliases: [mra]
+  report:
+    description: Einen Spieler beim Team melden.
+    usage: /report <spieler> <grund>
+    aliases: [melden]
+  staffchat:
+    description: Chat nur für das Team (ohne Text umschalten).
+    usage: /sc [nachricht]
+    aliases: [sc]
+
+permissions:
+  mradmin.staff:
+    description: Alles, was ein Teammitglied braucht - z.B. für die Staff-Gruppe in LuckPerms (Join während Wartung, Hinweise, Admin-Modus).
+    default: op
+    children:
+      mradmin.maintenance.bypass: true
+      mradmin.maintenance.notify: true
+      mradmin.mode: true
+      mradmin.mode.teleport: true
+      mradmin.player.summon: true
+      mradmin.player.inventory: true
+      mradmin.player.freeze: true
+      mradmin.status: true
+      mradmin.report.notify: true
+      mradmin.report.manage: true
+      mradmin.staffchat: true
+  mradmin.maintenance.bypass:
+    description: Darf während einer Wartung joinen und wird beim Start nicht gekickt.
+    default: op
+  mradmin.maintenance.notify:
+    description: Hinweise zum Wartungsmodus (z.B. Verbindung zu Uptime Kuma verloren).
+    default: op
+  mradmin.maintenance.manage:
+    description: /mradmin maintenance - Status, Wartung starten, planen, verlängern und beenden.
+    default: op
+  mradmin.announce:
+    description: /mradmin announce - Ankündigungen auf dem Bildschirm aller Spieler.
+    default: op
+  mradmin.mode:
+    description: /mradmin mode - Admin-Modus für sich selbst.
+    default: op
+  mradmin.mode.teleport:
+    description: Mit dem Kompass im Admin-Modus zu Spielern teleportieren.
+    default: op
+  mradmin.mode.others:
+    description: /mradmin mode <on|off> <spieler> - Admin-Modus anderer Spieler steuern.
+    default: op
+  mradmin.player.summon:
+    description: Spieler im Spieler-Menü zu sich holen.
+    default: op
+  mradmin.player.inventory:
+    description: Inventar und Enderchest anderer Spieler ansehen (nur lesen).
+    default: op
+  mradmin.player.freeze:
+    description: Spieler einfrieren und auftauen; Hinweis, wenn sich ein eingefrorener Spieler ausloggt.
+    default: op
+  mradmin.status:
+    description: /mradmin status - Serverzustand (TPS, RAM, Chunks mit den meisten Entities).
+    default: op
+  mradmin.report:
+    description: /report - Spieler beim Team melden.
+    default: true
+  mradmin.report.notify:
+    description: Meldung bei neuen Reports und beim Join, wenn welche offen sind.
+    default: op
+  mradmin.report.manage:
+    description: /mradmin reports - offene Reports ansehen, hinteleportieren, erledigen. Kein Report-Cooldown.
+    default: op
+  mradmin.staffchat:
+    description: /sc - Staff-Chat lesen und schreiben.
+    default: op
+  mradmin.admin:
+    description: Alle Rechte von MRadmin.
+    default: op
+    children:
+      mradmin.staff: true
+      mradmin.maintenance.manage: true
+      mradmin.announce: true
+      mradmin.mode.others: true
+      mradmin.admin.discord: true
+      mradmin.admin.reload: true
+      mradmin.admin.update: true
+  mradmin.admin.discord:
+    description: /mradmin discord [test]
+    default: op
+  mradmin.admin.reload:
+    description: /mradmin reload
+    default: op
+  mradmin.admin.update:
+    description: Hinweis beim Betreten des Servers, wenn ein Update verfügbar ist.
+    default: op

@@ -1,0 +1,56 @@
+name: 🐞 Fehler melden
+description: Etwas funktioniert nicht wie erwartet.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Melden! Bei Problemen mit der Wartung bitte vorher `/mradmin maintenance` ausführen
+        (zeigt auch den Verbindungsstatus zu Uptime Kuma).
+  - type: input
+    id: version
+    attributes:
+      label: MRadmin-Version
+      description: Ausgabe von `/mradmin version`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Server-Version
+      description: Ausgabe von `/version`
+      placeholder: "Paper 26.3 Build 200"
+    validations:
+      required: true
+  - type: input
+    id: kuma
+    attributes:
+      label: Uptime-Kuma-Version (falls Wartung betroffen)
+      placeholder: "2.0.2"
+  - type: textarea
+    id: what
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du gemacht, was hast du erwartet, was ist stattdessen passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen
+      placeholder: |
+        1. /mradmin maintenance schedule 1m 5m
+        2. ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Konsole / /mradmin maintenance
+      description: Relevante Konsolenausgabe oder Ausgabe von `/mradmin maintenance`.
+      render: text
+  - type: textarea
+    id: config
+    attributes:
+      label: Geänderte Config-Werte (optional)
+      description: Nur die Werte, die du gegenüber dem Standard geändert hast. Keine Passwörter, Tokens oder Webhook-URLs posten!
+      render: yaml

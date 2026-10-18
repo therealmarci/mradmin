@@ -1,0 +1,497 @@
+﻿# ==============================================================================
+#   MRadmin - Sprachdatei: Deutsch (de)
+# ==============================================================================
+#   Aktivieren: in der config.yml  language: de
+#   Eigene Sprache: diese Datei kopieren (z.B. als fr.yml), übersetzen und language: fr setzen.
+#   Fehlende Texte werden bei Updates automatisch ergänzt - deine Änderungen bleiben erhalten.
+#
+#   Format: MiniMessage - https://docs.advntr.dev/minimessage/format.html
+#   Leerer Text ("") = Nachricht wird nicht gesendet.
+# ==============================================================================
+
+# Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
+lang-version: 8
+
+prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
+
+# --- Allgemein ---------------------------------------------------------------
+no-permission: "<prefix><red>Dazu hast du keine Berechtigung."
+players-only: "<prefix><red>Dieser Befehl kann nur von Spielern genutzt werden."
+player-not-found: "<prefix><red>Spieler <white><player></white> ist nicht online."
+reloaded: "<prefix><green>Konfiguration und Sprachdatei neu geladen."
+reload-invalid: "<prefix><red>config.yml hat einen Fehler bei Zeile <white><line></white> oder kurz davor</red> <gray>- häufig ein fehlendes Anführungszeichen oder falsche Einrückung. Die bisherige Konfiguration bleibt aktiv. <dark_gray>(<error>)"
+# Uhrzeiten (Java-Muster): time-format für heute, date-format für andere Tage.
+time-format: "HH:mm 'Uhr'"
+date-format: "dd.MM.yyyy 'um' HH:mm 'Uhr'"
+# Anzeige, wenn kein Ende feststeht.
+time-open-end: "offen"
+
+# --- Hilfe (/mradmin) --------------------------------------------------------
+# Jede Zeile erscheint nur, wenn man den Befehl nutzen darf.
+help-header: "<prefix><gray>Befehle:"
+help-announce: "<gold>/mradmin announce <text|preset></gold> <dark_gray>- <gray>Ankündigung an alle <dark_gray>(Presets: <presets>)"
+help-mode: "<gold>/mradmin mode [on|off|list]</gold> <dark_gray>- <gray>Admin-Modus (Creative + Admin-Kompass mit Menü)"
+help-maintenance: "<gold>/mradmin maintenance [status|on|schedule|extend|off|refresh]</gold> <dark_gray>- <gray>Wartungsarbeiten"
+help-discord: "<gold>/mradmin discord [test [announce]]</gold> <dark_gray>- <gray>Status der Discord-Webhooks (Admin-Log und Ankündigungen)"
+help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>Konfiguration neu laden"
+help-version: "<gold>/mradmin version</gold> <dark_gray>- <gray>Version und Updates"
+help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>Admin-Dashboard, <gold>/mradmin player <spieler></gold> <dark_gray>- <gray>Spieler-Menü, <gold>/mradmin help</gold> <dark_gray>- <gray>diese Liste"
+help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>Serverzustand: TPS, RAM, Chunks mit den meisten Entities"
+help-reports: "<gold>/mradmin reports</gold> <dark_gray>- <gray>offene Reports"
+help-staffchat: "<gold>/sc [text]</gold> <dark_gray>- <gray>Staff-Chat (ohne Text: umschalten)"
+
+# --- Ankündigungen -------------------------------------------------------------
+announce-usage: |-
+  <prefix><gray>Verwendung:
+  <gold>/mradmin announce <text></gold> <dark_gray>- <gray>eigener Text, mit <white>|</white> getrennt: <white>Titel | Untertitel</white>
+  <gold>/mradmin announce <preset> [werte...]</gold> <dark_gray>- <gray>Presets: <white><presets>
+  <gray>Mit <white>-d</white> geht ein eigener Text auch in den Community-Discord, mit <white>-q</white> ein Preset nicht.
+announce-sent: "<prefix><green>Ankündigung gesendet."
+# Überschrift bei eigenem Text ohne "|"
+announce-custom-title: "<gold><bold>Ankündigung"
+# Chat-Ausgabe bei eigenem Text. Platzhalter: <title> <message>
+announce-custom-chat: "<dark_gray>[<gold>📢</gold>]</dark_gray> <title> <dark_gray>»</dark_gray> <white><message>"
+
+# Vorbereitete Ankündigungen: /mradmin announce <name> [werte...]
+# Je Preset: title (groß), subtitle (darunter), chat (optional, "" = keine Chat-Nachricht).
+# discord (optional): Text für den Community-Discord (Markdown, Platzhalter {args} {arg1} ...), "" = nicht posten.
+# Platzhalter: <arg1> <arg2> ... = einzelne Werte, <args> = alle Werte zusammen.
+# Eigene Presets einfach dazuschreiben, der Name ist frei wählbar (ohne Leerzeichen).
+announce-presets:
+  restart:
+    title: "<red><bold>Neustart"
+    subtitle: "<gray>Der Server startet in <white><args></white> neu"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet in <white><args></white> neu. Bitte sucht euch einen sicheren Ort!"
+    discord: "🔄 Der Server startet in **{args}** neu."
+  restart-now:
+    title: "<red><bold>Neustart"
+    subtitle: "<gray>Der Server startet <white>jetzt</white> neu - bis gleich!"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet jetzt neu - bis gleich!"
+    discord: ""
+  update:
+    title: "<aqua><bold>Update"
+    subtitle: "<gray>Gleich gibt es ein Server-Update"
+    chat: "<dark_gray>[<aqua>⬆</aqua>]</dark_gray> <gray>Gleich gibt es ein Server-Update. <white><args>"
+    discord: "⬆️ Gleich gibt es ein Server-Update. {args}"
+  event:
+    title: "<light_purple><bold>Event"
+    subtitle: "<white><args>"
+    chat: "<dark_gray>[<light_purple>★</light_purple>]</dark_gray> <gray>Event: <white><args>"
+    discord: "⭐ **Event:** {args}"
+# --- Admin-Modus ---------------------------------------------------------------
+mode-usage: "<prefix><gray>Verwendung: <gold>/mradmin mode [on|off|list] [spieler]"
+mode-on: "<prefix><green>Admin-Modus <white>an</white>. <gray>Dein Inventar ist sicher gespeichert. Rechtsklick mit dem Kompass: Admin-Menü. Beenden: <white>/mradmin mode off"
+mode-off: "<prefix><green>Admin-Modus <white>aus</white>. <gray>Alles ist wieder wie vorher <dark_gray>(<duration> im Admin-Modus)"
+mode-off-no-world: "<prefix><yellow>Admin-Modus aus - aber die Welt <white><world></white> ist nicht geladen, du bleibst hier. Inventar & Co. sind wiederhergestellt."
+mode-resumed: "<prefix><yellow>Du bist noch im Admin-Modus <gray>(seit <duration>). Beenden: <white>/mradmin mode off"
+mode-already-on: "<prefix><gray>Du bist schon im Admin-Modus."
+mode-already-off: "<prefix><gray>Du bist nicht im Admin-Modus."
+mode-on-other: "<prefix><green><white><player></white> ist jetzt im Admin-Modus."
+mode-off-other: "<prefix><green><white><player></white> ist nicht mehr im Admin-Modus."
+mode-save-failed: "<prefix><red>Dein Inventar konnte nicht gespeichert werden - Admin-Modus wurde NICHT gestartet. Siehe Konsole."
+mode-load-failed: "<prefix><red>Dein gespeicherter Stand aus dem Admin-Modus ist beschädigt. Bitte melde dich bei einem Admin (Datei wurde nicht gelöscht)."
+mode-no-drop: "<prefix><red>Im Admin-Modus kannst du nichts fallen lassen."
+mode-list-header: "<prefix><gray>Im Admin-Modus:"
+mode-list-entry: "<dark_gray>- <white><player></white> <gray>seit <duration>"
+mode-list-empty: "<prefix><gray>Niemand ist im Admin-Modus."
+mode-teleported: "<prefix><gray>Zu <white><player></white> teleportiert."
+mode-compass-name: "<gold><bold>Admin-Kompass"
+mode-compass-lore:
+  - "<gray>Rechtsklick: Admin-Menü"
+  - "<dark_gray>Teleport, Plugins, Wartung"
+player-summoned: "<prefix><gray><white><player></white> wurde zu dir geholt."
+player-summoned-target: "<prefix><gray>Du wurdest von <white><staff></white> geholt."
+freeze-frozen: "<prefix><aqua><bold>Du wurdest eingefroren.</bold></aqua> <gray>Bitte warte auf <white><staff></white> und logge dich nicht aus."
+freeze-unfrozen: "<prefix><green>Du bist wieder frei - danke für deine Geduld!"
+freeze-still: "<prefix><aqua>Du bist noch eingefroren.</aqua> <gray>Bitte warte auf ein Teammitglied."
+freeze-actionbar: "<aqua>🧊 Eingefroren - bitte warte auf das Team"
+freeze-done: "<prefix><aqua><white><player></white> ist eingefroren."
+unfreeze-done: "<prefix><green><white><player></white> ist wieder aufgetaut."
+freeze-quit: "<prefix><red>⚠ <white><player></white> hat sich eingefroren ausgeloggt."
+freeze-self: "<prefix><red>Dich selbst kannst du nicht einfrieren."
+# --- Menüs -------------------------------------------------------------------
+gui-title-teleport: "<dark_gray>Zu Spieler teleportieren"
+gui-title-hub: "<dark_gray>MRadmin » Dashboard"
+gui-state-on: "<green>an"
+gui-state-off: "<gray>aus"
+gui-hub-head-name: "<gold><bold><player>"
+gui-hub-head-lore:
+  - "<gray>Admin-Modus: <admin>"
+  - "<gray>Staff-Chat: <staffchat>"
+  - "<gray>Welt: <white><world></white> <dark_gray>| <gray>Modus: <white><gamemode>"
+gui-tile-players-name: "<bold>Spieler"
+gui-tile-players-lore:
+  - "<gray>Online außer dir: <white><online>"
+  - "<gray>Eingefroren: <white><frozen>"
+  - ""
+  - "<yellow>Klick: Spielerliste"
+gui-tile-players-ok: "<green>Alles ruhig"
+gui-tile-players-frozen: "<yellow><frozen> Spieler eingefroren"
+gui-tile-server-name: "<bold>Server"
+gui-tile-server-lore:
+  - "<gray>TPS: <white><tps></white> <dark_gray>| <gray>MSPT: <white><mspt> ms"
+  - ""
+  - "<yellow>Klick: Details und Lag-Quellen"
+gui-tile-server-state: "<white>TPS <tps>"
+gui-tile-maintenance-name: "<bold>Wartung"
+gui-tile-maintenance-state-none: "<green>Keine Wartung geplant"
+gui-tile-maintenance-state-planned: "<yellow>Geplant: <start>"
+gui-tile-maintenance-state-upcoming: "<yellow>Countdown: <countdown>"
+gui-tile-maintenance-state-active: "<red>Wartung aktiv bis <end>"
+gui-tile-reports-name: "<bold>Reports"
+gui-tile-reports-lore:
+  - "<gray>Offen: <white><count>"
+  - ""
+  - "<yellow>Klick: offene Reports"
+gui-tile-reports-open: "<red><count> offene Reports"
+gui-tile-reports-none: "<green>Keine offenen Reports"
+gui-hub-announce-name: "<light_purple><bold>Ankündigen"
+gui-hub-announce-lore:
+  - "<gray>Presets: <white><count>"
+  - "<gray>oder eigener Text"
+  - ""
+  - "<yellow>Klick: Ankündigung wählen"
+gui-switch-admin: "<gold><bold>Admin-Modus: <state>"
+gui-switch-admin-on-lore:
+  - "<gray>Inventar, XP & Co. sind gespeichert."
+  - ""
+  - "<yellow>Klick: beenden <gray>(alles zurück,"
+  - "<gray>Teleport zum Ausgangspunkt)"
+gui-switch-admin-off-lore:
+  - "<gray>Creative + Admin-Kompass,"
+  - "<gray>dein Inventar wird sicher gespeichert."
+  - ""
+  - "<yellow>Klick: starten"
+gui-switch-staffchat: "<aqua><bold>Staff-Chat: <state>"
+gui-switch-staffchat-on-lore:
+  - "<gray>Dein Chat geht nur ans Team."
+  - ""
+  - "<yellow>Klick: ausschalten"
+gui-switch-staffchat-off-lore:
+  - "<gray>Dein Chat geht an alle."
+  - "<gray>Einzelne Nachricht: <white>/sc <text>"
+  - ""
+  - "<yellow>Klick: einschalten"
+gui-title-announce: "<dark_gray>MRadmin » Ankündigen"
+gui-announce-preset-id: "<dark_gray>Preset: <preset>"
+gui-announce-values-yes: "<gray>Werte: <yellow>werden abgefragt"
+gui-announce-values-no: "<gray>Werte: <white>keine"
+gui-announce-discord-yes: "<gray>Discord: <green>wird gepostet"
+gui-announce-discord-no: "<gray>Discord: <white>nein"
+gui-announce-click: "<yellow>Klick: ankündigen"
+gui-announce-click-quiet: "<yellow>Rechtsklick: ohne Discord"
+gui-announce-none: "<gray>Keine Presets in der Sprachdatei"
+gui-announce-custom-name: "<gold><bold>Eigener Text"
+gui-announce-custom-lore:
+  - "<gray>Titel und Untertitel frei eingeben,"
+  - "<gray>wahlweise auch für Discord."
+gui-back: "<yellow>« Zurück"
+gui-hub-maintenance-none:
+  - "<green>Keine Wartung geplant."
+gui-hub-maintenance-planned:
+  - "<yellow>Geplant: <white><start>"
+  - "<gray>bis <white><end>"
+gui-hub-maintenance-upcoming:
+  - "<gold>Countdown läuft: <white><countdown>"
+  - "<gray>Beginn <white><start></white>, Ende <white><end>"
+gui-hub-maintenance-active:
+  - "<red>Wartung aktiv"
+  - "<gray>Ende: <white><end>"
+gui-hub-maintenance-click:
+  - ""
+  - "<yellow>Klick: Details im Chat"
+gui-hub-button-fallback-name: "<gold><name>"
+gui-hub-buttons:
+  mrsleep:
+    name: "<light_purple><bold>MRsleep"
+    lore:
+      - "<gray>Schlafquote, /nosleep und Sperren"
+      - ""
+      - "<yellow>Klick: Admin-Menü öffnen"
+  mrchunks:
+    name: "<green><bold>MRchunks"
+    lore:
+      - "<gray>Alle Spieler und ihre Chunkloader"
+      - ""
+      - "<yellow>Klick: Admin-Menü öffnen"
+gui-teleport-empty: "<gray>Außer dir ist niemand online."
+gui-teleport-player-name: "<yellow><player>"
+# Platzhalter: <world> <x> <y> <z> <gamemode> <health> <ping>
+gui-teleport-player-lore:
+  - "<gray>Welt: <white><world>"
+  - "<gray>Position: <white><x> <y> <z>"
+  - "<gray>Spielmodus: <white><gamemode>"
+  - "<gray>Leben: <white><health></white> <dark_gray>| <gray>Ping: <white><ping> ms"
+  - ""
+  - "<yellow>Klick: Aktionen"
+  - "<yellow>Shift-Klick: hinteleportieren"
+gui-close: "<red>Schließen"
+gui-prev: "<yellow>« Vorherige Seite"
+gui-next: "<yellow>Nächste Seite »"
+gui-page-lore: "<gray>Seite <page>/<pages>"
+gui-no-permission: "<red>✘ Keine Berechtigung"
+gui-online: "<green>online"
+gui-offline: "<gray>offline"
+gui-player-gone: "<gray>Der Spieler ist nicht mehr online."
+gui-title-player: "<dark_gray>Spieler: <player>"
+gui-player-status-frozen: "<aqua>eingefroren"
+gui-player-status-admin: "<gold>im Admin-Modus"
+gui-player-info:
+  - "<gray>Welt: <white><world></white> <dark_gray>(<x> <y> <z>)"
+  - "<gray>Spielmodus: <white><gamemode>"
+  - "<gray>Leben: <white><health></white> <dark_gray>| <gray>Hunger: <white><food></white> <dark_gray>| <gray>Level: <white><level>"
+  - "<gray>Ping: <white><ping> ms"
+  - "<gray>Spielzeit: <white><playtime>"
+  - "<gray>Erster Join: <white><first-join>"
+  - "<status>"
+gui-player-teleport-name: "<yellow>Hinteleportieren"
+gui-player-teleport-lore: "<gray>Zum Spieler teleportieren."
+gui-player-summon-name: "<yellow>Zu mir holen"
+gui-player-summon-lore: "<gray>Den Spieler zu dir teleportieren."
+gui-player-inventory-name: "<yellow>Inventar ansehen"
+gui-player-inventory-lore: "<gray>Inventar und Rüstung, live (nur lesen)."
+gui-player-enderchest-name: "<yellow>Enderchest ansehen"
+gui-player-enderchest-lore: "<gray>Inhalt der Enderchest, live (nur lesen)."
+gui-player-freeze-name: "<aqua>Einfrieren"
+gui-player-freeze-lore:
+  - "<gray>Kann sich nicht bewegen, bauen,"
+  - "<gray>kämpfen oder benutzen - z.B. für einen Check."
+gui-player-unfreeze-name: "<green>Auftauen"
+gui-player-unfreeze-lore: "<gray>Der Spieler ist gerade eingefroren."
+gui-player-reports: "<gold>Reports über diesen Spieler: <white><count>"
+gui-player-reports-lore: "<yellow>Klick: offene Reports ansehen"
+gui-player-plugin-click: "<yellow>Klick: im Plugin öffnen"
+gui-title-inventory: "<dark_gray>Inventar: <player>"
+gui-title-enderchest: "<dark_gray>Enderchest: <player>"
+gui-inventory-xp: "<green>Level <level>"
+gui-inventory-readonly: "<gray>Nur ansehen - Änderungen nicht möglich"
+gui-title-reports: "<dark_gray>Offene Reports"
+gui-title-reports-player: "<dark_gray>Reports: <player>"
+gui-reports-empty: "<green>Keine offenen Reports"
+gui-report-name: "<gold>#<id> <white><player>"
+gui-report-lore:
+  - "<gray>Von: <white><reporter>"
+  - "<gray>Grund: <white><reason>"
+  - "<gray>Vor <white><ago></white> <dark_gray>(<time>)"
+  - "<gray>Ort: <white><world> <x> <y> <z>"
+  - "<gray>Spieler ist <online>"
+  - ""
+  - "<yellow>Linksklick: hinteleportieren"
+  - "<yellow>Rechtsklick: erledigt"
+gui-title-status: "<dark_gray>Serverzustand"
+gui-status-tps: "<green>TPS: <white><tps>"
+gui-status-tps-lore:
+  - "<gray>1 min: <white><tps1></white> <dark_gray>| <gray>5 min: <white><tps5></white> <dark_gray>| <gray>15 min: <white><tps15>"
+  - "<dark_gray>20 = keine Verzögerung"
+gui-status-mspt: "<yellow>MSPT: <white><mspt> ms"
+gui-status-mspt-lore: "<dark_gray>Zeit pro Tick, ab 50 ms laggt der Server"
+gui-status-ram: "<red>RAM: <white><used> / <max> MB"
+gui-status-ram-lore: "<gray><percent> % belegt"
+gui-status-world: "<aqua><world>"
+gui-status-world-lore:
+  - "<gray>Geladene Chunks: <white><chunks>"
+  - "<gray>Entities: <white><entities>"
+  - "<gray>Spieler: <white><players>"
+gui-status-chunk: "<gold><count> Entities"
+gui-status-chunk-lore:
+  - "<gray><world> <white><x> <z>"
+  - "<gray>Meiste: <white><types>"
+gui-status-chunk-click:
+  - ""
+  - "<yellow>Klick: hinteleportieren"
+gui-status-no-chunks: "<green>Keine Entities geladen"
+gui-status-activity-none: "<green>Keine auffälligen Chunkloader"
+gui-status-activity-none-lore:
+  - "<gray>Hier erscheinen Chunkloader, deren Bereich"
+  - "<gray>auffällig viel Aktivität hat oder die wegen"
+  - "<gray>Lag gesperrt sind (Daten von <white><plugin></white>)."
+
+# --- Wartungsarbeiten ----------------------------------------------------------
+# Platzhalter: <title> (Thema der Wartung, z.B. aus Uptime Kuma), <title-line> / <kick-title-line> (Zeile mit dem Thema, leer ohne Thema),
+# <start> <end> (Uhrzeit), <in> (Zeit bis Beginn, z.B. 14m 30s), <countdown> (z.B. 0:14:30), <remaining> (Zeit bis Ende)
+maintenance-title-line: "<newline>  <dark_gray>▪</dark_gray> <gray>Thema: <white><title>"
+maintenance-kick-title-line: "<newline><white><title>"
+maintenance-source-manual: "per Befehl"
+# Bossbar vor Beginn (alle) und während der Wartung (Staff)
+maintenance-bossbar: "<yellow>⚠ Wartungsarbeiten in <white><bold><countdown></bold></white> <gray>(um <start>)"
+maintenance-bossbar-active: "<light_purple>🔧 Wartung läuft <dark_gray>- <gray>noch <white><countdown></white> <gray>(bis <end>)"
+maintenance-bossbar-active-open: "<light_purple>🔧 Wartung läuft <dark_gray>- <gray>Ende offen"
+maintenance-announced: |-
+  <prefix><yellow><bold>⚠ Wartungsarbeiten</bold></yellow> <gray>in <white><in></white><title-line>
+    <dark_gray>▪</dark_gray> <gray>Beginn: <white><start></white> <dark_gray>·</dark_gray> <gray>Ende: <white><end></white>
+    <dark_gray>▪</dark_gray> <gray>Danach können nur Teammitglieder joinen.
+maintenance-reminder: "<prefix><yellow>⚠ Die Wartungsarbeiten beginnen in <white><in></white>."
+maintenance-rescheduled: "<prefix><yellow>Die Wartung wurde verschoben: <gray>Beginn jetzt <white><start></white>, Ende <white><end></white>."
+maintenance-cancelled: "<prefix><green>Die geplanten Wartungsarbeiten wurden abgesagt."
+# Großer Countdown in den letzten Sekunden (maintenance.title-countdown-seconds). <seconds> = verbleibende Sekunden
+maintenance-countdown-title: "<red><bold><seconds>"
+maintenance-countdown-subtitle: "<gray>Wartungsarbeiten beginnen"
+maintenance-started: |-
+  <prefix><red><bold>🔧 Wartungsarbeiten haben begonnen</bold></red><title-line>
+    <dark_gray>▪</dark_gray> <gray>Geschätztes Ende: <white><end></white>
+maintenance-start-title: "<red><bold>Wartungsarbeiten"
+maintenance-start-subtitle: "<gray>Bis später - voraussichtlich bis <white><end>"
+# An Staff (mradmin.maintenance.bypass):
+maintenance-extended: "<prefix><yellow>Die Wartung wurde verlängert: <gray>Ende jetzt <white><end></white>."
+maintenance-shortened: "<prefix><green>Die Wartung endet früher: <gray>Ende jetzt <white><end></white>."
+maintenance-join-staff: "<prefix><light_purple>Wartungsmodus aktiv <gray>- nur das Team kann joinen. Ende: <white><end></white>."
+maintenance-ended: "<prefix><green>✔ Die Wartungsarbeiten sind beendet - der Server ist wieder für alle offen."
+# Bildschirm beim Kick / wenn jemand während der Wartung joinen will
+maintenance-kick: |-
+  <red><bold>Wartungsarbeiten</bold></red><kick-title-line>
+
+  <gray>Der Server wird gerade gewartet.
+  <gray>Geschätztes Ende: <white><end></white>
+
+  <dark_gray>Danke für deine Geduld!
+# Serverliste während der Wartung (2 Zeilen)
+maintenance-motd: "<red><bold>Wartungsarbeiten</bold></red> <dark_gray>»</dark_gray> <yellow><countdown><newline><gray>Geschätztes Ende: <aqua><end>"
+maintenance-motd-open: "<red><bold>Wartungsarbeiten</bold></red><newline><gray>Geschätztes Ende: <aqua><end>"
+# Steht in der Serverliste statt der Spieleranzahl (maintenance.motd.replace-version)
+maintenance-version-text: "<red>Wartung"
+kuma-lost: "<prefix><red>Verbindung zu Uptime Kuma verloren. <gray>Es wird automatisch neu verbunden."
+
+# /mradmin maintenance
+maintenance-usage: |-
+  <prefix><gray>Wartung:
+  <gold>/mradmin maintenance</gold> <dark_gray>- <gray>Status (auch Uptime Kuma)
+  <gold>/mradmin maintenance on [dauer] [titel]</gold> <dark_gray>- <gray>sofort starten (ohne Dauer bis "off")
+  <gold>/mradmin maintenance schedule <in> [dauer] [titel]</gold> <dark_gray>- <gray>mit Countdown planen, z.B. <white>schedule 15m 1h
+  <gold>/mradmin maintenance extend <dauer></gold> <dark_gray>- <gray>Ende verschieben (z.B. <white>30m</white> oder <white>-15m</white>)
+  <gold>/mradmin maintenance off</gold> <dark_gray>- <gray>beenden bzw. absagen
+  <gold>/mradmin maintenance refresh</gold> <dark_gray>- <gray>Wartungen sofort von Uptime Kuma holen
+maintenance-cmd-on: "<prefix><green>Wartung gestartet. <gray>Ende: <white><end></white>."
+maintenance-cmd-scheduled: "<prefix><green>Wartung geplant für <white><start></white>."
+maintenance-cmd-extended: "<prefix><green>Neues Ende: <white><end></white>."
+maintenance-cmd-extend-failed: "<prefix><red>Verlängern geht nur bei Wartungen, die per Befehl gestartet wurden (Kuma-Wartungen bitte in Uptime Kuma ändern)."
+maintenance-cmd-off: "<prefix><green>Wartung beendet bzw. abgesagt."
+maintenance-cmd-off-kuma: "<prefix><green>Wartung aus Uptime Kuma hier beendet. <gray>Sie bleibt aus, bis sie in Kuma neue Zeiten bekommt."
+maintenance-cmd-none: "<prefix><gray>Gerade ist keine Wartung aktiv oder geplant."
+maintenance-cmd-refresh: "<prefix><gray>Wartungen werden von Uptime Kuma abgefragt ..."
+maintenance-status-header: "<prefix><gray>Wartungsstatus:"
+maintenance-status-none: "<dark_gray>- <green>Keine Wartung geplant."
+maintenance-status-planned: "<dark_gray>- <yellow>Geplant: <white><start></white> bis <white><end></white> <gray>(in <in>)<title-line>"
+maintenance-status-upcoming: "<dark_gray>- <gold>Countdown läuft: <white><start></white> bis <white><end></white> <gray>(in <in>)<title-line>"
+maintenance-status-active: "<dark_gray>- <red>Wartung aktiv <gray>bis <white><end></white><title-line>"
+maintenance-status-source: "<dark_gray>- <gray>Quelle: <white><source>"
+kuma-state-disabled: "<dark_gray>- <gray>Uptime Kuma: <white>aus</white> (uptime-kuma.enabled)"
+kuma-state-connecting: "<dark_gray>- <gray>Uptime Kuma: <yellow>verbinde ...</yellow> <dark_gray><reason>"
+kuma-state-connected: "<dark_gray>- <gray>Uptime Kuma: <green>verbunden</green> (<white><count></white> passende Wartungen, zuletzt <white><updated></white>)"
+kuma-state-login-failed: "<dark_gray>- <gray>Uptime Kuma: <red>Login fehlgeschlagen</red> - <white><reason>"
+kuma-state-offline: "<dark_gray>- <gray>Uptime Kuma: <red>nicht verbunden</red> - <white><reason>"
+kuma-reason-disabled: "uptime-kuma.enabled ist false"
+kuma-reason-no-url: "uptime-kuma.url ist leer"
+kuma-reason-bad-url: "uptime-kuma.url ist keine http(s)-Adresse"
+kuma-reason-no-login: "kein Login eingetragen (username + password oder token)"
+kuma-reason-unreachable: "Uptime Kuma nicht erreichbar"
+kuma-reason-disconnected: "Verbindung getrennt"
+kuma-reason-bad-token: "Token ungültig (Passwort geändert?)"
+kuma-reason-2fa: "2FA ist aktiv - bitte statt Passwort den Login-Token eintragen (siehe config.yml)"
+kuma-reason-login-failed: "Benutzername oder Passwort falsch"
+announce-dialog-title: "<gold>Ankündigung: <preset>"
+announce-dialog-hint: "<gray>Welche Werte soll das Preset <white><preset></white> bekommen? Z.B. <white>5 Minuten</white> für restart."
+announce-dialog-label: "<gray>Werte"
+announce-dialog-send: "<green>Ankündigen"
+announce-dialog-cancel: "<red>Abbrechen"
+announce-dialog-empty: "<prefix><red>Bitte gib einen Titel oder Untertitel ein."
+announce-custom-dialog-title: "<gold>Eigene Ankündigung"
+announce-custom-dialog-hint: "<gray>Der Titel erscheint groß, der Untertitel darunter. Farben und Fett gehen mit MiniMessage-Tags wie in der Sprachdatei."
+announce-custom-dialog-title-label: "<gray>Titel"
+announce-custom-dialog-subtitle-label: "<gray>Untertitel"
+announce-custom-dialog-discord-label: "<gray>Auch im Community-Discord posten"
+report-usage: "<prefix><gray>Verwendung: <gold>/report <spieler> <grund>"
+report-self: "<prefix><red>Dich selbst kannst du nicht melden."
+report-reason-short: "<prefix><red>Bitte gib einen Grund an (mindestens <min> Zeichen)."
+report-cooldown: "<prefix><red>Bitte warte noch <white><time></white> bis zum nächsten Report."
+report-too-many: "<prefix><red>Du hast schon <white><max></white> offene Reports - das Team kümmert sich darum."
+report-sent: "<prefix><green>Danke! Dein Report über <white><player></white> ist beim Team angekommen."
+report-notify: "<prefix><gold>🚩 Report #<id></gold> <gray>von <white><reporter></white> über <white><player></white>: <white><reason></white> <teleport> <list>"
+report-notify-teleport: "<aqua>[Teleport]"
+report-notify-teleport-hover: "<gray>Zum Spieler bzw. zum Ort des Reports"
+report-notify-list: "<yellow>[Alle Reports]"
+report-notify-list-hover: "<gray>Offene Reports öffnen"
+report-join: "<prefix><gold>Es gibt <white><count></white> offene Reports.</gold> <list>"
+report-closed: "<prefix><green>Report #<id> ist erledigt."
+report-handled: "<prefix><green>Dein Report über <white><player></white> wurde vom Team bearbeitet. Danke!"
+report-no-location: "<prefix><red>Der Ort des Reports ist gerade nicht erreichbar (Welt nicht geladen)."
+report-teleported-player: "<prefix><gray>Report #<id>: zu <white><player></white> teleportiert."
+report-teleported-place: "<prefix><gray>Report #<id>: <white><player></white> ist offline - zum Ort des Reports teleportiert."
+report-not-found: "<prefix><red>Report <white><id></white> gibt es nicht."
+staffchat-on: "<prefix><green>Staff-Chat an - deine Nachrichten gehen nur noch ans Team. <gray>Aus: <white>/sc"
+staffchat-off: "<prefix><gray>Staff-Chat aus - du schreibst wieder im normalen Chat."
+staffchat-usage: "<prefix><gray>Verwendung: <gold>/sc <nachricht>"
+staffchat-format: "<dark_gray>[<red>Staff</red>]</dark_gray> <white><player></white><dark_gray>:</dark_gray> <aqua><message>"
+
+# Texte der Discord-Logs (Markdown wie in Discord). An/aus und Farbe stehen in der config.yml.
+# Platzhalter: {title} {start} {end} {source} {url} {admin} {text} {player} {world} {x} {y} {z} {duration}
+discord:
+  test-message: "🔧 Testnachricht von MRadmin - der Webhook funktioniert!"
+  maintenance-scheduled: "🗓️ Wartung geplant: **{start}** bis **{end}** - {title} ({source})"
+  maintenance-changed: "✏️ Wartung geändert: jetzt **{start}** bis **{end}** - {title} ({source})"
+  maintenance-cancelled: "❎ Wartung abgesagt: {title} ({source})"
+  maintenance-start: "🔧 Wartung hat begonnen - nur Staff kann joinen. Ende: **{end}** ({source})"
+  maintenance-end: "✅ Wartung beendet - der Server ist wieder offen."
+  kuma-connected: "🔗 Mit Uptime Kuma verbunden ({url})."
+  kuma-disconnected: "⚠️ Verbindung zu Uptime Kuma verloren ({url})."
+  announce: "📢 **{admin}**: {text}"
+  admin-mode-on: "🛡️ **{player}** ist im Admin-Modus ({world} {x}, {y}, {z})."
+  admin-mode-off: "🛡️ **{player}** hat den Admin-Modus beendet (nach {duration})."
+  admin-reload: "🔄 **{admin}** hat die MRadmin-Konfiguration neu geladen."
+  report: "🚩 **Report #{id}** von **{reporter}** über **{player}**: {reason} ({world} {x}, {y}, {z})"
+  report-closed: "✅ Report #{id} über **{player}** wurde von **{admin}** erledigt."
+  player-freeze: "🧊 **{admin}** hat **{player}** eingefroren."
+  player-unfreeze: "💧 **{admin}** hat **{player}** wieder aufgetaut."
+  player-freeze-quit: "⚠️ **{player}** hat sich eingefroren ausgeloggt."
+  staff-chat: "💬 **{player}**: {text}"
+# Texte für den Community-Discord (discord-announce in der config.yml). Markdown wie in Discord.
+# Platzhalter: {title} (Thema) {start} {end} (Discord-Zeitstempel, jeder sieht seine Zeitzone) {start-relative} {end-relative} ("in 2 Stunden").
+discord-announce:
+  test-message: "🔧 Testnachricht von MRadmin - der Ankündigungs-Webhook funktioniert!"
+  open-end: "offen"
+  maintenance-topic-line: "**Thema:** {title}"
+  maintenance-scheduled-title: "🛠️ Wartungsarbeiten geplant"
+  maintenance-scheduled: "Der Server ist ab **{start}** ({start-relative}) wegen Wartungsarbeiten nicht erreichbar.\n**Geschätztes Ende:** {end}"
+  maintenance-started-title: "🔧 Wartungsarbeiten laufen"
+  maintenance-started: "Der Server ist gerade im Wartungsmodus.\n**Geschätztes Ende:** {end} {end-relative}"
+  maintenance-ended-title: "✅ Server wieder online"
+  maintenance-ended: "Die Wartungsarbeiten sind abgeschlossen - viel Spaß beim Spielen!"
+  maintenance-cancelled-title: "❎ Wartung abgesagt"
+  maintenance-cancelled: "~~Geplant ab {start}~~ - die Wartung findet nicht statt."
+  maintenance-changed-note: "✏️ *Die Zeiten wurden aktualisiert.*"
+
+# --- Discord -----------------------------------------------------------------
+discord-status-active: "<prefix><green>Discord-Webhook aktiv <gray>(<white><events></white>/<white><total></white> Events eingeschaltet)"
+discord-status-inactive: "<prefix><red>Discord-Webhook inaktiv: <white><reason>"
+discord-status-last: "<prefix><gray>Letzter Versand: <white><result>"
+discord-status-never: "seit dem Start noch nichts gesendet"
+discord-test-hint: "<prefix><gray>Testnachricht: <white>/mradmin discord test</white> (Admin-Log) bzw. <white>/mradmin discord test announce</white> (Ankündigungen)."
+discord-announce-status-active: "<prefix><green>Ankündigungs-Webhook aktiv <gray>(aktuelle Wartung: <white><tracked></white>)"
+discord-announce-status-inactive: "<prefix><gray>Ankündigungs-Webhook inaktiv: <white><reason>"
+discord-test-sending: "<prefix><gray>Sende Testnachricht an Discord ..."
+discord-test-ok: "<prefix><green>✔ Testnachricht ist in Discord angekommen."
+discord-test-failed: "<prefix><red>✘ Testnachricht fehlgeschlagen: <white><reason>"
+discord-reason-disabled: "discord.enabled ist false"
+discord-reason-no-url: "discord.webhook-url ist leer"
+discord-reason-bad-url: "discord.webhook-url ist keine Discord-Webhook-URL (muss mit https://discord.com/api/webhooks/ beginnen)"
+discord-reason-invalid-url: "discord.webhook-url enthält ungültige Zeichen (Leerzeichen? Anführungszeichen?)"
+discord-result-ok: "OK (HTTP <status>) um <time>"
+discord-result-error: "FEHLER um <time>: <error>"
+discord-error-400: "Discord lehnt die Nachricht ab (z.B. ungültiger Name/Avatar oder zu langer Text)."
+discord-error-401: "Webhook-Token ungültig."
+discord-error-404: "Webhook existiert nicht (gelöscht? URL falsch kopiert?)."
+discord-error-rate-limit: "Rate-Limit von Discord, Nachricht verworfen"
+discord-error-interrupted: "unterbrochen"
+
+# --- Version & Updates -------------------------------------------------------
+version: "<prefix><gray>MRadmin <white>v<version></white> <dark_gray>(MC <mc>)</dark_gray> von <white><author></white>"
+version-latest: "<prefix><green>Du nutzt die aktuellste Version."
+version-outdated: "<prefix><gold>Neue Version verfügbar: <white><latest></white> <gray>(installiert: <current>) <download>"
+version-unknown: "<prefix><gray>Update-Status unbekannt: <reason>"
+version-checking: "<prefix><gray>Suche nach Updates ..."
+version-links: "<prefix><modrinth> <dark_gray>| <github>"
+update-download-label: "<aqua><u>[Download]</u></aqua>"
+update-join-notify: "<prefix><gold>Für MRadmin gibt es ein Update: <white><latest></white> <gray>(installiert: <current>) <download>"
+update-reason-disabled: "Update-Check ist deaktiviert"
+update-reason-not-found: "Projekt nicht gefunden (HTTP 404) - noch nicht veröffentlicht?"
+update-reason-no-release: "Keine veröffentlichte Version gefunden"
+update-reason-no-repository: "Kein GitHub-Repository hinterlegt"

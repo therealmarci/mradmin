@@ -1,0 +1,341 @@
+﻿# ==============================================================================
+#   MRadmin - Konfiguration
+# ==============================================================================
+#   Nach Änderungen:  /mradmin reload   (kein Neustart nötig)
+#   Dashboard:        /mradmin        Befehlsliste: /mradmin help
+#
+#   Zeitangaben: d = Tage, h = Stunden, m = Minuten, s = Sekunden,
+#                z.B. "30s", "15m", "1h30m". Eine reine Zahl zählt als Minuten.
+#
+#   Texte & Nachrichten (auch Ankündigungs-Presets und Discord): lang/de.yml bzw. lang/en.yml.
+#
+#   Diese Datei ist UTF-8-kodiert. Falls Umlaute (ä, ö, ü) falsch angezeigt werden,
+#   im Editor die Kodierung auf "UTF-8" stellen.
+# ==============================================================================
+
+# Nicht ändern - wird für automatische Config-Updates verwendet.
+config-version: 4
+
+# Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
+# und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
+language: de
+
+# Zeitzone für alle angezeigten Uhrzeiten, z.B. "Europe/Vienna" oder "Europe/Berlin". Leer = Zeitzone des Servers.
+timezone: ""
+
+
+# ------------------------------------------------------------------------------
+#   1) WARTUNGSARBEITEN
+# ------------------------------------------------------------------------------
+# Während einer Wartung können nur Spieler mit der Permission "mradmin.maintenance.bypass" joinen
+# (in LuckPerms z.B. der Staff-Gruppe geben: /lp group staff permission set mradmin.maintenance.bypass true).
+# Wartungen kommen aus Uptime Kuma (Abschnitt uptime-kuma unten) oder per Befehl:
+#   /mradmin maintenance           Status
+#   /mradmin maintenance on [dauer]             sofort starten (ohne Dauer: bis "off")
+#   /mradmin maintenance schedule <in> [dauer]  geplante Wartung mit Countdown, z.B. "schedule 15m 1h"
+#   /mradmin maintenance off                    beenden bzw. Planung aufheben
+maintenance:
+  # So lange vor Beginn erscheint die Bossbar mit Countdown.
+  warn-before: "15m"
+
+  # Bossbar mit Countdown vor Beginn (alle Spieler) und mit der Restzeit während der Wartung (nur Staff).
+  bossbar:
+    enabled: true
+    # Farben: PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+    color: YELLOW
+    # In den letzten "final-seconds" Sekunden vor Beginn wechselt die Farbe auf final-color.
+    final-color: RED
+    final-seconds: 60
+    # Unterteilung: PROGRESS (durchgehend), NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+    overlay: NOTCHED_10
+    # Während der Wartung eine Bossbar mit der Restzeit für Staff anzeigen (wenn das Ende bekannt ist).
+    show-during-maintenance: true
+    during-color: PURPLE
+
+  # Zusätzliche Erinnerungen vor Beginn (Chat-Nachricht maintenance-reminder), jeweils so lange vorher.
+  reminders: ["15m", "10m", "5m", "2m", "1m", "30s"]
+  # Ab so vielen Sekunden vor Beginn läuft zusätzlich ein großer Countdown auf dem Bildschirm (0 = aus).
+  title-countdown-seconds: 10
+  # Ton bei Erinnerungen und Countdown ("" = kein Ton). Namen: https://jd.papermc.io/paper/org/bukkit/Sound.html
+  sound: BLOCK_NOTE_BLOCK_PLING
+
+  # Spieler ohne Bypass-Permission beim Start der Wartung vom Server kicken.
+  kick-on-start: true
+  # So viele Sekunden nach dem Start wird gekickt (Zeit, um die Nachricht noch zu lesen).
+  kick-delay-seconds: 5
+
+  # Serverliste während der Wartung: Text aus der Sprachdatei (maintenance-motd) statt der normalen MOTD.
+  motd:
+    enabled: true
+    # Statt der Spieleranzahl erscheint rechts "Wartung" (maintenance-version-text) in rot.
+    replace-version: true
+
+
+# ------------------------------------------------------------------------------
+#   2) UPTIME KUMA
+# ------------------------------------------------------------------------------
+# MRadmin meldet sich wie die Weboberfläche bei Uptime Kuma an und liest die Wartungen live mit:
+# geplante Wartungen lösen den Countdown aus, Änderungen in Kuma (Verlängern, Verschieben, Pausieren,
+# Löschen) werden sofort übernommen. Gedacht für Uptime Kuma 2.x (1.23 sollte ebenfalls funktionieren).
+# Uptime Kuma kennt nur einen Benutzer - hier also deinen Kuma-Login eintragen. Er wird nur an Kuma geschickt.
+uptime-kuma:
+  enabled: false
+  # Adresse der Weboberfläche, z.B. "https://status.deinserver.de" oder "http://192.168.1.10:3001"
+  url: ""
+  # Login: Benutzername + Passwort ...
+  username: ""
+  password: ""
+  # ... oder stattdessen ein Login-Token (nötig, wenn 2FA aktiv ist): im Browser bei Kuma einloggen,
+  # Entwicklertools (F12) -> Anwendung/Speicher -> Local Storage -> Wert von "token" kopieren.
+  # Der Token bleibt gültig, bis das Kuma-Passwort geändert wird.
+  token: ""
+
+  # Welche Wartungen gelten für DIESEN Server? (Beide Listen leer = jede Wartung in Kuma.)
+  # monitor-ids: Wartungen, die einen dieser Monitore betreffen. Die ID steht in der Adresse des Monitors,
+  #              z.B. https://status.deinserver.de/dashboard/12  ->  12
+  monitor-ids: []
+  # maintenance-ids: genau diese Wartungen (ID aus https://status.deinserver.de/maintenance/3  ->  3)
+  maintenance-ids: []
+
+  # So oft wird die Liste zusätzlich neu abgefragt (Änderungen kommen sonst sofort).
+  refresh-seconds: 60
+  # Nach einem Verbindungsabbruch wird es nach so vielen Sekunden erneut versucht.
+  reconnect-seconds: 30
+  # Ist Kuma nicht erreichbar, bleibt die zuletzt bekannte Planung gültig (true) oder wird verworfen (false).
+  keep-schedule-when-offline: true
+
+
+# ------------------------------------------------------------------------------
+#   3) ANKÜNDIGUNGEN
+# ------------------------------------------------------------------------------
+# /mradmin announce <text>               eigener Text (MiniMessage erlaubt, z.B. <red>Achtung!)
+# /mradmin announce <preset> [werte...]  vorbereitete Ankündigung aus der Sprachdatei (announce-presets)
+# Auch von der Konsole/RCON nutzbar, z.B. im Restart-Script:  mradmin announce restart 5m
+announce:
+  # Wie lange der Text auf dem Bildschirm steht (in Sekunden).
+  fade-in: 0.5
+  stay: 6
+  fade-out: 1
+  # Zusätzlich im Chat ausgeben.
+  chat: true
+  # Ton ("" = kein Ton) mit Lautstärke und Tonhöhe.
+  sound: BLOCK_NOTE_BLOCK_BELL
+  volume: 1.0
+  pitch: 1.0
+
+
+# ------------------------------------------------------------------------------
+#   4) ADMIN-MODUS
+# ------------------------------------------------------------------------------
+# /mradmin mode on   Inventar, Rüstung, XP, Leben, Hunger, Effekte und Position werden gespeichert,
+#                    du kommst in den Creative-Modus und bekommst nur den Admin-Kompass (Menü: Teleport, Plugins, Wartung).
+# /mradmin mode off  alles wird exakt wiederhergestellt und du landest wieder am Ausgangspunkt.
+# Der gespeicherte Stand liegt in plugins/MRadmin/admin-mode/ und übersteht auch Abstürze und Neustarts.
+admin-mode:
+  # Spielmodus im Admin-Modus: CREATIVE oder SPECTATOR
+  gamemode: CREATIVE
+  # Beim Beenden zum Ausgangspunkt zurück teleportieren.
+  return-to-start: true
+  # Teleport-Kompass: Material und Slot in der Hotbar (0-8).
+  compass-material: COMPASS
+  compass-slot: 4
+  # Items im Admin-Modus nicht fallen lassen / nicht aufheben (schützt vor Creative-Items im Survival).
+  prevent-drop: true
+  prevent-pickup: true
+  # Was passiert, wenn ein Admin im Admin-Modus den Server verlässt?
+  #   true  = Admin-Modus wird beendet (alles zurück, Teleport zum Ausgangspunkt)
+  #   false = bleibt aktiv, beim nächsten Join geht es im Admin-Modus weiter
+  end-on-quit: false
+
+  # Menü des Kompasses (Rechtsklick): "Spieler teleportieren", die Buttons unten, Wartungsstatus, Admin-Modus beenden.
+  # Jeder Button führt einen Befehl als Spieler aus, z.B. das Admin-Menü eines anderen Plugins. Die Rechte prüft
+  # dann das jeweilige Plugin selbst. Höchstens 6 Buttons, Reihenfolge wie hier.
+  #   plugin:     nur anzeigen, wenn dieses Plugin installiert ist ("" = immer)
+  #   permission: nur anzeigen, wenn der Spieler diese Permission hat ("" = alle im Admin-Modus)
+  #   enabled:    false = Button ausblenden (z.B. statt ihn zu löschen)
+  #   hook:       Schnittstelle des Plugins für Live-Infos auf dem Button und im Spieler-Menü (nur MRsleep/MRchunks,
+  #               ab deren Version mit MRadmin-Unterstützung - ältere funktionieren weiter, nur ohne Live-Infos)
+  # Name und Beschreibung stehen in der Sprachdatei unter gui-hub-buttons.<name> (fehlt er dort: der Name von hier).
+  # Eigene Buttons einfach dazuschreiben, z.B.:
+  #   chunky:
+  #     plugin: Chunky
+  #     material: MAP
+  #     command: "chunky progress"
+  menu:
+    buttons:
+      mrsleep:
+        enabled: true
+        plugin: MRsleep
+        material: RED_BED
+        command: "mrsleep gui"
+        permission: "mrsleep.admin.gui"
+        hook: "at.marcelr.mrsleep.api.MRadminHook"
+      mrchunks:
+        enabled: true
+        plugin: MRchunks
+        material: EMERALD_BLOCK
+        command: "mrchunks gui"
+        permission: "mrchunks.admin.gui"
+        hook: "at.marcelr.mrchunks.api.MRadminHook"
+
+
+# ------------------------------------------------------------------------------
+#   5) REPORTS
+# ------------------------------------------------------------------------------
+# /report <spieler> <grund> für alle Spieler (Permission mradmin.report). Das Team (mradmin.report.notify) bekommt
+# eine Meldung mit [Teleport]-Knopf, offene Reports stehen im Admin-Menü bzw. unter /mradmin reports.
+reports:
+  # So lange muss ein Spieler zwischen zwei Reports warten (Team: kein Cooldown).
+  cooldown: "60s"
+  # Grund mindestens / höchstens so viele Zeichen (längere werden gekürzt).
+  min-reason-length: 3
+  max-reason-length: 200
+  # Höchstens so viele offene Reports pro meldendem Spieler.
+  max-open-per-player: 3
+  # Dem Spieler Bescheid geben, wenn sein Report erledigt wurde (falls er online ist).
+  tell-reporter: true
+  # Erledigte Reports so lange aufheben, danach werden sie gelöscht.
+  keep-closed: "7d"
+
+
+# ------------------------------------------------------------------------------
+#   6) DISCORD-LOGS (Admin)
+# ------------------------------------------------------------------------------
+# Webhook anlegen: Discord-Kanal -> Kanal bearbeiten -> Integrationen -> Webhooks
+#                  -> Neuer Webhook -> Webhook-URL kopieren.
+# Die Texte der Events stehen in der Sprachdatei (lang/<sprache>.yml, Abschnitt discord).
+# Ein Event mit "enabled: false" oder leerem Text wird nicht gesendet.
+# Funktioniert es nicht? -> /mradmin discord zeigt den Status, /mradmin discord test schickt eine Testnachricht.
+discord:
+  enabled: false
+  # Komplette URL in Anführungszeichen, z.B. "https://discord.com/api/webhooks/123456/abcdef"
+  webhook-url: ""
+  username: "MRadmin"
+  avatar-url: ""
+  use-embeds: true
+  footer: "Minecraft-Server"
+  events:
+    maintenance-scheduled:
+      enabled: true
+      color: "#F1C40F"
+    maintenance-changed:
+      enabled: true
+      color: "#3498DB"
+    maintenance-cancelled:
+      enabled: true
+      color: "#95A5A6"
+    maintenance-start:
+      enabled: true
+      color: "#E74C3C"
+    maintenance-end:
+      enabled: true
+      color: "#2ECC71"
+    kuma-connected:
+      enabled: false
+      color: "#2ECC71"
+    kuma-disconnected:
+      enabled: true
+      color: "#E67E22"
+    announce:
+      enabled: true
+      color: "#9B59B6"
+    admin-mode-on:
+      enabled: true
+      color: "#E67E22"
+    admin-mode-off:
+      enabled: true
+      color: "#1ABC9C"
+    admin-reload:
+      enabled: true
+      color: "#3498DB"
+    report:
+      enabled: true
+      color: "#E67E22"
+    report-closed:
+      enabled: true
+      color: "#2ECC71"
+    player-freeze:
+      enabled: true
+      color: "#3498DB"
+    player-unfreeze:
+      enabled: true
+      color: "#95A5A6"
+    player-freeze-quit:
+      enabled: true
+      color: "#E74C3C"
+    # Jede Staff-Chat-Nachricht auch im Admin-Discord (standardmäßig aus).
+    staff-chat:
+      enabled: false
+      color: "#7F8C8D"
+
+
+# ------------------------------------------------------------------------------
+#   7) DISCORD-ANKÜNDIGUNGEN (Community)
+# ------------------------------------------------------------------------------
+# Eigener Webhook für den öffentlichen Ankündigungs-Channel deines Discords - getrennt von den Admin-Logs oben.
+# Bewusst sparsam: pro Wartung höchstens 3 Posts (geplant, gestartet, beendet). Verschieben, Verlängern und
+# Absagen werden in den letzten Post eingearbeitet, statt neu zu posten. Zeiten erscheinen als Discord-Zeitstempel
+# (jeder sieht sie in seiner eigenen Zeitzone, mit "in 2 Stunden").
+# Texte: lang/<sprache>.yml, Abschnitt discord-announce. Testen: /mradmin discord test announce
+discord-announce:
+  enabled: false
+  webhook-url: ""
+  username: ""
+  avatar-url: ""
+  footer: ""
+  # Rolle, die beim ersten Post erwähnt wird (z.B. @Server-News). Leer = niemand wird gepingt.
+  # ID: Discord-Einstellungen -> Erweitert -> Entwicklermodus an, dann Rechtsklick auf die Rolle -> "ID kopieren".
+  ping-role-id: ""
+
+  maintenance:
+    enabled: true
+    # Erst posten, wenn die Wartung höchstens so lange entfernt ist (später angelegte: sofort).
+    # Verhindert, dass wiederkehrende Wartungen weit im Voraus gepostet werden.
+    announce-ahead: "24h"
+    # Kürzere Wartungen gar nicht posten ("0" = alle posten).
+    min-length: "0"
+    # Eigener Post beim Start bzw. beim Ende ("Server wieder online"). false = nur der Post "geplant".
+    post-start: true
+    post-end: true
+    # ping-role-id beim ersten Post einer Wartung erwähnen (nie bei Bearbeitungen oder beim Ende).
+    ping: true
+    # Mehrere Änderungen in Kuma kurz hintereinander werden zu einer Bearbeitung zusammengefasst.
+    debounce-seconds: 60
+
+  announcements:
+    # Ankündigungen posten: Presets mit "discord"-Text in der Sprachdatei automatisch (außer mit -q),
+    # eigene Texte nur mit -d, z.B. /mradmin announce -d Heute Abend Event!
+    enabled: true
+    # Dasselbe Preset höchstens einmal in dieser Zeit posten (Restart-Script mit 5m/1m = ein Post).
+    cooldown: "10m"
+    ping: false
+
+  colors:
+    scheduled: "#F1C40F"
+    started: "#E74C3C"
+    ended: "#2ECC71"
+    cancelled: "#95A5A6"
+    announce: "#9B59B6"
+
+
+# ------------------------------------------------------------------------------
+#   8) UPDATE-CHECK
+# ------------------------------------------------------------------------------
+update-checker:
+  enabled: true
+  # Quelle: "github" (GitHub Releases, Standard) oder "modrinth"
+  source: github
+  # Auch Beta-/Alpha-Versionen melden. Läuft selbst eine Vorabversion (0.x), werden sie immer gemeldet.
+  include-prereleases: false
+  interval-hours: 6
+  # Spieler mit "mradmin.admin.update" beim Betreten des Servers informieren.
+  notify-on-join: true
+
+
+# ------------------------------------------------------------------------------
+#   9) MENÜS
+# ------------------------------------------------------------------------------
+gui:
+  # Wie oft offene Menüs aktualisiert werden (in Ticks, 20 = 1 Sekunde).
+  refresh-ticks: 20
+  sounds: true
