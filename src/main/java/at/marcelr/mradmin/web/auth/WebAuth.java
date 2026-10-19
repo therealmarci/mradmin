@@ -48,6 +48,9 @@ public final class WebAuth {
         long lockedUntil;
         /** Time step of the last accepted 2FA code - the same code is never accepted twice. */
         long lastTotpStep;
+        /** Random, fixed ID for passkeys (base64url) - never the UUID, so passkeys do not reveal the player. */
+        String userHandle;
+        List<Passkey> passkeys = new ArrayList<>();
 
         Account(UUID id, String name) {
             this.id = id;
@@ -80,6 +83,13 @@ public final class WebAuth {
         }
     }
 
+    /**
+     * A passkey of an account: credential ID and public key (COSE) as base64url, the authenticator's signature
+     * counter, a name the member chose, and when it was added and last used. Only public keys - nothing secret.
+     */
+    public record Passkey(String id, String publicKey, long signCount, String name, long created, long lastUsed) {
+    }
+
     /** What a setup link stands for; the 2FA secret is made once per link, so reloading the page keeps the QR code. */
     private record Setup(UUID player, String name, long expires, String totp) {
     }
@@ -87,7 +97,7 @@ public final class WebAuth {
     /** Result of sign-in and setup: the cookie token (null on failure) and an error key. */
     public record Result(String token, Session session, String error, List<String> recoveryCodes) {
 
-        static Result fail(String error) {
+        public static Result fail(String error) {
             return new Result(null, null, error, List.of());
         }
 
@@ -175,6 +185,8 @@ public final class WebAuth {
             account.failed = 0;
             account.lockedUntil = 0;
             account.lastTotpStep = step;
+            // A reset (lost phone, forgotten password) also removes the passkeys - a lost device must not sign in.
+            account.passkeys = new ArrayList<>();
             if (account.created == 0) {
                 account.created = System.currentTimeMillis();
             }
@@ -215,6 +227,11 @@ public final class WebAuth {
         }
         boolean passwordOk = Passwords.verify(password, account.password);
         synchronized (this) {
+            // Password sign-in always needs 2FA. Without 2FA (switched off, passkeys only) it is not possible - only
+            // said once the password was right, so the answer reveals nothing to strangers.
+            if (passwordOk && account.totp == null) {
+                return Result.fail("passkey-only");
+            }
             if (!passwordOk || !secondFactor(account, code)) {
                 if (++account.failed >= MAX_FAILED) {
                     account.failed = 0;
@@ -252,6 +269,164 @@ public final class WebAuth {
         }
         String recovery = Secrets.sha256(code.replace("-", "").replace(" ", "").toUpperCase(Locale.ROOT));
         return account.recovery.remove(recovery);
+    }
+
+    // ---------------------------------------------------------------- passkeys
+
+    /** The account's passkey ID (made on first use). */
+    public synchronized String userHandle(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            return null;
+        }
+        if (account.userHandle == null) {
+            account.userHandle = Secrets.token(32);
+            saveAccounts();
+        }
+        return account.userHandle;
+    }
+
+    /** The account with this passkey ID, or null. */
+    public synchronized Account byUserHandle(String handle) {
+        if (handle == null) {
+            return null;
+        }
+        return accounts.values().stream().filter(a -> handle.equals(a.userHandle)).findFirst().orElse(null);
+    }
+
+    public synchronized List<Passkey> passkeys(UUID id) {
+        Account account = accounts.get(id);
+        return account == null ? List.of() : List.copyOf(account.passkeys);
+    }
+
+    /** The passkey with this credential ID and its account, or null. */
+    public synchronized Map.Entry<Account, Passkey> passkey(String credentialId) {
+        for (Account account : accounts.values()) {
+            for (Passkey p : account.passkeys) {
+                if (p.id().equals(credentialId)) {
+                    return Map.entry(account, p);
+                }
+            }
+        }
+        return null;
+    }
+
+    public synchronized void addPasskey(UUID id, Passkey passkey) {
+        Account account = accounts.get(id);
+        if (account != null) {
+            account.passkeys.removeIf(p -> p.id().equals(passkey.id()));
+            account.passkeys.add(passkey);
+            saveAccounts();
+        }
+    }
+
+    /** @return null, "not-found", or "last-passkey" (without 2FA the last passkey is the only way in) */
+    public synchronized String removePasskey(UUID id, String credentialId) {
+        Account account = accounts.get(id);
+        if (account == null || account.passkeys.stream().noneMatch(p -> p.id().equals(credentialId))) {
+            return "not-found";
+        }
+        if (account.totp == null && account.passkeys.size() <= 1) {
+            return "last-passkey";
+        }
+        account.passkeys.removeIf(p -> p.id().equals(credentialId));
+        saveAccounts();
+        return null;
+    }
+
+    /** After a passkey check (not a sign-in): its new signature counter and "last used". */
+    public synchronized void passkeyUsed(UUID id, String credentialId, long signCount) {
+        Account account = accounts.get(id);
+        if (account != null) {
+            long now = System.currentTimeMillis();
+            account.passkeys.replaceAll(p -> p.id().equals(credentialId)
+                    ? new Passkey(p.id(), p.publicKey(), signCount, p.name(), p.created(), now) : p);
+            saveAccounts();
+        }
+    }
+
+    // ---------------------------------------------------------------- 2FA on/off
+
+    /** account -> 2FA secret being set up again (until the first code confirms it) */
+    private final Map<UUID, String> pendingTotp = new HashMap<>();
+
+    public synchronized boolean hasTotp(UUID id) {
+        Account account = accounts.get(id);
+        return account != null && account.totp != null;
+    }
+
+    /**
+     * Switches 2FA off - only with at least one passkey. Then the account signs in only with passkeys (password
+     * sign-in needs 2FA); the recovery codes go too. @return null or "need-passkey"
+     */
+    public synchronized String disableTotp(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null || account.passkeys.isEmpty()) {
+            return "need-passkey";
+        }
+        account.totp = null;
+        account.recovery = new ArrayList<>();
+        saveAccounts();
+        return null;
+    }
+
+    /** Switching 2FA on again, step 1: a new secret for the app (QR). Null if 2FA is on already. */
+    public synchronized Map<String, Object> startTotp(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null || account.totp != null) {
+            return null;
+        }
+        String secret = Totp.newSecret();
+        pendingTotp.put(id, secret);
+        return Map.of("secret", secret, "uri", Totp.uri(issuer(), account.name, secret));
+    }
+
+    /** Step 2: the first code from the app confirms it; new recovery codes. @return the codes, or null if wrong */
+    public synchronized List<String> enableTotp(UUID id, String code) {
+        Account account = accounts.get(id);
+        String secret = pendingTotp.get(id);
+        if (account == null || secret == null || code == null) {
+            return null;
+        }
+        long step = Totp.verify(secret, code.replace(" ", ""), System.currentTimeMillis());
+        if (step < 0) {
+            return null;
+        }
+        pendingTotp.remove(id);
+        account.totp = secret;
+        account.lastTotpStep = step;
+        List<String> codes = new ArrayList<>();
+        account.recovery = new ArrayList<>();
+        for (int i = 0; i < RECOVERY_CODES; i++) {
+            String raw = Secrets.base32(Secrets.random(7)).substring(0, 10);
+            codes.add(raw.substring(0, 5) + "-" + raw.substring(5));
+            account.recovery.add(Secrets.sha256(raw));
+        }
+        saveAccounts();
+        return codes;
+    }
+
+    /**
+     * Signs in with a verified passkey (the WebAuthn check happened in {@link Passkeys}): stores the new signature
+     * counter and starts a session. A passkey with user verification counts as two factors - no 2FA code.
+     */
+    public synchronized Result passkeyLogin(UUID id, String credentialId, long signCount, String ip, String agent) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            return Result.fail("invalid");
+        }
+        if (account.lockedUntil > System.currentTimeMillis()) {
+            return Result.fail("locked");
+        }
+        long now = System.currentTimeMillis();
+        account.passkeys.replaceAll(p -> p.id().equals(credentialId)
+                ? new Passkey(p.id(), p.publicKey(), signCount, p.name(), p.created(), now) : p);
+        account.failed = 0;
+        account.lastLogin = now;
+        Result result = startSession(account, ip, agent);
+        saveAccounts();
+        saveSessions();
+        return result;
     }
 
     private Result startSession(Account account, String ip, String agent) {
@@ -361,7 +536,7 @@ public final class WebAuth {
      */
     public synchronized boolean confirmCode(UUID id, String code) {
         Account account = accounts.get(id);
-        if (account == null || code == null) {
+        if (account == null || code == null || account.totp == null) {
             return false;
         }
         long step = Totp.verify(account.totp, code.replace(" ", ""), System.currentTimeMillis());
@@ -376,7 +551,7 @@ public final class WebAuth {
     /** New recovery codes after confirming with a 2FA code. @return the codes, or null if the code was wrong */
     public synchronized List<String> newRecoveryCodes(UUID id, String code) {
         Account account = accounts.get(id);
-        if (account == null) {
+        if (account == null || account.totp == null) {
             return null;
         }
         long step = Totp.verify(account.totp, code, System.currentTimeMillis());
@@ -420,6 +595,16 @@ public final class WebAuth {
                     account.failed = s.getInt("failed");
                     account.lockedUntil = s.getLong("locked-until");
                     account.lastTotpStep = s.getLong("last-code");
+                    account.userHandle = s.getString("user-handle");
+                    ConfigurationSection keys = s.getConfigurationSection("passkeys");
+                    if (keys != null) {
+                        for (String k : keys.getKeys(false)) {
+                            ConfigurationSection p = keys.getConfigurationSection(k);
+                            account.passkeys.add(new Passkey(p.getString("id"), p.getString("public-key"),
+                                    p.getLong("sign-count"), p.getString("name", "Passkey"), p.getLong("created"),
+                                    p.getLong("last-used")));
+                        }
+                    }
                     accounts.put(account.id, account);
                 } catch (RuntimeException e) {
                     plugin.getLogger().warning("Web account " + key + " is broken, skipped: " + e.getMessage());
@@ -460,6 +645,17 @@ public final class WebAuth {
             y.set(p + "failed", a.failed);
             y.set(p + "locked-until", a.lockedUntil);
             y.set(p + "last-code", a.lastTotpStep);
+            y.set(p + "user-handle", a.userHandle);
+            for (int i = 0; i < a.passkeys.size(); i++) {
+                Passkey k = a.passkeys.get(i);
+                String q = p + "passkeys." + i + ".";
+                y.set(q + "id", k.id());
+                y.set(q + "public-key", k.publicKey());
+                y.set(q + "sign-count", k.signCount());
+                y.set(q + "name", k.name());
+                y.set(q + "created", k.created());
+                y.set(q + "last-used", k.lastUsed());
+            }
         }
         storage().saveYaml(ACCOUNTS, y);
     }

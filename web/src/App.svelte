@@ -148,7 +148,7 @@
     {:else if route.path === '/players' && me.may.players}
       <Players />
     {:else if route.path === '/console' && me.may.console}
-      <Console />
+      <Console {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
     {:else if route.path === '/audit' && me.may.audit}

@@ -25,6 +25,16 @@ import java.util.Map;
  *  POST   /api/sessions/others                              signs out all other browsers
  *  POST   /api/account/recovery {code}                      new recovery codes
  *  GET    /api/audit                                        mradmin.web.audit
+ *  POST   /api/login/passkey/start                          open: challenge for a passkey sign-in
+ *  POST   /api/login/passkey/finish {request, credential}    open, 10/min per IP
+ *  GET    /api/passkeys                                     own passkeys
+ *  POST   /api/passkeys/start  {code}                        adding one needs a fresh 2FA code
+ *  POST   /api/passkeys/finish {credential, name}
+ *  DELETE /api/passkeys/{id}
+ *  POST   /api/confirm/passkey                             passkey check for a sensitive step (instead of a code)
+ *  POST   /api/account/totp/disable {code | passkey}       2FA off (only with a passkey)
+ *  POST   /api/account/totp/start   {passkey}             2FA on again: new secret
+ *  POST   /api/account/totp/finish  {code}               ... confirmed, new recovery codes
  * </pre>
  */
 public final class AuthRoutes {
@@ -53,6 +63,152 @@ public final class AuthRoutes {
         server.route("POST", "/api/sessions/others", r::revokeOthers);
         server.route("POST", "/api/account/recovery", r::recovery);
         server.route("GET", "/api/audit", r::audit);
+        server.open("POST", "/api/login/passkey/start", r::passkeyLoginStart);
+        server.open("POST", "/api/login/passkey/finish", r::passkeyLoginFinish);
+        server.route("GET", "/api/passkeys", r::passkeys);
+        server.route("POST", "/api/passkeys/start", r::passkeyAddStart);
+        server.route("POST", "/api/passkeys/finish", r::passkeyAddFinish);
+        server.route("DELETE", "/api/passkeys/{id}", r::passkeyRemove);
+        server.route("POST", "/api/confirm/passkey", r::confirmStart);
+        server.route("POST", "/api/account/totp/disable", r::totpDisable);
+        server.route("POST", "/api/account/totp/start", r::totpStart);
+        server.route("POST", "/api/account/totp/finish", r::totpFinish);
+    }
+
+    // --------------------------------------------------------- confirmation, 2FA
+
+    /** A passkey check for a sensitive step (then send {request, credential} instead of {code}). */
+    private void confirmStart(Http http) throws Exception {
+        requirePasskeys();
+        if (!server.allow("passkey:" + http.ip(), 10)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        if (auth.passkeys(http.account().id()).isEmpty()) {
+            throw new Http.WebException(400, "need-passkey");
+        }
+        Map<String, String> start = server.passkeys().startConfirm(http.account().id());
+        http.json(200, Map.of("request", start.get("request"),
+                "options", com.google.gson.JsonParser.parseString(start.get("options"))));
+    }
+
+    /** 2FA off (only with a passkey; then sign-in only with passkeys) - confirmed with a code or a passkey. */
+    private void totpDisable(Http http) throws Exception {
+        if (!server.allow("passkey:" + http.ip(), 10)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        if (!server.confirmed(http)) {
+            throw new Http.WebException(400, "code-wrong");
+        }
+        String error = auth.disableTotp(http.account().id());
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+        log(http, http.account().id(), http.account().name(), "2fa-off", "");
+        http.json(200, Map.of());
+    }
+
+    /** 2FA on again, step 1 - confirmed with a passkey (there is no code without 2FA): the new secret for the app. */
+    private void totpStart(Http http) throws Exception {
+        if (!server.allow("passkey:" + http.ip(), 10)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        if (!server.confirmed(http)) {
+            throw new Http.WebException(400, "passkey-failed");
+        }
+        Map<String, Object> start = auth.startTotp(http.account().id());
+        if (start == null) {
+            throw new Http.WebException(400, "totp-on");
+        }
+        http.json(200, start);
+    }
+
+    /** Step 2: the first code from the app; answers with new recovery codes. */
+    private void totpFinish(Http http) throws Exception {
+        if (!server.allow("passkey:" + http.ip(), 10)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        List<String> codes = auth.enableTotp(http.account().id(), http.string("code"));
+        if (codes == null) {
+            throw new Http.WebException(400, "code-wrong");
+        }
+        log(http, http.account().id(), http.account().name(), "2fa-on", "");
+        http.json(200, Map.of("recoveryCodes", codes));
+    }
+
+    // ---------------------------------------------------------------- passkeys
+
+    private void requirePasskeys() throws Http.WebException {
+        if (!server.passkeys().enabled()) {
+            throw new Http.WebException(404, "feature-disabled");
+        }
+    }
+
+    /** Sign-in with a passkey, step 1: the browser gets a challenge (no name needed - the passkey knows it). */
+    private void passkeyLoginStart(Http http) throws Exception {
+        limit(http, "login");
+        requirePasskeys();
+        Map<String, String> start = server.passkeys().startAssertion();
+        http.json(200, Map.of("request", start.get("request"),
+                "options", com.google.gson.JsonParser.parseString(start.get("options"))));
+    }
+
+    /** Step 2: the signed challenge - on success the browser is signed in like with password + code. */
+    private void passkeyLoginFinish(Http http) throws Exception {
+        limit(http, "login");
+        requirePasskeys();
+        var credential = http.body().get("credential");
+        WebAuth.Result result = credential == null ? WebAuth.Result.fail("passkey-failed")
+                : server.passkeys().finishAssertion(http.string("request"), credential.toString(), http.storedIp(),
+                        http.header("User-Agent"));
+        if (!result.ok()) {
+            log(http, null, "", "login-failed", "passkey: " + result.error());
+            http.error(result.error().equals("locked") ? 423 : 401, result.error());
+            return;
+        }
+        signedIn(http, result, "login-passkey");
+        http.json(200, Map.of("name", auth.account(result.session().account()).name()));
+    }
+
+    private void passkeys(Http http) throws Exception {
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (WebAuth.Passkey p : server.passkeys().list(http.account().id())) {
+            list.add(Map.of("id", p.id(), "name", p.name(), "created", p.created(), "lastUsed", p.lastUsed()));
+        }
+        http.json(200, Map.of("enabled", server.passkeys().enabled(), "passkeys", list));
+    }
+
+    /** Adding a passkey needs a fresh 2FA code (or an existing passkey) - a stolen session alone cannot add one. */
+    private void passkeyAddStart(Http http) throws Exception {
+        requirePasskeys();
+        if (!server.allow("passkey:" + http.ip(), 10)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        if (!server.confirmed(http)) {
+            throw new Http.WebException(400, "code-wrong");
+        }
+        http.json(200, Map.of("options", com.google.gson.JsonParser.parseString(
+                server.passkeys().startRegistration(http.account().id()))));
+    }
+
+    private void passkeyAddFinish(Http http) throws Exception {
+        requirePasskeys();
+        var credential = http.body().get("credential");
+        String error = credential == null ? "passkey-failed"
+                : server.passkeys().finishRegistration(http.account().id(), credential.toString(), http.string("name"));
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+        log(http, http.account().id(), http.account().name(), "passkey-add", String.valueOf(http.string("name")));
+        http.json(200, Map.of());
+    }
+
+    private void passkeyRemove(Http http) throws Exception {
+        String error = auth.removePasskey(http.account().id(), http.param("id"));
+        if (error != null) {
+            throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
+        }
+        log(http, http.account().id(), http.account().name(), "passkey-remove", "");
+        http.json(200, Map.of());
     }
 
     // ------------------------------------------------------------------ public
@@ -153,6 +309,8 @@ public final class AuthRoutes {
         me.put("name", account.name());
         me.put("lastLogin", account.lastLogin());
         me.put("recoveryLeft", account.recoveryLeft());
+        me.put("passkeys", auth.passkeys(account.id()).size());
+        me.put("totp", auth.hasTotp(account.id()));
         me.put("version", plugin.updateChecker().currentVersion());
         me.put("may", may);
         http.json(200, me);

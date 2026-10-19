@@ -65,10 +65,29 @@ public final class WebServer {
         this.plugin = plugin;
         this.auth = auth;
         this.permissions = permissions;
+        this.passkeys = new at.marcelr.mradmin.web.auth.Passkeys(plugin, auth);
     }
+
+    private final at.marcelr.mradmin.web.auth.Passkeys passkeys;
 
     public WebAuth auth() {
         return auth;
+    }
+
+    public at.marcelr.mradmin.web.auth.Passkeys passkeys() {
+        return passkeys;
+    }
+
+    /**
+     * A sensitive step is confirmed by the member: either with a fresh 2FA code ({code}) or - also without 2FA - with
+     * one of their passkeys ({request, credential}, after POST /api/confirm/passkey).
+     */
+    public boolean confirmed(Http http) throws java.io.IOException {
+        var credential = http.body().get("credential");
+        if (credential != null && !credential.isJsonNull()) {
+            return passkeys.finishConfirm(http.account().id(), http.string("request"), credential.toString());
+        }
+        return auth.confirmCode(http.account().id(), http.string("code"));
     }
 
     public WebPermissions permissions() {

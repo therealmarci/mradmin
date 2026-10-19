@@ -117,7 +117,7 @@ public final class ConsoleRoutes {
         if (lockedUntil.getOrDefault(account, 0L) > now) {
             throw new Http.WebException(429, "console-code-locked");
         }
-        if (!server.auth().confirmCode(account, http.string("code"))) {
+        if (!server.confirmed(http)) {
             int[] count = failures.computeIfAbsent(account, k -> new int[1]);
             if (++count[0] >= MAX_FAILURES) {
                 count[0] = 0;

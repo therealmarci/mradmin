@@ -241,7 +241,7 @@
       </section>
     {/if}
 
-    {#if me.recoveryLeft <= 2}
+    {#if me.totp && me.recoveryLeft <= 2}
       <button class="card tile notice-tile" onclick={() => go('/account')}>
         <span class="warn">!</span> {t('home.recoveryLow')}
       </button>

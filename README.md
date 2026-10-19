@@ -94,6 +94,16 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 **Sicherheit**
 - Anmeldung immer mit Passwort **und** Code aus der Authenticator-App (oder einem Wiederherstellungscode).
   Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
+- **Passkeys** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): unter **Konto** hinzufügen - zur Sicherheit
+  mit einem frischen Code aus der App. Danach geht die Anmeldung ohne Name, Passwort und Code; die Prüfung des Geräts
+  (Fingerabdruck, PIN) ist immer Pflicht und ersetzt beide Faktoren. Passkeys sind an die Adresse aus
+  `web.public-url` gebunden (ohne sie nur `http://localhost` zum Testen). Gespeichert werden nur öffentliche
+  Schlüssel. Wer sein Konto per Einrichtungslink zurücksetzt, verliert alle Passkeys (verlorenes Handy).
+- **2FA ausschalten** geht unter **Konto**, sobald ein Passkey da ist. Dann meldet sich das Konto nur noch per Passkey
+  an - mit Name und Passwort ist 2FA immer Pflicht. Schritte, die sonst einen frischen Code verlangen (Konsole
+  entsperren, Passkey hinzufügen), bestätigt man dann mit einem Passkey. Der letzte Passkey lässt sich ohne 2FA nicht
+  entfernen; 2FA kann jederzeit wieder eingeschaltet werden (neuer QR-Code, neue Wiederherstellungscodes).
+  Abschalten: `web.login.passkeys: false`.
 - Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
   Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein.
 - Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`. Änderungen nur mit eigenem Header und passender

@@ -21,6 +21,8 @@ val githubRepository = providers.gradleProperty("githubRepository").get()
 val socketIoVersion = providers.gradleProperty("socketIoVersion").get()
 val hikariVersion = providers.gradleProperty("hikariVersion").get()
 val sqliteVersion = providers.gradleProperty("sqliteVersion").get()
+val webauthnVersion = providers.gradleProperty("webauthnVersion").get()
+val jacksonVersion = providers.gradleProperty("jacksonVersion").get()
 val mariadbVersion = providers.gradleProperty("mariadbVersion").get()
 val libertyBansVersion = providers.gradleProperty("libertyBansVersion").get()
 val omnibusVersion = providers.gradleProperty("omnibusVersion").get()
@@ -46,6 +48,20 @@ dependencies {
     implementation("io.socket:socket.io-client:$socketIoVersion")
     // Datenbank: nur zum Kompilieren - auf dem Server lädt Paper sie über "libraries" in der plugin.yml.
     compileOnly("com.zaxxer:HikariCP:$hikariVersion")
+    // Passkeys (WebAuthn, Yubico) - steckt mit in der JAR (umbenannt, siehe shadowJar). Nicht über "libraries":
+    // dessen Versionsbereiche (z.B. Jackson [2.13,3)) ließe Paper beim Start hunderte Dateien laden.
+    implementation("com.yubico:webauthn-server-core:$webauthnVersion") {
+        exclude(group = "org.slf4j") // bringt Paper mit
+    }
+    // Feste, stabile Jackson-Version statt des Bereichs aus Yubicos POM (der sonst ein SNAPSHOT erwischen kann).
+    implementation(enforcedPlatform("com.fasterxml.jackson:jackson-bom:$jacksonVersion"))
+    implementation("com.fasterxml.jackson.core:jackson-core") // Version aus der BOM; nötig zum Kompilieren
+    // Auch hier feste, stabile Versionen statt der Bereiche (httpclient5 [5,6) träfe sonst eine Alpha).
+    constraints {
+        implementation("org.apache.httpcomponents.client5:httpclient5") { version { strictly("5.6.4") } }
+        implementation("com.google.guava:guava") { version { strictly("33.7.2-jre") } }
+        implementation("com.upokecenter:cbor") { version { strictly("4.5.6") } }
+    }
 
     // Für die Tests des Uptime-Kuma-Parsers (auf dem Server bringt Paper Gson mit).
     testImplementation("com.google.code.gson:gson:2.13.1")
@@ -97,6 +113,18 @@ tasks.shadowJar {
     relocate("okhttp3", "$lib.okhttp3")
     relocate("okio", "$lib.okio")
     relocate("org.json", "$lib.json")
+    relocate("com.yubico", "$lib.yubico")
+    relocate("com.fasterxml.jackson", "$lib.jackson")
+    relocate("com.google.common", "$lib.guava")
+    relocate("com.google.thirdparty", "$lib.guava.thirdparty")
+    relocate("com.google.errorprone", "$lib.errorprone")
+    relocate("com.google.j2objc", "$lib.j2objc")
+    relocate("org.checkerframework", "$lib.checkerframework")
+    relocate("org.apache.hc", "$lib.httpclient")
+    relocate("co.nstant", "$lib.cbor")
+    relocate("upokecenter", "$lib.upokecenter")
+    relocate("com.upokecenter", "$lib.upokecenter")
+    relocate("org.jspecify", "$lib.jspecify")
     exclude("META-INF/maven/**", "META-INF/*.kotlin_module")
     mergeServiceFiles()
 }

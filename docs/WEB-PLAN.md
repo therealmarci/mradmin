@@ -6,7 +6,7 @@ Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release
 | Phase | Stand |
 |---|---|
 | 1 – Speicher-Schicht | ✅ fertig (YAML, SQLite, MySQL/MariaDB, Übernahme der YAML-Daten) |
-| 2 – Web-Grundgerüst und Anmeldung | ✅ Webserver, Einrichtungslinks, Passwort + 2FA, Wiederherstellungscodes, Sitzungen, Rechte, Protokoll, Frontend-Grundgerüst · ⏳ Passkeys |
+| 2 – Web-Grundgerüst und Anmeldung | ✅ Webserver, Einrichtungslinks, Passwort + 2FA, Wiederherstellungscodes, Sitzungen, Rechte, Protokoll, Frontend-Grundgerüst · ✅ Passkeys |
 | 3 – Erste Seiten | ✅ Übersicht (Schnappschuss 1×/s), Tickets mit Live-Aktualisierung (SSE) |
 
 ### Weitere Reihenfolge (Stand 2026-10-19)
@@ -21,7 +21,7 @@ Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release
 7. ✅ Web-Konsole: Live-Log (`mradmin.web.console.view`) und Befehle (`.execute`), beide nicht in Paketen,
    erneuter 2FA-Code vor dem Öffnen, alles im Protokoll und Discord-Log, Sperrliste für Befehle, Links/IPs im Log
    ausgeblendet
-8. Passkeys
+8. ✅ Passkeys (Yubico WebAuthn 2.10.0, in der JAR; Anmeldung ohne Name, Hinzufügen mit 2FA-Code)
 
 Umsetzungsdetails, die vom ursprünglichen Plan abweichen:
 - Web-Konten und Sitzungen sind (wie Wartung/Freeze) Dokumente im Speicher (`state`: `web-accounts`,
@@ -60,7 +60,8 @@ Browser ──HTTPS──> Reverse Proxy (Domain, Zertifikat)
                          ▼
                Speicher-Schicht (Hintergrund-Thread) ─► YAML | SQLite | MySQL/MariaDB
 ```
-Bibliotheken (Webserver, Treiber, Passkeys) lädt Paper über `libraries` in der plugin.yml – die JAR bleibt klein.
+Datenbank-Treiber lädt Paper über `libraries` in der plugin.yml. Die Passkey-Bibliothek steckt mit festen Versionen in
+der JAR (umbenannt) - ihre Versionsbereiche hätten Paper beim Start hunderte Dateien laden lassen.
 
 Performance-Regel: **Nichts vom Web oder der Datenbank blockiert den Server-Thread.** Das Web liest nur
 Schnappschüsse bzw. die Daten im Speicher, Datenbank-Zugriffe laufen im Hintergrund.

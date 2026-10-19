@@ -3,6 +3,9 @@
   import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
+  import * as passkeys from '../lib/passkeys.js';
+
+  let { me } = $props();
 
   let info = $state(null);
   let error = $state('');
@@ -66,16 +69,18 @@
     return () => clearInterval(timer);
   });
 
-  async function unlock(event) {
-    event.preventDefault();
+  // With a 2FA code - or with a passkey (the only way when 2FA is off).
+  async function unlock(event, withPasskey = false) {
+    event?.preventDefault();
     busy = true;
     error = '';
     try {
-      await api('POST', '/console/unlock', { code: code.trim() });
+      const body = withPasskey ? await passkeys.proof(api) : { code: code.trim() };
+      await api('POST', '/console/unlock', body);
       code = '';
       await loadState();
     } catch (e) {
-      error = errorText(e);
+      if (!passkeys.cancelled(e)) error = errorText(e);
     } finally {
       busy = false;
     }
@@ -154,9 +159,15 @@
       {#if info.lockedUntil}
         <p class="error small">{t('console.codeLocked', { time: new Date(info.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}</p>
       {/if}
-      <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" bind:value={code}
-        placeholder="123456" aria-label={t('login.code')} />
-      <button type="submit" disabled={busy || code.trim().length < 6}>{t('console.unlock')}</button>
+      {#if me.totp}
+        <input inputmode="numeric" autocomplete="one-time-code" maxlength="6" bind:value={code}
+          placeholder="123456" aria-label={t('login.code')} />
+        <button type="submit" disabled={busy || code.trim().length < 6}>{t('console.unlock')}</button>
+      {/if}
+      {#if me.passkeys > 0 && passkeys.supported}
+        <button type="button" class:secondary={me.totp} disabled={busy}
+          onclick={() => unlock(null, true)}>🔑 {t('console.unlockPasskey')}</button>
+      {/if}
     </form>
   {:else if info}
     <div class="bar">

@@ -2,6 +2,8 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, ago, head } from '../lib/format.js';
+  import PasskeysCard from '../components/PasskeysCard.svelte';
+  import TwoFactorCard from '../components/TwoFactorCard.svelte';
 
   let { me } = $props();
 
@@ -60,6 +62,9 @@
   {#if error}<div class="error">{error}</div>{/if}
   {#if message}<div class="notice">{message}</div>{/if}
 
+  <PasskeysCard {me} />
+  <TwoFactorCard {me} />
+
   <section class="card stack">
     <div class="row">
       <h2>{t('account.devices')}</h2>
@@ -89,6 +94,7 @@
     {/if}
   </section>
 
+  {#if me.totp}
   <section class="card stack">
     <h2>{t('account.recoveryTitle')}</h2>
     <p class="muted">{t('account.recoveryLeft', { n: me.recoveryLeft })}</p>
@@ -102,6 +108,7 @@
       <p class="hint">{t('account.recoveryHint')}</p>
     {/if}
   </section>
+  {/if}
 
   <p class="muted small">{t('account.reset')}</p>
 </div>

@@ -525,7 +525,9 @@ web:
   # So lange bleibt ein Gerät angemeldet (Tage). Abmelden geht jederzeit im Web oder mit /mradmin web logout.
   session-days: 30
   login:
-    # Passkeys (Fingerabdruck, Face ID, Windows Hello) - folgt in einer der nächsten Versionen.
+    # Passkeys (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): im Web unter "Konto" hinzufügen (mit Code aus
+    # der App), dann Anmeldung ohne Passwort und Code. Sie gelten nur für die Adresse aus public-url (ohne sie: nur
+    # http://localhost zum Testen). Ein Zurücksetzen per Einrichtungslink entfernt alle Passkeys des Kontos.
     passkeys: true
     # Passwort - immer zusammen mit einem Code aus der Authenticator-App.
     password: true

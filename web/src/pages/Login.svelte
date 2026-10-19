@@ -2,6 +2,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import Footer from '../components/Footer.svelte';
+  import * as passkeys from '../lib/passkeys.js';
 
   let { onSignedIn } = $props();
 
@@ -32,6 +33,22 @@
       busy = false;
     }
   }
+
+  // Sign-in with a passkey: no name, no password, no code - the passkey knows the account.
+  async function withPasskey() {
+    busy = true;
+    error = '';
+    try {
+      const start = await api('POST', '/login/passkey/start');
+      const credential = await passkeys.get(start.options);
+      await api('POST', '/login/passkey/finish', { request: start.request, credential });
+      onSignedIn();
+    } catch (e) {
+      if (!passkeys.cancelled(e)) error = e?.name === 'SecurityError' ? t('passkey.wrongAddress') : errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
 <div class="page">
@@ -46,6 +63,11 @@
 
     {#if error}
       <div class="error" role="alert">{error}</div>
+    {/if}
+
+    {#if passkeys.supported}
+      <button class="block passkey" type="button" onclick={withPasskey} disabled={busy}>🔑 {t('passkey.signIn')}</button>
+      <div class="or"><span>{t('passkey.or')}</span></div>
     {/if}
 
     <div>
@@ -92,5 +114,26 @@
 
   .logo p {
     margin: 0;
+  }
+
+  .passkey {
+    padding: 12px 16px;
+  }
+
+  /* "or" between passkey and password, with a line on both sides. */
+  .or {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  .or::before,
+  .or::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
   }
 </style>
