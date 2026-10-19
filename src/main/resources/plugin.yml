@@ -98,6 +98,8 @@ permissions:
       mradmin.admin.discord: true
       mradmin.admin.reload: true
       mradmin.admin.update: true
+      mradmin.web: true
+      mradmin.web.manage: true
   mradmin.admin.discord:
     description: /mradmin discord [test]
     default: op
@@ -106,4 +108,10 @@ permissions:
     default: op
   mradmin.admin.update:
     description: Hinweis beim Betreten des Servers, wenn ein Update verfügbar ist.
+    default: op
+  mradmin.web:
+    description: Weboberfläche nutzen (eigenes Konto per /mradmin web setup). Im Web gelten dieselben Rechte wie ingame.
+    default: op
+  mradmin.web.manage:
+    description: Web-Konten anderer verwalten (/mradmin web invite|logout|remove) und das Protokoll der Web-Aktionen sehen.
     default: op

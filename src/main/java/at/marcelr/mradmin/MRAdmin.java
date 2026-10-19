@@ -17,6 +17,10 @@ import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
 import at.marcelr.mradmin.hook.LockTickets;
 import at.marcelr.mradmin.storage.Storage;
+import at.marcelr.mradmin.web.AuthRoutes;
+import at.marcelr.mradmin.web.WebServer;
+import at.marcelr.mradmin.web.auth.WebAuth;
+import at.marcelr.mradmin.web.auth.WebPermissions;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -73,6 +77,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private PluginHooks hooks;
     private LockTickets lockTickets;
     private Storage storage;
+    private WebServer web;
     private StaffChat staffChat;
     private MenuListener menuListener;
 
@@ -83,6 +88,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         loadConfiguration();
         storage = Storage.create(this);
         getLogger().info("Storage: " + storage.type() + " (" + storage.describe() + ").");
+        WebAuth webAuth = new WebAuth(this);
+        webAuth.load();
+        web = new WebServer(this, webAuth, new WebPermissions(this));
+        AuthRoutes.register(web);
 
         freeze = new FreezeManager(this);
         freeze.load();
@@ -143,6 +152,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (discordAnnounce != null) {
             discordAnnounce.shutdown();
         }
+        if (web != null) {
+            web.stop();
+            web.auth().flush();
+        }
         // Last: everything above may still save something.
         if (storage != null) {
             storage.close();
@@ -174,6 +187,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     private void startServices() {
         hooks.clear();
+        web.permissions().clear();
+        web.start();
         freeze.start();
         maintenance.start();
         adminMode.start();
@@ -317,6 +332,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public Storage storage() {
         return storage;
+    }
+
+    public WebServer web() {
+        return web;
     }
 
     public PluginHooks hooks() {

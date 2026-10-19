@@ -45,8 +45,20 @@ public interface Storage {
     /** Removes tickets with all their messages in the background. */
     void deleteTickets(Collection<Integer> ids);
 
+    // ------------------------------------------------------------- audit log
+
+    /** Appends an entry to the log of web actions in the background. */
+    void audit(AuditRow row);
+
+    /** The newest {@code limit} entries, newest first. Blocking - call it from a web thread, never the server thread. */
+    List<AuditRow> recentAudit(int limit);
+
     /** Writes everything still pending and closes connections. */
     void close();
+
+    /** One web action: who (may be null for failed logins), from where, what. Time in epoch milliseconds. */
+    record AuditRow(long time, UUID account, String name, String ip, String action, String detail) {
+    }
 
     /** Loaded tickets: rows with their messages (in order), and the next free id. */
     record Tickets(List<LoadedTicket> tickets, int nextId) {

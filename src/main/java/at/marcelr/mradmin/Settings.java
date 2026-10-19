@@ -29,8 +29,23 @@ public record Settings(
         GuiSettings gui,
         TicketSettings tickets,
         Set<Feature> features,
-        StorageSettings storage
+        StorageSettings storage,
+        WebSettings web
 ) {
+
+    /**
+     * The web interface. {@code publicUrl} without trailing slash (empty = not set up yet); {@code roles} maps a role to
+     * its permissions and {@code players} a player (name or UUID, lower case) to a role - only used without LuckPerms.
+     */
+    public record WebSettings(boolean enabled, String bind, int port, String publicUrl, Set<String> trustedProxies,
+                              int sessionDays, boolean passkeys, boolean password,
+                              java.util.Map<String, List<String>> roles, java.util.Map<String, String> players) {
+
+        /** Cookies only over HTTPS when the public address is HTTPS (plain http is only for local tests). */
+        public boolean secure() {
+            return publicUrl.startsWith("https://");
+        }
+    }
 
     /**
      * Where the data is kept: {@code type} is "yaml", "sqlite" or "mysql" (MySQL/MariaDB). Changes need a restart.
@@ -252,7 +267,43 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log));
+                storage(c, log), web(c, log));
+    }
+
+    private static WebSettings web(FileConfiguration c, Logger log) {
+        String url = c.getString("web.public-url", "").trim();
+        while (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        if (!url.isEmpty() && !url.startsWith("https://") && !url.startsWith("http://")) {
+            log.warning("web.public-url must start with https:// (e.g. https://admin.yourserver.com), ignored.");
+            url = "";
+        }
+        java.util.Map<String, List<String>> roles = new java.util.LinkedHashMap<>();
+        var roleSection = c.getConfigurationSection("web.roles");
+        if (roleSection != null) {
+            for (String role : roleSection.getKeys(false)) {
+                roles.put(role.toLowerCase(Locale.ROOT), List.copyOf(c.getStringList("web.roles." + role)));
+            }
+        }
+        java.util.Map<String, String> players = new java.util.HashMap<>();
+        var playerSection = c.getConfigurationSection("web.players");
+        if (playerSection != null) {
+            for (String player : playerSection.getKeys(false)) {
+                players.put(player.toLowerCase(Locale.ROOT), c.getString("web.players." + player, "").toLowerCase(Locale.ROOT));
+            }
+        }
+        return new WebSettings(
+                c.getBoolean("web.enabled", false),
+                c.getString("web.bind", "127.0.0.1").trim(),
+                Math.clamp(c.getInt("web.port", 8125), 1, 65535),
+                url,
+                Set.copyOf(c.getStringList("web.trusted-proxies")),
+                Math.clamp(c.getInt("web.session-days", 30), 1, 365),
+                c.getBoolean("web.login.passkeys", true),
+                c.getBoolean("web.login.password", true),
+                java.util.Map.copyOf(roles),
+                java.util.Map.copyOf(players));
     }
 
     private static StorageSettings storage(FileConfiguration c, Logger log) {

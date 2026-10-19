@@ -38,6 +38,31 @@ help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>reload the configu
 help-storage: "<gold>/mradmin storage</gold> <dark_gray>- <gray>show the storage (YAML, SQLite, MySQL)"
 storage-status: "<prefix><gray>Storage: <white><type></white> <dark_gray>(<target>)"
 storage-pending: "<prefix><yellow>The config says <white><type></white> - it applies after a restart <gray>(or the database was not reachable at start, see console)</gray>."
+
+# --- Web interface (/mradmin web) ----------------------------------------------
+help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>web interface: set up your account, signed-in devices"
+web-usage: |-
+  <gray>/mradmin web setup <dark_gray>- <gray>setup link for you (also to reset password and 2FA)
+  <gray>/mradmin web sessions [player] <dark_gray>- <gray>signed-in devices
+  <gray>/mradmin web logout [player] <dark_gray>- <gray>sign out all devices
+  <gray>/mradmin web invite <player> <dark_gray>- <gray>setup link for someone else (admins, console)
+  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the web account (admins)
+web-status: "<prefix><gray>Web interface: <state> <dark_gray>(<address>)</dark_gray> <gray>· accounts: <white><accounts></white> · signed-in devices: <white><sessions>"
+web-state-on: "<green>running"
+web-state-off: "<red>off</red> <gray>(web.enabled in the config)"
+web-off: "<prefix><red>The web interface is off.</red> <gray>Set web.enabled: true in the config and /mradmin reload."
+web-setup-console: "<prefix><gray>From the console: /mradmin web invite <player>"
+web-setup-link: "<prefix><green>Your setup link:</green> <link> <gray>(valid for 10 minutes, works once - do not share it!)"
+web-setup-link-other: "<prefix><green>Setup link for <white><player></white>:</green> <link> <gray>(valid for 10 minutes, works once - give it only to <player>!)"
+web-link-label: "<aqua><u>[Open setup]</u></aqua>"
+web-no-public-url: "<prefix><yellow>web.public-url is not set - the link uses the local address and only works on this machine."
+web-target-no-permission: "<prefix><yellow><player> does not have the permission mradmin.web - signing in only works with it."
+web-sessions-header: "<prefix><gray>Signed-in devices of <white><player></white>:"
+web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, last <seen>)"
+web-sessions-none: "<prefix><gray><player> is not signed in anywhere."
+web-logout-done: "<prefix><green>Signed out <white><count></white> device(s) of <white><player></white>."
+web-remove-done: "<prefix><green>Web account of <white><player></white> deleted."
+web-no-account: "<prefix><gray><player> has no web account."
 help-version: "<gold>/mradmin version</gold> <dark_gray>- <gray>version and updates"
 help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>admin dashboard, <gold>/mradmin player <player></gold> <dark_gray>- <gray>player menu, <gold>/mradmin help</gold> <dark_gray>- <gray>this list"
 help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>server health: TPS, RAM, chunks with the most entities"
@@ -608,6 +633,8 @@ discord:
   player-unfreeze: "💧 **{admin}** unfroze **{player}**."
   player-freeze-quit: "⚠️ **{player}** logged out while frozen."
   staff-chat: "💬 **{player}**: {text}"
+  web-login: "🌐 **{player}** signed in to the web interface ({device}, {ip})."
+  web-setup: "🔑 **{player}** set up or reset their web account ({device}, {ip})."
 # Texts for the community Discord (discord-announce in config.yml). Markdown like in Discord.
 # Placeholders: {title} (topic) {start} {end} (Discord timestamps, everyone sees their own timezone) {start-relative} {end-relative} ("in 2 hours").
 discord-announce:

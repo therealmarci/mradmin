@@ -243,6 +243,48 @@ final class YamlStorage implements Storage {
         return new LoadedTicket(row, List.copyOf(list));
     }
 
+    // ------------------------------------------------------------- audit log
+
+    private static final String AUDIT = "web-audit.log";
+    private static final com.google.gson.Gson GSON = new com.google.gson.Gson();
+
+    /** One JSON object per line, appended - the file is only ever read from the end. */
+    @Override
+    public void audit(AuditRow row) {
+        String line = GSON.toJson(row) + "\n";
+        executor.execute(() -> {
+            try {
+                Files.writeString(new File(folder, AUDIT).toPath(), line, StandardCharsets.UTF_8,
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not write " + AUDIT + ": " + e.getMessage());
+            }
+        });
+    }
+
+    @Override
+    public List<AuditRow> recentAudit(int limit) {
+        File file = new File(folder, AUDIT);
+        if (!file.exists()) {
+            return List.of();
+        }
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            List<AuditRow> result = new ArrayList<>();
+            for (int i = lines.size() - 1; i >= 0 && result.size() < limit; i--) {
+                try {
+                    result.add(GSON.fromJson(lines.get(i), AuditRow.class));
+                } catch (RuntimeException ignored) {
+                    // a line cut off by a crash
+                }
+            }
+            return result;
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Could not read " + AUDIT + ": " + e.getMessage());
+            return List.of();
+        }
+    }
+
     /** Writes to a temporary file first and then replaces the old one, so a crash never leaves half a file. */
     private void write(File file, String content) {
         File temp = new File(file.getParentFile(), file.getName() + ".tmp");

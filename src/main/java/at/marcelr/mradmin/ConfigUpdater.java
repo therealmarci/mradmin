@@ -26,9 +26,9 @@ public final class ConfigUpdater {
     /**
      * 5: reports became tickets (section "tickets", Discord events ticket*); 6: free ticket categories;
      * 7: feature switches (features), MRsleep/MRchunks built in (integrations instead of menu buttons);
-     * 8: storage (yaml, sqlite, mysql).
+     * 8: storage (yaml, sqlite, mysql); 9: web interface (web, Discord events web-login/web-setup).
      */
-    public static final int CURRENT_VERSION = 8;
+    public static final int CURRENT_VERSION = 9;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -48,7 +48,7 @@ public final class ConfigUpdater {
      * kept even if the template lacks them, and default entries the owner removed do not come back.
      */
     private static final java.util.List<String> USER_SECTIONS = java.util.List.of(
-            "admin-mode.menu.buttons.", "tickets.categories.");
+            "admin-mode.menu.buttons.", "tickets.categories.", "web.roles.", "web.players.");
 
     private ConfigUpdater() {
     }

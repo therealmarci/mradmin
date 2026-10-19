@@ -77,6 +77,41 @@ Discord-Ankündigungen speichert:
 - Die Treiber (HikariCP, SQLite, MariaDB) lädt Paper beim ersten Start selbst herunter (Ordner `libraries/` des
   Servers), die JAR bleibt klein.
 
+### Weboberfläche (Vorschau)
+MRadmin vom Handy, Tablet oder PC bedienen. Bisher: Anmeldung, Geräte- und Kontoverwaltung, Protokoll; Tickets und
+Server-Status folgen (Plan: [docs/WEB-PLAN.md](docs/WEB-PLAN.md)).
+
+1. In der Config `web.enabled: true`, `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`)
+   und `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
+2. Reverse Proxy einrichten: Domain mit HTTPS → `http://127.0.0.1:8125`. Der eingebaute Webserver lauscht nur
+   lokal und hat selbst kein HTTPS.
+3. Konto anlegen: ingame `/mradmin web setup` (Permission `mradmin.web`) → Link öffnen → Passwort festlegen,
+   Authenticator-App per QR-Code verbinden → Wiederherstellungscodes sichern. Für andere: `/mradmin web invite
+   <spieler>` (auch aus der Konsole).
+
+**Sicherheit**
+- Anmeldung immer mit Passwort **und** Code aus der Authenticator-App (oder einem Wiederherstellungscode).
+  Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
+- Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
+  Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein.
+- Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`. Änderungen nur mit eigenem Header und passender
+  Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
+- Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über
+  `web.roles` und `web.players`. Wer `mradmin.web` verliert, ist sofort überall abgemeldet.
+- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.manage`), Anmeldungen und
+  Einrichtungen auch im Discord-Log (`web-login`, `web-setup`).
+- Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
+  und meldet alle Geräte ab.
+
+| Befehl | Funktion | Permission |
+|---|---|---|
+| `/mradmin web` | Status (läuft, Adresse, Konten, Geräte) | `mradmin.web` |
+| `/mradmin web setup` | Einrichtungslink für dich | `mradmin.web` |
+| `/mradmin web sessions [spieler]` | angemeldete Geräte | `mradmin.web` (andere: `.manage`) |
+| `/mradmin web logout [spieler]` | alle Geräte abmelden | `mradmin.web` (andere: `.manage`) |
+| `/mradmin web invite <spieler>` | Einrichtungslink für jemand anderen | `mradmin.web.manage` |
+| `/mradmin web remove <spieler>` | Web-Konto löschen | `mradmin.web.manage` |
+
 ---
 
 ## Wartungsarbeiten
@@ -309,5 +344,7 @@ Beispiel LuckPerms:
 ```
 ./gradlew build      # JAR in build/libs/, inkl. Unit-Tests
 ```
+Der Build baut auch die Weboberfläche (`web/`, Svelte). Node lädt Gradle dafür selbst herunter. Zum Entwickeln
+der Oberfläche: in `web/` `npm run dev` (leitet `/api` an ein laufendes MRadmin auf Port 8125 weiter).
 Versionen & Releases: [docs/RELEASES.md](docs/RELEASES.md). Lizenz: [LICENSE](LICENSE) (Nutzung und Änderung
 erlaubt, Weiterveröffentlichung nicht).

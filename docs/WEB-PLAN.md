@@ -2,6 +2,21 @@
 
 Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release, Phase 1 darf vorher allein erscheinen).
 
+## Stand
+| Phase | Stand |
+|---|---|
+| 1 – Speicher-Schicht | ✅ fertig (YAML, SQLite, MySQL/MariaDB, Übernahme der YAML-Daten) |
+| 2 – Web-Grundgerüst und Anmeldung | ✅ Webserver, Einrichtungslinks, Passwort + 2FA, Wiederherstellungscodes, Sitzungen, Rechte, Protokoll, Frontend-Grundgerüst · ⏳ Passkeys |
+| 3 – Erste Seiten | ⏳ Übersicht (Grundgerüst steht), Tickets, Server-Status |
+
+Umsetzungsdetails, die vom ursprünglichen Plan abweichen:
+- Web-Konten und Sitzungen sind (wie Wartung/Freeze) Dokumente im Speicher (`state`: `web-accounts`,
+  `web-sessions`), keine eigenen Tabellen – wenige, kleine Datensätze. Das Protokoll hat eine eigene Tabelle
+  `audit_log` (YAML: `web-audit.log`, eine JSON-Zeile pro Eintrag).
+- Webserver: der in Java eingebaute `com.sun.net.httpserver` mit virtuellen Threads (keine Server-Bibliothek nötig).
+- Passwörter: PBKDF2-HMAC-SHA256, 600.000 Runden (JDK). 2FA: TOTP nach RFC 6238 (eigene, getestete Umsetzung).
+- Frontend: `web/` (Svelte 5 + Vite), Gradle lädt Node selbst (node-gradle) und packt das Ergebnis als `web/` in die JAR.
+
 ## Ziele
 - MRadmin vom Handy, Tablet und PC bedienen: zuerst Tickets und Server-Status, später Wartung, Ankündigungen,
   MRchunks und MRsleep.

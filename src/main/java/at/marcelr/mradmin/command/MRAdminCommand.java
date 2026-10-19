@@ -49,9 +49,11 @@ public final class MRAdminCommand implements TabExecutor {
     public static final String PERM_DISCORD = "mradmin.admin.discord";
 
     private final MRAdmin plugin;
+    private final WebCommand webCommand;
 
     public MRAdminCommand(MRAdmin plugin) {
         this.plugin = plugin;
+        this.webCommand = new WebCommand(plugin);
     }
 
     private Messages messages() {
@@ -119,6 +121,7 @@ public final class MRAdminCommand implements TabExecutor {
                     teleport(sender, args);
                 }
             }
+            case "web" -> webCommand.handle(sender, args);
             case "storage", "speicher", "db" -> {
                 if (check(sender, PERM_RELOAD)) {
                     storage(sender);
@@ -150,6 +153,9 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (sender.hasPermission(PERM_RELOAD)) {
             messages().send(sender, "help-storage");
+        }
+        if (sender.hasPermission(at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB)) {
+            messages().send(sender, "help-web");
         }
         if (sender.hasPermission(AdminModeManager.PERM_USE)) {
             messages().send(sender, "help-menu");
@@ -522,6 +528,7 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
             addIf(sender, PERM_RELOAD, options, "storage");
+            addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
             options.add("help");
             addIf(sender, AdminModeManager.PERM_USE, options, "player");
             addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");
@@ -568,6 +575,7 @@ public final class MRAdminCommand implements TabExecutor {
                         Bukkit.getOnlinePlayers().forEach(p -> options.add(p.getName()));
                     }
                 }
+                case "web" -> options.addAll(WebCommand.complete(sender, args));
                 case "discord" -> {
                     if (args.length == 2) {
                         options.add("test");

@@ -1,0 +1,19 @@
+{
+  "name": "mradmin-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Weboberfläche von MRadmin - wird beim Gradle-Build gebaut und in die Plugin-JAR gepackt.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.57.1",
+    "vite": "8.3.1"
+  }
+}

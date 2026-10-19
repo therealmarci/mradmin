@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 8
+config-version: 9
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -351,6 +351,13 @@ discord:
     staff-chat:
       enabled: false
       color: "#7F8C8D"
+    # Anmeldungen in der Weboberfläche und Einrichtung/Zurücksetzen eines Web-Kontos.
+    web-login:
+      enabled: true
+      color: "#3498DB"
+    web-setup:
+      enabled: true
+      color: "#9B59B6"
 
 
 # ------------------------------------------------------------------------------
@@ -450,3 +457,44 @@ storage:
   server-id: "main"
   # Vor jeden Tabellennamen (z.B. mradmin_tickets), falls die Datenbank auch für anderes genutzt wird.
   table-prefix: "mradmin_"
+
+
+# ------------------------------------------------------------------------------
+#   11) WEBOBERFLÄCHE
+# ------------------------------------------------------------------------------
+# MRadmin vom Handy, Tablet oder PC bedienen (zuerst Tickets und Server-Status). Der eingebaute Webserver lauscht
+# nur lokal - erreichbar wird er über deinen Reverse Proxy (nginx, Caddy, Traefik, Cloudflare ...) mit HTTPS und
+# Domain, z.B. https://admin.deinserver.de -> http://127.0.0.1:8125. Für die Weboberfläche empfiehlt sich
+# storage.type: sqlite (siehe oben).
+#
+# Konto einrichten: ingame /mradmin web setup (Permission mradmin.web) oder in der Konsole
+# /mradmin web invite <spieler> -> Link (10 Minuten, einmalig) -> Passwort + Code einer Authenticator-App
+# (z.B. Google Authenticator, Aegis). Dazu gibt es Wiederherstellungscodes. Passwort oder Handy weg? Einfach einen
+# neuen Einrichtungslink holen. Im Web gelten dieselben Permissions wie ingame.
+web:
+  enabled: false
+  # Nur ändern, wenn der Reverse Proxy auf einem anderen Rechner läuft (dann z.B. "0.0.0.0" + Firewall!).
+  bind: "127.0.0.1"
+  port: 8125
+  # Öffentliche Adresse, unter der die Oberfläche erreichbar ist (für Links und Anmeldungen), z.B.
+  # "https://admin.deinserver.de". Ohne HTTPS werden Anmelde-Cookies nicht als "Secure" markiert - nur zum Testen.
+  public-url: ""
+  # Adressen deines Reverse Proxys. Nur denen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For) - wichtig für
+  # die Begrenzung der Anmeldeversuche und das Protokoll.
+  trusted-proxies: ["127.0.0.1"]
+  # So lange bleibt ein Gerät angemeldet (Tage). Abmelden geht jederzeit im Web oder mit /mradmin web logout.
+  session-days: 30
+  login:
+    # Passkeys (Fingerabdruck, Face ID, Windows Hello) - folgt in einer der nächsten Versionen.
+    passkeys: true
+    # Passwort - immer zusammen mit einem Code aus der Authenticator-App.
+    password: true
+  # Nur OHNE LuckPerms: welche Rechte Web-Nutzer haben. Mit LuckPerms gelten einfach die normalen Permissions.
+  # Operatoren dürfen alles; sonst Rolle -> Permissions ("*" = alles, "mradmin.*" = alles von MRadmin) und
+  # Spieler (Name oder UUID) -> Rolle. Beispiel:
+  #   roles:
+  #     support: ["mradmin.web", "mradmin.report.manage", "mradmin.status"]
+  #   players:
+  #     Steve: support
+  roles: {}
+  players: {}

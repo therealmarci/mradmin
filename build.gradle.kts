@@ -3,6 +3,8 @@ plugins {
     id("com.modrinth.minotaur") version "2.10.0"
     // Packt den Socket.IO-Client (Uptime Kuma) in die JAR - auf dem Server muss nichts nachgeladen werden.
     id("com.gradleup.shadow") version "9.6.1"
+    // Baut die Weboberfläche (Svelte, Ordner web/) - lädt Node selbst herunter, auf dem Rechner muss nichts installiert sein.
+    id("com.github.node-gradle.node") version "7.1.0"
 }
 
 group = "at.marcelr"
@@ -113,4 +115,31 @@ modrinth {
     gameVersions.addAll(supportedGameVersions.split(",").map { it.trim() })
     loaders.addAll("paper", "purpur")
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("Siehe CHANGELOG.md"))
+}
+
+// ------------------------------------------------------------------ Weboberfläche
+// Der Svelte-Code in web/ wird mit Vite nach build/web-dist gebaut und als web/ in die Plugin-JAR gepackt.
+node {
+    download.set(true)
+    version.set("24.19.0")
+    nodeProjectDir.set(file("web"))
+    // "npm ci" installiert genau die Versionen aus package-lock.json.
+    npmInstallCommand.set("ci")
+}
+
+val buildWeb = tasks.register<com.github.gradle.node.npm.task.NpmTask>("buildWeb") {
+    description = "Baut die Weboberfläche (web/) nach build/web-dist."
+    dependsOn(tasks.named("npmInstall"))
+    args.set(listOf("run", "build"))
+    inputs.dir("web/src")
+    inputs.dir("web/public")
+    inputs.files("web/index.html", "web/package.json", "web/package-lock.json", "web/vite.config.js")
+    outputs.dir(layout.buildDirectory.dir("web-dist"))
+}
+
+tasks.processResources {
+    dependsOn(buildWeb)
+    from(layout.buildDirectory.dir("web-dist")) {
+        into("web")
+    }
 }

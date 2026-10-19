@@ -38,6 +38,31 @@ help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>Konfiguration neu 
 help-storage: "<gold>/mradmin storage</gold> <dark_gray>- <gray>Speicher (YAML, SQLite, MySQL) anzeigen"
 storage-status: "<prefix><gray>Speicher: <white><type></white> <dark_gray>(<target>)"
 storage-pending: "<prefix><yellow>In der Config steht <white><type></white> - das gilt erst nach einem Neustart <gray>(oder die Datenbank war beim Start nicht erreichbar, siehe Konsole)</gray>."
+
+# --- Weboberfläche (/mradmin web) ----------------------------------------------
+help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>Weboberfläche: Konto einrichten, angemeldete Geräte"
+web-usage: |-
+  <gray>/mradmin web setup <dark_gray>- <gray>Einrichtungslink für dich (auch zum Zurücksetzen von Passwort und 2FA)
+  <gray>/mradmin web sessions [spieler] <dark_gray>- <gray>angemeldete Geräte
+  <gray>/mradmin web logout [spieler] <dark_gray>- <gray>alle Geräte abmelden
+  <gray>/mradmin web invite <spieler> <dark_gray>- <gray>Einrichtungslink für jemand anderen (Admins, Konsole)
+  <gray>/mradmin web remove <spieler> <dark_gray>- <gray>Web-Konto löschen (Admins)
+web-status: "<prefix><gray>Weboberfläche: <state> <dark_gray>(<address>)</dark_gray> <gray>· Konten: <white><accounts></white> · angemeldete Geräte: <white><sessions>"
+web-state-on: "<green>läuft"
+web-state-off: "<red>aus</red> <gray>(web.enabled in der Config)"
+web-off: "<prefix><red>Die Weboberfläche ist aus.</red> <gray>web.enabled: true in der Config setzen und /mradmin reload."
+web-setup-console: "<prefix><gray>Für die Konsole: /mradmin web invite <spieler>"
+web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nicht weitergeben!)"
+web-setup-link-other: "<prefix><green>Einrichtungslink für <white><player></white>:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nur an <player> geben!)"
+web-link-label: "<aqua><u>[Einrichtung öffnen]</u></aqua>"
+web-no-public-url: "<prefix><yellow>web.public-url ist nicht gesetzt - der Link nutzt die lokale Adresse und funktioniert nur auf diesem Rechner."
+web-target-no-permission: "<prefix><yellow><player> hat die Permission mradmin.web nicht - die Anmeldung klappt erst damit."
+web-sessions-header: "<prefix><gray>Angemeldete Geräte von <white><player></white>:"
+web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, zuletzt <seen>)"
+web-sessions-none: "<prefix><gray><player> ist auf keinem Gerät angemeldet."
+web-logout-done: "<prefix><green><white><count></white> Gerät(e) von <white><player></white> abgemeldet."
+web-remove-done: "<prefix><green>Web-Konto von <white><player></white> gelöscht."
+web-no-account: "<prefix><gray><player> hat kein Web-Konto."
 help-version: "<gold>/mradmin version</gold> <dark_gray>- <gray>Version und Updates"
 help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>Admin-Dashboard, <gold>/mradmin player <spieler></gold> <dark_gray>- <gray>Spieler-Menü, <gold>/mradmin help</gold> <dark_gray>- <gray>diese Liste"
 help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>Serverzustand: TPS, RAM, Chunks mit den meisten Entities"
@@ -608,6 +633,8 @@ discord:
   player-unfreeze: "💧 **{admin}** hat **{player}** wieder aufgetaut."
   player-freeze-quit: "⚠️ **{player}** hat sich eingefroren ausgeloggt."
   staff-chat: "💬 **{player}**: {text}"
+  web-login: "🌐 **{player}** hat sich in der Weboberfläche angemeldet ({device}, {ip})."
+  web-setup: "🔑 **{player}** hat sein Web-Konto eingerichtet bzw. zurückgesetzt ({device}, {ip})."
 # Texte für den Community-Discord (discord-announce in der config.yml). Markdown wie in Discord.
 # Platzhalter: {title} (Thema) {start} {end} (Discord-Zeitstempel, jeder sieht seine Zeitzone) {start-relative} {end-relative} ("in 2 Stunden").
 discord-announce:

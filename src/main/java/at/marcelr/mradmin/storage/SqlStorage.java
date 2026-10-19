@@ -128,6 +128,9 @@ final class SqlStorage implements Storage {
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "state ("
                     + "server VARCHAR(64) NOT NULL, name VARCHAR(64) NOT NULL, content TEXT NOT NULL, "
                     + "PRIMARY KEY (server, name))" + suffix);
+            st.execute("CREATE TABLE IF NOT EXISTS " + p + "audit_log ("
+                    + "server VARCHAR(64) NOT NULL, time BIGINT NOT NULL, account VARCHAR(36), name VARCHAR(64), "
+                    + "ip VARCHAR(64), action VARCHAR(64) NOT NULL, detail TEXT)" + suffix);
         }
     }
 
@@ -361,6 +364,45 @@ final class SqlStorage implements Storage {
                 }
             }
         });
+    }
+
+    // ------------------------------------------------------------- audit log
+
+    @Override
+    public void audit(AuditRow row) {
+        write("write the web log", c -> {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + p + "audit_log "
+                    + "(server, time, account, name, ip, action, detail) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+                ps.setString(1, server);
+                ps.setLong(2, row.time());
+                ps.setString(3, row.account() == null ? null : row.account().toString());
+                ps.setString(4, row.name());
+                ps.setString(5, row.ip());
+                ps.setString(6, row.action());
+                ps.setString(7, row.detail());
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    @Override
+    public List<AuditRow> recentAudit(int limit) {
+        List<AuditRow> result = new ArrayList<>();
+        try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
+                "SELECT time, account, name, ip, action, detail FROM " + p + "audit_log WHERE server = ? "
+                        + "ORDER BY time DESC LIMIT ?")) {
+            ps.setString(1, server);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new AuditRow(rs.getLong(1), uuid(rs.getString(2)), rs.getString(3), rs.getString(4),
+                            rs.getString(5), rs.getString(6)));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Could not read the web log: " + e.getMessage());
+        }
+        return result;
     }
 
     // ---------------------------------------------------------------- writing
