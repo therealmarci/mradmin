@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { api, whenSignedOut } from './lib/api.js';
   import { route, go } from './lib/router.svelte.js';
   import { t } from './lib/i18n.js';
@@ -11,6 +12,8 @@
   import Audit from './pages/Audit.svelte';
   import Tickets from './pages/Tickets.svelte';
   import TicketView from './pages/TicketView.svelte';
+  import Legal from './pages/Legal.svelte';
+  import Footer from './components/Footer.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -40,7 +43,10 @@
     }
   }
 
-  if (route.path !== '/setup') loadMe();
+  // Ask who is signed in as soon as a page needs it (not on setup, imprint and privacy - they work without).
+  $effect(() => {
+    if (me === undefined && !['/setup', '/impressum', '/datenschutz'].includes(route.path)) untrack(loadMe);
+  });
 
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
   const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
@@ -66,7 +72,10 @@
   };
 </script>
 
-{#if route.path === '/setup'}
+{#if route.path === '/impressum' || route.path === '/datenschutz'}
+  <Legal page={route.path === '/impressum' ? 'imprint' : 'privacy'} />
+  <Footer />
+{:else if route.path === '/setup'}
   <Setup onDone={() => { loadMe(); go('/', true); }} />
 {:else if me === undefined}
   <div class="center muted">{t('common.loading')}</div>
@@ -105,6 +114,7 @@
     {:else}
       <Home {me} />
     {/if}
+    <Footer />
   </main>
 
   <nav class="tabs">

@@ -8,6 +8,10 @@ const texts = {
     'nav.account': 'Konto',
     'nav.audit': 'Protokoll',
     'nav.logout': 'Abmelden',
+    'footer.imprint': 'Impressum',
+    'footer.privacy': 'Datenschutz',
+    'legal.back': 'Zurück',
+    'legal.empty': 'Hier steht noch kein Text. Der Betreiber muss ihn noch hinterlegen.',
 
     'login.title': 'Anmelden',
     'login.subtitle': 'Mit deinem Minecraft-Namen, Passwort und dem Code aus deiner Authenticator-App.',
@@ -155,6 +159,10 @@ const texts = {
     'nav.account': 'Account',
     'nav.audit': 'Log',
     'nav.logout': 'Sign out',
+    'footer.imprint': 'Imprint',
+    'footer.privacy': 'Privacy',
+    'legal.back': 'Back',
+    'legal.empty': 'There is no text here yet. The operator still has to add it.',
 
     'login.title': 'Sign in',
     'login.subtitle': 'With your Minecraft name, password and the code from your authenticator app.',

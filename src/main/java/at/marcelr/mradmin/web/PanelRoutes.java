@@ -222,7 +222,7 @@ public final class PanelRoutes {
             throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
         }
         plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), http.account().id(), http.account().name(),
-                http.ip(), log, "#" + id + (detail.isEmpty() ? "" : " " + detail)));
+                http.storedIp(), log, "#" + id + (detail.isEmpty() ? "" : " " + detail)));
     }
 
     private static int id(Http http) throws Http.WebException {

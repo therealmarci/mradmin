@@ -21,7 +21,7 @@ export function tpsTone(tps) {
   return tps >= 19.5 ? 'good' : tps >= 15 ? 'warn' : 'bad';
 }
 
-/** Player head (also for offline players) - mc-heads.net, allowed by the page's security rules. */
-export function head(uuid, size = 64) {
-  return `https://mc-heads.net/avatar/${uuid}/${size}`;
+/** Player head (also offline players) - made by MRadmin itself, no outside service sees the visitor. */
+export function head(uuid) {
+  return `/api/head/${uuid}`;
 }

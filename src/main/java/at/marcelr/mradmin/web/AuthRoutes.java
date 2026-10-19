@@ -60,7 +60,7 @@ public final class AuthRoutes {
     private void login(Http http) throws Exception {
         limit(http, "login");
         String name = http.string("name");
-        WebAuth.Result result = auth.login(name, http.string("password"), http.string("code"), http.ip(),
+        WebAuth.Result result = auth.login(name, http.string("password"), http.string("code"), http.storedIp(),
                 http.header("User-Agent"));
         if (!result.ok()) {
             log(http, null, name, "login-failed", result.error());
@@ -84,7 +84,7 @@ public final class AuthRoutes {
     private void setupFinish(Http http) throws Exception {
         limit(http, "setup");
         WebAuth.Result result = auth.finishSetup(http.string("token"), http.string("password"), http.string("code"),
-                http.ip(), http.header("User-Agent"));
+                http.storedIp(), http.header("User-Agent"));
         if (!result.ok()) {
             http.error(400, result.error());
             return;
@@ -100,7 +100,7 @@ public final class AuthRoutes {
         WebAuth.Account account = auth.account(result.session().account());
         log(http, account.id(), account.name(), action, device(http.header("User-Agent")));
         plugin.discord().log(action.equals("setup") ? "web-setup" : "web-login",
-                "player", account.name(), "ip", http.ip(), "device", device(http.header("User-Agent")));
+                "player", account.name(), "ip", http.storedIp(), "device", device(http.header("User-Agent")));
     }
 
     /** Sign-in and setup: at most 10 tries per minute and IP (password guessing). */
@@ -193,7 +193,7 @@ public final class AuthRoutes {
     // ----------------------------------------------------------------- helpers
 
     private void log(Http http, java.util.UUID account, String name, String action, String detail) {
-        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), account, name, http.ip(), action, detail));
+        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), account, name, http.storedIp(), action, detail));
     }
 
     /** "Firefox on Windows" instead of the whole user agent. */

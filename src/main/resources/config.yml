@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 9
+config-version: 10
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -498,3 +498,15 @@ web:
   #     Steve: support
   roles: {}
   players: {}
+  # Impressum und Datenschutzerklärung - verlinkt in der Fußzeile jeder Seite (auch auf der Anmeldeseite).
+  # Leer = die Texte aus plugins/MRadmin/web/impressum.md und datenschutz.md (beim ersten Start als Vorlage angelegt,
+  # bitte ausfüllen). Oder hier die Adresse eigener Seiten eintragen, z.B. "https://deinserver.de/impressum".
+  legal:
+    imprint-url: ""
+    privacy-url: ""
+  privacy:
+    # Einträge im Protokoll der Weboberfläche (mit IP-Adressen) nach dieser Zeit automatisch löschen.
+    audit-retention: "90d"
+    # IP-Adressen nur gekürzt speichern (1.2.3.4 -> 1.2.3.0) - im Protokoll und bei den angemeldeten Geräten.
+    # Weniger personenbezogen, Missbrauch lässt sich aber schlechter nachverfolgen.
+    mask-ip: false

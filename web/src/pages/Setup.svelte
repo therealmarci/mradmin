@@ -2,6 +2,7 @@
   import QRCode from 'qrcode';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
+  import Footer from '../components/Footer.svelte';
 
   let { onDone } = $props();
 
@@ -135,6 +136,7 @@
       </form>
     {/if}
   </div>
+  <Footer />
 </div>
 
 <style>
@@ -142,6 +144,7 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
+    grid-template-rows: 1fr auto;
     padding: 20px 16px;
   }
 

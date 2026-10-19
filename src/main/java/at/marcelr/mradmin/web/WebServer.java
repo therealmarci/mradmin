@@ -36,7 +36,7 @@ public final class WebServer {
     /** Name of the session cookie. */
     public static final String COOKIE = "mradmin_session";
     private static final String CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-            + "img-src 'self' data: https://mc-heads.net; connect-src 'self'; font-src 'self'; object-src 'none'; "
+            + "img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; "
             + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
     /** A route handler; throw {@link Http.WebException} to answer with an error. */
@@ -57,6 +57,7 @@ public final class WebServer {
     private final WebEvents events = new WebEvents();
     private volatile Map<String, Object> snapshot = Map.of();
     private org.bukkit.scheduler.BukkitTask snapshotTask;
+    private org.bukkit.scheduler.BukkitTask pruneTask;
 
     public WebServer(MRAdmin plugin, WebAuth auth, WebPermissions permissions) {
         this.plugin = plugin;
@@ -129,6 +130,9 @@ public final class WebServer {
             server.createContext("/", this::handle);
             server.start();
             snapshotTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> snapshot = WebSnapshot.build(plugin), 1L, 20L);
+            // Retention period of the log (web.privacy.audit-retention): now and every 6 hours.
+            pruneTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.storage().pruneAudit(
+                    System.currentTimeMillis() - plugin.settings().web().auditRetention()), 20L, 6 * 72_000L);
             plugin.getLogger().info("Web interface listening on " + s.bind() + ":" + s.port()
                     + (s.publicUrl().isEmpty() ? " (set web.public-url to the address of your reverse proxy)" : " for " + s.publicUrl()) + ".");
         } catch (IOException | RuntimeException e) {
@@ -141,6 +145,10 @@ public final class WebServer {
         if (snapshotTask != null) {
             snapshotTask.cancel();
             snapshotTask = null;
+        }
+        if (pruneTask != null) {
+            pruneTask.cancel();
+            pruneTask = null;
         }
         if (server != null) {
             server.stop(1);
@@ -156,7 +164,7 @@ public final class WebServer {
 
     private void handle(HttpExchange exchange) {
         Settings.WebSettings s = plugin.settings().web();
-        Http http = new Http(exchange, s.trustedProxies());
+        Http http = new Http(exchange, s.trustedProxies(), s.maskIp());
         try {
             securityHeaders(exchange);
             String path = http.path();
@@ -200,7 +208,7 @@ public final class WebServer {
             }
             http.params(params);
             if (!route.open()) {
-                WebAuth.Session session = auth.session(http.cookie(COOKIE), http.ip());
+                WebAuth.Session session = auth.session(http.cookie(COOKIE), http.storedIp());
                 if (session == null) {
                     throw new Http.WebException(401, "signed-out");
                 }

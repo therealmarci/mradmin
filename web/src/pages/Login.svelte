@@ -1,6 +1,7 @@
 <script>
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
+  import Footer from '../components/Footer.svelte';
 
   let { onSignedIn } = $props();
 
@@ -66,6 +67,7 @@
     <button class="block" type="submit" disabled={busy}>{busy ? t('common.loading') : t('login.submit')}</button>
     <p class="muted small">{t('login.noAccount')}</p>
   </form>
+  <Footer />
 </div>
 
 <style>
@@ -73,6 +75,7 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
+    grid-template-rows: 1fr auto;
     padding: 20px 16px;
   }
 

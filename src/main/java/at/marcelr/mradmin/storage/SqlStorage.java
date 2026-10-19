@@ -405,6 +405,17 @@ final class SqlStorage implements Storage {
         return result;
     }
 
+    @Override
+    public void pruneAudit(long before) {
+        write("clean up the web log", c -> {
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + p + "audit_log WHERE server = ? AND time < ?")) {
+                ps.setString(1, server);
+                ps.setLong(2, before);
+                ps.executeUpdate();
+            }
+        });
+    }
+
     // ---------------------------------------------------------------- writing
 
     private interface Write {

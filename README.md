@@ -100,10 +100,20 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
   Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
 - Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über
   `web.roles` und `web.players`. Wer `mradmin.web` verliert, ist sofort überall abgemeldet.
-- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.manage`), Anmeldungen und
+- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen und
   Einrichtungen auch im Discord-Log (`web-login`, `web-setup`).
 - Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
   und meldet alle Geräte ab.
+
+**Datenschutz & Impressum**
+- Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt
+  MRadmin Vorlagen in `plugins/MRadmin/web/impressum.md` und `datenschutz.md` an. Die Datenschutz-Vorlage beschreibt,
+  was die Oberfläche verarbeitet. Bitte ausfüllen und prüfen (keine Rechtsberatung). Alternativ eigene Seiten unter
+  `web.legal` verlinken.
+- Keine Drittanbieter: Auch die Spielerköpfe erzeugt MRadmin selbst aus den Skins, der Browser lädt nichts von
+  fremden Diensten. Nur ein technisch notwendiges Cookie, kein Tracking.
+- Das Protokoll wird nach `web.privacy.audit-retention` (Standard 90 Tage) gelöscht. Mit `web.privacy.mask-ip` werden
+  IP-Adressen nur gekürzt gespeichert.
 
 | Befehl | Funktion | Permission |
 |---|---|---|

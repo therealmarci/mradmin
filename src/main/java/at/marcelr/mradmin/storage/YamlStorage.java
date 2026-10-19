@@ -285,6 +285,38 @@ final class YamlStorage implements Storage {
         }
     }
 
+    @Override
+    public void pruneAudit(long before) {
+        executor.execute(() -> {
+            File file = new File(folder, AUDIT);
+            if (!file.exists()) {
+                return;
+            }
+            try {
+                List<String> keep = new ArrayList<>();
+                int removed = 0;
+                for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                    AuditRow row;
+                    try {
+                        row = GSON.fromJson(line, AuditRow.class);
+                    } catch (RuntimeException e) {
+                        row = null;
+                    }
+                    if (row != null && row.time() >= before) {
+                        keep.add(line);
+                    } else {
+                        removed++;
+                    }
+                }
+                if (removed > 0) {
+                    write(file, keep.isEmpty() ? "" : String.join("\n", keep) + "\n");
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not clean up " + AUDIT + ": " + e.getMessage());
+            }
+        });
+    }
+
     /** Writes to a temporary file first and then replaces the old one, so a crash never leaves half a file. */
     private void write(File file, String content) {
         File temp = new File(file.getParentFile(), file.getName() + ".tmp");

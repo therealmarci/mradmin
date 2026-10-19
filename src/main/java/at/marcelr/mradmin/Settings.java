@@ -39,7 +39,8 @@ public record Settings(
      */
     public record WebSettings(boolean enabled, String bind, int port, String publicUrl, Set<String> trustedProxies,
                               int sessionDays, boolean passkeys, boolean password,
-                              java.util.Map<String, List<String>> roles, java.util.Map<String, String> players) {
+                              java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
+                              String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp) {
 
         /** Cookies only over HTTPS when the public address is HTTPS (plain http is only for local tests). */
         public boolean secure() {
@@ -303,7 +304,11 @@ public record Settings(
                 c.getBoolean("web.login.passkeys", true),
                 c.getBoolean("web.login.password", true),
                 java.util.Map.copyOf(roles),
-                java.util.Map.copyOf(players));
+                java.util.Map.copyOf(players),
+                c.getString("web.legal.imprint-url", "").trim(),
+                c.getString("web.legal.privacy-url", "").trim(),
+                duration(c, "web.privacy.audit-retention", 90 * 86_400_000L, log),
+                c.getBoolean("web.privacy.mask-ip", false));
     }
 
     private static StorageSettings storage(FileConfiguration c, Logger log) {

@@ -53,6 +53,9 @@ public interface Storage {
     /** The newest {@code limit} entries, newest first. Blocking - call it from a web thread, never the server thread. */
     List<AuditRow> recentAudit(int limit);
 
+    /** Deletes entries older than {@code before} (epoch ms) in the background - retention period, GDPR. */
+    void pruneAudit(long before);
+
     /** Writes everything still pending and closes connections. */
     void close();
 

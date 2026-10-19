@@ -27,6 +27,7 @@ public final class Http {
 
     private final HttpExchange exchange;
     private final String ip;
+    private final boolean maskIp;
     private final Map<String, String> params = new HashMap<>();
     private JsonObject body;
     private boolean answered;
@@ -35,9 +36,10 @@ public final class Http {
     WebAuth.Session session;
     WebAuth.Account account;
 
-    Http(HttpExchange exchange, Set<String> trustedProxies) {
+    Http(HttpExchange exchange, Set<String> trustedProxies, boolean maskIp) {
         this.exchange = exchange;
         this.ip = clientIp(exchange, trustedProxies);
+        this.maskIp = maskIp;
     }
 
     /**
@@ -72,6 +74,23 @@ public final class Http {
 
     public String ip() {
         return ip;
+    }
+
+    /**
+     * The address as it is stored (log, sessions): with web.privacy.mask-ip the last part is zeroed - 1.2.3.4 becomes
+     * 1.2.3.0, an IPv6 address keeps its first three blocks. Rate limits always use the full address.
+     */
+    public String storedIp() {
+        return maskIp ? mask(ip) : ip;
+    }
+
+    static String mask(String ip) {
+        if (ip.contains(".") && !ip.contains(":")) {
+            int last = ip.lastIndexOf('.');
+            return last < 0 ? ip : ip.substring(0, last) + ".0";
+        }
+        String[] parts = ip.split(":");
+        return parts.length < 3 ? ip : parts[0] + ":" + parts[1] + ":" + parts[2] + "::";
     }
 
     public String header(String name) {
