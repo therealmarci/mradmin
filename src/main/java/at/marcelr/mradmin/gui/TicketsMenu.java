@@ -59,7 +59,7 @@ public final class TicketsMenu extends Menu {
         int slot = 0;
         for (Ticket ticket : Pages.slice(shown, page, PER_PAGE)) {
             set(slot++, TicketItems.ticket(plugin, ticket, true), click -> {
-                if (!allowed(TicketManager.PERM_MANAGE)) {
+                if (!allowed(at.marcelr.mradmin.Perms.TICKETS_VIEW)) {
                     return;
                 }
                 clickSound();

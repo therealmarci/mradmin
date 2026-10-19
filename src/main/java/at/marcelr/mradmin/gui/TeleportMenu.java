@@ -51,9 +51,10 @@ public final class TeleportMenu extends Menu {
                             tag("gamemode", target.getGameMode().name().toLowerCase(java.util.Locale.ROOT)),
                             tag("health", Math.round(target.getHealth())),
                             tag("ping", target.getPing())))
-                    .lore(plugin.feature(Feature.TELEPORT) ? List.of(messages.item("gui-teleport-player-shift")) : List.of())
+                    .lore(plugin.feature(Feature.TELEPORT) && viewer.hasPermission(at.marcelr.mradmin.Perms.PLAYER_TELEPORT) ? List.of(messages.item("gui-teleport-player-shift")) : List.of())
                     .build(), click -> {
-                if (click.isShiftClick() && plugin.feature(Feature.TELEPORT)) {
+                if (click.isShiftClick() && plugin.feature(Feature.TELEPORT)
+                        && viewer.hasPermission(at.marcelr.mradmin.Perms.PLAYER_TELEPORT)) {
                     teleport(target);
                 } else {
                     clickSound();

@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class WebPermissions {
 
-    public static final String PERM_WEB = "mradmin.web";
+    public static final String PERM_WEB = at.marcelr.mradmin.Perms.WEB;
     private static final long CACHE_MILLIS = 60_000L;
 
     private record Cached(boolean value, long until) {
@@ -78,12 +78,30 @@ public final class WebPermissions {
         return perm == null ? op : perm.getDefault().getValue(op);
     }
 
-    /** "*" grants everything, "mradmin.*" everything below mradmin., otherwise the exact permission. */
+    /**
+     * "*" grants everything, "mradmin.*" everything below mradmin., otherwise the permission itself or a bundle that
+     * contains it (as in the plugin.yml, e.g. mradmin.support -> mradmin.tickets.reply).
+     */
     static boolean matches(List<String> granted, String permission) {
         for (String g : granted) {
             String p = g.trim().toLowerCase(Locale.ROOT);
             if (p.equals("*") || p.equals(permission)
-                    || (p.endsWith(".*") && permission.startsWith(p.substring(0, p.length() - 1)))) {
+                    || (p.endsWith(".*") && permission.startsWith(p.substring(0, p.length() - 1)))
+                    || contains(p, permission, 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the bundle {@code node} grants {@code permission} through its children (a few levels deep). */
+    private static boolean contains(String node, String permission, int depth) {
+        org.bukkit.permissions.Permission perm = Bukkit.getPluginManager().getPermission(node);
+        if (perm == null || depth > 5) {
+            return false;
+        }
+        for (Map.Entry<String, Boolean> child : perm.getChildren().entrySet()) {
+            if (child.getValue() && (child.getKey().equals(permission) || contains(child.getKey(), permission, depth + 1))) {
                 return true;
             }
         }

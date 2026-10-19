@@ -42,9 +42,9 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class MaintenanceManager {
 
-    public static final String PERM_BYPASS = "mradmin.maintenance.bypass";
-    public static final String PERM_MANAGE = "mradmin.maintenance.manage";
-    public static final String PERM_NOTIFY = "mradmin.maintenance.notify";
+    public static final String PERM_BYPASS = at.marcelr.mradmin.Perms.MAINTENANCE_BYPASS;
+    public static final String PERM_MANAGE = at.marcelr.mradmin.Perms.MAINTENANCE_MANAGE;
+    public static final String PERM_NOTIFY = at.marcelr.mradmin.Perms.MAINTENANCE_NOTIFY;
 
     public enum Phase { NONE, PLANNED, UPCOMING, ACTIVE }
 

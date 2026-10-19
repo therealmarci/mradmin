@@ -201,11 +201,11 @@ admin-mode:
 # ------------------------------------------------------------------------------
 #   5) TICKETS & REPORTS
 # ------------------------------------------------------------------------------
-# /report öffnet für alle Spieler (Permission mradmin.report) das Ticket-Menü: "Ticket erstellen" (Kategorie wählen,
+# /report öffnet für alle Spieler (Permission mradmin.tickets.create) das Ticket-Menü: "Ticket erstellen" (Kategorie wählen,
 # dann ein Formular), die offenen Tickets und das Archiv mit den geschlossenen. Im Ticket schreiben Spieler und
 # Team hin und her wie in einem Chat.
-# Das Team (mradmin.report.notify) bekommt eine Meldung mit [Öffnen] und [Teleport]. Alle Tickets stehen im
-# Dashboard bzw. unter /mradmin tickets (mradmin.report.manage): antworten, übernehmen, teleportieren, schließen.
+# Das Team (mradmin.tickets.notify) bekommt eine Meldung mit [Öffnen] und [Teleport]. Alle Tickets stehen im
+# Dashboard bzw. unter /mradmin tickets (mradmin.tickets.view, dazu .reply, .claim, .close, .reopen, .teleport).
 # Texte: lang/<sprache>.yml, Abschnitte ticket-... und ticket-categories.
 tickets:
   # So lange muss ein Spieler zwischen zwei neuen Tickets warten (Team: kein Cooldown).
@@ -246,7 +246,7 @@ tickets:
   #   name:       Anzeigename. Leer = Text aus der Sprachdatei (ticket-categories.<id>), sonst die ID.
   #   player:     true = Spieler-Report: erst wird der Spieler ausgewählt, dann der Vorfall beschrieben.
   #               false = normales Ticket mit Titel und Beschreibung.
-  #   permission: nur Spieler mit dieser Permission sehen die Kategorie. Leer = alle mit mradmin.report.
+  #   permission: nur Spieler mit dieser Permission sehen die Kategorie. Leer = alle mit mradmin.tickets.create.
   #   enabled:    false = ausgeblendet (bestehende Tickets bleiben erhalten).
   # Beispiel für eine eigene Kategorie:
   #   bewerbung:
@@ -493,7 +493,7 @@ web:
   # Operatoren dürfen alles; sonst Rolle -> Permissions ("*" = alles, "mradmin.*" = alles von MRadmin) und
   # Spieler (Name oder UUID) -> Rolle. Beispiel:
   #   roles:
-  #     support: ["mradmin.web", "mradmin.report.manage", "mradmin.status"]
+  #     support: ["mradmin.support", "mradmin.status"]
   #   players:
   #     Steve: support
   roles: {}

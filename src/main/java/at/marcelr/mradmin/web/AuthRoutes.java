@@ -2,6 +2,7 @@ package at.marcelr.mradmin.web;
 
 import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
+import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.web.auth.WebAuth;
 import at.marcelr.mradmin.web.auth.WebPermissions;
@@ -23,12 +24,12 @@ import java.util.Map;
  *  DELETE /api/sessions/{id}
  *  POST   /api/sessions/others                              signs out all other browsers
  *  POST   /api/account/recovery {code}                      new recovery codes
- *  GET    /api/audit                                        mradmin.web.manage
+ *  GET    /api/audit                                        mradmin.web.audit
  * </pre>
  */
 public final class AuthRoutes {
 
-    public static final String PERM_MANAGE = "mradmin.web.manage";
+    public static final String PERM_MANAGE = at.marcelr.mradmin.Perms.WEB_MANAGE;
 
     private final WebServer server;
     private final MRAdmin plugin;
@@ -122,10 +123,15 @@ public final class AuthRoutes {
         WebAuth.Account account = http.account();
         WebPermissions perms = server.permissions();
         Map<String, Object> may = new LinkedHashMap<>();
-        may.put("tickets", plugin.feature(Feature.TICKETS) && perms.has(account.id(), "mradmin.report.manage"));
-        may.put("status", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), "mradmin.status"));
-        may.put("maintenance", plugin.feature(Feature.MAINTENANCE) && perms.has(account.id(), "mradmin.maintenance.manage"));
-        may.put("audit", perms.has(account.id(), PERM_MANAGE));
+        boolean tickets = plugin.feature(Feature.TICKETS);
+        may.put("tickets", tickets && perms.has(account.id(), Perms.TICKETS_VIEW));
+        may.put("ticketsReply", tickets && perms.has(account.id(), Perms.TICKETS_REPLY));
+        may.put("ticketsClaim", tickets && perms.has(account.id(), Perms.TICKETS_CLAIM));
+        may.put("ticketsClose", tickets && perms.has(account.id(), Perms.TICKETS_CLOSE));
+        may.put("ticketsReopen", tickets && perms.has(account.id(), Perms.TICKETS_REOPEN));
+        may.put("status", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), Perms.STATUS));
+        may.put("maintenance", plugin.feature(Feature.MAINTENANCE) && perms.has(account.id(), Perms.MAINTENANCE_VIEW));
+        may.put("audit", perms.has(account.id(), Perms.WEB_AUDIT));
         Map<String, Object> me = new LinkedHashMap<>();
         me.put("uuid", account.id().toString());
         me.put("name", account.name());
@@ -177,7 +183,7 @@ public final class AuthRoutes {
     }
 
     private void audit(Http http) throws Exception {
-        if (!server.permissions().has(http.account().id(), PERM_MANAGE)) {
+        if (!server.permissions().has(http.account().id(), Perms.WEB_AUDIT)) {
             http.error(403, "no-permission");
             return;
         }

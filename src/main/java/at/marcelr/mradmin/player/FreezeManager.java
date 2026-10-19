@@ -19,7 +19,7 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class FreezeManager {
 
-    public static final String PERM_FREEZE = "mradmin.player.freeze";
+    public static final String PERM_FREEZE = at.marcelr.mradmin.Perms.PLAYER_FREEZE;
 
     private final MRAdmin plugin;
     private final Set<UUID> frozen = new HashSet<>();

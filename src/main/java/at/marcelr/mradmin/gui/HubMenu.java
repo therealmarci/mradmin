@@ -8,7 +8,6 @@ import at.marcelr.mradmin.command.MRAdminCommand;
 import at.marcelr.mradmin.command.StaffChat;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.mode.AdminModeManager;
-import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -130,7 +129,7 @@ public final class HubMenu extends Menu {
         Messages messages = plugin.messages();
         List<Tile> tiles = new ArrayList<>();
 
-        if (viewer.hasPermission(AdminModeManager.PERM_TELEPORT)) {
+        if (viewer.hasPermission(at.marcelr.mradmin.Perms.PLAYER_VIEW)) {
             int online = Math.max(0, Bukkit.getOnlinePlayers().size() - 1);
             long frozen = Bukkit.getOnlinePlayers().stream().filter(p -> plugin.freeze().frozen(p.getUniqueId())).count();
             State state = frozen > 0 ? State.WARN : State.GOOD;
@@ -158,11 +157,11 @@ public final class HubMenu extends Menu {
             }));
         }
 
-        if (plugin.feature(Feature.MAINTENANCE)) {
+        if (plugin.feature(Feature.MAINTENANCE) && viewer.hasPermission(at.marcelr.mradmin.Perms.MAINTENANCE_VIEW)) {
             tiles.add(maintenanceTile());
         }
 
-        if (viewer.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+        if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW) && plugin.feature(Feature.TICKETS)) {
             int open = plugin.tickets().openCount();
             int unread = plugin.tickets().staffUnreadCount();
             // Red while players wait for an answer, yellow while tickets are open at all.
@@ -198,7 +197,7 @@ public final class HubMenu extends Menu {
         }
         return new Tile(clock.glint(mState == State.BAD).build(), mState,
                 messages.item("gui-tile-maintenance-state-" + phase, resolvers), click -> {
-            if (allowed(MaintenanceManager.PERM_MANAGE)) {
+            if (allowed(at.marcelr.mradmin.Perms.MAINTENANCE_VIEW)) {
                 clickSound();
                 viewer.closeInventory();
                 viewer.performCommand("mradmin maintenance");

@@ -2,6 +2,7 @@ package at.marcelr.mradmin.web;
 
 import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
+import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.ticket.Ticket;
@@ -15,7 +16,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * The team's pages: server overview, live updates and tickets.
+ * The team's pages: server overview, live updates and tickets. Every action has its own permission
+ * (mradmin.tickets.view, .reply, .claim, .close, .reopen; mradmin.status; mradmin.maintenance.view).
  * <pre>
  *  GET  /api/overview                          server state (mradmin.status), maintenance, ticket counts
  *  GET  /api/events                            live updates (Server-Sent Events)
@@ -31,7 +33,6 @@ import java.util.Map;
  */
 public final class PanelRoutes {
 
-    private static final String PERM_STATUS = "mradmin.status";
 
     private final WebServer server;
     private final MRAdmin plugin;
@@ -65,20 +66,20 @@ public final class PanelRoutes {
         Map<String, Object> snapshot = server.snapshot();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("time", snapshot.getOrDefault("time", System.currentTimeMillis()));
-        if (plugin.feature(Feature.SERVER_STATUS) && may(http, PERM_STATUS)) {
+        if (plugin.feature(Feature.SERVER_STATUS) && may(http, Perms.STATUS)) {
             result.put("server", snapshot.get("server"));
-            if (snapshot.containsKey("maintenance")) {
-                result.put("maintenance", snapshot.get("maintenance"));
-            }
         }
-        if (snapshot.containsKey("tickets") && may(http, TicketManager.PERM_MANAGE)) {
+        if (snapshot.containsKey("maintenance") && may(http, Perms.MAINTENANCE_VIEW)) {
+            result.put("maintenance", snapshot.get("maintenance"));
+        }
+        if (snapshot.containsKey("tickets") && may(http, Perms.TICKETS_VIEW)) {
             result.put("tickets", snapshot.get("tickets"));
         }
         http.json(200, result);
     }
 
     private void events(Http http) throws Exception {
-        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, TicketManager.PERM_MANAGE));
+        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW));
     }
 
     // ---------------------------------------------------------------- tickets
@@ -87,7 +88,13 @@ public final class PanelRoutes {
         if (!plugin.feature(Feature.TICKETS)) {
             throw new Http.WebException(404, "feature-disabled");
         }
-        if (!may(http, TicketManager.PERM_MANAGE)) {
+        if (!may(http, Perms.TICKETS_VIEW)) {
+            throw new Http.WebException(403, "no-permission");
+        }
+    }
+
+    private void require(Http http, String permission) throws Http.WebException {
+        if (!may(http, permission)) {
             throw new Http.WebException(403, "no-permission");
         }
     }
@@ -133,9 +140,9 @@ public final class PanelRoutes {
             tickets.webMarkRead(http.account().id(), t);
             Map<String, Object> detail = summary(tickets, t);
             detail.put("world", t.world());
-            detail.put("x", (int) t.x());
-            detail.put("y", (int) t.y());
-            detail.put("z", (int) t.z());
+            detail.put("x", t.blockX());
+            detail.put("y", t.blockY());
+            detail.put("z", t.blockZ());
             detail.put("closedBy", t.closedBy());
             detail.put("closedAt", t.closedAt() == null ? 0 : t.closedAt().toEpochMilli());
             detail.put("mine", t.isCreator(http.account().id()));
@@ -161,6 +168,7 @@ public final class PanelRoutes {
 
     private void reply(Http http) throws Exception {
         requireTickets(http);
+        require(http, Perms.TICKETS_REPLY);
         String text = http.string("text");
         if (text == null || text.length() > 4000) {
             throw new Http.WebException(400, "reply-empty");
@@ -171,6 +179,7 @@ public final class PanelRoutes {
 
     private void claim(Http http) throws Exception {
         requireTickets(http);
+        require(http, Perms.TICKETS_CLAIM);
         act(http, "ticket-claim", (tickets, t) -> {
             tickets.webToggleClaim(http.account().id(), http.account().name(), t);
             return null;
@@ -179,6 +188,7 @@ public final class PanelRoutes {
 
     private void close(Http http) throws Exception {
         requireTickets(http);
+        require(http, Perms.TICKETS_CLOSE);
         String text = http.string("text");
         act(http, "ticket-close", (tickets, t) -> {
             if (text != null && !text.isBlank()) {
@@ -193,6 +203,7 @@ public final class PanelRoutes {
 
     private void reopen(Http http) throws Exception {
         requireTickets(http);
+        require(http, Perms.TICKETS_REOPEN);
         act(http, "ticket-reopen", (tickets, t) -> tickets.webReopen(http.account().id(), http.account().name(), t), "");
     }
 

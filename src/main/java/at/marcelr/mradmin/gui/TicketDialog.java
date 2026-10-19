@@ -245,7 +245,7 @@ public final class TicketDialog {
         tickets.markRead(viewer, ticket);
         Messages messages = plugin.messages();
         Settings.TicketSettings s = plugin.settings().tickets();
-        boolean staff = viewer.hasPermission(TicketManager.PERM_MANAGE);
+        boolean staff = viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW);
 
         List<DialogBody> body = new ArrayList<>();
         body.add(header(plugin, ticket, staff));
@@ -274,7 +274,10 @@ public final class TicketDialog {
                 view(plugin, viewer, current, back);
             }
         };
-        if (ticket.open()) {
+        boolean creator = ticket.isCreator(viewer.getUniqueId());
+        boolean mayReply = creator || viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REPLY);
+        boolean mayClose = (creator && !ticket.teamCloseOnly()) || viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_CLOSE);
+        if (ticket.open() && mayReply) {
             inputs.add(DialogInput.text(TEXT, messages.get("ticket-view-reply"))
                     .width(WIDTH).maxLength(s.maxTextLength()).initial(cut(draft, s.maxTextLength()))
                     .multiline(TextDialogInput.MultilineOptions.create(8, 80)).build());
@@ -286,11 +289,13 @@ public final class TicketDialog {
                     view(plugin, viewer, ticket, text, back);
                 }
             })));
-            if (!ticket.teamCloseOnly() || staff) {
+        }
+        if (ticket.open()) {
+            if (mayClose) {
                 buttons.add(ActionButton.create(messages.get("ticket-view-close"), messages.get("ticket-view-close-hover"), 150,
                         action(plugin, viewer, response -> confirmClose(plugin, viewer, ticket, text(response.getText(TEXT)), back))));
             }
-            if (staff) {
+            if (!creator && viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_CLAIM)) {
                 boolean mine = viewer.getUniqueId().equals(ticket.claimedBy());
                 buttons.add(ActionButton.create(messages.get(mine ? "ticket-view-release" : "ticket-view-claim"), null, 150,
                         action(plugin, viewer, response -> {
@@ -298,13 +303,13 @@ public final class TicketDialog {
                             view(plugin, viewer, ticket, text(response.getText(TEXT)), back);
                         })));
             }
-        } else if (staff) {
+        } else if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REOPEN)) {
             buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), null, 150, action(plugin, viewer, response -> {
                 tickets.reopen(viewer, ticket);
                 again.run();
             })));
         }
-        if (staff && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT)) {
+        if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_TELEPORT) && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT)) {
             buttons.add(ActionButton.create(messages.get("ticket-view-teleport"), messages.get("ticket-view-teleport-hover"), 150,
                     action(plugin, viewer, response -> tickets.teleport(viewer, ticket))));
         }
@@ -346,7 +351,7 @@ public final class TicketDialog {
                 tag("category", tickets.categoryName(ticket.category())),
                 tag("online", messages.get(ticket.target() != null && Bukkit.getPlayer(ticket.target()) != null
                         ? "gui-online" : "gui-offline")),
-                tag("world", ticket.world()), tag("x", (int) ticket.x()), tag("y", (int) ticket.y()), tag("z", (int) ticket.z())};
+                tag("world", ticket.world()), tag("x", ticket.blockX()), tag("y", ticket.blockY()), tag("z", ticket.blockZ())};
         Component text = messages.get(ticket.playerReport() ? "ticket-chat-header-player" : "ticket-chat-header-other", common);
         if (staff && messages.has("ticket-chat-header-staff")) {
             text = text.appendNewline().append(messages.get("ticket-chat-header-staff", common));
@@ -386,7 +391,7 @@ public final class TicketDialog {
                 tag("time", Texts.at(plugin, first.time())),
                 tag("text", text));
         boolean anonymous = first.staff() && !plugin.settings().tickets().showStaffNames()
-                && !viewer.hasPermission(TicketManager.PERM_MANAGE);
+                && !viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW);
         ItemStack avatar;
         if (TicketManager.SYSTEM.equals(first.author())) {
             // Written by a plugin (e.g. MRchunks about a lock): its icon instead of a head.

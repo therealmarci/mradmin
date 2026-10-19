@@ -14,7 +14,6 @@ import at.marcelr.mradmin.gui.TicketDialog;
 import at.marcelr.mradmin.gui.TicketsMenu;
 import at.marcelr.mradmin.gui.ServerStatusMenu;
 import at.marcelr.mradmin.ticket.Ticket;
-import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.maintenance.KumaClient;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
@@ -43,10 +42,10 @@ import static at.marcelr.mradmin.Messages.tag;
 /** /mradmin - every sub command checks its own permission. Usable from the console (e.g. restart scripts). */
 public final class MRAdminCommand implements TabExecutor {
 
-    public static final String PERM_ANNOUNCE = "mradmin.announce";
-    public static final String PERM_MODE_OTHERS = "mradmin.mode.others";
-    public static final String PERM_RELOAD = "mradmin.admin.reload";
-    public static final String PERM_DISCORD = "mradmin.admin.discord";
+    public static final String PERM_ANNOUNCE = at.marcelr.mradmin.Perms.ANNOUNCE;
+    public static final String PERM_MODE_OTHERS = at.marcelr.mradmin.Perms.MODE_OTHERS;
+    public static final String PERM_RELOAD = at.marcelr.mradmin.Perms.ADMIN_RELOAD;
+    public static final String PERM_DISCORD = at.marcelr.mradmin.Perms.ADMIN_DISCORD;
 
     private final MRAdmin plugin;
     private final WebCommand webCommand;
@@ -67,7 +66,7 @@ public final class MRAdminCommand implements TabExecutor {
     }
 
     private boolean handle(CommandSender sender, String[] args) {
-        if (args.length == 0 && sender instanceof Player player && sender.hasPermission(AdminModeManager.PERM_USE)) {
+        if (args.length == 0 && sender instanceof Player player && sender.hasPermission(at.marcelr.mradmin.Perms.DASHBOARD)) {
             // Players get the dashboard; the command list stays available with /mradmin help.
             new HubMenu(plugin, player).open();
             return true;
@@ -84,7 +83,7 @@ public final class MRAdminCommand implements TabExecutor {
             }
             case "mode", "modus", "adminmode" -> mode(sender, args);
             case "maintenance", "wartung", "maint" -> {
-                if (check(sender, MaintenanceManager.PERM_MANAGE) && plugin.feature(sender, Feature.MAINTENANCE)) {
+                if (check(sender, at.marcelr.mradmin.Perms.MAINTENANCE_VIEW) && plugin.feature(sender, Feature.MAINTENANCE)) {
                     maintenance(sender, args);
                 }
             }
@@ -123,7 +122,7 @@ public final class MRAdminCommand implements TabExecutor {
             }
             case "web" -> webCommand.handle(sender, args);
             case "storage", "speicher", "db" -> {
-                if (check(sender, PERM_RELOAD)) {
+                if (check(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE)) {
                     storage(sender);
                 }
             }
@@ -142,7 +141,7 @@ public final class MRAdminCommand implements TabExecutor {
         if (sender.hasPermission(AdminModeManager.PERM_USE) && plugin.feature(Feature.ADMIN_MODE)) {
             messages().send(sender, "help-mode");
         }
-        if (sender.hasPermission(MaintenanceManager.PERM_MANAGE) && plugin.feature(Feature.MAINTENANCE)) {
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.MAINTENANCE_VIEW) && plugin.feature(Feature.MAINTENANCE)) {
             messages().send(sender, "help-maintenance");
         }
         if (sender.hasPermission(PERM_DISCORD)) {
@@ -151,19 +150,19 @@ public final class MRAdminCommand implements TabExecutor {
         if (sender.hasPermission(PERM_RELOAD)) {
             messages().send(sender, "help-reload");
         }
-        if (sender.hasPermission(PERM_RELOAD)) {
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.ADMIN_STORAGE)) {
             messages().send(sender, "help-storage");
         }
         if (sender.hasPermission(at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB)) {
             messages().send(sender, "help-web");
         }
-        if (sender.hasPermission(AdminModeManager.PERM_USE)) {
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.DASHBOARD)) {
             messages().send(sender, "help-menu");
         }
         if (sender.hasPermission(ServerStatusMenu.PERM) && plugin.feature(Feature.SERVER_STATUS)) {
             messages().send(sender, "help-status");
         }
-        if (sender.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW) && plugin.feature(Feature.TICKETS)) {
             messages().send(sender, "help-tickets");
         }
         if (sender.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
@@ -185,7 +184,7 @@ public final class MRAdminCommand implements TabExecutor {
 
     /** /mradmin player <name> - action menu of an online player. */
     private void player(CommandSender sender, String[] args) {
-        withPlayer(sender, AdminModeManager.PERM_USE, viewer -> {
+        withPlayer(sender, at.marcelr.mradmin.Perms.PLAYER_VIEW, viewer -> {
             Player target = args.length > 1 ? Bukkit.getPlayerExact(args[1]) : null;
             if (target == null) {
                 messages().send(sender, "player-not-found", tag("player", args.length > 1 ? args[1] : "?"));
@@ -210,7 +209,7 @@ public final class MRAdminCommand implements TabExecutor {
 
     /** /mradmin tickets [view|tp|close <id>] - the team's ticket menu, or the actions of the clickable notices. */
     private void tickets(CommandSender sender, String[] args) {
-        withPlayer(sender, TicketManager.PERM_MANAGE, viewer -> {
+        withPlayer(sender, at.marcelr.mradmin.Perms.TICKETS_VIEW, viewer -> {
             if (args.length < 3) {
                 new TicketsMenu(plugin, viewer, null, null).open();
                 return;
@@ -330,6 +329,10 @@ public final class MRAdminCommand implements TabExecutor {
     private void maintenance(CommandSender sender, String[] args) {
         MaintenanceManager manager = plugin.maintenance();
         String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "status";
+        // Looking is mradmin.maintenance.view, changing anything mradmin.maintenance.manage.
+        if (!action.equals("status") && !action.equals("info") && !check(sender, MaintenanceManager.PERM_MANAGE)) {
+            return;
+        }
         switch (action) {
             case "on", "start", "an" -> {
                 // on [duration] [title...]
@@ -524,15 +527,15 @@ public final class MRAdminCommand implements TabExecutor {
             options.add("version");
             addIf(sender, PERM_ANNOUNCE, Feature.ANNOUNCE, options, "announce");
             addIf(sender, AdminModeManager.PERM_USE, Feature.ADMIN_MODE, options, "mode");
-            addIf(sender, MaintenanceManager.PERM_MANAGE, Feature.MAINTENANCE, options, "maintenance");
+            addIf(sender, at.marcelr.mradmin.Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, options, "maintenance");
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
-            addIf(sender, PERM_RELOAD, options, "storage");
+            addIf(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE, options, "storage");
             addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
             options.add("help");
-            addIf(sender, AdminModeManager.PERM_USE, options, "player");
+            addIf(sender, at.marcelr.mradmin.Perms.PLAYER_VIEW, options, "player");
             addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");
-            addIf(sender, TicketManager.PERM_MANAGE, Feature.TICKETS, options, "tickets");
+            addIf(sender, at.marcelr.mradmin.Perms.TICKETS_VIEW, Feature.TICKETS, options, "tickets");
             addIf(sender, AdminModeManager.PERM_TELEPORT, Feature.TELEPORT, options, "tp");
         } else {
             String sub = args[0].toLowerCase(Locale.ROOT);

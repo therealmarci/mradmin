@@ -35,8 +35,8 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class AdminModeManager {
 
-    public static final String PERM_USE = "mradmin.mode";
-    public static final String PERM_TELEPORT = "mradmin.mode.teleport";
+    public static final String PERM_USE = at.marcelr.mradmin.Perms.MODE;
+    public static final String PERM_TELEPORT = at.marcelr.mradmin.Perms.PLAYER_TELEPORT;
 
     private final MRAdmin plugin;
     private final File folder;

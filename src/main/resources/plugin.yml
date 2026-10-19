@@ -26,45 +26,132 @@ commands:
     usage: /sc [nachricht]
     aliases: [sc]
 
+# Eine Permission pro Funktion - sie gilt ingame und in der Weboberfläche gleich. Zum einfachen Vergeben gibt es
+# die Pakete mradmin.support, mradmin.staff und mradmin.admin. Die Web-Konsole ist in keinem Paket enthalten.
 permissions:
-  mradmin.staff:
-    description: Alles, was ein Teammitglied braucht - z.B. für die Staff-Gruppe in LuckPerms (Join während Wartung, Hinweise, Admin-Modus).
+  # ------------------------------------------------------------------ Pakete
+  mradmin.support:
+    description: "Paket Support: Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche."
     default: op
     children:
+      mradmin.dashboard: true
+      mradmin.tickets.notify: true
+      mradmin.tickets.view: true
+      mradmin.tickets.reply: true
+      mradmin.tickets.claim: true
+      mradmin.tickets.close: true
+      mradmin.tickets.reopen: true
+      mradmin.player.view: true
+      mradmin.staffchat: true
+      mradmin.web: true
+  mradmin.staff:
+    description: "Paket Team: Support + Spieler-Werkzeuge, Admin-Modus, Serverzustand, Wartung ansehen und joinen."
+    default: op
+    children:
+      mradmin.support: true
+      mradmin.tickets.teleport: true
+      mradmin.maintenance.view: true
       mradmin.maintenance.bypass: true
       mradmin.maintenance.notify: true
       mradmin.mode: true
-      mradmin.mode.teleport: true
+      mradmin.player.teleport: true
       mradmin.player.summon: true
       mradmin.player.inventory: true
       mradmin.player.freeze: true
+      mradmin.player.kick: true
       mradmin.status: true
-      mradmin.report.notify: true
-      mradmin.report.manage: true
-      mradmin.staffchat: true
+      mradmin.status.health: true
+  mradmin.admin:
+    description: "Alle Rechte von MRadmin - außer der Web-Konsole (mradmin.web.console.*), die man bewusst einzeln vergibt."
+    default: op
+    children:
+      mradmin.staff: true
+      mradmin.maintenance.manage: true
+      mradmin.announce: true
+      mradmin.mode.others: true
+      mradmin.web.audit: true
+      mradmin.web.manage: true
+      mradmin.admin.reload: true
+      mradmin.admin.storage: true
+      mradmin.admin.discord: true
+      mradmin.admin.update: true
+
+  # ------------------------------------------------------------ Dashboard
+  mradmin.dashboard:
+    description: Dashboard öffnen (/mradmin) bzw. Übersicht in der Weboberfläche.
+    default: op
+  mradmin.status:
+    description: Serverzustand (/mradmin status, Server-Kachel, Übersicht im Web).
+    default: op
+  mradmin.status.health:
+    description: Health-Dashboard - Verlauf von TPS, MSPT, CPU, RAM, Lag-Quellen.
+    default: op
+
+  # -------------------------------------------------------------- Tickets
+  mradmin.tickets.create:
+    description: /report - Tickets öffnen und die eigenen ansehen, beantworten und schließen.
+    default: true
+  mradmin.tickets.notify:
+    description: Meldung bei neuen Tickets und Antworten, beim Join die Zahl offener Tickets.
+    default: op
+  mradmin.tickets.view:
+    description: Alle Tickets ansehen (/mradmin tickets, Dashboard, Web). Kein Cooldown beim Erstellen.
+    default: op
+  mradmin.tickets.reply:
+    description: In fremden Tickets antworten.
+    default: op
+  mradmin.tickets.claim:
+    description: Tickets übernehmen und freigeben.
+    default: op
+  mradmin.tickets.close:
+    description: Fremde Tickets schließen (auch die automatischen Chunkloader-Tickets).
+    default: op
+  mradmin.tickets.reopen:
+    description: Geschlossene Tickets wieder öffnen.
+    default: op
+  mradmin.tickets.teleport:
+    description: Zum Ort eines Tickets bzw. zum gemeldeten Spieler teleportieren.
+    default: op
+
+  # -------------------------------------------------------------- Wartung
+  mradmin.maintenance.view:
+    description: Wartungsstatus ansehen (/mradmin maintenance, Dashboard, Web).
+    default: op
+  mradmin.maintenance.manage:
+    description: Wartung starten, planen, verlängern und beenden.
+    default: op
   mradmin.maintenance.bypass:
     description: Darf während einer Wartung joinen und wird beim Start nicht gekickt.
     default: op
   mradmin.maintenance.notify:
     description: Hinweise zum Wartungsmodus (z.B. Verbindung zu Uptime Kuma verloren).
     default: op
-  mradmin.maintenance.manage:
-    description: /mradmin maintenance - Status, Wartung starten, planen, verlängern und beenden.
-    default: op
+
+  # ------------------------------------------------- Ankündigung, Modus, Chat
   mradmin.announce:
     description: /mradmin announce - Ankündigungen auf dem Bildschirm aller Spieler.
     default: op
   mradmin.mode:
-    description: /mradmin mode - Admin-Modus für sich selbst.
+    description: /mradmin mode - Admin-Modus für sich selbst (der Kompass öffnet das Dashboard).
     default: op
-  mradmin.mode.teleport:
-    description: Mit dem Kompass im Admin-Modus zu Spielern teleportieren.
-    default: op
+    children:
+      mradmin.dashboard: true
   mradmin.mode.others:
     description: /mradmin mode <on|off> <spieler> - Admin-Modus anderer Spieler steuern.
     default: op
+  mradmin.staffchat:
+    description: /sc - Staff-Chat lesen und schreiben.
+    default: op
+
+  # -------------------------------------------------------------- Spieler
+  mradmin.player.view:
+    description: Spielerliste und Spieler-Menü bzw. Spielerprofil im Web (Infos, Tickets über den Spieler).
+    default: op
+  mradmin.player.teleport:
+    description: Zu Spielern teleportieren (Spielerliste, Spieler-Menü, /mradmin tp, Serverzustand).
+    default: op
   mradmin.player.summon:
-    description: Spieler im Spieler-Menü zu sich holen.
+    description: Spieler zu sich holen.
     default: op
   mradmin.player.inventory:
     description: Inventar und Enderchest anderer Spieler ansehen (nur lesen).
@@ -72,46 +159,68 @@ permissions:
   mradmin.player.freeze:
     description: Spieler einfrieren und auftauen; Hinweis, wenn sich ein eingefrorener Spieler ausloggt.
     default: op
-  mradmin.status:
-    description: /mradmin status - Serverzustand (TPS, RAM, Chunks mit den meisten Entities).
+  mradmin.player.kick:
+    description: Spieler vom Server werfen.
     default: op
-  mradmin.report:
-    description: /report - Tickets öffnen und die eigenen ansehen und beantworten.
-    default: true
-  mradmin.report.notify:
-    description: Meldung bei neuen Tickets und Antworten, beim Join die Zahl offener Tickets.
+
+  # ---------------------------------------------------------- Weboberfläche
+  mradmin.web:
+    description: Weboberfläche nutzen (eigenes Konto per /mradmin web setup). Im Web gelten dieselben Rechte wie ingame.
     default: op
-  mradmin.report.manage:
-    description: /mradmin tickets - alle Tickets ansehen, beantworten, übernehmen, hinteleportieren, schließen. Kein Cooldown.
+  mradmin.web.audit:
+    description: Protokoll aller Web-Aktionen ansehen.
     default: op
-  mradmin.staffchat:
-    description: /sc - Staff-Chat lesen und schreiben.
+  mradmin.web.manage:
+    description: Web-Konten anderer verwalten (/mradmin web invite|logout|remove).
     default: op
-  mradmin.admin:
-    description: Alle Rechte von MRadmin.
-    default: op
+  mradmin.web.console.view:
+    description: Live-Konsole in der Weboberfläche ansehen. Nicht in mradmin.admin enthalten.
+    default: false
+  mradmin.web.console.execute:
+    description: Befehle über die Web-Konsole ausführen (so viel wie Konsolenzugriff!). Nicht in mradmin.admin enthalten.
+    default: false
     children:
-      mradmin.staff: true
-      mradmin.maintenance.manage: true
-      mradmin.announce: true
-      mradmin.mode.others: true
-      mradmin.admin.discord: true
-      mradmin.admin.reload: true
-      mradmin.admin.update: true
-      mradmin.web: true
-      mradmin.web.manage: true
-  mradmin.admin.discord:
-    description: /mradmin discord [test]
-    default: op
+      mradmin.web.console.view: true
+
+  # ------------------------------------------------------------ Verwaltung
   mradmin.admin.reload:
     description: /mradmin reload
+    default: op
+  mradmin.admin.storage:
+    description: /mradmin storage - Speicher (YAML, SQLite, MySQL) anzeigen.
+    default: op
+  mradmin.admin.discord:
+    description: /mradmin discord [test]
     default: op
   mradmin.admin.update:
     description: Hinweis beim Betreten des Servers, wenn ein Update verfügbar ist.
     default: op
-  mradmin.web:
-    description: Weboberfläche nutzen (eigenes Konto per /mradmin web setup). Im Web gelten dieselben Rechte wie ingame.
-    default: op
-  mradmin.web.manage:
-    description: Web-Konten anderer verwalten (/mradmin web invite|logout|remove) und das Protokoll der Web-Aktionen sehen.
-    default: op
+
+  # ---------------------------------------------- frühere Permissions (bis 0.1)
+  # Bleiben gültig und geben dieselben Rechte wie bisher - für neue Vergaben die einzelnen Permissions oben nutzen.
+  mradmin.report:
+    description: "Veraltet: wie mradmin.tickets.create."
+    default: true
+    children:
+      mradmin.tickets.create: true
+  mradmin.report.notify:
+    description: "Veraltet: wie mradmin.tickets.notify."
+    default: false
+    children:
+      mradmin.tickets.notify: true
+  mradmin.report.manage:
+    description: "Veraltet: alle Ticket-Rechte (view, reply, claim, close, reopen, teleport)."
+    default: false
+    children:
+      mradmin.tickets.view: true
+      mradmin.tickets.reply: true
+      mradmin.tickets.claim: true
+      mradmin.tickets.close: true
+      mradmin.tickets.reopen: true
+      mradmin.tickets.teleport: true
+  mradmin.mode.teleport:
+    description: "Veraltet: wie mradmin.player.teleport (+ Spielerliste)."
+    default: false
+    children:
+      mradmin.player.teleport: true
+      mradmin.player.view: true

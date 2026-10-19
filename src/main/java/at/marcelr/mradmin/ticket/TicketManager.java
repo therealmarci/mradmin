@@ -2,6 +2,7 @@ package at.marcelr.mradmin.ticket;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
+import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
 import at.marcelr.mradmin.storage.Storage;
@@ -36,9 +37,8 @@ import static at.marcelr.mradmin.Messages.tag;
 public final class TicketManager {
 
     /** Open tickets at all (/report); a category may additionally need its own permission. */
-    public static final String PERM_CREATE = "mradmin.report";
-    public static final String PERM_NOTIFY = "mradmin.report.notify";
-    public static final String PERM_MANAGE = "mradmin.report.manage";
+    public static final String PERM_CREATE = at.marcelr.mradmin.Perms.TICKETS_CREATE;
+    public static final String PERM_NOTIFY = at.marcelr.mradmin.Perms.TICKETS_NOTIFY;
 
     /** Length of message previews in chat and item lore. */
     public static final int PREVIEW = 60;
@@ -96,7 +96,7 @@ public final class TicketManager {
         if (SYSTEM.equals(message.author())) {
             return message.authorName();
         }
-        if (message.staff() && !settings().showStaffNames() && !viewer.hasPermission(PERM_MANAGE)) {
+        if (message.staff() && !settings().showStaffNames() && !viewer.hasPermission(Perms.TICKETS_VIEW)) {
             return messages().plain("ticket-staff-anonymous");
         }
         return message.authorName();
@@ -129,7 +129,7 @@ public final class TicketManager {
             messages().send(player, "no-permission");
             return false;
         }
-        if (player.hasPermission(PERM_MANAGE)) {
+        if (player.hasPermission(Perms.TICKETS_VIEW)) {
             return true;
         }
         Instant last = lastTicket.get(player.getUniqueId());
@@ -208,7 +208,7 @@ public final class TicketManager {
                 + summary(ticket) + " - " + TicketText.preview(cleanText, 200));
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName, "creator", creator.getName(),
                 "summary", summary(ticket), "text", TicketText.preview(cleanText, 300),
-                "world", ticket.world(), "x", (int) ticket.x(), "y", (int) ticket.y(), "z", (int) ticket.z());
+                "world", ticket.world(), "x", ticket.blockX(), "y", ticket.blockY(), "z", ticket.blockZ());
         return ticket;
     }
 
@@ -250,7 +250,7 @@ public final class TicketManager {
         }
         String subject = TicketText.limit(messages().plain("ticket-lock-subject", "name", name), 100);
         Ticket ticket = new Ticket(nextId++, owner, string(data, "owner-name"), null, null, LOCK_CATEGORY, subject,
-                Instant.now(), string(data, "world"), number(data, "x") + 0.5, number(data, "y") + 1, number(data, "z") + 0.5);
+                Instant.now(), string(data, "world"), number(data, "x") + 0.5, number(data, "y"), number(data, "z") + 0.5);
         ticket.source(source, id);
         ticket.add(new Ticket.Message(SYSTEM, source, true, details, Instant.now()));
         ticket.staffUnread(true);
@@ -263,7 +263,7 @@ public final class TicketManager {
                 + ": " + subject + " (opened by " + source + ").");
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(LOCK_CATEGORY), "creator", ticket.creatorName(),
                 "summary", subject, "text", TicketText.preview(details, 300),
-                "world", ticket.world(), "x", (int) ticket.x(), "y", (int) ticket.y(), "z", (int) ticket.z());
+                "world", ticket.world(), "x", ticket.blockX(), "y", ticket.blockY(), "z", ticket.blockZ());
     }
 
     /** A message of the plugin itself in the ticket (the creator sees it as unread; the team too if asked). */
@@ -298,12 +298,12 @@ public final class TicketManager {
 
     /** The creator and the team may open a ticket. */
     public boolean canView(Player player, Ticket ticket) {
-        return ticket.isCreator(player.getUniqueId()) || player.hasPermission(PERM_MANAGE);
+        return ticket.isCreator(player.getUniqueId()) || player.hasPermission(Perms.TICKETS_VIEW);
     }
 
     /** Whether {@code player} writes as team member in this ticket (team, but not the creator). */
     public boolean asStaff(Player player, Ticket ticket) {
-        return !ticket.isCreator(player.getUniqueId()) && player.hasPermission(PERM_MANAGE);
+        return !ticket.isCreator(player.getUniqueId()) && player.hasPermission(Perms.TICKETS_VIEW);
     }
 
     /**
@@ -327,13 +327,17 @@ public final class TicketManager {
             return false;
         }
         Instant last = lastReply.get(author.getUniqueId());
-        if (last != null && !author.hasPermission(PERM_MANAGE) && Instant.now().isBefore(last.plusMillis(s.replyCooldown()))) {
+        if (last != null && !author.hasPermission(Perms.TICKETS_VIEW) && Instant.now().isBefore(last.plusMillis(s.replyCooldown()))) {
             messages().send(author, "ticket-reply-cooldown", tag("time",
                     Texts.duration(last.plusMillis(s.replyCooldown()).toEpochMilli() - System.currentTimeMillis())));
             return false;
         }
-        lastReply.put(author.getUniqueId(), Instant.now());
         boolean staff = asStaff(author, ticket);
+        if (staff && !author.hasPermission(Perms.TICKETS_REPLY)) {
+            messages().send(author, "no-permission");
+            return false;
+        }
+        lastReply.put(author.getUniqueId(), Instant.now());
         ticket.add(new Ticket.Message(author.getUniqueId(), author.getName(), staff, clean, Instant.now()));
         if (staff) {
             ticket.staffUnread(false);
@@ -370,8 +374,12 @@ public final class TicketManager {
         if (!ticket.open()) {
             return;
         }
-        if (ticket.teamCloseOnly() && !by.hasPermission(PERM_MANAGE)) {
+        if (ticket.teamCloseOnly() && !by.hasPermission(Perms.TICKETS_CLOSE)) {
             messages().send(by, "ticket-close-team-only");
+            return;
+        }
+        if (!ticket.isCreator(by.getUniqueId()) && !by.hasPermission(Perms.TICKETS_CLOSE)) {
+            messages().send(by, "no-permission");
             return;
         }
         ticket.close(by.getName(), Instant.now());
@@ -402,7 +410,7 @@ public final class TicketManager {
 
     /** Opens a closed ticket again (team only). */
     public void reopen(Player staff, Ticket ticket) {
-        if (!staff.hasPermission(PERM_MANAGE)) {
+        if (!staff.hasPermission(Perms.TICKETS_REOPEN)) {
             messages().send(staff, "no-permission");
             return;
         }
@@ -422,7 +430,7 @@ public final class TicketManager {
 
     /** Claims the ticket for {@code staff}, or releases it if they already have it. */
     public void toggleClaim(Player staff, Ticket ticket) {
-        if (!staff.hasPermission(PERM_MANAGE)) {
+        if (!staff.hasPermission(Perms.TICKETS_CLAIM)) {
             messages().send(staff, "no-permission");
             return;
         }
@@ -533,7 +541,7 @@ public final class TicketManager {
 
     /** Teleports staff to the reported player (if online) or to where the ticket was opened. */
     public void teleport(Player staff, Ticket ticket) {
-        if (!staff.hasPermission(PERM_MANAGE)) {
+        if (!staff.hasPermission(Perms.TICKETS_TELEPORT)) {
             messages().send(staff, "no-permission");
             return;
         }
@@ -542,6 +550,10 @@ public final class TicketManager {
         }
         Player target = ticket.target() == null ? null : Bukkit.getPlayer(ticket.target());
         Location to = target != null ? target.getLocation() : ticket.location();
+        if (to != null && target == null && ticket.source() != null) {
+            // Tickets of a plugin point at a block (e.g. the chunk loader) - stand on it, not in it.
+            to = to.clone().add(0, 1, 0);
+        }
         if (to == null) {
             messages().send(staff, "ticket-no-location");
             return;

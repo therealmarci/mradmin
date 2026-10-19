@@ -109,7 +109,7 @@
             <img src={head(ticket.targetUuid, 32)} alt="" width="18" height="18" /> {ticket.target}</div>
         {/if}
         <div><span class="muted">{t('ticket.created')}</span> {dateTime(ticket.created)}</div>
-        <div><span class="muted">{t('ticket.location')}</span> <span class="mono">{ticket.world} {ticket.x} {ticket.y} {ticket.z}</span></div>
+        <div><span class="muted">{t('ticket.location')}</span> <span class="mono">{ticket.world} · X {ticket.x} · Y {ticket.y} · Z {ticket.z}</span></div>
         <div><span class="muted">{t('ticket.claimedBy')}</span> {ticket.claimedBy ?? t('ticket.nobody')}</div>
       </div>
       {#if ticket.source === 'mrchunks'}
@@ -140,19 +140,25 @@
     </section>
 
     <section class="card composer">
-      {#if ticket.open}
+      {#if ticket.open && me.may.ticketsReply}
         <textarea bind:value={text} rows="3" placeholder={t('ticket.reply')} onkeydown={keys} maxlength="2000"></textarea>
         <div class="actions">
           <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')}</button>
-          <button class="secondary" onclick={() => action('claim')} disabled={busy}>
-            {mineClaimed ? t('ticket.release') : t('ticket.claim')}
-          </button>
-          <button class="danger" onclick={close} disabled={busy}>
-            {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
-          </button>
+          {#if me.may.ticketsClaim}
+            <button class="secondary" onclick={() => action('claim')} disabled={busy}>
+              {mineClaimed ? t('ticket.release') : t('ticket.claim')}
+            </button>
+          {/if}
+          {#if me.may.ticketsClose}
+            <button class="danger" onclick={close} disabled={busy}>
+              {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
+            </button>
+          {/if}
           <span class="hint keys">{t('ticket.sendHint')}</span>
         </div>
-      {:else}
+      {:else if ticket.open && me.may.ticketsClose}
+        <button class="danger" onclick={close} disabled={busy}>{t('ticket.close')}</button>
+      {:else if !ticket.open && me.may.ticketsReopen}
         <button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button>
       {/if}
     </section>

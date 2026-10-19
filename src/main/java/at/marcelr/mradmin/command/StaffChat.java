@@ -27,7 +27,7 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class StaffChat implements TabExecutor, Listener {
 
-    public static final String PERM = "mradmin.staffchat";
+    public static final String PERM = at.marcelr.mradmin.Perms.STAFFCHAT;
 
     private final MRAdmin plugin;
     private final Set<UUID> toggled = ConcurrentHashMap.newKeySet();

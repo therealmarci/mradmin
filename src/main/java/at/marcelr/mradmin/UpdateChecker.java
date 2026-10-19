@@ -33,7 +33,7 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class UpdateChecker {
 
-    public static final String PERM_NOTIFY = "mradmin.admin.update";
+    public static final String PERM_NOTIFY = Perms.ADMIN_UPDATE;
 
     public enum State { DISABLED, CHECKING, UP_TO_DATE, OUTDATED, FAILED }
 

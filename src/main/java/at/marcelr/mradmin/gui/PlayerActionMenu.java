@@ -7,7 +7,6 @@ import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.player.FreezeManager;
-import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -42,8 +41,8 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class PlayerActionMenu extends Menu {
 
-    public static final String PERM_SUMMON = "mradmin.player.summon";
-    public static final String PERM_INVENTORY = "mradmin.player.inventory";
+    public static final String PERM_SUMMON = at.marcelr.mradmin.Perms.PLAYER_SUMMON;
+    public static final String PERM_INVENTORY = at.marcelr.mradmin.Perms.PLAYER_INVENTORY;
 
     private record Button(ItemStack item, Consumer<ClickType> action) {
     }
@@ -145,7 +144,7 @@ public final class PlayerActionMenu extends Menu {
                     plugin.freeze().set(viewer, target, !frozen);
                     render();
                 }));
-        if (viewer.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+        if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW) && plugin.feature(Feature.TICKETS)) {
             int reports = plugin.tickets().openAbout(targetId);
             actions.add(new Button(Items.of(reports > 0 ? Material.WRITABLE_BOOK : Material.BOOK)
                     .name(messages.item("gui-player-tickets", tag("count", reports)))

@@ -38,7 +38,7 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class ServerStatusMenu extends Menu {
 
-    public static final String PERM = "mradmin.status";
+    public static final String PERM = at.marcelr.mradmin.Perms.STATUS;
     private static final long RECOUNT_MS = 5_000;
     private static final int TOP = 21;
 

@@ -119,6 +119,19 @@ public final class Ticket {
         return z;
     }
 
+    /** Block coordinates (rounded down - (int) would round -623.5 to -623 instead of the block -624). */
+    public int blockX() {
+        return (int) Math.floor(x);
+    }
+
+    public int blockY() {
+        return (int) Math.floor(y);
+    }
+
+    public int blockZ() {
+        return (int) Math.floor(z);
+    }
+
     public Location location() {
         var w = Bukkit.getWorld(world);
         return w == null ? null : new Location(w, x, y, z);

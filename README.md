@@ -304,28 +304,39 @@ Dann geht dein normaler Chat ans Team. Das Spiegeln in den Admin-Discord ist opt
 ---
 
 ## Permissions
-| Permission | Standard | Wofür |
-|---|---|---|
-| `mradmin.staff` | op | Sammel-Permission fürs Team: Wartungs-Bypass und -Hinweise, Admin-Modus, Teleport, Spieler-Menü, Serverzustand, Tickets, Staff-Chat |
-| `mradmin.maintenance.bypass` | op | während der Wartung joinen, wird nicht gekickt |
-| `mradmin.maintenance.notify` | op | Hinweise (z.B. Kuma-Verbindung verloren) |
-| `mradmin.maintenance.manage` | op | `/mradmin maintenance …` |
-| `mradmin.announce` | op | `/mradmin announce …` |
-| `mradmin.mode` | op | `/mradmin mode` für sich selbst |
-| `mradmin.mode.teleport` | op | Teleport-Kompass benutzen |
-| `mradmin.mode.others` | op | Admin-Modus anderer steuern |
-| `mradmin.player.summon` / `.inventory` / `.freeze` | op | Spieler holen, Inventar/Enderchest ansehen, einfrieren |
-| `mradmin.status` | op | `/mradmin status` (Serverzustand) |
-| `mradmin.report` | **alle** | `/report` (Ticket-Menü, eigene Tickets) |
-| `mradmin.report.notify` / `.manage` | op | Meldung bei neuen Tickets und Antworten / alle Tickets bearbeiten (ohne Cooldown) |
-| `mradmin.staffchat` | op | `/sc` |
-| `mradmin.admin.discord` / `.reload` / `.update` | op | Discord-Status und -Test (beide Webhooks), Reload, Update-Hinweis |
-| `mradmin.admin` | op | alles |
+Jede Funktion hat eine eigene Permission, und sie gilt **ingame und in der Weboberfläche gleich**. Wer ingame Tickets
+nur ansehen darf, darf das im Web auch nur. Menüs und Web zeigen nur, was man darf.
+
+**Pakete** zum einfachen Vergeben:
+
+| Paket | enthält |
+|---|---|
+| `mradmin.support` | Dashboard, Tickets (ansehen, antworten, übernehmen, schließen, wieder öffnen, Hinweise), Spieler ansehen, Staff-Chat, Weboberfläche |
+| `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen/joinen/Hinweise, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand und Health |
+| `mradmin.admin` | alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Protokoll und -Konten, Reload, Speicher, Discord, Update-Hinweis |
+
+**Einzelne Permissions** (Standard `op`, außer anders angegeben):
+
+| Bereich | Permissions |
+|---|---|
+| Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
+| Tickets | `mradmin.tickets.create` (**alle**, `/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
+| Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
+| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` (enthält `mradmin.dashboard`) · `mradmin.mode.others` · `mradmin.staffchat` |
+| Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
+| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (beide **nicht** in Paketen, Standard: niemand) |
+| Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
+
+Die Permissions von MRchunks und MRsleep (z.B. `mrchunks.admin.manage`) gelten im Web ebenso für deren Bereiche.
+Frühere Permissions (`mradmin.report`, `mradmin.report.notify`, `mradmin.report.manage`, `mradmin.mode.teleport`)
+funktionieren weiter und geben dieselben Rechte wie bisher.
 
 Beispiel LuckPerms:
 ```
+/lp group supporter permission set mradmin.support true
 /lp group staff permission set mradmin.staff true
 /lp group admin permission set mradmin.admin true
+/lp user <name> permission set mradmin.web.console.execute true   # Konsole im Web nur gezielt
 ```
 
 ---
