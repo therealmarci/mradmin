@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 7
+config-version: 8
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -423,3 +423,30 @@ gui:
   # Wie oft offene Menüs aktualisiert werden (in Ticks, 20 = 1 Sekunde).
   refresh-ticks: 20
   sounds: true
+
+
+# ------------------------------------------------------------------------------
+#   10) SPEICHER
+# ------------------------------------------------------------------------------
+# Wo MRadmin Tickets, Wartungen, eingefrorene Spieler und (später) die Web-Konten speichert.
+#   yaml   = Dateien im Plugin-Ordner (Standard, wie bisher)
+#   sqlite = eine Datei plugins/MRadmin/mradmin.db - empfohlen ab vielen Tickets und für die Weboberfläche
+#   mysql  = MySQL oder MariaDB (z.B. für mehrere Server mit gemeinsamen Tickets)
+# Gespeichert wird immer im Hintergrund, der Server laggt dabei nicht. Änderungen hier wirken erst nach einem
+# Neustart. Beim ersten Start mit sqlite/mysql werden die bisherigen YAML-Daten automatisch übernommen (die Dateien
+# bleiben als *.migrated.yml). Ist die Datenbank nicht erreichbar, nutzt MRadmin vorerst die YAML-Dateien.
+# Die Treiber lädt Paper beim ersten Start selbst herunter (Ordner libraries/ im Server).
+storage:
+  type: yaml
+  mysql:
+    host: localhost
+    port: 3306
+    database: mradmin
+    username: ""
+    password: ""
+    # Gleichzeitige Verbindungen zur Datenbank.
+    pool-size: 4
+  # Name dieses Servers in der Datenbank - nur wichtig, wenn sich später mehrere Server eine Datenbank teilen.
+  server-id: "main"
+  # Vor jeden Tabellennamen (z.B. mradmin_tickets), falls die Datenbank auch für anderes genutzt wird.
+  table-prefix: "mradmin_"

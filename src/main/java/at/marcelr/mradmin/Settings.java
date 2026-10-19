@@ -28,8 +28,19 @@ public record Settings(
         UpdateSettings update,
         GuiSettings gui,
         TicketSettings tickets,
-        Set<Feature> features
+        Set<Feature> features,
+        StorageSettings storage
 ) {
+
+    /**
+     * Where the data is kept: {@code type} is "yaml", "sqlite" or "mysql" (MySQL/MariaDB). Changes need a restart.
+     *
+     * @param serverId    stored with every row, so several servers can share a database later
+     * @param tablePrefix in front of every table name (letters, digits, _)
+     */
+    public record StorageSettings(String type, String host, int port, String database, String username, String password,
+                                  int poolSize, String serverId, String tablePrefix) {
+    }
 
     /** Whether a feature is switched on under {@code features} (all are by default). */
     public boolean enabled(Feature feature) {
@@ -240,7 +251,37 @@ public record Settings(
             }
         }
 
-        return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features));
+        return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
+                storage(c, log));
+    }
+
+    private static StorageSettings storage(FileConfiguration c, Logger log) {
+        String type = c.getString("storage.type", "yaml").trim().toLowerCase(Locale.ROOT);
+        if (type.equals("mariadb")) {
+            type = "mysql";
+        }
+        if (!type.equals("yaml") && !type.equals("sqlite") && !type.equals("mysql")) {
+            log.warning("storage.type '" + type + "' is unknown (yaml, sqlite, mysql), using yaml.");
+            type = "yaml";
+        }
+        String prefix = c.getString("storage.table-prefix", "mradmin_").trim();
+        if (!prefix.matches("[A-Za-z0-9_]{0,32}")) {
+            log.warning("storage.table-prefix may only contain letters, digits and _, using mradmin_.");
+            prefix = "mradmin_";
+        }
+        String serverId = c.getString("storage.server-id", "main").trim();
+        if (serverId.isEmpty() || serverId.length() > 64) {
+            serverId = "main";
+        }
+        return new StorageSettings(type,
+                c.getString("storage.mysql.host", "localhost").trim(),
+                Math.clamp(c.getInt("storage.mysql.port", 3306), 1, 65535),
+                c.getString("storage.mysql.database", "mradmin").trim(),
+                c.getString("storage.mysql.username", ""),
+                c.getString("storage.mysql.password", ""),
+                Math.clamp(c.getInt("storage.mysql.pool-size", 4), 1, 20),
+                serverId,
+                prefix);
     }
 
     private static Material item(FileConfiguration c, String path, Material fallback, Logger log) {

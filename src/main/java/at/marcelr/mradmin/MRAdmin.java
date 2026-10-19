@@ -16,6 +16,7 @@ import at.marcelr.mradmin.mode.AdminModeListener;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
 import at.marcelr.mradmin.hook.LockTickets;
+import at.marcelr.mradmin.storage.Storage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -71,6 +72,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private TicketManager tickets;
     private PluginHooks hooks;
     private LockTickets lockTickets;
+    private Storage storage;
     private StaffChat staffChat;
     private MenuListener menuListener;
 
@@ -79,6 +81,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         discordAnnounce = new DiscordAnnouncer(this);
         ConfigUpdater.update(this);
         loadConfiguration();
+        storage = Storage.create(this);
+        getLogger().info("Storage: " + storage.type() + " (" + storage.describe() + ").");
 
         freeze = new FreezeManager(this);
         freeze.load();
@@ -139,6 +143,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (discordAnnounce != null) {
             discordAnnounce.shutdown();
         }
+        // Last: everything above may still save something.
+        if (storage != null) {
+            storage.close();
+        }
     }
 
     /**
@@ -155,7 +163,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             return problem;
         }
         ConfigUpdater.update(this);
+        String storageBefore = settings.storage().toString();
         loadConfiguration();
+        if (!settings.storage().toString().equals(storageBefore)) {
+            getLogger().warning("storage in config.yml was changed - this takes effect after a server restart.");
+        }
         startServices();
         return null;
     }
@@ -301,6 +313,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public TicketManager tickets() {
         return tickets;
+    }
+
+    public Storage storage() {
+        return storage;
     }
 
     public PluginHooks hooks() {

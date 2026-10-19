@@ -119,6 +119,11 @@ public final class MRAdminCommand implements TabExecutor {
                     teleport(sender, args);
                 }
             }
+            case "storage", "speicher", "db" -> {
+                if (check(sender, PERM_RELOAD)) {
+                    storage(sender);
+                }
+            }
             case "version", "ver" -> version(sender);
             default -> help(sender);
         }
@@ -142,6 +147,9 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (sender.hasPermission(PERM_RELOAD)) {
             messages().send(sender, "help-reload");
+        }
+        if (sender.hasPermission(PERM_RELOAD)) {
+            messages().send(sender, "help-storage");
         }
         if (sender.hasPermission(AdminModeManager.PERM_USE)) {
             messages().send(sender, "help-menu");
@@ -459,6 +467,16 @@ public final class MRAdminCommand implements TabExecutor {
         }));
     }
 
+    /** /mradmin storage - where the data is kept, and whether a changed setting still waits for a restart. */
+    private void storage(CommandSender sender) {
+        var active = plugin.storage();
+        messages().send(sender, "storage-status", tag("type", active.type()), tag("target", active.describe()));
+        String configured = plugin.settings().storage().type();
+        if (!configured.equals(active.type())) {
+            messages().send(sender, "storage-pending", tag("type", configured));
+        }
+    }
+
     private void version(CommandSender sender) {
         UpdateChecker updates = plugin.updateChecker();
         messages().send(sender, "version",
@@ -503,6 +521,7 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, MaintenanceManager.PERM_MANAGE, Feature.MAINTENANCE, options, "maintenance");
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
+            addIf(sender, PERM_RELOAD, options, "storage");
             options.add("help");
             addIf(sender, AdminModeManager.PERM_USE, options, "player");
             addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");

@@ -16,8 +16,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,7 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
 
 import static at.marcelr.mradmin.Messages.tag;
 
@@ -53,7 +50,6 @@ public final class MaintenanceManager {
 
     private final MRAdmin plugin;
     private final KumaClient kuma;
-    private final File dataFile;
 
     private List<Window> kumaWindows = List.of();
     private Window manual;
@@ -78,7 +74,6 @@ public final class MaintenanceManager {
 
     public MaintenanceManager(MRAdmin plugin) {
         this.plugin = plugin;
-        this.dataFile = new File(plugin.getDataFolder(), "maintenance.yml");
         this.kuma = new KumaClient(plugin, this::onKumaList, this::onKumaConnection);
     }
 
@@ -534,10 +529,7 @@ public final class MaintenanceManager {
     // ----------------------------------------------------------- persistence
 
     public void load() {
-        if (!dataFile.exists()) {
-            return;
-        }
-        YamlConfiguration data = YamlConfiguration.loadConfiguration(dataFile);
+        YamlConfiguration data = plugin.storage().loadYaml("maintenance", plugin.getLogger());
         manual = readWindow(data.getConfigurationSection("manual"));
         List<Window> cached = new ArrayList<>();
         ConfigurationSection kumaSection = data.getConfigurationSection("kuma-cache");
@@ -578,11 +570,7 @@ public final class MaintenanceManager {
         ignored.forEach((key, start) -> data.set("ignored." + key.replace(':', '_'), start == null ? "" : start.toString()));
         data.set("state.phase", phase.name());
         writeWindow(data, "state.window", tracked);
-        try {
-            data.save(dataFile);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "Could not save maintenance.yml: " + e.getMessage());
-        }
+        plugin.storage().saveYaml("maintenance", data);
     }
 
     private static void writeWindow(YamlConfiguration data, String path, Window w) {

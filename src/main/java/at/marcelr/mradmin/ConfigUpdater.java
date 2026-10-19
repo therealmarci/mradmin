@@ -25,9 +25,10 @@ public final class ConfigUpdater {
 
     /**
      * 5: reports became tickets (section "tickets", Discord events ticket*); 6: free ticket categories;
-     * 7: feature switches (features), MRsleep/MRchunks built in (integrations instead of menu buttons).
+     * 7: feature switches (features), MRsleep/MRchunks built in (integrations instead of menu buttons);
+     * 8: storage (yaml, sqlite, mysql).
      */
-    public static final int CURRENT_VERSION = 7;
+    public static final int CURRENT_VERSION = 8;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

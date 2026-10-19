@@ -17,6 +17,9 @@ version = "mc$mcVersion-v$pluginVersion"
 val modrinthProjectId = providers.gradleProperty("modrinthProjectId").get()
 val githubRepository = providers.gradleProperty("githubRepository").get()
 val socketIoVersion = providers.gradleProperty("socketIoVersion").get()
+val hikariVersion = providers.gradleProperty("hikariVersion").get()
+val sqliteVersion = providers.gradleProperty("sqliteVersion").get()
+val mariadbVersion = providers.gradleProperty("mariadbVersion").get()
 val supportedGameVersions = providers.gradleProperty("supportedGameVersions").get()
 val isPrerelease = pluginVersion.let { it.startsWith("0.") || it.contains("-") }
 
@@ -31,6 +34,8 @@ dependencies {
     compileOnly("net.luckperms:api:5.5")
     // Uptime-Kuma-Anbindung (Socket.IO). Steckt mit in der JAR (umbenannt nach at.marcelr.mradmin.lib, siehe shadowJar).
     implementation("io.socket:socket.io-client:$socketIoVersion")
+    // Datenbank: nur zum Kompilieren - auf dem Server lädt Paper sie über "libraries" in der plugin.yml.
+    compileOnly("com.zaxxer:HikariCP:$hikariVersion")
 
     // Für die Tests des Uptime-Kuma-Parsers (auf dem Server bringt Paper Gson mit).
     testImplementation("com.google.code.gson:gson:2.13.1")
@@ -62,6 +67,9 @@ tasks.processResources {
         "mcVersion" to mcVersion,
         "modrinthProjectId" to modrinthProjectId,
         "githubRepository" to githubRepository,
+        "hikariVersion" to hikariVersion,
+        "sqliteVersion" to sqliteVersion,
+        "mariadbVersion" to mariadbVersion,
     )
     inputs.properties(props)
     filteringCharset = "UTF-8"

@@ -58,6 +58,25 @@ anderen automatisch, auch wenn sie später geladen oder entfernt werden, und pas
 Konfigurieren muss man dafür nichts. Wer eine Verbindung nicht möchte, schaltet sie unter `integrations` ab
 (`mrsleep: false` / `mrchunks: false`). Beim Start steht in der Konsole, welche Plugins verbunden sind.
 
+### Speicher: YAML, SQLite oder MySQL
+Unter `storage.type` in der Config wählst du, wo MRadmin Tickets, Wartungen, eingefrorene Spieler und den Status der
+Discord-Ankündigungen speichert:
+
+| `type` | Wo | Wofür |
+|---|---|---|
+| `yaml` (Standard) | Dateien im Plugin-Ordner | kleine Server |
+| `sqlite` | eine Datei `plugins/MRadmin/mradmin.db` | viele Tickets, die kommende Weboberfläche |
+| `mysql` | MySQL oder MariaDB (`storage.mysql`) | später mehrere Server mit gemeinsamen Tickets |
+
+- Gespeichert wird immer im Hintergrund, nie auf dem Server-Thread. Mit SQLite/MySQL wird bei einer neuen
+  Nachricht nur diese geschrieben, nicht alle Tickets.
+- **Umstellen:** `type` ändern und den Server neu starten. Beim ersten Start werden die bisherigen YAML-Daten
+  übernommen, die Dateien bleiben als `*.migrated.yml`. `/mradmin storage` zeigt, welcher Speicher aktiv ist.
+- Ist die Datenbank beim Start nicht erreichbar, nutzt MRadmin vorerst die YAML-Dateien und meldet das in der
+  Konsole.
+- Die Treiber (HikariCP, SQLite, MariaDB) lädt Paper beim ersten Start selbst herunter (Ordner `libraries/` des
+  Servers), die JAR bleibt klein.
+
 ---
 
 ## Wartungsarbeiten
@@ -284,6 +303,7 @@ Beispiel LuckPerms:
 | `tickets.yml` | Tickets mit Verlauf (geschlossene werden nach `tickets.keep-closed` gelöscht) |
 | `frozen.yml` | eingefrorene Spieler |
 | `admin-mode/<uuid>.yml` | gespeicherter Stand von Spielern im Admin-Modus, **nicht löschen**, solange sie im Admin-Modus sind |
+| `mradmin.db` (+ `-wal`, `-shm`) | nur mit `storage.type: sqlite`: statt `tickets.yml`, `maintenance.yml`, `frozen.yml`, `discord-announce.yml` |
 
 ## Bauen
 ```

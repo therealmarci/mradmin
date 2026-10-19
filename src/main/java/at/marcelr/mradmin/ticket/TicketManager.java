@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
+import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.util.TicketText;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
@@ -19,16 +20,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 
 import static at.marcelr.mradmin.Messages.tag;
 
@@ -51,7 +48,6 @@ public final class TicketManager {
     public static final String LOCK_CATEGORY = "chunkloader-lock";
 
     private final MRAdmin plugin;
-    private final File file;
     private final Map<Integer, Ticket> tickets = new HashMap<>();
     private final Map<UUID, Instant> lastTicket = new HashMap<>();
     private final Map<UUID, Instant> lastReply = new HashMap<>();
@@ -59,7 +55,6 @@ public final class TicketManager {
 
     public TicketManager(MRAdmin plugin) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "tickets.yml");
     }
 
     private Settings.TicketSettings settings() {
@@ -203,7 +198,7 @@ public final class TicketManager {
                 cleanSubject, Instant.now(), where.getWorld().getName(), where.getX(), where.getY(), where.getZ());
         ticket.add(new Ticket.Message(creator.getUniqueId(), creator.getName(), false, cleanText, Instant.now()));
         tickets.put(ticket.id(), ticket);
-        save();
+        save(ticket);
 
         String categoryName = categoryName(category.id());
         messages().send(creator, "ticket-created", tag("id", ticket.id()), tag("type", categoryName),
@@ -260,7 +255,7 @@ public final class TicketManager {
         ticket.add(new Ticket.Message(SYSTEM, source, true, details, Instant.now()));
         ticket.staffUnread(true);
         tickets.put(ticket.id(), ticket);
-        save();
+        save(ticket);
 
         notifyLock(ticket, owner, name);
         notifyNew(ticket);
@@ -277,7 +272,7 @@ public final class TicketManager {
         if (forStaff) {
             ticket.staffUnread(true);
         }
-        save();
+        save(ticket);
     }
 
     /** Tells the owner (if online) that the ticket is there and that they can explain themselves in it. */
@@ -348,7 +343,7 @@ public final class TicketManager {
         } else {
             ticket.creatorUnread(false);
         }
-        save();
+        save(ticket);
 
         if (staff) {
             Player creator = Bukkit.getPlayer(ticket.creator());
@@ -387,7 +382,7 @@ public final class TicketManager {
         } else {
             ticket.creatorUnread(false);
         }
-        save();
+        save(ticket);
         messages().send(by, "ticket-closed", tag("id", ticket.id()));
         if (staff) {
             Player creator = Bukkit.getPlayer(ticket.creator());
@@ -416,7 +411,7 @@ public final class TicketManager {
         }
         ticket.reopen();
         ticket.creatorUnread(!ticket.isCreator(staff.getUniqueId()));
-        save();
+        save(ticket);
         messages().send(staff, "ticket-reopened", tag("id", ticket.id()));
         Player creator = Bukkit.getPlayer(ticket.creator());
         if (creator != null && !creator.equals(staff)) {
@@ -440,7 +435,7 @@ public final class TicketManager {
             messages().send(staff, before == null ? "ticket-claimed" : "ticket-claimed-from",
                     tag("id", ticket.id()), tag("player", before == null ? "" : before));
         }
-        save();
+        save(ticket);
     }
 
     /** Teleports staff to the reported player (if online) or to where the ticket was opened. */
@@ -475,7 +470,7 @@ public final class TicketManager {
             changed = true;
         }
         if (changed) {
-            save();
+            save(ticket);
         }
     }
 
@@ -600,70 +595,54 @@ public final class TicketManager {
 
     // ------------------------------------------------------------- persistence
 
+    /** Loads all tickets from the storage (YAML, SQLite or MySQL); takes over reports.yml of version 0.1.0. */
     public void load() {
         tickets.clear();
-        nextId = 1;
+        Storage.Tickets loaded = plugin.storage().loadTickets();
+        nextId = loaded.nextId();
+        for (Storage.LoadedTicket t : loaded.tickets()) {
+            Ticket ticket = fromRow(t.ticket(), t.messages());
+            tickets.put(ticket.id(), ticket);
+        }
         File old = new File(plugin.getDataFolder(), "reports.yml");
-        if (!file.exists() && old.exists()) {
+        if (tickets.isEmpty() && old.exists()) {
             migrate(old);
-            return;
-        }
-        if (!file.exists()) {
-            return;
-        }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
-        nextId = Math.max(1, y.getInt("next-id", 1));
-        ConfigurationSection section = y.getConfigurationSection("tickets");
-        if (section == null) {
-            return;
-        }
-        for (String key : section.getKeys(false)) {
-            try {
-                Ticket ticket = read(Integer.parseInt(key), section.getConfigurationSection(key));
-                tickets.put(ticket.id(), ticket);
-                nextId = Math.max(nextId, ticket.id() + 1);
-            } catch (RuntimeException e) {
-                plugin.getLogger().warning("tickets.yml: ticket " + key + " is broken, skipped (" + e.getMessage() + ").");
-            }
         }
         cleanup();
     }
 
-    private static Ticket read(int id, ConfigurationSection t) {
-        String target = t.getString("target", "");
-        // Before free categories, tickets of the types "bug" and "other" had no category: the type was it.
-        String category = t.getString("category", t.getString("type", "other"));
-        Ticket ticket = new Ticket(id, UUID.fromString(t.getString("creator")), t.getString("creator-name", "?"),
-                target.isEmpty() ? null : UUID.fromString(target), t.getString("target-name"), category,
-                t.getString("subject", ""), Instant.parse(t.getString("time")),
-                t.getString("world", ""), t.getDouble("x"), t.getDouble("y"), t.getDouble("z"));
-        for (Map<?, ?> m : t.getMapList("messages")) {
-            ticket.add(new Ticket.Message(UUID.fromString(String.valueOf(m.get("author"))), String.valueOf(m.get("name")),
-                    Boolean.parseBoolean(String.valueOf(m.get("staff"))), String.valueOf(m.get("text")),
-                    Instant.parse(String.valueOf(m.get("time")))));
+    private static Ticket fromRow(Storage.TicketRow r, List<Storage.MessageRow> messages) {
+        Ticket ticket = new Ticket(r.id(), r.creator(), r.creatorName(), r.target(), r.targetName(), r.category(),
+                r.subject(), Instant.ofEpochMilli(r.created()), r.world(), r.x(), r.y(), r.z());
+        for (Storage.MessageRow m : messages) {
+            ticket.add(new Ticket.Message(m.author(), m.authorName(), m.staff(), m.text(), Instant.ofEpochMilli(m.time())));
         }
-        String claimed = t.getString("claimed-by", "");
-        if (!claimed.isEmpty()) {
-            ticket.claim(UUID.fromString(claimed), t.getString("claimed-by-name", "?"));
+        if (r.claimedBy() != null) {
+            ticket.claim(r.claimedBy(), r.claimedByName());
         }
-        String closedBy = t.getString("closed-by", "");
-        if (!closedBy.isEmpty()) {
-            String closedAt = t.getString("closed-at", "");
-            ticket.close(closedBy, closedAt.isEmpty() ? Instant.now() : Instant.parse(closedAt));
+        if (r.closedBy() != null) {
+            ticket.close(r.closedBy(), Instant.ofEpochMilli(r.closedAt()));
         }
-        ticket.creatorUnread(t.getBoolean("creator-unread", false));
-        ticket.staffUnread(t.getBoolean("staff-unread", false));
-        String source = t.getString("source", "");
-        if (!source.isEmpty()) {
-            ticket.source(source, t.getString("source-id", ""));
+        ticket.creatorUnread(r.creatorUnread());
+        ticket.staffUnread(r.staffUnread());
+        if (r.source() != null) {
+            ticket.source(r.source(), r.sourceId());
         }
+        ticket.saved(messages.size());
         return ticket;
+    }
+
+    private static Storage.TicketRow row(Ticket t) {
+        return new Storage.TicketRow(t.id(), t.creator(), t.creatorName(), t.target(), t.targetName(), t.category(),
+                t.subject(), t.created().toEpochMilli(), t.world(), t.x(), t.y(), t.z(), t.claimedBy(), t.claimedByName(),
+                t.closedBy(), t.closedAt() == null ? 0 : t.closedAt().toEpochMilli(), t.creatorUnread(), t.staffUnread(),
+                t.source(), t.sourceId());
     }
 
     /** reports.yml of version 0.1.0: every report becomes a player ticket, the old file is kept as backup. */
     private void migrate(File old) {
         YamlConfiguration y = YamlConfiguration.loadConfiguration(old);
-        nextId = Math.max(1, y.getInt("next-id", 1));
+        nextId = Math.max(nextId, y.getInt("next-id", 1));
         ConfigurationSection section = y.getConfigurationSection("reports");
         int count = 0;
         if (section != null) {
@@ -686,81 +665,46 @@ public final class TicketManager {
                     }
                     tickets.put(id, ticket);
                     nextId = Math.max(nextId, id + 1);
+                    save(ticket);
                     count++;
                 } catch (RuntimeException e) {
                     plugin.getLogger().warning("reports.yml: report " + key + " is broken, not migrated (" + e.getMessage() + ").");
                 }
             }
         }
-        save();
         File backup = new File(plugin.getDataFolder(), "reports.migrated.yml");
         if (old.renameTo(backup)) {
-            plugin.getLogger().info("Migrated " + count + " reports from reports.yml to tickets.yml (old file: " + backup.getName() + ").");
+            plugin.getLogger().info("Migrated " + count + " reports from reports.yml to tickets (old file: " + backup.getName() + ").");
         } else {
-            plugin.getLogger().warning("Migrated " + count + " reports to tickets.yml, but could not rename reports.yml.");
+            plugin.getLogger().warning("Migrated " + count + " reports to tickets, but could not rename reports.yml.");
         }
     }
 
     /** Closed tickets older than keep-closed are removed. */
     private void cleanup() {
         Instant limit = Instant.now().minusMillis(settings().keepClosed());
-        boolean removed = tickets.values().removeIf(t -> !t.open() && t.closedAt() != null && t.closedAt().isBefore(limit));
-        if (removed) {
-            save();
+        List<Integer> old = tickets.values().stream()
+                .filter(t -> !t.open() && t.closedAt() != null && t.closedAt().isBefore(limit))
+                .map(Ticket::id).toList();
+        if (!old.isEmpty()) {
+            old.forEach(tickets::remove);
+            plugin.storage().deleteTickets(old);
         }
     }
 
-    private void save() {
-        YamlConfiguration y = new YamlConfiguration();
-        y.options().setHeader(List.of("MRadmin - support tickets (managed by the plugin, do not edit while the server runs)."));
-        y.set("next-id", nextId);
-        for (Ticket t : new ArrayList<>(tickets.values())) {
-            String p = "tickets." + t.id() + ".";
-            y.set(p + "creator", t.creator().toString());
-            y.set(p + "creator-name", t.creatorName());
-            if (t.target() != null) {
-                y.set(p + "target", t.target().toString());
-                y.set(p + "target-name", t.targetName());
-            }
-            if (t.category() != null) {
-                y.set(p + "category", t.category());
-            }
-            y.set(p + "subject", t.subject());
-            y.set(p + "time", t.created().toString());
-            y.set(p + "world", t.world());
-            y.set(p + "x", t.x());
-            y.set(p + "y", t.y());
-            y.set(p + "z", t.z());
-            if (t.claimedBy() != null) {
-                y.set(p + "claimed-by", t.claimedBy().toString());
-                y.set(p + "claimed-by-name", t.claimedByName());
-            }
-            if (!t.open()) {
-                y.set(p + "closed-by", t.closedBy());
-                y.set(p + "closed-at", t.closedAt().toString());
-            }
-            y.set(p + "creator-unread", t.creatorUnread());
-            y.set(p + "staff-unread", t.staffUnread());
-            if (t.source() != null) {
-                y.set(p + "source", t.source());
-                y.set(p + "source-id", t.sourceId());
-            }
-            List<Map<String, Object>> messages = new ArrayList<>();
-            for (Ticket.Message m : t.messages()) {
-                Map<String, Object> map = new LinkedHashMap<>();
-                map.put("author", m.author().toString());
-                map.put("name", m.authorName());
-                map.put("staff", m.staff());
-                map.put("time", m.time().toString());
-                map.put("text", m.text());
-                messages.add(map);
-            }
-            y.set(p + "messages", messages);
+    /**
+     * Saves the ticket and the messages added since the last save - in the background (see {@link Storage}); with a
+     * database only this ticket and its new messages are written.
+     */
+    private void save(Ticket ticket) {
+        Storage storage = plugin.storage();
+        storage.saveTicket(row(ticket), nextId);
+        List<Ticket.Message> all = ticket.messages();
+        for (int i = ticket.saved(); i < all.size(); i++) {
+            Ticket.Message m = all.get(i);
+            storage.addMessage(ticket.id(), i, new Storage.MessageRow(m.author(), m.authorName(), m.staff(), m.text(),
+                    m.time().toEpochMilli()));
         }
-        try {
-            y.save(file);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "Could not save tickets.yml: " + e.getMessage());
-        }
+        ticket.saved(all.size());
     }
 }

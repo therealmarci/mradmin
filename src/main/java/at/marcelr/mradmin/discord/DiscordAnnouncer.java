@@ -8,15 +8,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 /**
  * Public announcements for the community Discord (own webhook, separate from the admin log). Deliberately sparse:
@@ -56,7 +53,6 @@ public final class DiscordAnnouncer {
     }
 
     private final MRAdmin plugin;
-    private final File dataFile;
     private final AnnounceWebhook webhook;
     private Config config = Config.DISABLED;
     private String disabledReason = "discord-reason-disabled";
@@ -65,7 +61,6 @@ public final class DiscordAnnouncer {
 
     public DiscordAnnouncer(MRAdmin plugin) {
         this.plugin = plugin;
-        this.dataFile = new File(plugin.getDataFolder(), "discord-announce.yml");
         this.webhook = new AnnounceWebhook("MRadmin/" + plugin.getPluginMeta().getVersion(),
                 error -> plugin.getLogger().warning("Discord announcement webhook: " + error));
     }
@@ -346,10 +341,7 @@ public final class DiscordAnnouncer {
     // ------------------------------------------------------------- persistence
 
     public void loadState() {
-        if (!dataFile.exists()) {
-            return;
-        }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(dataFile);
+        YamlConfiguration y = plugin.storage().loadYaml("discord-announce", plugin.getLogger());
         if (!y.contains("key")) {
             return;
         }
@@ -389,11 +381,7 @@ public final class DiscordAnnouncer {
             y.set("scheduled-message", t.scheduledPost == null || t.scheduledPost.id == null ? "" : t.scheduledPost.id);
             y.set("started-message", t.startedPost == null || t.startedPost.id == null ? "" : t.startedPost.id);
         }
-        try {
-            y.save(dataFile);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "Could not save discord-announce.yml: " + e.getMessage());
-        }
+        plugin.storage().saveYaml("discord-announce", y);
     }
 
     public void shutdown() {

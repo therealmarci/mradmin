@@ -47,6 +47,8 @@ public final class Ticket {
     private String source;
     /** What it is about in that plugin (e.g. the chunk loader id). */
     private String sourceId;
+    /** How many messages are already in the storage (the rest is written with the next save). */
+    private int saved;
 
     Ticket(int id, UUID creator, String creatorName, UUID target, String targetName, String category,
            String subject, Instant created, String world, double x, double y, double z) {
@@ -218,6 +220,14 @@ public final class Ticket {
 
     void staffUnread(boolean unread) {
         staffUnread = unread;
+    }
+
+    int saved() {
+        return saved;
+    }
+
+    void saved(int count) {
+        saved = count;
     }
 
     void source(String source, String sourceId) {
