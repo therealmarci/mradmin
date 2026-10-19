@@ -54,6 +54,9 @@ public final class AdminModeManager {
         stop();
         // Players that are online (plugin reload) or come back later are picked up from their files.
         Bukkit.getOnlinePlayers().forEach(player -> resume(player, false));
+        if (!plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
+            return;
+        }
         compassTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (UUID id : states.keySet()) {
                 Player player = Bukkit.getPlayer(id);
@@ -192,8 +195,9 @@ public final class AdminModeManager {
             messages().send(player, "mode-load-failed");
             return;
         }
-        if (joined && settings().endOnQuit()) {
-            // Should already have ended on quit; the server probably crashed. Restore now.
+        if ((joined && settings().endOnQuit()) || !plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
+            // Should already have ended on quit (the server probably crashed), or the admin mode was switched off
+            // in the config: restore now.
             disable(player, false);
             return;
         }

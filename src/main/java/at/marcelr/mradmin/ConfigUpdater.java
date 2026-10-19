@@ -23,15 +23,31 @@ import java.util.logging.Level;
  */
 public final class ConfigUpdater {
 
-    public static final int CURRENT_VERSION = 4;
+    /**
+     * 5: reports became tickets (section "tickets", Discord events ticket*); 6: free ticket categories;
+     * 7: feature switches (features), MRsleep/MRchunks built in (integrations instead of menu buttons).
+     */
+    public static final int CURRENT_VERSION = 7;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
     /** Keys that were renamed: old path -> new path (the value is carried over). */
-    private static final Map<String, String> RENAMED_KEYS = Map.of();
+    private static final Map<String, String> RENAMED_KEYS = Map.ofEntries(
+            Map.entry("reports.cooldown", "tickets.cooldown"),
+            Map.entry("reports.max-open-per-player", "tickets.max-open-per-player"),
+            Map.entry("reports.tell-reporter", "tickets.notify-creator"),
+            Map.entry("reports.keep-closed", "tickets.keep-closed"),
+            Map.entry("discord.events.report.enabled", "discord.events.ticket.enabled"),
+            Map.entry("discord.events.report.color", "discord.events.ticket.color"),
+            Map.entry("discord.events.report-closed.enabled", "discord.events.ticket-closed.enabled"),
+            Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"));
 
-    /** Sections whose entries are made by the server owner (own menu buttons) - kept even if the template lacks them. */
-    private static final java.util.List<String> USER_SECTIONS = java.util.List.of("admin-mode.menu.buttons.");
+    /**
+     * Sections whose entries are made by the server owner (own menu buttons, ticket categories): their entries are
+     * kept even if the template lacks them, and default entries the owner removed do not come back.
+     */
+    private static final java.util.List<String> USER_SECTIONS = java.util.List.of(
+            "admin-mode.menu.buttons.", "tickets.categories.");
 
     private ConfigUpdater() {
     }
@@ -67,6 +83,31 @@ public final class ConfigUpdater {
                 template.loadFromString(stripBom(new String(in.readAllBytes(), StandardCharsets.UTF_8)));
             }
 
+            // v7: the MRsleep/MRchunks buttons became built-in integrations. A button the owner had switched off
+            // becomes a switched-off integration; the button entry itself goes.
+            for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
+                String button = "admin-mode.menu.buttons." + integration.id();
+                if (existing.isConfigurationSection(button)
+                        && integration.hook().equals(existing.getString(button + ".hook", "").trim())) {
+                    if (!existing.getBoolean(button + ".enabled", true)) {
+                        existing.set("integrations." + integration.id(), false);
+                    }
+                    existing.set(button, null);
+                }
+            }
+            // Default entries of owner sections that the owner had removed stay removed.
+            for (String prefix : USER_SECTIONS) {
+                String section = prefix.substring(0, prefix.length() - 1);
+                var own = existing.getConfigurationSection(section);
+                var defaults = template.getConfigurationSection(section);
+                if (own != null && defaults != null) {
+                    for (String entry : defaults.getKeys(false)) {
+                        if (!own.contains(entry, true)) {
+                            template.set(prefix + entry, null);
+                        }
+                    }
+                }
+            }
             int carried = 0;
             for (String oldKey : existing.getKeys(true)) {
                 String key = RENAMED_KEYS.getOrDefault(oldKey, oldKey);
@@ -130,7 +171,7 @@ public final class ConfigUpdater {
                 // Fill in values missing from the file. Bukkit ignores the defaults whenever code passes its own
                 // fallback (getString(path, "...")), so missing keys would otherwise get those fallbacks.
                 for (String key : defaults.getKeys(true)) {
-                    if (!defaults.isConfigurationSection(key) && !config.isSet(key)) {
+                    if (!defaults.isConfigurationSection(key) && !config.isSet(key) && !removedByOwner(config, key)) {
                         config.set(key, defaults.get(key));
                     }
                 }
@@ -139,6 +180,20 @@ public final class ConfigUpdater {
             plugin.getLogger().log(Level.WARNING, "Could not read the bundled config: " + e.getMessage());
         }
         return config;
+    }
+
+    /**
+     * Whether {@code key} belongs to a default entry of an owner section (e.g. a ticket category) that the owner
+     * removed: the file has the section, but not this entry.
+     */
+    private static boolean removedByOwner(YamlConfiguration config, String key) {
+        for (String prefix : USER_SECTIONS) {
+            if (key.startsWith(prefix) && config.contains(prefix.substring(0, prefix.length() - 1), true)) {
+                String entry = key.substring(prefix.length()).split("\\.", 2)[0];
+                return !config.contains(prefix + entry, true);
+            }
+        }
+        return false;
     }
 
     public static String stripBom(String text) {

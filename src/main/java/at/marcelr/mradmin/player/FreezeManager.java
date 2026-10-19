@@ -49,6 +49,15 @@ public final class FreezeManager {
 
     public void start() {
         stop();
+        if (!plugin.feature(at.marcelr.mradmin.Feature.FREEZE)) {
+            // Switched off: everybody is free - for good, nobody is frozen again when it is switched back on.
+            if (!frozen.isEmpty()) {
+                plugin.getLogger().info("Freeze is switched off (features.freeze) - " + frozen.size() + " frozen player(s) released.");
+                frozen.clear();
+                save();
+            }
+            return;
+        }
         // Remind frozen players every few seconds - otherwise they think the server lags.
         reminder = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (UUID id : frozen) {

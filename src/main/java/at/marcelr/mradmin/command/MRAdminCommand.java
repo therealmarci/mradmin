@@ -1,6 +1,7 @@
 package at.marcelr.mradmin.command;
 
 import at.marcelr.mradmin.DiscordWebhook;
+import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Texts;
@@ -9,9 +10,11 @@ import at.marcelr.mradmin.announce.Announcer;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
 import at.marcelr.mradmin.gui.HubMenu;
 import at.marcelr.mradmin.gui.PlayerActionMenu;
-import at.marcelr.mradmin.gui.ReportsMenu;
+import at.marcelr.mradmin.gui.TicketDialog;
+import at.marcelr.mradmin.gui.TicketsMenu;
 import at.marcelr.mradmin.gui.ServerStatusMenu;
-import at.marcelr.mradmin.report.ReportManager;
+import at.marcelr.mradmin.ticket.Ticket;
+import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.maintenance.KumaClient;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
@@ -73,13 +76,13 @@ public final class MRAdminCommand implements TabExecutor {
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "announce", "ankuendigung", "broadcast", "bc" -> {
-                if (check(sender, PERM_ANNOUNCE)) {
+                if (check(sender, PERM_ANNOUNCE) && plugin.feature(sender, Feature.ANNOUNCE)) {
                     announce(sender, args);
                 }
             }
             case "mode", "modus", "adminmode" -> mode(sender, args);
             case "maintenance", "wartung", "maint" -> {
-                if (check(sender, MaintenanceManager.PERM_MANAGE)) {
+                if (check(sender, MaintenanceManager.PERM_MANAGE) && plugin.feature(sender, Feature.MAINTENANCE)) {
                     maintenance(sender, args);
                 }
             }
@@ -100,10 +103,22 @@ public final class MRAdminCommand implements TabExecutor {
                 }
             }
             case "player", "spieler", "p" -> player(sender, args);
-            case "status", "server", "tps" -> withPlayer(sender, ServerStatusMenu.PERM,
-                    viewer -> new ServerStatusMenu(plugin, viewer, () -> new HubMenu(plugin, viewer).open()).open());
-            case "reports", "report" -> reports(sender, args);
-            case "tp", "teleport" -> teleport(sender, args);
+            case "status", "server", "tps" -> {
+                if (plugin.feature(sender, Feature.SERVER_STATUS)) {
+                    withPlayer(sender, ServerStatusMenu.PERM,
+                            viewer -> new ServerStatusMenu(plugin, viewer, () -> new HubMenu(plugin, viewer).open()).open());
+                }
+            }
+            case "tickets", "ticket", "reports", "report" -> {
+                if (plugin.feature(sender, Feature.TICKETS)) {
+                    tickets(sender, args);
+                }
+            }
+            case "tp", "teleport" -> {
+                if (plugin.feature(sender, Feature.TELEPORT)) {
+                    teleport(sender, args);
+                }
+            }
             case "version", "ver" -> version(sender);
             default -> help(sender);
         }
@@ -113,13 +128,13 @@ public final class MRAdminCommand implements TabExecutor {
     /** Every line only appears if the sender may use that command. */
     private void help(CommandSender sender) {
         messages().send(sender, "help-header");
-        if (sender.hasPermission(PERM_ANNOUNCE)) {
+        if (sender.hasPermission(PERM_ANNOUNCE) && plugin.feature(Feature.ANNOUNCE)) {
             messages().send(sender, "help-announce", tag("presets", String.join(", ", plugin.announcer().presets())));
         }
-        if (sender.hasPermission(AdminModeManager.PERM_USE)) {
+        if (sender.hasPermission(AdminModeManager.PERM_USE) && plugin.feature(Feature.ADMIN_MODE)) {
             messages().send(sender, "help-mode");
         }
-        if (sender.hasPermission(MaintenanceManager.PERM_MANAGE)) {
+        if (sender.hasPermission(MaintenanceManager.PERM_MANAGE) && plugin.feature(Feature.MAINTENANCE)) {
             messages().send(sender, "help-maintenance");
         }
         if (sender.hasPermission(PERM_DISCORD)) {
@@ -131,13 +146,13 @@ public final class MRAdminCommand implements TabExecutor {
         if (sender.hasPermission(AdminModeManager.PERM_USE)) {
             messages().send(sender, "help-menu");
         }
-        if (sender.hasPermission(ServerStatusMenu.PERM)) {
+        if (sender.hasPermission(ServerStatusMenu.PERM) && plugin.feature(Feature.SERVER_STATUS)) {
             messages().send(sender, "help-status");
         }
-        if (sender.hasPermission(ReportManager.PERM_MANAGE)) {
-            messages().send(sender, "help-reports");
+        if (sender.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+            messages().send(sender, "help-tickets");
         }
-        if (sender.hasPermission(StaffChat.PERM)) {
+        if (sender.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
             messages().send(sender, "help-staffchat");
         }
         messages().send(sender, "help-version");
@@ -179,25 +194,27 @@ public final class MRAdminCommand implements TabExecutor {
         });
     }
 
-    /** /mradmin reports [tp <id>|close <id>] - the menu, or the actions of the clickable report notice. */
-    private void reports(CommandSender sender, String[] args) {
-        withPlayer(sender, ReportManager.PERM_MANAGE, viewer -> {
+    /** /mradmin tickets [view|tp|close <id>] - the team's ticket menu, or the actions of the clickable notices. */
+    private void tickets(CommandSender sender, String[] args) {
+        withPlayer(sender, TicketManager.PERM_MANAGE, viewer -> {
             if (args.length < 3) {
-                new ReportsMenu(plugin, viewer, null, null).open();
+                new TicketsMenu(plugin, viewer, null, null).open();
                 return;
             }
-            ReportManager.Report report;
+            Ticket ticket;
             try {
-                report = plugin.reports().get(Integer.parseInt(args[2].replace("#", "")));
+                ticket = plugin.tickets().get(Integer.parseInt(args[2].replace("#", "")));
             } catch (NumberFormatException e) {
-                report = null;
+                ticket = null;
             }
-            if (report == null) {
-                messages().send(sender, "report-not-found", tag("id", args[2]));
-            } else if (args[1].equalsIgnoreCase("close")) {
-                plugin.reports().close(viewer, report);
-            } else {
-                plugin.reports().teleport(viewer, report);
+            if (ticket == null) {
+                messages().send(sender, "ticket-not-found", tag("id", args[2]));
+                return;
+            }
+            switch (args[1].toLowerCase(Locale.ROOT)) {
+                case "close" -> plugin.tickets().close(viewer, ticket);
+                case "tp", "teleport" -> plugin.tickets().teleport(viewer, ticket);
+                default -> TicketDialog.view(plugin, viewer, ticket, null);
             }
         });
     }
@@ -240,7 +257,7 @@ public final class MRAdminCommand implements TabExecutor {
 
     /** /mradmin mode [on|off|toggle|list] [player] */
     private void mode(CommandSender sender, String[] args) {
-        if (!check(sender, AdminModeManager.PERM_USE)) {
+        if (!check(sender, AdminModeManager.PERM_USE) || !plugin.feature(sender, Feature.ADMIN_MODE)) {
             return;
         }
         AdminModeManager mode = plugin.adminMode();
@@ -481,16 +498,16 @@ public final class MRAdminCommand implements TabExecutor {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
             options.add("version");
-            addIf(sender, PERM_ANNOUNCE, options, "announce");
-            addIf(sender, AdminModeManager.PERM_USE, options, "mode");
-            addIf(sender, MaintenanceManager.PERM_MANAGE, options, "maintenance");
+            addIf(sender, PERM_ANNOUNCE, Feature.ANNOUNCE, options, "announce");
+            addIf(sender, AdminModeManager.PERM_USE, Feature.ADMIN_MODE, options, "mode");
+            addIf(sender, MaintenanceManager.PERM_MANAGE, Feature.MAINTENANCE, options, "maintenance");
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
             options.add("help");
             addIf(sender, AdminModeManager.PERM_USE, options, "player");
-            addIf(sender, ServerStatusMenu.PERM, options, "status");
-            addIf(sender, ReportManager.PERM_MANAGE, options, "reports");
-            addIf(sender, AdminModeManager.PERM_TELEPORT, options, "tp");
+            addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");
+            addIf(sender, TicketManager.PERM_MANAGE, Feature.TICKETS, options, "tickets");
+            addIf(sender, AdminModeManager.PERM_TELEPORT, Feature.TELEPORT, options, "tp");
         } else {
             String sub = args[0].toLowerCase(Locale.ROOT);
             switch (sub) {
@@ -551,6 +568,12 @@ public final class MRAdminCommand implements TabExecutor {
     private static void addIf(CommandSender sender, String permission, List<String> target, String... values) {
         if (sender.hasPermission(permission)) {
             target.addAll(List.of(values));
+        }
+    }
+
+    private void addIf(CommandSender sender, String permission, Feature feature, List<String> target, String... values) {
+        if (plugin.feature(feature)) {
+            addIf(sender, permission, target, values);
         }
     }
 }

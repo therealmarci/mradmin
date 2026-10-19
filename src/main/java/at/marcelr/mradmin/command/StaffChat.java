@@ -39,6 +39,9 @@ public final class StaffChat implements TabExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         return plugin.messages().as(sender, () -> {
+            if (!plugin.feature(sender, at.marcelr.mradmin.Feature.STAFF_CHAT)) {
+                return true;
+            }
             if (!sender.hasPermission(PERM)) {
                 plugin.messages().send(sender, "no-permission");
             } else if (args.length == 0) {
@@ -56,7 +59,7 @@ public final class StaffChat implements TabExecutor, Listener {
 
     /** Whether the player's normal chat currently goes to the staff chat. */
     public boolean toggled(Player player) {
-        return toggled.contains(player.getUniqueId());
+        return plugin.feature(at.marcelr.mradmin.Feature.STAFF_CHAT) && toggled.contains(player.getUniqueId());
     }
 
     /** Switches the player's chat between normal and staff chat and tells them. @return the new state */
@@ -85,7 +88,7 @@ public final class StaffChat implements TabExecutor, Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
-        if (!toggled.contains(player.getUniqueId())) {
+        if (!toggled(player)) {
             return;
         }
         if (!player.hasPermission(PERM)) {

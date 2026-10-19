@@ -84,6 +84,14 @@ public final class MaintenanceManager {
 
     public void start() {
         stop();
+        if (!plugin.feature(at.marcelr.mradmin.Feature.MAINTENANCE)) {
+            // Switched off: nobody is kept out, no countdown, no Kuma connection. Plans stay in maintenance.yml.
+            phase = Phase.NONE;
+            tracked = null;
+            active = false;
+            activeWindow = null;
+            return;
+        }
         kuma.start(plugin.settings().kuma());
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
         tick();

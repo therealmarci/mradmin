@@ -24,6 +24,40 @@ Admin-Werkzeuge für **Paper 26.3** (Java 25): Wartungsmodus mit Uptime-Kuma-Anb
 Sprache: `language: de` oder `language: en` in der Config. Alle Texte (auch Presets und Discord) stehen in
 `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
 
+### Funktionen ein- und ausschalten
+Jede Funktion lässt sich unter `features` in der Config abschalten (`/mradmin reload` genügt):
+
+```yaml
+features:
+  maintenance: true    # Wartungsmodus inkl. Uptime Kuma
+  announce: true       # Ankündigungen
+  admin-mode: true     # Admin-Modus und Kompass
+  teleport: true       # zu Spielern teleportieren (Spieler-Menü, /mradmin tp, Tickets, Serverzustand)
+  summon: true         # Spieler herholen
+  inventory: true      # Inventar/Enderchest ansehen
+  freeze: true         # Einfrieren
+  server-status: true  # Serverzustand
+  tickets: true        # Tickets & Reports (/report)
+  staff-chat: true     # Staff-Chat (/sc)
+```
+
+Eine ausgeschaltete Funktion verschwindet komplett: Ihre Befehle melden „ausgeschaltet“, Knöpfe und Kacheln fehlen in
+allen Menüs, und sie greift nirgends mehr ein. Ihre Daten (Tickets, geplante Wartungen) bleiben erhalten.
+Sonderfälle: Wer beim Abschalten des Admin-Modus darin ist, bekommt sein Inventar sofort zurück (offline beim nächsten
+Join). Beim Abschalten von `freeze` sind alle eingefrorenen Spieler frei. Discord-Logs, Discord-Ankündigungen,
+Uptime Kuma und Update-Check haben ihren Schalter (`enabled`) im jeweiligen Abschnitt.
+
+### Zusammenarbeit mit MRsleep und MRchunks
+MRadmin, MRsleep und MRchunks laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin die
+anderen automatisch, auch wenn sie später geladen oder entfernt werden, und passt die Menüs von selbst an:
+- **Dashboard:** ein Knopf je Plugin mit Live-Infos, der dessen Admin-Menü öffnet.
+- **Spieler-Menü:** die Infos des Spielers aus dem Plugin, ein Klick öffnet dessen Spieler-Menü.
+- **Serverzustand** (MRchunks): auffällige, gesperrte und pausierte Chunkloader statt der Chunks mit den meisten
+  Entities.
+
+Konfigurieren muss man dafür nichts. Wer eine Verbindung nicht möchte, schaltet sie unter `integrations` ab
+(`mrsleep: false` / `mrchunks: false`). Beim Start steht in der Konsole, welche Plugins verbunden sind.
+
 ---
 
 ## Wartungsarbeiten
@@ -125,18 +159,19 @@ Ein **eigener Webhook** für den öffentlichen Channel, getrennt vom Admin-Log (
 `/mradmin` (oder Rechtsklick mit dem Admin-Kompass) öffnet das Dashboard. Die Befehlsliste gibt es mit `/mradmin help`.
 ```
 ■ ■ ■ ■ [Du] ■ ■ ■ ■                                Kopf: Admin-Modus, Staff-Chat, Welt
-■ [Spieler] ■ [Server] ■ [Wartung] ■ [Reports] ■     Live-Kacheln, Klick öffnet
+■ [Spieler] ■ [Server] ■ [Wartung] ■ [Tickets] ■     Live-Kacheln, Klick öffnet
 □ □ ▬ □ ▬ □ ▬ □ ▬ □                                  Statusleiste: grün / gelb / rot
 ■ ■ [Ankündigen] ■ [MRsleep] ■ [MRchunks] ■ ■        Werkzeuge und Plugins
 ■ ■ [Admin-Modus] ■ [Schließen] ■ [Staff-Chat] ■ ■   Schalter
 ```
 - **Statusleiste:** Unter jeder Kachel zeigt eine Scheibe den Zustand, z.B. TPS (grün ab 19,5, gelb ab 15), Wartung
-  (gelb = geplant/Countdown, rot = aktiv), Reports (rot = offen) und eingefrorene Spieler (gelb).
+  (gelb = geplant/Countdown, rot = aktiv), Tickets (gelb = offen, rot = warten auf Antwort) und eingefrorene Spieler (gelb).
 - **Ankündigen:** alle Presets als Buttons. Braucht ein Preset Werte (z.B. `restart`), fragt ein Dialog danach.
   Rechtsklick kündigt ohne Discord an. „Eigener Text“ öffnet einen Dialog für Titel, Untertitel und optional Discord.
 - **Plugin-Buttons:** öffnen die Admin-Menüs anderer Plugins, mit Live-Infos, wenn das Plugin sie anbietet.
-  Mitgeliefert sind MRsleep und MRchunks, sie erscheinen nur, wenn das Plugin installiert ist und du dessen
-  Permission hast. Eigene Buttons gehen über `admin-mode.menu.buttons` in der Config, z.B. für Chunky.
+  MRsleep und MRchunks kommen automatisch, sobald sie installiert sind und du deren Permission hast (siehe
+  [Zusammenarbeit](#zusammenarbeit-mit-mrsleep-und-mrchunks)). Eigene Buttons gehen über `admin-mode.menu.buttons`
+  in der Config, z.B. für Chunky.
 - **Schalter:** Admin-Modus an/aus und Staff-Chat an/aus.
 - Alle Reihen sind symmetrisch zur Mitte. Fehlt eine Permission, rücken die übrigen Buttons zusammen.
 
@@ -154,7 +189,7 @@ Ein **eigener Webhook** für den öffentlichen Channel, getrennt vom Admin-Log (
 
 ---
 
-## Spieler-Menü, Serverzustand, Reports, Staff-Chat
+## Spieler-Menü, Serverzustand, Tickets, Staff-Chat
 
 ### Spieler-Menü
 Über Kompass → **Spieler teleportieren** → Klick auf einen Kopf (Shift-Klick teleportiert direkt) oder
@@ -179,13 +214,32 @@ Entities und Spieler. Darunter stehen:
 - ohne MRchunks: die **21 Chunks mit den meisten Entities** (Lag-Quellen) samt häufigster Typen. Ein Klick
   teleportiert zum Chunk.
 
-### Reports
-- `/report <spieler> <grund>` für alle Spieler, mit Cooldown und Höchstzahl offener Reports pro Spieler
-  (Config `reports`).
-- Das Team bekommt eine Meldung mit **[Teleport]** und **[Alle Reports]**, beim Join auch die Zahl offener Reports,
-  dazu ein Post im Admin-Discord.
-- Kompass → **Reports** oder `/mradmin reports`: Linksklick teleportiert zum Spieler (offline: zum Ort des
-  Reports), Rechtsklick markiert ihn als erledigt. Der Melder erfährt das, wenn er online ist.
+### Tickets & Reports
+- `/report` (auch `/ticket`, `/support`) öffnet für alle Spieler das **Ticket-Menü**: **Ticket erstellen**, darunter
+  die offenen Tickets (neue Antworten leuchten) und das **Archiv** mit den geschlossenen.
+- **Ticket erstellen:** erst die Kategorie wählen (ein Knopf pro Kategorie), dann das **Formular** (Minecraft-Dialog).
+  Bei Spieler-Reports wird vorher der Spieler gewählt (Köpfe der Online-Spieler oder Name eingeben, auch offline),
+  sonst gibt es Titel und Beschreibung. Der Standort wird mitgespeichert. `/report <spieler> [text]` springt direkt
+  zur Auswahl des Grundes.
+- **Kategorien** legst du in der Config unter `tickets.categories` an: Name, `player: true` für Spieler-Reports,
+  optional eine Permission. Standard: Cheating, Chat, Griefing, Betrug (Spieler-Reports), Bug, Frage/Sonstiges.
+- Im **Ticket** stehen oben die Details, darunter der Verlauf wie in einem Chat (Kopf, Name, Uhrzeit, Text) und ein
+  Antwortfeld. Wer gerade nicht online ist, erfährt beim nächsten Join von neuen Antworten. Klickbare
+  **[Öffnen]**-Links im Chat öffnen das Ticket direkt (`/report #<id>`).
+- Das Team bekommt neue Tickets mit **[Öffnen] [Teleport] [Alle Tickets]**, beim Join die Zahl offener Tickets.
+  Dashboard → **Tickets** oder `/mradmin tickets`: Filter nach Kategorie und offen/geschlossen, Linksklick öffnet das
+  Ticket, Rechtsklick teleportiert. Im Ticket: antworten, **übernehmen**/freigeben, teleportieren, schließen,
+  wieder öffnen. Wer zuerst antwortet, übernimmt das Ticket automatisch (abschaltbar).
+- Config `tickets`: Cooldowns, Höchstzahl offener Tickets, Textlängen, Kategorien, Symbol, Team-Namen anzeigen oder
+  nur „Team“, Ton. Discord-Events `ticket`, `ticket-message` (aus), `ticket-closed`, `ticket-reopened`.
+- Bestehende Reports aus `reports.yml` werden beim ersten Start automatisch zu Tickets (Backup
+  `reports.migrated.yml`).
+- **Mit MRchunks:** Wird ein Chunkloader wegen Lag gesperrt, öffnet MRadmin automatisch ein Ticket für den Owner
+  (Kategorie „Chunkloader-Sperre“) mit allen Details der Sperre: Messwerte, Grenzen, Ort, Zeit, Server-TPS. Der
+  Owner bekommt einen Link im Chat (offline beim nächsten Join) und kann im Ticket erklären, was passiert ist.
+  **Schließen kann es nur das Team.** Im Ticket öffnet
+  **Chunkloader-Menü** das Menü des Loaders (Teleport, an/aus, Grenze, Lag-Sperre aufheben). Wird der Loader erneut gesperrt oder entsperrt, auch außerhalb
+  des Tickets, steht das im selben Ticket. Abschaltbar mit `tickets.chunkloader-locks: false`.
 
 ### Staff-Chat
 `/sc <nachricht>` schreibt an alle mit `mradmin.staffchat`, auch von der Konsole. `/sc` ohne Text schaltet um:
@@ -196,7 +250,7 @@ Dann geht dein normaler Chat ans Team. Das Spiegeln in den Admin-Discord ist opt
 ## Permissions
 | Permission | Standard | Wofür |
 |---|---|---|
-| `mradmin.staff` | op | Sammel-Permission fürs Team: Wartungs-Bypass und -Hinweise, Admin-Modus, Teleport, Spieler-Menü, Serverzustand, Reports, Staff-Chat |
+| `mradmin.staff` | op | Sammel-Permission fürs Team: Wartungs-Bypass und -Hinweise, Admin-Modus, Teleport, Spieler-Menü, Serverzustand, Tickets, Staff-Chat |
 | `mradmin.maintenance.bypass` | op | während der Wartung joinen, wird nicht gekickt |
 | `mradmin.maintenance.notify` | op | Hinweise (z.B. Kuma-Verbindung verloren) |
 | `mradmin.maintenance.manage` | op | `/mradmin maintenance …` |
@@ -206,8 +260,8 @@ Dann geht dein normaler Chat ans Team. Das Spiegeln in den Admin-Discord ist opt
 | `mradmin.mode.others` | op | Admin-Modus anderer steuern |
 | `mradmin.player.summon` / `.inventory` / `.freeze` | op | Spieler holen, Inventar/Enderchest ansehen, einfrieren |
 | `mradmin.status` | op | `/mradmin status` (Serverzustand) |
-| `mradmin.report` | **alle** | `/report` |
-| `mradmin.report.notify` / `.manage` | op | Meldung bei Reports / Reports bearbeiten (ohne Cooldown) |
+| `mradmin.report` | **alle** | `/report` (Ticket-Menü, eigene Tickets) |
+| `mradmin.report.notify` / `.manage` | op | Meldung bei neuen Tickets und Antworten / alle Tickets bearbeiten (ohne Cooldown) |
 | `mradmin.staffchat` | op | `/sc` |
 | `mradmin.admin.discord` / `.reload` / `.update` | op | Discord-Status und -Test (beide Webhooks), Reload, Update-Hinweis |
 | `mradmin.admin` | op | alles |
@@ -227,7 +281,7 @@ Beispiel LuckPerms:
 | `lang/de.yml`, `lang/en.yml` | alle Texte, Presets, Discord-Texte |
 | `maintenance.yml` | Zustand der Wartung (manuelle Wartung, letzter Stand aus Kuma), wird vom Plugin verwaltet |
 | `discord-announce.yml` | welche Wartung zuletzt im Community-Discord gepostet wurde (für Bearbeitungen), wird vom Plugin verwaltet |
-| `reports.yml` | Reports (erledigte werden nach `reports.keep-closed` gelöscht) |
+| `tickets.yml` | Tickets mit Verlauf (geschlossene werden nach `tickets.keep-closed` gelöscht) |
 | `frozen.yml` | eingefrorene Spieler |
 | `admin-mode/<uuid>.yml` | gespeicherter Stand von Spielern im Admin-Modus, **nicht löschen**, solange sie im Admin-Modus sind |
 

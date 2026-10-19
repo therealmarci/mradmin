@@ -149,7 +149,7 @@ public final class ServerStatusMenu extends Menu {
             hot = countHotChunks();
             counted = System.currentTimeMillis();
         }
-        boolean teleport = viewer.hasPermission(AdminModeManager.PERM_TELEPORT);
+        boolean teleport = viewer.hasPermission(AdminModeManager.PERM_TELEPORT) && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT);
         // 3 rows of 7 (columns 1-7), so the block is centered.
         int index = 0;
         for (HotChunk chunk : hot) {

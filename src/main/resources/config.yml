@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 4
+config-version: 7
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -22,6 +22,40 @@ language: de
 
 # Zeitzone für alle angezeigten Uhrzeiten, z.B. "Europe/Vienna" oder "Europe/Berlin". Leer = Zeitzone des Servers.
 timezone: ""
+
+# Funktionen ein- und ausschalten. Eine ausgeschaltete Funktion verschwindet komplett: ihre Befehle melden
+# "ausgeschaltet", ihre Knöpfe fehlen in den Menüs und sie greift nirgends mehr ein. Gespeicherte Daten (Tickets,
+# geplante Wartungen ...) bleiben erhalten und sind nach dem Einschalten wieder da. Wirkt mit /mradmin reload.
+# Discord-Logs, Discord-Ankündigungen, Uptime Kuma und der Update-Check haben ihren Schalter (enabled) im
+# jeweiligen Abschnitt weiter unten.
+features:
+  # Wartungsmodus: Countdown, Bossbar, MOTD, Join-Sperre (inkl. Uptime-Kuma-Anbindung).
+  maintenance: true
+  # Ankündigungen: /mradmin announce und das Ankündigungs-Menü.
+  announce: true
+  # Admin-Modus: /mradmin mode und der Admin-Kompass. Wer beim Ausschalten im Admin-Modus ist, bekommt sein
+  # Inventar sofort zurück (offline: beim nächsten Join).
+  admin-mode: true
+  # Spieler-Werkzeuge im Spieler-Menü: zu Spielern teleportieren (auch /mradmin tp), Spieler herholen, Inventar und
+  # Enderchest ansehen, einfrieren (beim Ausschalten sind eingefrorene Spieler sofort frei).
+  teleport: true
+  summon: true
+  inventory: true
+  freeze: true
+  # Serverzustand: /mradmin status und die Server-Kachel im Dashboard.
+  server-status: true
+  # Tickets & Reports: /report und /mradmin tickets.
+  tickets: true
+  # Staff-Chat: /sc.
+  staff-chat: true
+
+# Zusammenarbeit mit meinen anderen Plugins. MRadmin erkennt sie automatisch - auch wenn sie später geladen oder
+# entfernt werden - und passt die Menüs von selbst an: Knopf im Dashboard mit Live-Infos, Infos im Spieler-Menü,
+# bei MRchunks auffällige Chunkloader im Serverzustand. Ist ein Plugin nicht installiert, fehlt nur sein Teil.
+# Alle Plugins laufen auch einzeln. false = nicht verbinden, auch wenn das Plugin installiert ist.
+integrations:
+  mrsleep: true
+  mrchunks: true
 
 
 # ------------------------------------------------------------------------------
@@ -147,55 +181,98 @@ admin-mode:
   #   false = bleibt aktiv, beim nächsten Join geht es im Admin-Modus weiter
   end-on-quit: false
 
-  # Menü des Kompasses (Rechtsklick): "Spieler teleportieren", die Buttons unten, Wartungsstatus, Admin-Modus beenden.
-  # Jeder Button führt einen Befehl als Spieler aus, z.B. das Admin-Menü eines anderen Plugins. Die Rechte prüft
-  # dann das jeweilige Plugin selbst. Höchstens 6 Buttons, Reihenfolge wie hier.
+  # Eigene Knöpfe im Dashboard (Reihe "Werkzeuge"), z.B. für das Admin-Menü eines anderen Plugins. MRsleep und
+  # MRchunks brauchen hier keinen Eintrag, sie kommen automatisch (siehe integrations oben). Jeder Knopf führt einen
+  # Befehl als Spieler aus, die Rechte prüft dann das jeweilige Plugin selbst. Höchstens 6 Knöpfe inkl. MRsleep und
+  # MRchunks, Reihenfolge wie hier.
   #   plugin:     nur anzeigen, wenn dieses Plugin installiert ist ("" = immer)
-  #   permission: nur anzeigen, wenn der Spieler diese Permission hat ("" = alle im Admin-Modus)
-  #   enabled:    false = Button ausblenden (z.B. statt ihn zu löschen)
-  #   hook:       Schnittstelle des Plugins für Live-Infos auf dem Button und im Spieler-Menü (nur MRsleep/MRchunks,
-  #               ab deren Version mit MRadmin-Unterstützung - ältere funktionieren weiter, nur ohne Live-Infos)
+  #   permission: nur anzeigen, wenn der Spieler diese Permission hat ("" = alle mit Dashboard)
+  #   enabled:    false = Knopf ausblenden (z.B. statt ihn zu löschen)
   # Name und Beschreibung stehen in der Sprachdatei unter gui-hub-buttons.<name> (fehlt er dort: der Name von hier).
-  # Eigene Buttons einfach dazuschreiben, z.B.:
+  # Beispiel:
   #   chunky:
   #     plugin: Chunky
   #     material: MAP
   #     command: "chunky progress"
   menu:
-    buttons:
-      mrsleep:
-        enabled: true
-        plugin: MRsleep
-        material: RED_BED
-        command: "mrsleep gui"
-        permission: "mrsleep.admin.gui"
-        hook: "at.marcelr.mrsleep.api.MRadminHook"
-      mrchunks:
-        enabled: true
-        plugin: MRchunks
-        material: EMERALD_BLOCK
-        command: "mrchunks gui"
-        permission: "mrchunks.admin.gui"
-        hook: "at.marcelr.mrchunks.api.MRadminHook"
+    buttons: {}
 
 
 # ------------------------------------------------------------------------------
-#   5) REPORTS
+#   5) TICKETS & REPORTS
 # ------------------------------------------------------------------------------
-# /report <spieler> <grund> für alle Spieler (Permission mradmin.report). Das Team (mradmin.report.notify) bekommt
-# eine Meldung mit [Teleport]-Knopf, offene Reports stehen im Admin-Menü bzw. unter /mradmin reports.
-reports:
-  # So lange muss ein Spieler zwischen zwei Reports warten (Team: kein Cooldown).
+# /report öffnet für alle Spieler (Permission mradmin.report) das Ticket-Menü: "Ticket erstellen" (Kategorie wählen,
+# dann ein Formular), die offenen Tickets und das Archiv mit den geschlossenen. Im Ticket schreiben Spieler und
+# Team hin und her wie in einem Chat.
+# Das Team (mradmin.report.notify) bekommt eine Meldung mit [Öffnen] und [Teleport]. Alle Tickets stehen im
+# Dashboard bzw. unter /mradmin tickets (mradmin.report.manage): antworten, übernehmen, teleportieren, schließen.
+# Texte: lang/<sprache>.yml, Abschnitte ticket-... und ticket-categories.
+tickets:
+  # So lange muss ein Spieler zwischen zwei neuen Tickets warten (Team: kein Cooldown).
   cooldown: "60s"
-  # Grund mindestens / höchstens so viele Zeichen (längere werden gekürzt).
-  min-reason-length: 3
-  max-reason-length: 200
-  # Höchstens so viele offene Reports pro meldendem Spieler.
+  # Mindestabstand zwischen zwei Nachrichten eines Spielers im Ticket (gegen Spam).
+  reply-cooldown: "3s"
+  # Höchstens so viele offene Tickets pro Spieler (alle Kategorien zusammen).
   max-open-per-player: 3
-  # Dem Spieler Bescheid geben, wenn sein Report erledigt wurde (falls er online ist).
-  tell-reporter: true
-  # Erledigte Reports so lange aufheben, danach werden sie gelöscht.
+  # Länge des Titels (alle Kategorien außer Spieler-Reports) und der Texte. Das Formular lässt nicht mehr zu.
+  min-subject-length: 3
+  max-subject-length: 50
+  min-text-length: 10
+  max-text-length: 500
+  # Dem Spieler Bescheid geben, wenn das Team sein Ticket geschlossen hat (falls er online ist). Neue Antworten
+  # werden immer gemeldet, offline beim nächsten Join.
+  notify-creator: true
+  # Namen der Teammitglieder im Ticket zeigen. false = Spieler sehen nur "Team".
+  show-staff-names: true
+  # Bild neben Team-Nachrichten, wenn die Namen ausgeblendet sind (sonst der Kopf des Teammitglieds).
+  team-icon: "NETHER_STAR"
+  # Wer als Erster aus dem Team antwortet, übernimmt das Ticket automatisch (weitere Nachrichten des Spielers gehen
+  # dann nur an ihn, solange er online ist).
+  auto-claim: true
+  # So viele der letzten Nachrichten zeigt das Ticket (ältere werden ausgeblendet).
+  shown-messages: 20
+  # Ton bei Meldungen über neue Tickets und Antworten (Bukkit-Name oder Key). Leer = kein Ton.
+  sound: "BLOCK_NOTE_BLOCK_PLING"
+  # Geschlossene Tickets so lange aufheben (auch für den Spieler sichtbar), danach werden sie gelöscht.
   keep-closed: "7d"
+  # Mit MRchunks: Wird ein Chunkloader wegen Lag gesperrt, bekommt sein Owner automatisch ein Ticket mit allen
+  # Details der Sperre (Link im Chat). Darin kann er erklären, was passiert ist. Schließen kann es nur das Team, das
+  # den Loader über "Chunkloader-Menü" im Ticket entsperren kann. Wird er erneut gesperrt oder entsperrt, steht das im selben Ticket.
+  chunkloader-locks: true
+  # Symbol aller Tickets in den Menüs (Item-Name).
+  icon: "NAME_TAG"
+  # Kategorien, die beim Erstellen zur Auswahl stehen (in dieser Reihenfolge). Eigene einfach ergänzen, nicht
+  # benötigte löschen oder mit enabled: false ausblenden. Pro Kategorie:
+  #   name:       Anzeigename. Leer = Text aus der Sprachdatei (ticket-categories.<id>), sonst die ID.
+  #   player:     true = Spieler-Report: erst wird der Spieler ausgewählt, dann der Vorfall beschrieben.
+  #               false = normales Ticket mit Titel und Beschreibung.
+  #   permission: nur Spieler mit dieser Permission sehen die Kategorie. Leer = alle mit mradmin.report.
+  #   enabled:    false = ausgeblendet (bestehende Tickets bleiben erhalten).
+  # Beispiel für eine eigene Kategorie:
+  #   bewerbung:
+  #     name: "Bewerbung fürs Team"
+  #     player: false
+  #     permission: ""
+  # Die ID (hier "bewerbung") wird im Ticket gespeichert - nicht mehr ändern, sobald es Tickets damit gibt.
+  categories:
+    cheating:
+      name: ""
+      player: true
+    chat:
+      name: ""
+      player: true
+    griefing:
+      name: ""
+      player: true
+    scam:
+      name: ""
+      player: true
+    bug:
+      name: ""
+      player: false
+    other:
+      name: ""
+      player: false
 
 
 # ------------------------------------------------------------------------------
@@ -248,12 +325,19 @@ discord:
     admin-reload:
       enabled: true
       color: "#3498DB"
-    report:
+    ticket:
       enabled: true
       color: "#E67E22"
-    report-closed:
+    # Jede Nachricht in einem Ticket (standardmäßig aus).
+    ticket-message:
+      enabled: false
+      color: "#3498DB"
+    ticket-closed:
       enabled: true
       color: "#2ECC71"
+    ticket-reopened:
+      enabled: true
+      color: "#F1C40F"
     player-freeze:
       enabled: true
       color: "#3498DB"

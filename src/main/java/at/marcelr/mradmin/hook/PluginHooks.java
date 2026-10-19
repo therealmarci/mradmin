@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   public static boolean openActivity(Player viewer, String id, Runnable back)
  * </pre>
  * MRchunks uses that for chunk loaders with conspicuous activity in the server health menu.
+ * Version 3 may add {@code EVENT}: MRchunks' lock event, MRadmin opens a ticket for it (see {@link LockTickets}).
  * The class is looked up in that plugin's class loader when it is needed; a missing, outdated or broken hook simply
  * means the button works without live information (it still runs its command).
  */

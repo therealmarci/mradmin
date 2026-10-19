@@ -10,12 +10,12 @@ description: Admin-Werkzeuge - Wartungsmodus mit Uptime-Kuma-Anbindung, Ankündi
 commands:
   mradmin:
     description: Verwaltung von MRadmin (Ankündigungen, Admin-Modus, Wartung).
-    usage: /mradmin <announce|mode|menu|player|tp|status|reports|maintenance|discord|reload|version>
+    usage: /mradmin <announce|mode|menu|player|tp|status|tickets|maintenance|discord|reload|version>
     aliases: [mra]
   report:
-    description: Einen Spieler beim Team melden.
-    usage: /report <spieler> <grund>
-    aliases: [melden]
+    description: Ticket-Menü - Spieler melden, Bugs melden, sonstige Anfragen, eigene Tickets.
+    usage: /report [spieler]
+    aliases: [melden, ticket, tickets, support]
   staffchat:
     description: Chat nur für das Team (ohne Text umschalten).
     usage: /sc [nachricht]
@@ -71,13 +71,13 @@ permissions:
     description: /mradmin status - Serverzustand (TPS, RAM, Chunks mit den meisten Entities).
     default: op
   mradmin.report:
-    description: /report - Spieler beim Team melden.
+    description: /report - Tickets öffnen und die eigenen ansehen und beantworten.
     default: true
   mradmin.report.notify:
-    description: Meldung bei neuen Reports und beim Join, wenn welche offen sind.
+    description: Meldung bei neuen Tickets und Antworten, beim Join die Zahl offener Tickets.
     default: op
   mradmin.report.manage:
-    description: /mradmin reports - offene Reports ansehen, hinteleportieren, erledigen. Kein Report-Cooldown.
+    description: /mradmin tickets - alle Tickets ansehen, beantworten, übernehmen, hinteleportieren, schließen. Kein Cooldown.
     default: op
   mradmin.staffchat:
     description: /sc - Staff-Chat lesen und schreiben.

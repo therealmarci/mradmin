@@ -1,12 +1,13 @@
 package at.marcelr.mradmin.gui;
 
+import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.player.FreezeManager;
-import at.marcelr.mradmin.report.ReportManager;
+import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -33,7 +34,7 @@ import static at.marcelr.mradmin.Messages.tag;
  * Everything about one online player, every row centered:
  * <pre>
  *  row 0:  head with info (middle)
- *  row 1:  teleport, summon, inventory, ender chest, freeze, reports
+ *  row 1:  teleport, summon, inventory, ender chest, freeze, tickets about the player
  *  row 2:  plugins with a hook (MRsleep, MRchunks ...)
  *  row 3:  border
  *  row 4:  back, close
@@ -117,25 +118,25 @@ public final class PlayerActionMenu extends Menu {
     private List<Button> actions(Player target) {
         Messages messages = plugin.messages();
         List<Button> actions = new ArrayList<>();
-        actions.add(action(Material.ENDER_PEARL, "gui-player-teleport", AdminModeManager.PERM_TELEPORT, () -> {
+        add(actions, Feature.TELEPORT, action(Material.ENDER_PEARL, "gui-player-teleport", AdminModeManager.PERM_TELEPORT, () -> {
             viewer.closeInventory();
             viewer.teleport(target.getLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
             messages.send(viewer, "mode-teleported", tag("player", target.getName()));
             sound(Sound.ENTITY_ENDERMAN_TELEPORT);
         }));
-        actions.add(action(Material.LEAD, "gui-player-summon", PERM_SUMMON, () -> {
+        add(actions, Feature.SUMMON, action(Material.LEAD, "gui-player-summon", PERM_SUMMON, () -> {
             viewer.closeInventory();
             target.teleport(viewer.getLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
             messages.send(viewer, "player-summoned", tag("player", target.getName()));
             messages.send(target, "player-summoned-target", tag("staff", viewer.getName()));
             sound(Sound.ENTITY_ENDERMAN_TELEPORT);
         }));
-        actions.add(action(Material.CHEST, "gui-player-inventory", PERM_INVENTORY,
+        add(actions, Feature.INVENTORY, action(Material.CHEST, "gui-player-inventory", PERM_INVENTORY,
                 () -> new InventoryViewMenu(plugin, viewer, target, false, this::reopen).open()));
-        actions.add(action(Material.ENDER_CHEST, "gui-player-enderchest", PERM_INVENTORY,
+        add(actions, Feature.INVENTORY, action(Material.ENDER_CHEST, "gui-player-enderchest", PERM_INVENTORY,
                 () -> new InventoryViewMenu(plugin, viewer, target, true, this::reopen).open()));
         boolean frozen = plugin.freeze().frozen(targetId);
-        actions.add(action(frozen ? Material.BLUE_ICE : Material.PACKED_ICE, frozen ? "gui-player-unfreeze" : "gui-player-freeze",
+        add(actions, Feature.FREEZE, action(frozen ? Material.BLUE_ICE : Material.PACKED_ICE, frozen ? "gui-player-unfreeze" : "gui-player-freeze",
                 FreezeManager.PERM_FREEZE, () -> {
                     if (target.equals(viewer)) {
                         messages.send(viewer, "freeze-self");
@@ -144,16 +145,23 @@ public final class PlayerActionMenu extends Menu {
                     plugin.freeze().set(viewer, target, !frozen);
                     render();
                 }));
-        if (viewer.hasPermission(ReportManager.PERM_MANAGE)) {
-            int reports = plugin.reports().openAbout(targetId);
+        if (viewer.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+            int reports = plugin.tickets().openAbout(targetId);
             actions.add(new Button(Items.of(reports > 0 ? Material.WRITABLE_BOOK : Material.BOOK)
-                    .name(messages.item("gui-player-reports", tag("count", reports)))
-                    .lore(messages.lore("gui-player-reports-lore")).glint(reports > 0).build(), click -> {
+                    .name(messages.item("gui-player-tickets", tag("count", reports)))
+                    .lore(messages.lore("gui-player-tickets-lore")).glint(reports > 0).build(), click -> {
                 clickSound();
-                new ReportsMenu(plugin, viewer, targetId, this::reopen).open();
+                new TicketsMenu(plugin, viewer, targetId, this::reopen).open();
             }));
         }
         return actions;
+    }
+
+    /** Adds the button only while its feature is switched on (features in config.yml). */
+    private void add(List<Button> buttons, Feature feature, Button button) {
+        if (plugin.feature(feature)) {
+            buttons.add(button);
+        }
     }
 
     /** Plugins with a hook: their summary for this player, a click opens their player menu. */

@@ -27,8 +27,14 @@ public record Settings(
         AdminModeSettings adminMode,
         UpdateSettings update,
         GuiSettings gui,
-        ReportSettings reports
+        TicketSettings tickets,
+        Set<Feature> features
 ) {
+
+    /** Whether a feature is switched on under {@code features} (all are by default). */
+    public boolean enabled(Feature feature) {
+        return features.contains(feature);
+    }
 
     /** Durations in ms; {@code reminders} sorted from the earliest (largest) to the last one. {@code sound} may be null. */
     public record MaintenanceSettings(long warnBefore, boolean bossbar, BossBar.Color color, BossBar.Color finalColor,
@@ -77,9 +83,33 @@ public record Settings(
     public record GuiSettings(int refreshTicks, boolean sounds) {
     }
 
-    /** Durations in ms. */
-    public record ReportSettings(long cooldown, int minReasonLength, int maxReasonLength, int maxOpenPerPlayer,
-                                 boolean tellReporter, long keepClosed) {
+    /**
+     * Durations in ms. {@code sound} (may be null) plays for notifications about new tickets and answers.
+     *
+     * @param icon       item of every ticket in the menus
+     * @param categories the categories offered when creating a ticket, in config order (never empty)
+     * @param chunkloaderLocks open a ticket for the owner when MRchunks locks a chunk loader
+     */
+    public record TicketSettings(long cooldown, long replyCooldown, int maxOpenPerPlayer,
+                                 int minSubjectLength, int maxSubjectLength, int minTextLength, int maxTextLength,
+                                 boolean notifyCreator, boolean showStaffNames, boolean autoClaim, int shownMessages,
+                                 long keepClosed, Key sound, Material icon, Material teamIcon,
+                                 List<TicketCategory> categories, boolean chunkloaderLocks) {
+
+        /** The category with this id, or null if it is not (or no longer) configured. */
+        public TicketCategory category(String id) {
+            return categories.stream().filter(c -> c.id().equals(id)).findFirst().orElse(null);
+        }
+    }
+
+    /**
+     * A ticket category from tickets.categories.
+     *
+     * @param name       display name; empty = text from the language file (ticket-categories.&lt;id&gt;)
+     * @param player     a player report: asks which player it is about
+     * @param permission needed to choose it ("" = everyone who may open tickets)
+     */
+    public record TicketCategory(String id, String name, boolean player, String permission) {
     }
 
     public static Settings from(FileConfiguration c, Logger log) {
@@ -182,26 +212,95 @@ public record Settings(
             }
         }
 
-        ReportSettings reports = new ReportSettings(
-                duration(c, "reports.cooldown", 60_000L, log),
-                Math.clamp(c.getInt("reports.min-reason-length", 3), 0, 100),
-                Math.clamp(c.getInt("reports.max-reason-length", 200), 10, 1000),
-                Math.clamp(c.getInt("reports.max-open-per-player", 3), 1, 100),
-                c.getBoolean("reports.tell-reporter", true),
-                duration(c, "reports.keep-closed", 7 * 86_400_000L, log));
+        int minSubject = Math.clamp(c.getInt("tickets.min-subject-length", 3), 1, 50);
+        int minText = Math.clamp(c.getInt("tickets.min-text-length", 10), 0, 500);
+        TicketSettings tickets = new TicketSettings(
+                duration(c, "tickets.cooldown", 60_000L, log),
+                duration(c, "tickets.reply-cooldown", 3_000L, log),
+                Math.clamp(c.getInt("tickets.max-open-per-player", 3), 1, 100),
+                minSubject,
+                Math.clamp(c.getInt("tickets.max-subject-length", 50), minSubject, 100),
+                minText,
+                Math.clamp(c.getInt("tickets.max-text-length", 500), Math.max(10, minText), 2000),
+                c.getBoolean("tickets.notify-creator", true),
+                c.getBoolean("tickets.show-staff-names", true),
+                c.getBoolean("tickets.auto-claim", true),
+                Math.clamp(c.getInt("tickets.shown-messages", 20), 1, 100),
+                duration(c, "tickets.keep-closed", 7 * 86_400_000L, log),
+                sound(c.getString("tickets.sound", ""), "tickets.sound", log),
+                item(c, "tickets.icon", Material.NAME_TAG, log),
+                item(c, "tickets.team-icon", Material.NETHER_STAR, log),
+                ticketCategories(c, log),
+                c.getBoolean("tickets.chunkloader-locks", true));
 
-        return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, reports);
+        Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
+        for (Feature feature : Feature.values()) {
+            if (c.getBoolean("features." + feature.key(), true)) {
+                features.add(feature);
+            }
+        }
+
+        return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features));
     }
 
+    private static Material item(FileConfiguration c, String path, Material fallback, Logger log) {
+        Material item = Material.matchMaterial(c.getString(path, fallback.name()));
+        if (item == null || !item.isItem() || item.isAir()) {
+            log.warning(path + " '" + c.getString(path) + "' is not an item, using " + fallback + ".");
+            return fallback;
+        }
+        return item;
+    }
+
+    private static List<TicketCategory> ticketCategories(FileConfiguration c, Logger log) {
+        List<TicketCategory> categories = new ArrayList<>();
+        var section = c.getConfigurationSection("tickets.categories");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String path = "tickets.categories." + key;
+                if (!c.isConfigurationSection(path)) {
+                    log.warning(path + " is not a section (name, player ...), ignored.");
+                    continue;
+                }
+                if (!c.getBoolean(path + ".enabled", true)) {
+                    continue;
+                }
+                categories.add(new TicketCategory(key.toLowerCase(Locale.ROOT), c.getString(path + ".name", "").trim(),
+                        c.getBoolean(path + ".player", false), c.getString(path + ".permission", "").trim()));
+            }
+        }
+        if (categories.isEmpty()) {
+            log.warning("tickets.categories is empty, using a single category 'other'.");
+            categories.add(new TicketCategory("other", "", false, ""));
+        }
+        return List.copyOf(categories);
+    }
+
+    /**
+     * The built-in integrations that are switched on (they only show while their plugin runs, see
+     * {@link at.marcelr.mradmin.hook.Integration}), followed by the owner's own buttons - at most 6 together.
+     */
     private static List<HubButton> hubButtons(FileConfiguration c, Logger log) {
         List<HubButton> buttons = new ArrayList<>();
+        Set<String> builtInHooks = new java.util.HashSet<>();
+        for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
+            builtInHooks.add(integration.hook());
+            if (c.getBoolean("integrations." + integration.id(), true)) {
+                buttons.add(new HubButton(integration.id(), integration.plugin(), integration.material(),
+                        integration.command(), integration.permission(), integration.hook()));
+            }
+        }
         var section = c.getConfigurationSection("admin-mode.menu.buttons");
         if (section == null) {
-            return List.of();
+            return List.copyOf(buttons);
         }
         for (String id : section.getKeys(false)) {
             String path = "admin-mode.menu.buttons." + id;
             if (!c.getBoolean(path + ".enabled", true)) {
+                continue;
+            }
+            if (builtInHooks.contains(c.getString(path + ".hook", "").trim())) {
+                // Old config: MRsleep/MRchunks are built in now (integrations), no second button.
                 continue;
             }
             String command = c.getString(path + ".command", "").trim();

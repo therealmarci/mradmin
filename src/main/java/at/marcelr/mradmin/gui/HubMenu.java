@@ -1,5 +1,6 @@
 package at.marcelr.mradmin.gui;
 
+import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
@@ -7,7 +8,7 @@ import at.marcelr.mradmin.command.MRAdminCommand;
 import at.marcelr.mradmin.command.StaffChat;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.mode.AdminModeManager;
-import at.marcelr.mradmin.report.ReportManager;
+import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -32,7 +33,7 @@ import static at.marcelr.mradmin.Messages.tag;
  * The admin dashboard (/mradmin or the admin compass). Every row is centered:
  * <pre>
  *  row 0:  black border, the viewer's head in the middle (admin mode, staff chat)
- *  row 1:  live tiles - players, server, maintenance, reports (click opens)
+ *  row 1:  live tiles - players, server, maintenance, tickets (click opens)
  *  row 2:  status bar - under each tile a pane in green / yellow / red, light grey elsewhere
  *  row 3:  tools - announcements and the plugin buttons (MRsleep, MRchunks ...)
  *  row 4:  admin mode switch, close, staff chat switch
@@ -143,7 +144,7 @@ public final class HubMenu extends Menu {
             }));
         }
 
-        if (viewer.hasPermission(ServerStatusMenu.PERM)) {
+        if (viewer.hasPermission(ServerStatusMenu.PERM) && plugin.feature(Feature.SERVER_STATUS)) {
             double tps = Math.min(20, Bukkit.getTPS()[0]);
             State state = tps >= 19.5 ? State.GOOD : tps >= 15 ? State.WARN : State.BAD;
             String formatted = String.format(Locale.ROOT, "%.1f", tps);
@@ -157,6 +158,30 @@ public final class HubMenu extends Menu {
             }));
         }
 
+        if (plugin.feature(Feature.MAINTENANCE)) {
+            tiles.add(maintenanceTile());
+        }
+
+        if (viewer.hasPermission(TicketManager.PERM_MANAGE) && plugin.feature(Feature.TICKETS)) {
+            int open = plugin.tickets().openCount();
+            int unread = plugin.tickets().staffUnreadCount();
+            // Red while players wait for an answer, yellow while tickets are open at all.
+            State state = unread > 0 ? State.BAD : open > 0 ? State.WARN : State.GOOD;
+            tiles.add(new Tile(Items.of(open > 0 ? Material.WRITABLE_BOOK : Material.BOOK)
+                    .name(messages.item("gui-tile-tickets-name").colorIfAbsent(state.color))
+                    .lore(messages.lore("gui-tile-tickets-lore", tag("count", open), tag("unread", unread)))
+                    .glint(unread > 0).build(), state, messages.item(unread > 0 ? "gui-tile-tickets-unread"
+                    : open > 0 ? "gui-tile-tickets-open" : "gui-tile-tickets-none",
+                    tag("count", open), tag("unread", unread)), click -> {
+                clickSound();
+                new TicketsMenu(plugin, viewer, null, this::reopen).open();
+            }));
+        }
+        return tiles;
+    }
+
+    private Tile maintenanceTile() {
+        Messages messages = plugin.messages();
         MaintenanceManager maintenance = plugin.maintenance();
         State mState = switch (maintenance.phase()) {
             case NONE -> State.GOOD;
@@ -171,28 +196,14 @@ public final class HubMenu extends Menu {
         if (viewer.hasPermission(MaintenanceManager.PERM_MANAGE)) {
             clock.lore(messages.lore("gui-hub-maintenance-click"));
         }
-        tiles.add(new Tile(clock.glint(mState == State.BAD).build(), mState,
+        return new Tile(clock.glint(mState == State.BAD).build(), mState,
                 messages.item("gui-tile-maintenance-state-" + phase, resolvers), click -> {
             if (allowed(MaintenanceManager.PERM_MANAGE)) {
                 clickSound();
                 viewer.closeInventory();
                 viewer.performCommand("mradmin maintenance");
             }
-        }));
-
-        if (viewer.hasPermission(ReportManager.PERM_MANAGE)) {
-            int open = plugin.reports().openCount();
-            State state = open > 0 ? State.BAD : State.GOOD;
-            tiles.add(new Tile(Items.of(open > 0 ? Material.WRITABLE_BOOK : Material.BOOK)
-                    .name(messages.item("gui-tile-reports-name").colorIfAbsent(state.color))
-                    .lore(messages.lore("gui-tile-reports-lore", tag("count", open)))
-                    .glint(open > 0).build(), state, messages.item(open > 0 ? "gui-tile-reports-open" : "gui-tile-reports-none",
-                    tag("count", open)), click -> {
-                clickSound();
-                new ReportsMenu(plugin, viewer, null, this::reopen).open();
-            }));
-        }
-        return tiles;
+        });
     }
 
     // ------------------------------------------------------------------ tools
@@ -200,7 +211,7 @@ public final class HubMenu extends Menu {
     private List<Button> tools() {
         Messages messages = plugin.messages();
         List<Button> tools = new ArrayList<>();
-        if (viewer.hasPermission(MRAdminCommand.PERM_ANNOUNCE)) {
+        if (viewer.hasPermission(MRAdminCommand.PERM_ANNOUNCE) && plugin.feature(Feature.ANNOUNCE)) {
             tools.add(new Button(Items.of(Material.GOAT_HORN).name(messages.item("gui-hub-announce-name"))
                     .lore(messages.lore("gui-hub-announce-lore", tag("count", plugin.announcer().presets().size())))
                     .build(), click -> {
@@ -248,7 +259,7 @@ public final class HubMenu extends Menu {
     private List<Button> switches() {
         Messages messages = plugin.messages();
         List<Button> buttons = new ArrayList<>();
-        if (viewer.hasPermission(AdminModeManager.PERM_USE)) {
+        if (viewer.hasPermission(AdminModeManager.PERM_USE) && plugin.feature(Feature.ADMIN_MODE)) {
             boolean on = plugin.adminMode().active(viewer);
             buttons.add(new Button(Items.of(on ? Material.LIME_DYE : Material.GRAY_DYE)
                     .name(messages.item("gui-switch-admin", tag("state", messages.get(on ? "gui-state-on" : "gui-state-off"))))
@@ -269,7 +280,7 @@ public final class HubMenu extends Menu {
             }));
         }
         buttons.add(new Button(Items.of(Material.BARRIER).name(messages.item("gui-close")).build(), click -> viewer.closeInventory()));
-        if (viewer.hasPermission(StaffChat.PERM)) {
+        if (viewer.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
             boolean on = plugin.staffChat().toggled(viewer);
             buttons.add(new Button(Items.of(on ? Material.LIME_CANDLE : Material.GRAY_CANDLE)
                     .name(messages.item("gui-switch-staffchat", tag("state", messages.get(on ? "gui-state-on" : "gui-state-off"))))

@@ -1,5 +1,6 @@
 package at.marcelr.mradmin.gui;
 
+import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import org.bukkit.Bukkit;
@@ -50,8 +51,9 @@ public final class TeleportMenu extends Menu {
                             tag("gamemode", target.getGameMode().name().toLowerCase(java.util.Locale.ROOT)),
                             tag("health", Math.round(target.getHealth())),
                             tag("ping", target.getPing())))
+                    .lore(plugin.feature(Feature.TELEPORT) ? List.of(messages.item("gui-teleport-player-shift")) : List.of())
                     .build(), click -> {
-                if (click.isShiftClick()) {
+                if (click.isShiftClick() && plugin.feature(Feature.TELEPORT)) {
                     teleport(target);
                 } else {
                     clickSound();
