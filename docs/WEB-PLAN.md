@@ -7,7 +7,7 @@ Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release
 |---|---|
 | 1 – Speicher-Schicht | ✅ fertig (YAML, SQLite, MySQL/MariaDB, Übernahme der YAML-Daten) |
 | 2 – Web-Grundgerüst und Anmeldung | ✅ Webserver, Einrichtungslinks, Passwort + 2FA, Wiederherstellungscodes, Sitzungen, Rechte, Protokoll, Frontend-Grundgerüst · ⏳ Passkeys |
-| 3 – Erste Seiten | ⏳ Übersicht (Grundgerüst steht), Tickets, Server-Status |
+| 3 – Erste Seiten | ✅ Übersicht (Schnappschuss 1×/s), Tickets mit Live-Aktualisierung (SSE) |
 
 Umsetzungsdetails, die vom ursprünglichen Plan abweichen:
 - Web-Konten und Sitzungen sind (wie Wartung/Freeze) Dokumente im Speicher (`state`: `web-accounts`,

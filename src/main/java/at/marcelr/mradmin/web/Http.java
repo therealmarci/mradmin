@@ -168,6 +168,18 @@ public final class Http {
         }
     }
 
+    /** Starts an endless answer (Server-Sent Events); the caller writes to it until the browser goes away. */
+    public OutputStream stream(String type) throws IOException {
+        answered = true;
+        var headers = exchange.getResponseHeaders();
+        headers.set("Content-Type", type);
+        headers.set("Cache-Control", "no-store");
+        // nginx would otherwise collect the events and send them much later.
+        headers.set("X-Accel-Buffering", "no");
+        exchange.sendResponseHeaders(200, 0);
+        return exchange.getResponseBody();
+    }
+
     boolean answered() {
         return answered;
     }

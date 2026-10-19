@@ -2,11 +2,15 @@
   import { api, whenSignedOut } from './lib/api.js';
   import { route, go } from './lib/router.svelte.js';
   import { t } from './lib/i18n.js';
+  import { connect, disconnect, live } from './lib/live.svelte.js';
+  import { head } from './lib/format.js';
   import Login from './pages/Login.svelte';
   import Setup from './pages/Setup.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
   import Audit from './pages/Audit.svelte';
+  import Tickets from './pages/Tickets.svelte';
+  import TicketView from './pages/TicketView.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -14,6 +18,7 @@
   async function loadMe() {
     try {
       me = await api('GET', '/me');
+      connect();
       if (route.path === '/login') go('/', true);
     } catch {
       me = null;
@@ -22,6 +27,7 @@
 
   whenSignedOut(() => {
     me = null;
+    disconnect();
   });
 
   async function logout() {
@@ -29,16 +35,22 @@
       await api('POST', '/logout');
     } finally {
       me = null;
+      disconnect();
       go('/login');
     }
   }
 
   if (route.path !== '/setup') loadMe();
 
+  // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
+  const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
+  const section = $derived(ticketId ? '/tickets' : route.path);
+
   const nav = $derived(
     me
       ? [
           { path: '/', label: t('nav.home'), icon: 'home' },
+          ...(me.may.tickets ? [{ path: '/tickets', label: t('nav.tickets'), icon: 'ticket' }] : []),
           { path: '/account', label: t('nav.account'), icon: 'user' },
           ...(me.may.audit ? [{ path: '/audit', label: t('nav.audit'), icon: 'list' }] : []),
         ]
@@ -47,6 +59,7 @@
 
   const icons = {
     home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+    ticket: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z',
     user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5Z',
     list: 'M4 6h16M4 12h16M4 18h10',
     logout: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4',
@@ -64,14 +77,15 @@
     <div class="brand">
       <img src="/icon.svg" alt="" width="28" height="28" />
       <span>MRadmin</span>
+      <span class="dot" class:on={live.connected} title={live.connected ? t('common.live') : t('common.offline')}></span>
     </div>
     <nav class="desktop">
       {#each nav as item}
-        <button class:active={route.path === item.path} class="link" onclick={() => go(item.path)}>{item.label}</button>
+        <button class:active={section === item.path} class="link" onclick={() => go(item.path)}>{item.label}</button>
       {/each}
     </nav>
     <div class="user">
-      <img class="head" src={`https://mc-heads.net/avatar/${me.uuid}/64`} alt="" width="28" height="28" />
+      <img class="head" src={head(me.uuid)} alt="" width="28" height="28" />
       <span class="name">{me.name}</span>
       <button class="secondary icon" title={t('nav.logout')} aria-label={t('nav.logout')} onclick={logout}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={icons.logout} /></svg>
@@ -82,6 +96,10 @@
   <main>
     {#if route.path === '/account'}
       <Account {me} />
+    {:else if ticketId && me.may.tickets}
+      {#key ticketId}<TicketView id={ticketId} {me} />{/key}
+    {:else if route.path === '/tickets' && me.may.tickets}
+      <Tickets />
     {:else if route.path === '/audit' && me.may.audit}
       <Audit />
     {:else}
@@ -91,7 +109,7 @@
 
   <nav class="tabs">
     {#each nav as item}
-      <button class:active={route.path === item.path} onclick={() => go(item.path)}>
+      <button class:active={section === item.path} onclick={() => go(item.path)}>
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={icons[item.icon]} /></svg>
         <span>{item.label}</span>
       </button>
@@ -126,6 +144,19 @@
     gap: 10px;
     font-weight: 800;
     font-size: 1.05rem;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: 0.5;
+  }
+
+  .dot.on {
+    background: var(--good);
+    opacity: 1;
   }
 
   .desktop {

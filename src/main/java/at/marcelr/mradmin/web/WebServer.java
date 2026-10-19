@@ -54,6 +54,9 @@ public final class WebServer {
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private HttpServer server;
     private ExecutorService executor;
+    private final WebEvents events = new WebEvents();
+    private volatile Map<String, Object> snapshot = Map.of();
+    private org.bukkit.scheduler.BukkitTask snapshotTask;
 
     public WebServer(MRAdmin plugin, WebAuth auth, WebPermissions permissions) {
         this.plugin = plugin;
@@ -87,6 +90,29 @@ public final class WebServer {
         return server != null;
     }
 
+    public WebEvents events() {
+        return events;
+    }
+
+    /** The server state of the last second (TPS, players, maintenance, ticket counts) - see {@link WebSnapshot}. */
+    public Map<String, Object> snapshot() {
+        return snapshot;
+    }
+
+    /**
+     * Runs {@code action} on the server thread and waits for the result - for the few things that must happen there
+     * (Bukkit, the ticket data). Never call it from the server thread itself.
+     */
+    public <T> T sync(java.util.concurrent.Callable<T> action) throws Exception {
+        try {
+            return org.bukkit.Bukkit.getScheduler().callSyncMethod(plugin, action).get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            throw new Http.WebException(503, "busy");
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw e.getCause() instanceof Exception cause ? cause : e;
+        }
+    }
+
     // --------------------------------------------------------------- lifecycle
 
     /** Starts (or restarts) with the current settings; does nothing if web.enabled is false. */
@@ -102,6 +128,7 @@ public final class WebServer {
             server.setExecutor(executor);
             server.createContext("/", this::handle);
             server.start();
+            snapshotTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> snapshot = WebSnapshot.build(plugin), 1L, 20L);
             plugin.getLogger().info("Web interface listening on " + s.bind() + ":" + s.port()
                     + (s.publicUrl().isEmpty() ? " (set web.public-url to the address of your reverse proxy)" : " for " + s.publicUrl()) + ".");
         } catch (IOException | RuntimeException e) {
@@ -111,6 +138,10 @@ public final class WebServer {
     }
 
     public void stop() {
+        if (snapshotTask != null) {
+            snapshotTask.cancel();
+            snapshotTask = null;
+        }
         if (server != null) {
             server.stop(1);
             server = null;

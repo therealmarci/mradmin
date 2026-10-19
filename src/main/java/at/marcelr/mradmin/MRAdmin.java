@@ -92,6 +92,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         webAuth.load();
         web = new WebServer(this, webAuth, new WebPermissions(this));
         AuthRoutes.register(web);
+        at.marcelr.mradmin.web.PanelRoutes.register(web);
 
         freeze = new FreezeManager(this);
         freeze.load();

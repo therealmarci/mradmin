@@ -15,3 +15,13 @@ export function ago(millis) {
   if (seconds < 86400) return rtf.format(-Math.round(seconds / 3600), 'hour');
   return rtf.format(-Math.round(seconds / 86400), 'day');
 }
+
+/** Colour class for a TPS value (as in the in-game dashboard). */
+export function tpsTone(tps) {
+  return tps >= 19.5 ? 'good' : tps >= 15 ? 'warn' : 'bad';
+}
+
+/** Player head (also for offline players) - mc-heads.net, allowed by the page's security rules. */
+export function head(uuid, size = 64) {
+  return `https://mc-heads.net/avatar/${uuid}/${size}`;
+}

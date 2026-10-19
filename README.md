@@ -78,8 +78,10 @@ Discord-Ankündigungen speichert:
   Servers), die JAR bleibt klein.
 
 ### Weboberfläche (Vorschau)
-MRadmin vom Handy, Tablet oder PC bedienen. Bisher: Anmeldung, Geräte- und Kontoverwaltung, Protokoll; Tickets und
-Server-Status folgen (Plan: [docs/WEB-PLAN.md](docs/WEB-PLAN.md)).
+MRadmin vom Handy, Tablet oder PC bedienen: **Übersicht** (TPS, MSPT, RAM, Spieler online, Wartung, offene
+Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, übernehmen, schließen, wieder öffnen -
+Änderungen erscheinen live), **Konto** (Geräte, Wiederherstellungscodes) und **Protokoll**. Weiteres folgt
+(Plan: [docs/WEB-PLAN.md](docs/WEB-PLAN.md)).
 
 1. In der Config `web.enabled: true`, `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`)
    und `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.

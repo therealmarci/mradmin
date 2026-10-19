@@ -438,6 +438,99 @@ public final class TicketManager {
         save(ticket);
     }
 
+    // -------------------------------------------------------------------- web
+
+    // The web interface is for the team; its users are usually not online. These do what the in-game actions do
+    // (same notices to the creator, Discord log, auto-claim) for a member given by UUID and name. Server thread only.
+    // Each returns an error key for the web interface, or null if it worked.
+
+    public String webReply(UUID who, String name, Ticket ticket, String text) {
+        if (!ticket.open()) {
+            return "ticket-closed";
+        }
+        String clean = TicketText.limit(TicketText.clean(text), settings().maxTextLength());
+        if (clean.isEmpty()) {
+            return "reply-empty";
+        }
+        boolean staff = !ticket.isCreator(who);
+        ticket.add(new Ticket.Message(who, name, staff, clean, Instant.now()));
+        if (staff) {
+            ticket.staffUnread(false);
+            if (settings().autoClaim() && ticket.claimedBy() == null) {
+                ticket.claim(who, name);
+            }
+        } else {
+            ticket.creatorUnread(false);
+        }
+        save(ticket);
+        if (staff) {
+            Player creator = Bukkit.getPlayer(ticket.creator());
+            if (creator != null) {
+                messages().send(creator, "ticket-answer", tag("id", ticket.id()), tag("open", openButton(ticket)),
+                        tag("text", TicketText.preview(clean, PREVIEW)));
+                sound(creator);
+            }
+        } else {
+            notifyStaff(ticket, null, "ticket-notify-message", tag("id", ticket.id()), tag("player", name),
+                    tag("text", TicketText.preview(clean, PREVIEW)), tag("open", openButton(ticket)));
+        }
+        plugin.discord().log("ticket-message", "id", ticket.id(), "author", name,
+                "text", TicketText.preview(clean, 300), "summary", summary(ticket));
+        return null;
+    }
+
+    public String webClose(UUID who, String name, Ticket ticket) {
+        if (!ticket.open()) {
+            return "ticket-closed";
+        }
+        ticket.close(name, Instant.now());
+        ticket.creatorUnread(!ticket.isCreator(who));
+        ticket.staffUnread(false);
+        save(ticket);
+        Player creator = Bukkit.getPlayer(ticket.creator());
+        if (creator != null && !ticket.isCreator(who) && settings().notifyCreator()) {
+            messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
+                    tag("summary", summary(ticket)), tag("open", openButton(ticket)));
+            sound(creator);
+        }
+        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        return null;
+    }
+
+    public String webReopen(UUID who, String name, Ticket ticket) {
+        if (ticket.open()) {
+            return "ticket-open";
+        }
+        ticket.reopen();
+        ticket.creatorUnread(!ticket.isCreator(who));
+        save(ticket);
+        Player creator = Bukkit.getPlayer(ticket.creator());
+        if (creator != null && !ticket.isCreator(who)) {
+            messages().send(creator, "ticket-reopened-creator", tag("id", ticket.id()), tag("open", openButton(ticket)));
+        }
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        return null;
+    }
+
+    /** Claims the ticket for the member, or releases it if they already have it. */
+    public void webToggleClaim(UUID who, String name, Ticket ticket) {
+        ticket.claim(who.equals(ticket.claimedBy()) ? null : who, name);
+        save(ticket);
+    }
+
+    /** The member looked at the ticket in the web: no longer unread for the team (or the creator). */
+    public void webMarkRead(UUID who, Ticket ticket) {
+        boolean creator = ticket.isCreator(who);
+        if (creator ? ticket.creatorUnread() : ticket.staffUnread()) {
+            if (creator) {
+                ticket.creatorUnread(false);
+            } else {
+                ticket.staffUnread(false);
+            }
+            save(ticket);
+        }
+    }
+
     /** Teleports staff to the reported player (if online) or to where the ticket was opened. */
     public void teleport(Player staff, Ticket ticket) {
         if (!staff.hasPermission(PERM_MANAGE)) {
@@ -698,6 +791,10 @@ public final class TicketManager {
      */
     private void save(Ticket ticket) {
         Storage storage = plugin.storage();
+        if (plugin.web() != null) {
+            // Open pages in the web interface show the change right away.
+            plugin.web().events().ticket(ticket.id());
+        }
         storage.saveTicket(row(ticket), nextId);
         List<Ticket.Message> all = ticket.messages();
         for (int i = ticket.saved(); i < all.size(); i++) {
