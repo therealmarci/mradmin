@@ -2,6 +2,7 @@ package at.marcelr.mradmin.web;
 
 import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
+import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
 import org.bukkit.Bukkit;
@@ -43,7 +44,17 @@ final class WebSnapshot {
         Runtime rt = Runtime.getRuntime();
         server.put("ramUsed", (rt.totalMemory() - rt.freeMemory()) / 1_048_576);
         server.put("ramMax", rt.maxMemory() / 1_048_576);
+        server.put("uptime", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime());
+        java.io.File root = new java.io.File(".").getAbsoluteFile();
+        server.put("diskFree", root.getUsableSpace() / 1_048_576);
+        server.put("diskTotal", root.getTotalSpace() / 1_048_576);
         result.put("server", server);
+
+        // MRchunks (optional): counts and server pause - cheap, the plugin keeps them anyway.
+        Settings.HubButton chunks = ChunkRoutes.hook(plugin);
+        if (chunks != null && plugin.hooks().web(chunks, "overview", Map.of()) instanceof Map<?, ?> overview) {
+            result.put("mrchunks", overview);
+        }
 
         if (plugin.feature(Feature.MAINTENANCE)) {
             MaintenanceManager m = plugin.maintenance();
@@ -59,7 +70,10 @@ final class WebSnapshot {
             result.put("maintenance", maintenance);
         }
         if (plugin.feature(Feature.TICKETS)) {
-            result.put("tickets", Map.of("open", plugin.tickets().openCount(), "unread", plugin.tickets().staffUnreadCount()));
+            Map<String, Integer> claimed = new java.util.HashMap<>();
+            plugin.tickets().openClaimedCounts().forEach((uuid, n) -> claimed.put(uuid.toString(), n));
+            result.put("tickets", Map.of("open", plugin.tickets().openCount(), "unread", plugin.tickets().staffUnreadCount(),
+                    "claimed", claimed));
         }
         return Map.copyOf(result);
     }

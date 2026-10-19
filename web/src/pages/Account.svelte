@@ -1,7 +1,7 @@
 <script>
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
-  import { dateTime, ago } from '../lib/format.js';
+  import { dateTime, ago, head } from '../lib/format.js';
 
   let { me } = $props();
 
@@ -50,7 +50,13 @@
 </script>
 
 <div class="stack">
-  <h1>{t('account.title')}</h1>
+  <div class="who">
+    <img src={head(me.uuid)} alt="" width="48" height="48" />
+    <div>
+      <h1>{me.name}</h1>
+      <div class="muted small">{t('home.lastLogin')}: {dateTime(me.lastLogin)} · MRadmin {me.version}</div>
+    </div>
+  </div>
   {#if error}<div class="error">{error}</div>{/if}
   {#if message}<div class="notice">{message}</div>{/if}
 
@@ -101,6 +107,21 @@
 </div>
 
 <style>
+  .who {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .who h1 {
+    margin: 0;
+  }
+
+  .who img {
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+
   .row {
     display: flex;
     flex-wrap: wrap;

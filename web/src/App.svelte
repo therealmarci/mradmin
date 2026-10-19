@@ -63,7 +63,6 @@
           ...(me.may.tickets ? [{ path: '/tickets', label: t('nav.tickets'), icon: 'ticket' }] : []),
           ...(me.may.health ? [{ path: '/health', label: t('nav.health'), icon: 'pulse' }] : []),
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
-          { path: '/account', label: t('nav.account'), icon: 'user' },
           ...(me.may.audit ? [{ path: '/audit', label: t('nav.audit'), icon: 'list' }] : []),
         ]
       : [],
@@ -102,8 +101,11 @@
       {/each}
     </nav>
     <div class="user">
-      <img class="head" src={head(me.uuid)} alt="" width="28" height="28" />
-      <span class="name">{me.name}</span>
+      <!-- The account: a click on your own head or name. -->
+      <button class="me" class:active={route.path === '/account'} title={t('nav.account')} onclick={() => go('/account')}>
+        <img class="head" src={head(me.uuid)} alt="" width="28" height="28" />
+        <span class="name">{me.name}</span>
+      </button>
       <button class="secondary icon" title={t('nav.logout')} aria-label={t('nav.logout')} onclick={logout}>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={icons.logout} /></svg>
       </button>
@@ -116,7 +118,7 @@
     {:else if ticketId && me.may.tickets}
       {#key ticketId}<TicketView id={ticketId} {me} />{/key}
     {:else if route.path === '/tickets' && me.may.tickets}
-      <Tickets />
+      <Tickets {me} />
     {:else if route.path === '/health' && me.may.health}
       <Health />
     {:else if chunkId && me.may.mrchunks}
@@ -205,6 +207,20 @@
     display: flex;
     align-items: center;
     gap: 10px;
+  }
+
+  .me {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: var(--text);
+    padding: 4px 10px 4px 4px;
+  }
+
+  .me:hover,
+  .me.active {
+    background: var(--surface-2);
   }
 
   .head {

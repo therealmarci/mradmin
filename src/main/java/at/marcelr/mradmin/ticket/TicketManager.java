@@ -688,6 +688,17 @@ public final class TicketManager {
         return (int) tickets.values().stream().filter(Ticket::open).count();
     }
 
+    /** Open tickets per team member who claimed them. */
+    public Map<UUID, Integer> openClaimedCounts() {
+        Map<UUID, Integer> counts = new HashMap<>();
+        for (Ticket t : tickets.values()) {
+            if (t.open() && t.claimedBy() != null) {
+                counts.merge(t.claimedBy(), 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
     /** Open tickets with a message from the creator the team has not read. */
     public int staffUnreadCount() {
         return (int) tickets.values().stream().filter(t -> t.open() && t.staffUnread()).count();

@@ -3,6 +3,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, tpsTone, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
+  import { STATUS } from '../lib/chunks.js';
 
   let { me } = $props();
 
@@ -18,50 +19,163 @@
     }
   }
 
-  // Refresh every 5 seconds while the overview is open (the server keeps a snapshot, this costs it nothing).
+  // Every 2 seconds - the server keeps a snapshot (once per second), so this costs it nothing.
   $effect(() => {
     load();
-    const timer = setInterval(load, 5000);
+    const timer = setInterval(load, 2000);
     return () => clearInterval(timer);
   });
 
-  const phaseTone = { none: 'good', planned: 'warn', upcoming: 'warn', active: 'bad' };
+  const mb = (v) => (v >= 1024 ? (v / 1024).toFixed(1) + ' GB' : Math.round(v ?? 0) + ' MB');
+
+  function uptime(millis) {
+    const m = Math.floor(millis / 60000);
+    const d = Math.floor(m / 1440);
+    const h = Math.floor((m % 1440) / 60);
+    return d ? `${d} d ${h} h` : h ? `${h} h ${m % 60} min` : `${m} min`;
+  }
+
+  // Where an alert leads - only to pages the member may open (the server sends every alert only with permission
+  // for its area, the page may still be closed to them, e.g. MSPT without health).
+  const pages = {
+    health: () => me.may.health && '/health',
+    tickets: () => me.may.tickets && '/tickets',
+    'tickets-mine': () => me.may.tickets && '/tickets',
+    chunks: () => me.may.mrchunks && '/chunks',
+  };
+  const target = (a) => (a.page && pages[a.page]?.()) || null;
+
+  function open(a) {
+    if (a.page === 'tickets-mine') {
+      try {
+        sessionStorage.setItem('mradmin.tickets.state', 'mine');
+      } catch {
+        // fine
+      }
+    }
+    go(target(a));
+  }
+
+  function alertText(a) {
+    const v = { ...a.values };
+    if (a.key === 'disk') v.free = mb(v.free);
+    if (a.key === 'maintenanceSoon') v.start = v.start ? dateTime(v.start) : '–';
+    if (a.key === 'tps' || a.key === 'mspt') v.value = Number(v.value).toFixed(1);
+    return t('alert.' + a.key, v);
+  }
+
+  const icon = { bad: '✕', warn: '!', info: 'i' };
+  const alerts = $derived(data?.alerts ?? []);
+  const worst = $derived(alerts[0]?.tone ?? 'good');
+  const avgPing = $derived(
+    data?.server?.players.length ? Math.round(data.server.players.reduce((s, p) => s + p.ping, 0) / data.server.players.length) : null,
+  );
+  const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
 </script>
 
 <div class="stack">
   <div>
     <h1>{t('home.hello', { name: me.name })}</h1>
-    <p class="muted">{t('home.subtitle')}</p>
+    <p class="muted small">{t('home.live')}</p>
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
+    <!-- The situation: what needs attention right now - or, if nothing does, the most important facts. -->
+    <section class="card hero tone-{worst}" aria-live="polite">
+      {#if alerts.length}
+        <div class="hero-head">
+          <span class="badge {worst}">{icon[worst]}</span>
+          <h2>{t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length })}</h2>
+        </div>
+        <ul class="alerts">
+          {#each alerts as a (a.key)}
+            <li>
+              <span class="badge small-badge {a.tone}">{icon[a.tone]}</span>
+              <span class="text">{alertText(a)}</span>
+              {#if target(a)}
+                <button class="secondary mini" onclick={() => open(a)}>{t('home.show')} →</button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <div class="hero-head">
+          <span class="badge good">✓</span>
+          <h2>{t('home.allGood')}</h2>
+        </div>
+        <div class="facts-row">
+          {#if data.server}
+            <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
+            <span><b>{data.server.online}</b> {t('home.online')}</span>
+            <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
+          {/if}
+          {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
+          {#if data.mrchunks}<span><b>{data.mrchunks.active}</b> {t('home.loadersActive')}</span>{/if}
+          {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
+        </div>
+        {#if !data.server && !data.tickets && !data.mrchunks && !data.maintenance}
+          <p class="muted small">{t('home.nothing')}</p>
+        {/if}
+      {/if}
+    </section>
+
     <div class="grid">
       {#if data.server}
         {@const s = data.server}
-        <section class="card">
+        <button class="card tile" disabled={!me.may.health} onclick={() => go('/health')}>
           <div class="label">{t('overview.server')}</div>
           <div class="big {tpsTone(s.tps[0])}">{s.tps[0].toFixed(1)} <span class="unit">TPS</span></div>
           <div class="facts">
             <div><span class="muted">{t('overview.tps')}</span> {s.tps.map((v) => v.toFixed(1)).join(' / ')}</div>
             <div><span class="muted">{t('overview.mspt')}</span> {s.mspt.toFixed(1)} ms</div>
-            <div><span class="muted">{t('overview.ram')}</span> {s.ramUsed} / {s.ramMax} MB</div>
+            <div><span class="muted">{t('overview.ram')}</span> {mb(s.ramUsed)} / {mb(s.ramMax)}</div>
           </div>
           <div class="bar"><div style="width: {Math.min(100, (s.ramUsed / s.ramMax) * 100)}%"></div></div>
+          {#if me.may.health}<div class="small link">{t('home.toHealth')} →</div>{/if}
+        </button>
+
+        <section class="card">
+          <div class="label">{t('overview.players')}</div>
+          <div class="big">{s.online} <span class="unit">/ {s.max}</span></div>
+          <div class="facts">
+            <div><span class="muted">{t('home.avgPing')}</span> {avgPing === null ? '–' : avgPing + ' ms'}</div>
+            <div><span class="muted">{t('home.upFor')}</span> {uptime(s.uptime)}</div>
+            <div><span class="muted">{t('health.disk')}</span> {mb(s.diskFree)} {t('health.free')}</div>
+          </div>
         </section>
       {/if}
 
       {#if data.tickets}
+        {@const tk = data.tickets}
         <button class="card tile" onclick={() => go('/tickets')}>
           <div class="label">{t('overview.tickets')}</div>
-          <div class="big {data.tickets.unread > 0 ? 'bad' : data.tickets.open > 0 ? 'warn' : 'good'}">
-            {data.tickets.open} <span class="unit">{t('overview.openTickets')}</span>
+          <div class="big {tk.unread > 0 ? 'bad' : tk.open > 0 ? 'warn' : 'good'}">
+            {tk.open} <span class="unit">{t('overview.openTickets')}</span>
           </div>
-          {#if data.tickets.unread > 0}
-            <div class="small bad">{data.tickets.unread} {t('overview.unread')}</div>
-          {/if}
+          <div class="facts">
+            <div><span class="muted">{t('overview.unread')}</span> <span class:bad={tk.unread > 0}>{tk.unread}</span></div>
+            {#if me.may.ticketsClaim}<div><span class="muted">{t('tickets.mine')}</span> {tk.mine}</div>{/if}
+          </div>
           <div class="small link">{t('overview.toTickets')} →</div>
+        </button>
+      {/if}
+
+      {#if data.mrchunks}
+        {@const c = data.mrchunks}
+        <button class="card tile" onclick={() => go('/chunks')}>
+          <div class="label">{t('nav.chunks')}</div>
+          <div class="big {c.paused ? 'info' : c.locked > 0 ? 'bad' : c.warn > 0 ? 'warn' : 'good'}">
+            {c.active} <span class="unit">/ {c.loaders} {t('home.active')}</span>
+          </div>
+          <div class="facts">
+            {#if c.paused}<div class="info">{STATUS.paused.icon} {t('chunks.status.paused')}</div>{/if}
+            <div><span class="muted">{STATUS.locked.icon} {t('chunks.status.locked')}</span> {c.locked}</div>
+            <div><span class="muted">{STATUS.warn.icon} {t('chunks.status.warn')}</span> {c.warn}</div>
+            <div><span class="muted">{t('chunks.chunks')}</span> {c.chunks}</div>
+          </div>
+          <div class="small link">{t('home.toChunks')} →</div>
         </button>
       {/if}
 
@@ -90,7 +204,7 @@
           <div class="players">
             {#each data.server.players as p (p.uuid)}
               <div class="player">
-                <img src={head(p.uuid, 48)} alt="" width="32" height="32" />
+                <img src={head(p.uuid)} alt="" width="32" height="32" />
                 <div>
                   <div class="pname">{p.name}</div>
                   <div class="muted small">
@@ -105,32 +219,138 @@
         {/if}
       </section>
     {/if}
+
+    {#if me.recoveryLeft <= 2}
+      <button class="card tile notice-tile" onclick={() => go('/account')}>
+        <span class="warn">!</span> {t('home.recoveryLow')}
+      </button>
+    {/if}
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
-
-  <section class="card account">
-    <div class="label">{t('overview.account')}</div>
-    <div class="small">
-      {t('home.lastLogin')}: {dateTime(me.lastLogin)} · {t('home.recovery')}:
-      <span class:warn={me.recoveryLeft <= 2}>{me.recoveryLeft} / 8</span>
-    </div>
-  </section>
-  <p class="muted small">MRadmin {me.version}</p>
 </div>
 
 <style>
+  .hero {
+    border-left: 4px solid var(--good);
+    padding: 16px 20px;
+  }
+
+  .hero.tone-warn {
+    border-left-color: var(--warn);
+  }
+
+  .hero.tone-bad {
+    border-left-color: var(--bad);
+  }
+
+  .hero.tone-info {
+    border-left-color: var(--accent);
+  }
+
+  .hero-head {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .hero-head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .badge {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 800;
+    background: var(--good);
+  }
+
+  .small-badge {
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+  }
+
+  .badge.warn {
+    background: var(--warn);
+  }
+
+  .badge.bad {
+    background: var(--bad);
+  }
+
+  .badge.info {
+    background: var(--accent);
+  }
+
+  .alerts {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .alerts li {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
+
+  .alerts .text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mini {
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .facts-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+
   .grid {
     display: grid;
     gap: 16px;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 
+  /* Clickable tiles look exactly like the others: buttons centre their content (also with display: block), so
+     a column from the top, full width - the link at the bottom. */
   .tile {
     text-align: left;
     color: var(--text);
-    display: block;
     font-weight: 400;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .tile .link {
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  .tile:disabled {
+    opacity: 1;
+    cursor: default;
   }
 
   .label {
@@ -192,6 +412,17 @@
     color: var(--bad);
   }
 
+  .info {
+    color: var(--accent);
+  }
+
+  .badge.good,
+  .badge.warn,
+  .badge.bad,
+  .badge.info {
+    color: #fff;
+  }
+
   .link {
     color: var(--accent);
     margin-top: 6px;
@@ -219,7 +450,10 @@
     font-weight: 600;
   }
 
-  .account {
-    padding: 14px 20px;
+  .notice-tile {
+    padding: 12px 18px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
 </style>

@@ -73,7 +73,7 @@
         <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + loader.status)}</span>
       </div>
       <dl class="facts">
-        <dt>{t('ticket.location')}</dt><dd class="mono">{loader.world} · X {loader.x} · Y {loader.y} · Z {loader.z}</dd>
+        <dt>{t('ticket.location')}</dt><dd class="mono coords"><span>{loader.world}</span><span>X {loader.x}</span><span>Y {loader.y}</span><span>Z {loader.z}</span></dd>
         <dt>{t('chunks.created')}</dt><dd>{dateTime(loader.created)}</dd>
         {#if loader.lock}
           <dt>{t('chunks.status.locked')}</dt>
@@ -186,6 +186,17 @@
 
   .facts dd {
     margin: 0;
+  }
+
+  /* Wrapped only between the values - never inside one. */
+  .coords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 12px;
+  }
+
+  .coords span {
+    white-space: nowrap;
   }
 
   .actions {

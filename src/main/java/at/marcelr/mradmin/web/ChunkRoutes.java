@@ -41,7 +41,7 @@ public final class ChunkRoutes {
     }
 
     /** The MRchunks button if MRchunks runs, is connected and offers web data; otherwise null. */
-    static Settings.HubButton hook(MRAdmin plugin) {
+    public static Settings.HubButton hook(MRAdmin plugin) {
         return plugin.settings().adminMode().buttons().stream()
                 .filter(b -> b.id().equals("mrchunks") && plugin.hooks().available(b) && plugin.hooks().hasWeb(b))
                 .findFirst().orElse(null);

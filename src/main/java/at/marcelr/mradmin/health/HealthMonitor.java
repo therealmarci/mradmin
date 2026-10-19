@@ -38,9 +38,13 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class HealthMonitor {
 
-    /** One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second. */
+    /**
+     * One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second, ping = average
+     * of the online players in ms (-1 = nobody online), loaderChunks = chunks MRchunks keeps loaded (-1 = no MRchunks).
+     */
     public record Point(long time, double tps, double mspt, double msptP95, double msptMax, double cpu, double cpuSystem,
-                        long heapUsed, long heapMax, double gc, int players, int chunks, int entities, int tiles) {
+                        long heapUsed, long heapMax, double gc, int players, int chunks, int entities, int tiles,
+                        double ping, int loaderChunks) {
     }
 
     /** One world right now. */
@@ -159,9 +163,12 @@ public final class HealthMonitor {
         }
         worlds = List.copyOf(list);
 
+        double ping = Bukkit.getOnlinePlayers().stream().mapToInt(org.bukkit.entity.Player::getPing).average().orElse(-1);
+
         add(new Point(now, round(tps), round(Bukkit.getAverageTickTime()), round(p95), round(max), cpu, cpuSystem,
                 heap.getUsed() / 1_048_576, (heap.getMax() > 0 ? heap.getMax() : heap.getCommitted()) / 1_048_576,
-                round(gc), Bukkit.getOnlinePlayers().size(), chunks, entities, tiles));
+                round(gc), Bukkit.getOnlinePlayers().size(), chunks, entities, tiles, ping < 0 ? -1 : round(ping),
+                loaderChunks()));
         alert(Math.min(20, Bukkit.getTPS()[0]), now);
     }
 
@@ -208,7 +215,8 @@ public final class HealthMonitor {
                 maxOf(points, Point::msptP95), maxOf(points, Point::msptMax), avg(points, Point::cpu),
                 avg(points, Point::cpuSystem), (long) avg(points, Point::heapUsed), last.heapMax(), avg(points, Point::gc),
                 (int) Math.round(maxOf(points, Point::players)), (int) Math.round(avg(points, Point::chunks)),
-                (int) Math.round(avg(points, Point::entities)), (int) Math.round(avg(points, Point::tiles)));
+                (int) Math.round(avg(points, Point::entities)), (int) Math.round(avg(points, Point::tiles)),
+                known(points, Point::ping), (int) Math.round(known(points, Point::loaderChunks)));
     }
 
     // ----------------------------------------------------------------- reading
@@ -306,6 +314,17 @@ public final class HealthMonitor {
 
     private static double avg(List<Point> points, ToDoubleFunction<Point> f) {
         return round(points.stream().mapToDouble(f).average().orElse(0));
+    }
+
+    /** Average of the known values (-1 = unknown, e.g. nobody online), -1 if none is known. */
+    private static double known(List<Point> points, ToDoubleFunction<Point> f) {
+        return round(points.stream().mapToDouble(f).filter(v -> v >= 0).average().orElse(-1));
+    }
+
+    /** Chunks the loaders of MRchunks keep loaded - only if MRchunks runs and offers web data, else -1. */
+    private int loaderChunks() {
+        Settings.HubButton hook = at.marcelr.mradmin.web.ChunkRoutes.hook(plugin);
+        return hook != null && plugin.hooks().web(hook, "chunks", java.util.Map.of()) instanceof Number n ? n.intValue() : -1;
     }
 
     private static double maxOf(List<Point> points, ToDoubleFunction<Point> f) {

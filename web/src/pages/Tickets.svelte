@@ -1,11 +1,16 @@
 <script>
+  import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { ago, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
 
-  let state = $state(sessionStorage.getItem('mradmin.tickets.state') ?? 'open');
+  let { me } = $props();
+
+  // open | mine (open, claimed by me - only for those who may claim) | closed
+  const stored = sessionStorage.getItem('mradmin.tickets.state') ?? 'open';
+  let state = $state(untrack(() => (stored === 'mine' && !me.may.ticketsClaim ? 'open' : stored)));
   let category = $state('');
   let search = $state('');
   let tickets = $state(null);
@@ -58,6 +63,9 @@
     <h1>{t('tickets.title')}</h1>
     <div class="tabs">
       <button class:active={state === 'open'} onclick={() => setState('open')}>{t('tickets.open')}</button>
+      {#if me.may.ticketsClaim}
+        <button class:active={state === 'mine'} onclick={() => setState('mine')}>{t('tickets.mine')}</button>
+      {/if}
       <button class:active={state === 'closed'} onclick={() => setState('closed')}>{t('tickets.closed')}</button>
     </div>
   </div>
@@ -79,7 +87,7 @@
   {#if tickets === null}
     <p class="muted">{t('common.loading')}</p>
   {:else if shown.length === 0}
-    <p class="muted">{state === 'open' && !search && !category ? t('tickets.emptyOpen') : t('tickets.empty')}</p>
+    <p class="muted">{!search && !category && state !== 'closed' ? t(state === 'mine' ? 'tickets.emptyMine' : 'tickets.emptyOpen') : t('tickets.empty')}</p>
   {:else}
     <div class="list">
       {#each shown as x (x.id)}

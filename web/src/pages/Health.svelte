@@ -107,6 +107,11 @@
   const mb = (v) => (v >= 1024 ? (v / 1024).toFixed(1) + ' GB' : Math.round(v ?? 0) + ' MB');
   const num = (v) => (v >= 10000 ? (v / 1000).toFixed(1) + 'K' : String(Math.round(v ?? 0)));
   const tps = (v) => (v ?? 0).toFixed(1);
+  // Small sizes (the database) in KB, otherwise like mb().
+  const size = (v) => (v < 1 ? Math.max(1, Math.round(v * 1024)) + ' KB' : v < 10 ? v.toFixed(1) + ' MB' : mb(v));
+
+  // MRchunks is optional: only with it the chunk chart shows the chunks its loaders keep loaded (-1 = no MRchunks).
+  const loaders = $derived((latest?.loaderChunks ?? -1) >= 0);
 
   function uptime(millis) {
     const m = Math.floor(millis / 60000);
@@ -164,10 +169,27 @@
         <div class="sub">{t('health.of')} {mb(latest.heapMax)}</div>
       </div>
       <div class="card kpi">
-        <div class="label">{t('health.uptime')}</div>
-        <div class="value">{uptime(system.uptime)}</div>
+        <div class="label">{t('health.ping')}</div>
+        <div class="value">{latest.players > 0 && latest.ping >= 0 ? Math.round(latest.ping) + ' ms' : '–'}</div>
         <div class="sub">{latest.players} {t('health.players')}</div>
       </div>
+      {#if system}
+        <div class="card kpi">
+          <div class="label">{t('health.uptime')}</div>
+          <div class="value">{uptime(system.uptime)}</div>
+          <div class="sub">{system.server}</div>
+        </div>
+        <div class="card kpi">
+          <div class="label">{t('health.serverSize')}</div>
+          <div class="value">{system.serverSize >= 0 ? mb(system.serverSize) : '…'}</div>
+          <div class="sub">{t('health.serverSizeHint')}</div>
+        </div>
+        <div class="card kpi">
+          <div class="label">{t('health.dbSize')}</div>
+          <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
+          <div class="sub">{t('health.storage.' + system.storage)}</div>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -194,7 +216,12 @@
     <LineChart title={t('health.chart.gc')} {points} {long} seconds={range === '1m'} format={(v) => Math.round(v ?? 0) + ' ms'}
       series={[{ key: 'gc', label: 'GC', color: 'var(--series-1)' }]} />
     <LineChart title={t('health.chart.chunks')} {points} {long} seconds={range === '1m'} format={num}
-      series={[{ key: 'chunks', label: 'Chunks', color: 'var(--series-1)' }]} />
+      series={[
+        { key: 'chunks', label: t('health.loaded'), color: 'var(--series-1)' },
+        ...(loaders ? [{ key: 'loaderChunks', label: t('health.ofLoaders'), color: 'var(--series-3)' }] : []),
+      ]} />
+    <LineChart title={t('health.chart.ping')} {points} {long} seconds={range === '1m'} format={(v) => (v == null || v < 0 ? '–' : Math.round(v) + ' ms')}
+      series={[{ key: 'ping', label: t('health.ping'), color: 'var(--series-1)' }]} />
     <LineChart title={t('health.chart.entities')} {points} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'entities', label: 'Entities', color: 'var(--series-1)' }]} />
   </div>

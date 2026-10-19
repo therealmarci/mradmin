@@ -106,6 +106,31 @@ final class SqlStorage implements Storage {
         return target;
     }
 
+    @Override
+    public long sizeBytes() {
+        if (type.equals("sqlite")) {
+            long size = 0;
+            for (String suffix : new String[] {"", "-wal", "-shm"}) {
+                size += new File(plugin.getDataFolder(), "mradmin.db" + suffix).length();
+            }
+            return size;
+        }
+        // MariaDB / MySQL: data and indexes of MRadmin's tables (shared by all servers using them).
+        try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
+                "SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.tables"
+                        + " WHERE table_schema = DATABASE() AND table_name IN (?, ?, ?, ?, ?, ?)")) {
+            String[] tables = {"schema_version", "tickets", "ticket_messages", "state", "audit_log", "health"};
+            for (int i = 0; i < tables.length; i++) {
+                ps.setString(i + 1, p + tables[i]);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : -1;
+            }
+        } catch (SQLException e) {
+            return -1;
+        }
+    }
+
     // ---------------------------------------------------------------- tables
 
     private void createTables(Connection c) throws SQLException {

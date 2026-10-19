@@ -67,6 +67,9 @@ public interface Storage {
     /** Deletes points older than {@code before} in the background. */
     void pruneHealth(long before);
 
+    /** Size of MRadmin's data in bytes (-1 = unknown). Blocking - not on the server thread. */
+    long sizeBytes();
+
     /** Writes everything still pending and closes connections. */
     void close();
 

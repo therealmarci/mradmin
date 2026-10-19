@@ -63,6 +63,21 @@ final class YamlStorage implements Storage {
         return "plugins/" + folder.getName() + "/*.yml";
     }
 
+    /** The data files: *.yml and *.log in the folder and below, without config, backups, migrated files and lang. */
+    @Override
+    public long sizeBytes() {
+        try (var files = Files.walk(folder.toPath())) {
+            return files.filter(Files::isRegularFile).filter(path -> {
+                String name = path.getFileName().toString();
+                String relative = folder.toPath().relativize(path).toString().replace('\\', '/');
+                return (name.endsWith(".yml") || name.endsWith(".log")) && !relative.startsWith("lang/")
+                        && !name.startsWith("config") && !name.endsWith(".migrated.yml");
+            }).mapToLong(path -> path.toFile().length()).sum();
+        } catch (IOException | RuntimeException e) {
+            return -1;
+        }
+    }
+
     // ------------------------------------------------------------- documents
 
     @Override

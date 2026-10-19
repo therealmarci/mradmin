@@ -101,16 +101,31 @@
         <h1>#{ticket.id} · {ticket.summary || ticket.categoryName}</h1>
         <span class="status" class:closed={!ticket.open}>{ticket.open ? t('ticket.statusOpen') : t('ticket.statusClosed')}</span>
       </div>
+      <!-- The facts as small tiles: label on top, value below. -->
       <div class="facts">
-        <div><span class="muted">{t('ticket.by')}</span>
-          <img src={head(ticket.creatorUuid, 32)} alt="" width="18" height="18" /> {ticket.creator}</div>
+        <div class="fact">
+          <div class="flabel">{t('ticket.by')}</div>
+          <div class="fvalue"><img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</div>
+        </div>
         {#if ticket.report}
-          <div><span class="muted">{t('ticket.reported')}</span>
-            <img src={head(ticket.targetUuid, 32)} alt="" width="18" height="18" /> {ticket.target}</div>
+          <div class="fact">
+            <div class="flabel">{t('ticket.reported')}</div>
+            <div class="fvalue"><img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</div>
+          </div>
         {/if}
-        <div><span class="muted">{t('ticket.created')}</span> {dateTime(ticket.created)}</div>
-        <div><span class="muted">{t('ticket.location')}</span> <span class="mono">{ticket.world} · X {ticket.x} · Y {ticket.y} · Z {ticket.z}</span></div>
-        <div><span class="muted">{t('ticket.claimedBy')}</span> {ticket.claimedBy ?? t('ticket.nobody')}</div>
+        <div class="fact">
+          <div class="flabel">{t('ticket.created')}</div>
+          <div class="fvalue">{dateTime(ticket.created)}</div>
+        </div>
+        <div class="fact">
+          <div class="flabel">{t('ticket.location')}</div>
+          <!-- Wrapped only between the values - never inside one. -->
+          <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
+        </div>
+        <div class="fact">
+          <div class="flabel">{t('ticket.claimedBy')}</div>
+          <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
+        </div>
       </div>
       {#if ticket.source === 'mrchunks'}
         <div class="notice small">{t('ticket.lockHint')}</div>
@@ -207,21 +222,48 @@
 
   .facts {
     display: grid;
-    gap: 4px 20px;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    font-size: 0.9rem;
-    margin: 8px 0;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+    margin: 12px 0 8px;
   }
 
-  .facts .muted {
-    display: inline-block;
-    min-width: 7.5em;
+  .fact {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 0;
   }
 
-  .facts img {
-    vertical-align: -3px;
-    border-radius: 3px;
+  .flabel {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .fvalue {
+    font-size: 0.92rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-wrap: anywhere;
+  }
+
+  .coords {
+    flex-wrap: wrap;
+    gap: 0 10px;
+  }
+
+  .coords span {
+    white-space: nowrap;
+  }
+
+  .fvalue img {
+    border-radius: 4px;
     image-rendering: pixelated;
+    flex-shrink: 0;
   }
 
   .chat {

@@ -19,8 +19,8 @@ import java.util.Map;
  * <pre>
  *  GET /api/health?range=1m|1h|6h|24h|7d|30d   history (at most 360 points)
  *  GET /api/health/latest                  the newest point (every second)
- *  GET /api/health/system                   uptime, Java, CPU cores, disk, threads, worlds, latest point
- *  GET /api/health/lag                      chunks with the most entities (counted at most every 30 s)
+ *  GET /api/health/system                   uptime, Java, CPU cores, disk, server and database size, worlds, latest point
+ *  GET /api/health/lag                      the 5 chunks with the most entities (counted at most every 30 s)
  * </pre>
  */
 public final class HealthRoutes {
@@ -29,11 +29,18 @@ public final class HealthRoutes {
             "24h", 24 * 3_600_000L, "7d", 7 * 86_400_000L, "30d", 30 * 86_400_000L);
     private static final int MAX_POINTS = 360;
     private static final long LAG_CACHE_MILLIS = 30_000L;
+    private static final int LAG_TOP = 5;
+    /** Walking the whole server folder takes a moment on big worlds - at most every 10 minutes, in the background. */
+    private static final long SIZE_CACHE_MILLIS = 10 * 60_000L;
 
     private final WebServer server;
     private final MRAdmin plugin;
     private volatile List<Map<String, Object>> lag = List.of();
     private volatile long lagTime;
+    private volatile long serverSize = -1;
+    private volatile long dbSize = -1;
+    private volatile long sizeTime;
+    private final java.util.concurrent.atomic.AtomicBoolean measuring = new java.util.concurrent.atomic.AtomicBoolean();
 
     private HealthRoutes(WebServer server) {
         this.server = server;
@@ -89,9 +96,53 @@ public final class HealthRoutes {
         File root = new File(".").getAbsoluteFile();
         info.put("diskFree", root.getUsableSpace() / 1_048_576);
         info.put("diskTotal", root.getTotalSpace() / 1_048_576);
+        measureSizes(root);
+        // In MB like the other values; -1 = not measured yet.
+        info.put("serverSize", serverSize < 0 ? -1 : serverSize / 1_048_576.0);
+        info.put("dbSize", dbSize < 0 ? -1 : dbSize / 1_048_576.0);
+        info.put("storage", plugin.storage().type());
         info.put("worlds", plugin.health().worlds());
         info.put("latest", plugin.health().latest());
         http.json(200, info);
+    }
+
+    /** Size of the server folder (worlds, plugins, logs ...) and of MRadmin's data - measured in the background. */
+    private void measureSizes(File root) {
+        if (System.currentTimeMillis() - sizeTime < SIZE_CACHE_MILLIS || !measuring.compareAndSet(false, true)) {
+            return;
+        }
+        Thread.ofVirtual().name("MRadmin-Size").start(() -> {
+            try {
+                dbSize = plugin.storage().sizeBytes();
+                serverSize = folderSize(root.toPath());
+                sizeTime = System.currentTimeMillis();
+            } finally {
+                measuring.set(false);
+            }
+        });
+    }
+
+    private static long folderSize(java.nio.file.Path root) {
+        long[] total = {0};
+        try {
+            java.nio.file.Files.walkFileTree(root, new java.nio.file.SimpleFileVisitor<>() {
+                @Override
+                public java.nio.file.FileVisitResult visitFile(java.nio.file.Path file,
+                        java.nio.file.attribute.BasicFileAttributes attrs) {
+                    total[0] += attrs.size();
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public java.nio.file.FileVisitResult visitFileFailed(java.nio.file.Path file, java.io.IOException e) {
+                    // locked or vanished (e.g. a region file being written) - skip it
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (java.io.IOException e) {
+            return -1;
+        }
+        return total[0];
     }
 
     /** The chunk count goes through every entity - only when someone looks, and at most every 30 seconds. */
@@ -100,7 +151,7 @@ public final class HealthRoutes {
         if (System.currentTimeMillis() - lagTime > LAG_CACHE_MILLIS) {
             lag = server.sync(() -> {
                 List<Map<String, Object>> list = new ArrayList<>();
-                for (HotChunks.Chunk c : HotChunks.count(21)) {
+                for (HotChunks.Chunk c : HotChunks.count(LAG_TOP)) {
                     List<Map<String, Object>> types = new ArrayList<>();
                     c.types().entrySet().stream().sorted(Map.Entry.<org.bukkit.entity.EntityType, Integer>comparingByValue().reversed())
                             .limit(4).forEach(e -> types.add(Map.of("type", e.getKey().name().toLowerCase(Locale.ROOT), "count", e.getValue())));

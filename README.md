@@ -105,10 +105,23 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
   und meldet alle Geräte ab.
 
+**Übersicht (Dashboard)**
+- Oben die **Lage**: Läuft etwas aus dem Ruder, steht hier jede Meldung mit Symbol und Wort, die dringendsten
+  zuerst: niedrige TPS, hohe Tick-Zeit, voller Arbeitsspeicher, wenig Speicherplatz, hohe CPU-Last, hoher Ping,
+  unbeantwortete und dir zugewiesene Tickets, gesperrte, auffällige oder pausierte Chunkloader, Wartung. Läuft
+  alles rund, stehen dort die wichtigsten aktuellen Werte. Aktualisiert sich alle 2 Sekunden.
+- Darunter Kacheln für Server, Spieler, Tickets, Chunkloader und Wartung mit Klick zur jeweiligen Seite.
+- Jede Meldung und jede Kachel erscheint nur mit der Permission für ihren Bereich: Server und Spieler mit
+  `mradmin.status`, CPU mit `mradmin.status.health`, Tickets mit `mradmin.tickets.view` (zugewiesene mit
+  `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
+  Plugin oder Feature nicht da, fehlt der Teil einfach.
+- Das **Konto** (Geräte, Wiederherstellungscodes) öffnet ein Klick auf deinen Kopf bzw. Namen oben rechts.
+
 **Health-Dashboard** (`mradmin.status.health`)
 - Wie der Health-Report von spark: TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU (Server und System),
-  Arbeitsspeicher, Garbage Collection, Spieler, Chunks und Entities als Verlauf über 1 Minute bis 30 Tage, dazu
-  Welten, Systeminfos und die Chunks mit den meisten Entities.
+  Arbeitsspeicher, Garbage Collection, Spieler, Ø Ping, Chunks (mit MRchunks auch „davon Chunkloader“) und Entities
+  als Verlauf über 1 Minute bis 30 Tage, dazu Welten, Systeminfos, Servergröße (alle 10 Minuten im Hintergrund
+  gemessen), Größe der MRadmin-Datenbank und die 5 Chunks mit den meisten Entities.
 - Gemessen wird jede Sekunde aus Werten, die Java und Paper ohnehin führen (kein Lag), die Seite aktualisiert sich
   live. Die letzte Stunde ist sekündlich da (ab 1 Minute wählbar), 24 Stunden im 10-Sekunden-Takt, ältere als
   5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten). Aufbewahrung
