@@ -116,6 +116,13 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - `health.alert`: Warnung an das Team (ingame) und ins Discord-Log, wenn die TPS länger unter einer Grenze liegt,
   und Entwarnung, sobald sie sich erholt hat.
 
+**Chunkloader** (mit MRchunks; Permissions von MRchunks: `mrchunks.admin.gui` ansehen, `mrchunks.admin.manage` handeln)
+- Alle Chunkloader mit Status (OK, aus, auffällig, gesperrt, pausiert - immer mit Symbol und Wort), Probleme
+  zuerst, Suche nach Name, Spieler, Welt oder Koordinaten, Server-Pause als Hinweis.
+- Pro Loader: Ort, Sperrgrund, alle Messwerte des Lag-Schutzes mit Warn- und Sperrgrenze, Mitglieder. Aktionen:
+  ein-/ausschalten, Sperre aufheben, löschen - der Owner bekommt wie ingame eine Nachricht, alles landet im
+  Discord- und im Web-Protokoll.
+
 **Datenschutz & Impressum**
 - Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt
   MRadmin Vorlagen in `plugins/MRadmin/web/impressum.md` und `datenschutz.md` an. Die Datenschutz-Vorlage beschreibt,

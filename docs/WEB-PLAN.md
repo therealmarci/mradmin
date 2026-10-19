@@ -15,7 +15,7 @@ Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release
    Drittanbieter (über MRadmin ausgeliefert und zwischengespeichert), Löschfristen für Protokoll und IPs
 3. ✅ Health-Dashboard (`mradmin.status.health`): TPS/MSPT (Ø, 95 %, max), CPU, RAM, GC, Spieler, Chunks, Entities
    als Verlauf; Aufbewahrung in der Config `24h` / `7d` (Standard) / `30d`, mit SQLite/MySQL über Neustarts hinweg
-4. MRchunks im Web (MRadminHook v4: Daten-Methoden) · 5. MRsleep im Web (dto.)
+4. ✅ MRchunks im Web (MRadminHook v4: `web(request, args)`) · 5. MRsleep im Web (dto.)
 6. Spielerverwaltung + LibertyBans (dessen eigene Permissions gelten)
 7. Web-Konsole: Live-Log (`mradmin.web.console.view`) und Befehle (`.execute`), beide nicht in Paketen,
    erneuter 2FA-Code vor dem Öffnen, alles im Protokoll und Discord-Log, Sperrliste für Befehle, Links/IPs im Log

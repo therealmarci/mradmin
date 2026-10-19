@@ -15,6 +15,8 @@
   import Legal from './pages/Legal.svelte';
   import Footer from './components/Footer.svelte';
   import Health from './pages/Health.svelte';
+  import Chunks from './pages/Chunks.svelte';
+  import ChunkView from './pages/ChunkView.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -51,7 +53,8 @@
 
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
   const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
-  const section = $derived(ticketId ? '/tickets' : route.path);
+  const chunkId = $derived(route.path.match(/^\/chunks\/(\d+)$/)?.[1] ?? null);
+  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : route.path);
 
   const nav = $derived(
     me
@@ -59,6 +62,7 @@
           { path: '/', label: t('nav.home'), icon: 'home' },
           ...(me.may.tickets ? [{ path: '/tickets', label: t('nav.tickets'), icon: 'ticket' }] : []),
           ...(me.may.health ? [{ path: '/health', label: t('nav.health'), icon: 'pulse' }] : []),
+          ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           { path: '/account', label: t('nav.account'), icon: 'user' },
           ...(me.may.audit ? [{ path: '/audit', label: t('nav.audit'), icon: 'list' }] : []),
         ]
@@ -71,6 +75,7 @@
     user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5Z',
     list: 'M4 6h16M4 12h16M4 18h10',
     pulse: 'M3 12h4l2-6 4 12 2-6h6',
+    grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
     logout: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4',
   };
 </script>
@@ -114,6 +119,10 @@
       <Tickets />
     {:else if route.path === '/health' && me.may.health}
       <Health />
+    {:else if chunkId && me.may.mrchunks}
+      {#key chunkId}<ChunkView id={chunkId} {me} />{/key}
+    {:else if route.path === '/chunks' && me.may.mrchunks}
+      <Chunks />
     {:else if route.path === '/audit' && me.may.audit}
       <Audit />
     {:else}
@@ -245,6 +254,17 @@
 
   .tabs button.active {
     color: var(--accent);
+  }
+
+  .tabs button {
+    min-width: 0;
+  }
+
+  .tabs span {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Tablet and PC: navigation at the top instead of the bottom bar. */

@@ -132,6 +132,9 @@ public final class AuthRoutes {
         may.put("status", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), Perms.STATUS));
         may.put("health", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), Perms.STATUS_HEALTH));
         may.put("maintenance", plugin.feature(Feature.MAINTENANCE) && perms.has(account.id(), Perms.MAINTENANCE_VIEW));
+        boolean chunks = ChunkRoutes.hook(plugin) != null;
+        may.put("mrchunks", chunks && perms.has(account.id(), ChunkRoutes.PERM_VIEW));
+        may.put("mrchunksManage", chunks && perms.has(account.id(), ChunkRoutes.PERM_MANAGE));
         may.put("audit", perms.has(account.id(), Perms.WEB_AUDIT));
         Map<String, Object> me = new LinkedHashMap<>();
         me.put("uuid", account.id().toString());

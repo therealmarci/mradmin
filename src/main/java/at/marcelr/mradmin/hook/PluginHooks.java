@@ -31,6 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * </pre>
  * MRchunks uses that for chunk loaders with conspicuous activity in the server health menu.
  * Version 3 may add {@code EVENT}: MRchunks' lock event, MRadmin opens a ticket for it (see {@link LockTickets}).
+ * Version 4 may add {@code public static Object web(String request, Map<String, Object> args)}: plain data and
+ * actions for the web interface (server thread only).
  * The class is looked up in that plugin's class loader when it is needed; a missing, outdated or broken hook simply
  * means the button works without live information (it still runs its command).
  */
@@ -41,10 +43,10 @@ public final class PluginHooks {
 
     /** Resolved methods of one hook class. */
     private record Hook(Plugin owner, MethodHandle summary, MethodHandle playerSummary, MethodHandle openPlayerMenu,
-                        MethodHandle activity, MethodHandle openActivity) {
+                        MethodHandle activity, MethodHandle openActivity, MethodHandle web) {
     }
 
-    private static final Hook NONE = new Hook(null, null, null, null, null, null);
+    private static final Hook NONE = new Hook(null, null, null, null, null, null, null);
 
     private final MRAdmin plugin;
     private final Map<String, Hook> hooks = new ConcurrentHashMap<>();
@@ -148,6 +150,28 @@ public final class PluginHooks {
         }
     }
 
+    /** Whether the plugin offers data for the web interface (hook version 4). */
+    public boolean hasWeb(Settings.HubButton button) {
+        return hook(button).web() != null;
+    }
+
+    /**
+     * Asks the plugin for web data or runs a web action (server thread only).
+     * @return its answer (maps, lists, strings), or null if there is none
+     */
+    public Object web(Settings.HubButton button, String request, Map<String, Object> args) {
+        MethodHandle handle = hook(button).web();
+        if (handle == null) {
+            return null;
+        }
+        try {
+            return handle.invoke(request, args);
+        } catch (Throwable t) {
+            broken(button, t);
+            return null;
+        }
+    }
+
     private Hook hook(Settings.HubButton button) {
         if (button.hook().isEmpty() || button.plugin().isEmpty()) {
             return NONE;
@@ -183,7 +207,8 @@ public final class PluginHooks {
                     lookup.findStatic(type, "playerSummary", listOfPlayerUuid),
                     lookup.findStatic(type, "openPlayerMenu", open),
                     optional(lookup, type, "activity", listOfPlayer),
-                    optional(lookup, type, "openActivity", MethodType.methodType(boolean.class, Player.class, String.class, Runnable.class)));
+                    optional(lookup, type, "openActivity", MethodType.methodType(boolean.class, Player.class, String.class, Runnable.class)),
+                    optional(lookup, type, "web", MethodType.methodType(Object.class, String.class, Map.class)));
         } catch (ClassNotFoundException e) {
             // Older version of the plugin without hook - fine, the button simply runs its command.
             return NONE;
