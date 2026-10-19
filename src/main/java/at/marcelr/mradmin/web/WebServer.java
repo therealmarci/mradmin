@@ -57,6 +57,8 @@ public final class WebServer {
     private final WebEvents events = new WebEvents();
     private volatile Map<String, Object> snapshot = Map.of();
     private org.bukkit.scheduler.BukkitTask snapshotTask;
+    /** Started with the web interface and stopped with it (e.g. the console log reader). */
+    private final java.util.List<Runnable[]> lifecycle = new java.util.ArrayList<>();
     private org.bukkit.scheduler.BukkitTask pruneTask;
 
     public WebServer(MRAdmin plugin, WebAuth auth, WebPermissions permissions) {
@@ -133,6 +135,7 @@ public final class WebServer {
             // Retention period of the log (web.privacy.audit-retention): now and every 6 hours.
             pruneTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.storage().pruneAudit(
                     System.currentTimeMillis() - plugin.settings().web().auditRetention()), 20L, 6 * 72_000L);
+            lifecycle.forEach(l -> l[0].run());
             plugin.getLogger().info("Web interface listening on " + s.bind() + ":" + s.port()
                     + (s.publicUrl().isEmpty() ? " (set web.public-url to the address of your reverse proxy)" : " for " + s.publicUrl()) + ".");
         } catch (IOException | RuntimeException e) {
@@ -141,7 +144,13 @@ public final class WebServer {
         }
     }
 
+    /** {@code start} runs whenever the web interface starts, {@code stop} when it stops. */
+    public void lifecycle(Runnable start, Runnable stop) {
+        lifecycle.add(new Runnable[] {start, stop});
+    }
+
     public void stop() {
+        lifecycle.forEach(l -> l[1].run());
         if (snapshotTask != null) {
             snapshotTask.cancel();
             snapshotTask = null;

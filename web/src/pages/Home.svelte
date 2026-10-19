@@ -131,10 +131,10 @@
           <div class="facts">
             <div><span class="muted">{t('overview.tps')}</span> {s.tps.map((v) => v.toFixed(1)).join(' / ')}</div>
             <div><span class="muted">{t('overview.mspt')}</span> {s.mspt.toFixed(1)} ms</div>
-            <div><span class="muted">{t('overview.ram')}</span> {mb(s.ramUsed)} / {mb(s.ramMax)}</div>
+            <div><span class="muted">{t('overview.ram')}</span> {mb(s.ramUsed)} / {mb(s.ramMax)}
+              <div class="bar"><div style="width: {Math.min(100, (s.ramUsed / s.ramMax) * 100)}%"></div></div></div>
           </div>
-          <div class="bar"><div style="width: {Math.min(100, (s.ramUsed / s.ramMax) * 100)}%"></div></div>
-          {#if me.may.health}<div class="small link">{t('home.toHealth')} →</div>{/if}
+          <div class="small link">{#if me.may.health}{t('home.toHealth')} →{/if}</div>
         </button>
 
         <section class="card">
@@ -145,6 +145,7 @@
             <div><span class="muted">{t('home.upFor')}</span> {uptime(s.uptime)}</div>
             <div><span class="muted">{t('health.disk')}</span> {mb(s.diskFree)} {t('health.free')}</div>
           </div>
+          <div></div>
         </section>
       {/if}
 
@@ -203,13 +204,14 @@
         <section class="card">
           <div class="label">{t('overview.maintenance')}</div>
           <div class="big small-big {phaseTone[m.phase]}">{t('overview.phase.' + m.phase)}</div>
-          {#if m.phase !== 'none'}
-            {#if m.title}<div class="small">{m.title}</div>{/if}
-            <div class="facts">
+          <div class="facts">
+            {#if m.phase !== 'none'}
+              {#if m.title}<div class="wide"><span class="muted">{t('overview.what')}</span> {m.title}</div>{/if}
               <div><span class="muted">{t('overview.from')}</span> {dateTime(m.start)}</div>
               <div><span class="muted">{t('overview.until')}</span> {m.end ? dateTime(m.end) : t('overview.openEnd')}</div>
-            </div>
-          {/if}
+            {/if}
+          </div>
+          <div></div>
         </section>
       {/if}
     </div>
@@ -339,15 +341,32 @@
   .facts-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 18px;
-    margin-top: 10px;
-    font-size: 0.95rem;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 0.92rem;
   }
 
+  .facts-row > span {
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: 8px;
+    padding: 5px 10px;
+  }
+
+  /* Every tile has the same four rows (label, big value, sub-tiles, link) as a subgrid: in a row of tiles they
+     all sit on the same level, however much each one holds. */
   .grid {
     display: grid;
     gap: 16px;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .grid > .card {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    row-gap: 6px;
+    align-content: start;
   }
 
   /* Clickable tiles look exactly like the others: buttons centre their content (also with display: block), so
@@ -356,15 +375,8 @@
     text-align: left;
     color: var(--text);
     font-weight: 400;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-  }
-
-  .tile .link {
-    margin-top: auto;
-    padding-top: 6px;
+    justify-content: stretch;
+    justify-items: stretch;
   }
 
   .tile:disabled {
@@ -378,11 +390,16 @@
     font-weight: 600;
   }
 
+  /* Centred in its row - a short text ("Keine Wartung geplant") sits level with the big numbers. */
   .big {
     font-size: 2rem;
     font-weight: 800;
-    margin: 4px 0 8px;
     line-height: 1.1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    min-height: 2.4rem;
   }
 
   .small-big {
@@ -395,22 +412,37 @@
     color: var(--muted);
   }
 
+  /* Every value as a subtle sub-tile: label small on top, value below. */
   .facts {
-    font-size: 0.9rem;
     display: grid;
-    gap: 2px;
+    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 118px), 1fr));
+    align-content: start;
+  }
+
+  .facts > div {
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .facts .muted {
-    display: inline-block;
-    min-width: 9em;
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 600;
+    margin-bottom: 1px;
   }
 
   .bar {
-    height: 6px;
+    height: 5px;
     border-radius: 3px;
-    background: var(--surface-2);
-    margin-top: 10px;
+    background: var(--border);
+    margin-top: 6px;
     overflow: hidden;
   }
 
@@ -444,7 +476,11 @@
 
   .link {
     color: var(--accent);
-    margin-top: 6px;
+    align-self: end;
+  }
+
+  .facts .wide {
+    grid-column: 1 / -1;
   }
 
   .players {

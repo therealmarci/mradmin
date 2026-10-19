@@ -144,6 +144,9 @@ public final class AuthRoutes {
         may.put("mrsleepBypass", sleep && perms.has(account.id(), SleepRoutes.PERM_BYPASS));
         may.put("mrsleepBan", sleep && perms.has(account.id(), SleepRoutes.PERM_BAN));
         may.put("players", perms.has(account.id(), Perms.PLAYER_VIEW));
+        boolean console = ConsoleRoutes.enabled(plugin) && perms.has(account.id(), Perms.WEB_CONSOLE_VIEW);
+        may.put("console", console);
+        may.put("consoleExecute", console && perms.has(account.id(), Perms.WEB_CONSOLE_EXECUTE));
         may.put("audit", perms.has(account.id(), Perms.WEB_AUDIT));
         Map<String, Object> me = new LinkedHashMap<>();
         me.put("uuid", account.id().toString());

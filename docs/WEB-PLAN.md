@@ -18,7 +18,7 @@ Stand: 2026-10-19. Ziel-Version: **MRadmin 0.2.0** (Phasen 1–3 als ein Release
 4. ✅ MRchunks im Web (MRadminHook v4: `web(request, args)`) · 5. ✅ MRsleep im Web (dto.)
 6. ✅ Spielerverwaltung: Liste, Spielerseite mit MRadmin-, MRsleep- und MRchunks-Teil (Hook-Anfragen `player`,
    `flags`, MRchunks `playerAction`) · 6b. ✅ LibertyBans als weiterer Teil der Spielerseite (dessen Permissions, API 1.1.4)
-7. Web-Konsole: Live-Log (`mradmin.web.console.view`) und Befehle (`.execute`), beide nicht in Paketen,
+7. ✅ Web-Konsole: Live-Log (`mradmin.web.console.view`) und Befehle (`.execute`), beide nicht in Paketen,
    erneuter 2FA-Code vor dem Öffnen, alles im Protokoll und Discord-Log, Sperrliste für Befehle, Links/IPs im Log
    ausgeblendet
 8. Passkeys

@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 13
+config-version: 14
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -368,6 +368,10 @@ discord:
     web-setup:
       enabled: true
       color: "#9B59B6"
+    # Jeder Befehl aus der Web-Konsole.
+    web-console:
+      enabled: true
+      color: "#E74C3C"
     # Der Server laggt länger (health.alert) bzw. hat sich wieder erholt.
     health-alert:
       enabled: true
@@ -546,3 +550,20 @@ web:
     # IP-Adressen nur gekürzt speichern (1.2.3.4 -> 1.2.3.0) - im Protokoll und bei den angemeldeten Geräten.
     # Weniger personenbezogen, Missbrauch lässt sich aber schlechter nachverfolgen.
     mask-ip: false
+  # Web-Konsole: Live-Log (Permission mradmin.web.console.view) und Befehle (mradmin.web.console.execute). Beide
+  # stecken in keinem Paket (auch nicht in mradmin.admin) und müssen bewusst einzeln vergeben werden. Vor dem Öffnen
+  # fragt die Oberfläche noch einmal nach dem Code aus der Authenticator-App. Jeder Befehl landet im Web-Protokoll
+  # und im Discord-Log (web-console).
+  console:
+    enabled: true
+    # So lange bleibt die Konsole nach dem Code offen (Minuten, pro Gerät).
+    unlock-minutes: 15
+    # So viele der neuesten Zeilen hält MRadmin vor.
+    lines: 1000
+    # Diese Befehle gehen über die Web-Konsole nie - auch nicht versteckt in "execute ... run". Verglichen wird der
+    # Anfang des Befehls, ohne "/" und ohne Namespace ("minecraft:op" = "op"). Mehrere Wörter gehen auch ("mradmin web").
+    blocked: ["op", "deop", "stop", "restart", "reload", "lp", "luckperms", "perm", "perms", "permissions", "pex",
+      "mradmin web", "whitelist off", "save-off"]
+    # Links und IP-Adressen in der Ausgabe ausblenden (z.B. Einrichtungslinks, IPs beim Join).
+    hide-links: true
+    hide-ips: true

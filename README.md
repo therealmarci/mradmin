@@ -160,6 +160,15 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - Jede Welt mit Tag/Nacht, wie viele schlafen und wie viele nötig sind, dazu wer gerade mit /nosleep blockiert -
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
+**Konsole** (`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle - beide in keinem Paket)
+- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
+  farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
+- Vor dem Öffnen noch einmal der Code aus der Authenticator-App (keine Wiederherstellungscodes), dann
+  `web.console.unlock-minutes` lang offen (pro Gerät). 5 falsche Codes sperren die Konsole 15 Minuten.
+- Befehle laufen als Konsole. `web.console.blocked` sperrt Befehle komplett - auch mit Namespace
+  (`minecraft:op`) und versteckt in `execute ... run`. Jeder Befehl landet im Web-Protokoll und im Discord-Log
+  (`web-console`), gesperrte Versuche im Protokoll.
+
 **Datenschutz & Impressum**
 - Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt
   MRadmin Vorlagen in `plugins/MRadmin/web/impressum.md` und `datenschutz.md` an. Die Datenschutz-Vorlage beschreibt,

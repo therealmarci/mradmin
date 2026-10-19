@@ -640,6 +640,7 @@ discord:
   staff-chat: "💬 **{player}**: {text}"
   web-login: "🌐 **{player}** signed in to the web interface ({device}, {ip})."
   web-setup: "🔑 **{player}** set up or reset their web account ({device}, {ip})."
+  web-console: "⌨️ **{player}** ran in the web console: `{command}`"
   health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
   health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
 # Texts for the community Discord (discord-announce in config.yml). Markdown like in Discord.

@@ -355,6 +355,24 @@ public final class WebAuth {
         return existed;
     }
 
+    /**
+     * Confirms a sensitive step (e.g. opening the web console) with a fresh 2FA code from the app - recovery codes
+     * do not count here. A code works once (same replay protection as at sign-in).
+     */
+    public synchronized boolean confirmCode(UUID id, String code) {
+        Account account = accounts.get(id);
+        if (account == null || code == null) {
+            return false;
+        }
+        long step = Totp.verify(account.totp, code.replace(" ", ""), System.currentTimeMillis());
+        if (step < 0 || step <= account.lastTotpStep) {
+            return false;
+        }
+        account.lastTotpStep = step;
+        saveAccounts();
+        return true;
+    }
+
     /** New recovery codes after confirming with a 2FA code. @return the codes, or null if the code was wrong */
     public synchronized List<String> newRecoveryCodes(UUID id, String code) {
         Account account = accounts.get(id);

@@ -640,6 +640,7 @@ discord:
   staff-chat: "💬 **{player}**: {text}"
   web-login: "🌐 **{player}** hat sich in der Weboberfläche angemeldet ({device}, {ip})."
   web-setup: "🔑 **{player}** hat sein Web-Konto eingerichtet bzw. zurückgesetzt ({device}, {ip})."
+  web-console: "⌨️ **{player}** hat in der Web-Konsole ausgeführt: `{command}`"
   health-alert: "🐢 Der Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
   health-recovered: "✅ Der Server läuft wieder flüssig: **{tps} TPS**."
 # Texte für den Community-Discord (discord-announce in der config.yml). Markdown wie in Discord.
