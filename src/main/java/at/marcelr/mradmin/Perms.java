@@ -3,8 +3,7 @@ package at.marcelr.mradmin;
 /**
  * Every permission of MRadmin in one place. One permission per function, valid in game and in the web interface
  * alike - whoever may only read tickets in game may only read them in the web. The plugin.yml bundles them
- * (mradmin.support, mradmin.staff, mradmin.admin); the permissions of older versions (mradmin.report.manage ...) are
- * bundles of the new ones, so existing setups keep their rights.
+ * (mradmin.support, mradmin.staff, mradmin.admin).
  */
 public final class Perms {
 

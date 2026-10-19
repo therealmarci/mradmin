@@ -338,8 +338,6 @@ nur ansehen darf, darf das im Web auch nur. Menüs und Web zeigen nur, was man d
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
 
 Die Permissions von MRchunks und MRsleep (z.B. `mrchunks.admin.manage`) gelten im Web ebenso für deren Bereiche.
-Frühere Permissions (`mradmin.report`, `mradmin.report.notify`, `mradmin.report.manage`, `mradmin.mode.teleport`)
-funktionieren weiter und geben dieselben Rechte wie bisher.
 
 Beispiel LuckPerms:
 ```

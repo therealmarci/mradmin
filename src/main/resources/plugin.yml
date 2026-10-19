@@ -196,31 +196,3 @@ permissions:
     description: Hinweis beim Betreten des Servers, wenn ein Update verfügbar ist.
     default: op
 
-  # ---------------------------------------------- frühere Permissions (bis 0.1)
-  # Bleiben gültig und geben dieselben Rechte wie bisher - für neue Vergaben die einzelnen Permissions oben nutzen.
-  mradmin.report:
-    description: "Veraltet: wie mradmin.tickets.create."
-    default: true
-    children:
-      mradmin.tickets.create: true
-  mradmin.report.notify:
-    description: "Veraltet: wie mradmin.tickets.notify."
-    default: false
-    children:
-      mradmin.tickets.notify: true
-  mradmin.report.manage:
-    description: "Veraltet: alle Ticket-Rechte (view, reply, claim, close, reopen, teleport)."
-    default: false
-    children:
-      mradmin.tickets.view: true
-      mradmin.tickets.reply: true
-      mradmin.tickets.claim: true
-      mradmin.tickets.close: true
-      mradmin.tickets.reopen: true
-      mradmin.tickets.teleport: true
-  mradmin.mode.teleport:
-    description: "Veraltet: wie mradmin.player.teleport (+ Spielerliste)."
-    default: false
-    children:
-      mradmin.player.teleport: true
-      mradmin.player.view: true

@@ -21,7 +21,7 @@ import java.util.Map;
  * <pre>
  *  GET  /api/overview                          server state (mradmin.status), maintenance, ticket counts
  *  GET  /api/events                            live updates (Server-Sent Events)
- *  GET  /api/tickets?state=open|closed         ticket list                    (mradmin.report.manage)
+ *  GET  /api/tickets?state=open|closed         ticket list                    (mradmin.tickets.view)
  *  GET  /api/tickets/categories
  *  GET  /api/tickets/{id}                      one ticket with its messages (marks it read)
  *  POST /api/tickets/{id}/reply   {text}
