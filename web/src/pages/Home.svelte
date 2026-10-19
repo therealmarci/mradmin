@@ -42,6 +42,7 @@
     tickets: () => me.may.tickets && '/tickets',
     'tickets-mine': () => me.may.tickets && '/tickets',
     chunks: () => me.may.mrchunks && '/chunks',
+    sleep: () => me.may.mrsleep && '/sleep',
   };
   const target = (a) => (a.page && pages[a.page]?.()) || null;
 
@@ -176,6 +177,24 @@
             <div><span class="muted">{t('chunks.chunks')}</span> {c.chunks}</div>
           </div>
           <div class="small link">{t('home.toChunks')} →</div>
+        </button>
+      {/if}
+
+      {#if data.mrsleep}
+        {@const sl = data.mrsleep}
+        {@const managed = sl.worlds.filter((w) => w.managed)}
+        <button class="card tile" onclick={() => go('/sleep')}>
+          <div class="label">{t('nav.sleep')}</div>
+          <div class="big small-big {sl.blocked > 0 ? 'warn' : 'good'}">
+            {sl.blocked > 0 ? '⛔ ' + t('home.sleepBlocked', { n: sl.blocked }) : t('home.sleepFree')}
+          </div>
+          <div class="facts">
+            {#each managed.slice(0, 3) as w (w.name)}
+              <div><span class="muted">{w.name}</span> {w.thunder ? '⛈' : w.night ? '☽' : '☀'} {w.sleeping} / {w.needed}</div>
+            {/each}
+            {#if sl.bans}<div><span class="muted">{t('sleep.bans')}</span> {sl.bans}</div>{/if}
+          </div>
+          <div class="small link">{t('home.toSleep')} →</div>
         </button>
       {/if}
 

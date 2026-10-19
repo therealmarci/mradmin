@@ -105,12 +105,14 @@
       <div class="facts">
         <div class="fact">
           <div class="flabel">{t('ticket.by')}</div>
-          <div class="fvalue"><img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</div>
+          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
+            <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
         </div>
         {#if ticket.report}
           <div class="fact">
             <div class="flabel">{t('ticket.reported')}</div>
-            <div class="fvalue"><img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</div>
+            <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.targetUuid)}>
+              <img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</button>
           </div>
         {/if}
         <div class="fact">
@@ -249,6 +251,20 @@
     align-items: center;
     gap: 6px;
     overflow-wrap: anywhere;
+  }
+
+  /* A person in the facts: a link to their player page (with mradmin.player.view). */
+  .person {
+    background: transparent;
+    color: var(--accent);
+    padding: 0;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .person:disabled {
+    color: var(--text);
+    opacity: 1;
   }
 
   .coords {

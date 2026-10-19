@@ -55,6 +55,11 @@ final class WebSnapshot {
         if (chunks != null && plugin.hooks().web(chunks, "overview", Map.of()) instanceof Map<?, ?> overview) {
             result.put("mrchunks", overview);
         }
+        // MRsleep (optional): sleep status per world and /nosleep blocks.
+        Settings.HubButton sleep = SleepRoutes.hook(plugin);
+        if (sleep != null && plugin.hooks().web(sleep, "overview", Map.of()) instanceof Map<?, ?> overview) {
+            result.put("mrsleep", overview);
+        }
 
         if (plugin.feature(Feature.MAINTENANCE)) {
             MaintenanceManager m = plugin.maintenance();

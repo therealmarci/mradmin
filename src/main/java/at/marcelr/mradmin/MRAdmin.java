@@ -98,6 +98,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.SiteRoutes.register(web);
         at.marcelr.mradmin.web.HealthRoutes.register(web);
         at.marcelr.mradmin.web.ChunkRoutes.register(web);
+        at.marcelr.mradmin.web.SleepRoutes.register(web);
+        at.marcelr.mradmin.web.PlayerRoutes.register(web);
         health = new HealthMonitor(this);
 
         freeze = new FreezeManager(this);

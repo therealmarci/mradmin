@@ -68,7 +68,10 @@
         <img src={head(loader.owner)} alt="" width="44" height="44" />
         <div>
           <h1>{loader.name}</h1>
-          <div class="muted">{loader.ownerName} · Nr. {loader.number}</div>
+          <div class="muted">
+            {#if me.may.players}<button class="plink" onclick={() => go('/players/' + loader.owner)}>{loader.ownerName}</button>{:else}{loader.ownerName}{/if}
+            · Nr. {loader.number}
+          </div>
         </div>
         <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + loader.status)}</span>
       </div>
@@ -161,6 +164,13 @@
   .title img {
     border-radius: 8px;
     image-rendering: pixelated;
+  }
+
+  .plink {
+    background: transparent;
+    color: var(--accent);
+    padding: 0;
+    font-weight: 600;
   }
 
   .title h1 {

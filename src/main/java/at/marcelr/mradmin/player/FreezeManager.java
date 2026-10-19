@@ -75,21 +75,32 @@ public final class FreezeManager {
 
     /** Freezes or unfreezes; tells the target, logs to the console and the admin Discord. */
     public void set(Player staff, Player target, boolean freeze) {
+        set(staff.getName(), staff, target, freeze);
+    }
+
+    /**
+     * The same for a staff member who may not be online (web interface): {@code feedback} gets the confirmation,
+     * null = nobody. @return whether something changed
+     */
+    public boolean set(String staff, org.bukkit.command.CommandSender feedback, Player target, boolean freeze) {
         if (freeze == frozen(target.getUniqueId())) {
-            return;
+            return false;
         }
         if (freeze) {
             frozen.add(target.getUniqueId());
             target.setVelocity(new org.bukkit.util.Vector());
-            plugin.messages().send(target, "freeze-frozen", tag("staff", staff.getName()));
+            plugin.messages().send(target, "freeze-frozen", tag("staff", staff));
         } else {
             frozen.remove(target.getUniqueId());
             plugin.messages().send(target, "freeze-unfrozen");
         }
         save();
-        plugin.messages().send(staff, freeze ? "freeze-done" : "unfreeze-done", tag("player", target.getName()));
-        plugin.getLogger().info(staff.getName() + (freeze ? " froze " : " unfroze ") + target.getName() + ".");
-        plugin.discord().log(freeze ? "player-freeze" : "player-unfreeze", "admin", staff.getName(), "player", target.getName());
+        if (feedback != null) {
+            plugin.messages().send(feedback, freeze ? "freeze-done" : "unfreeze-done", tag("player", target.getName()));
+        }
+        plugin.getLogger().info(staff + (freeze ? " froze " : " unfroze ") + target.getName() + ".");
+        plugin.discord().log(freeze ? "player-freeze" : "player-unfreeze", "admin", staff, "player", target.getName());
+        return true;
     }
 
     /** A frozen player left the server - staff should know (logging out to escape a check). */

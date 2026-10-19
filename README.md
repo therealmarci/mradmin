@@ -108,12 +108,13 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 **Übersicht (Dashboard)**
 - Oben die **Lage**: Läuft etwas aus dem Ruder, steht hier jede Meldung mit Symbol und Wort, die dringendsten
   zuerst: niedrige TPS, hohe Tick-Zeit, voller Arbeitsspeicher, wenig Speicherplatz, hohe CPU-Last, hoher Ping,
-  unbeantwortete und dir zugewiesene Tickets, gesperrte, auffällige oder pausierte Chunkloader, Wartung. Läuft
+  unbeantwortete und dir zugewiesene Tickets, gesperrte, auffällige oder pausierte Chunkloader, /nosleep-Blockaden,
+  Wartung. Läuft
   alles rund, stehen dort die wichtigsten aktuellen Werte. Aktualisiert sich alle 2 Sekunden.
-- Darunter Kacheln für Server, Spieler, Tickets, Chunkloader und Wartung mit Klick zur jeweiligen Seite.
+- Darunter Kacheln für Server, Spieler, Tickets, Chunkloader, Schlaf und Wartung mit Klick zur jeweiligen Seite.
 - Jede Meldung und jede Kachel erscheint nur mit der Permission für ihren Bereich: Server und Spieler mit
   `mradmin.status`, CPU mit `mradmin.status.health`, Tickets mit `mradmin.tickets.view` (zugewiesene mit
-  `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
+  `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Schlaf mit `mrsleep.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
   Plugin oder Feature nicht da, fehlt der Teil einfach.
 - Das **Konto** (Geräte, Wiederherstellungscodes) öffnet ein Klick auf deinen Kopf bzw. Namen oben rechts.
 
@@ -135,6 +136,23 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - Pro Loader: Ort, Sperrgrund, alle Messwerte des Lag-Schutzes mit Warn- und Sperrgrenze, Mitglieder. Aktionen:
   ein-/ausschalten, Sperre aufheben, löschen - der Owner bekommt wie ingame eine Nachricht, alles landet im
   Discord- und im Web-Protokoll.
+
+**Spieler** (`mradmin.player.view`)
+- Alle, die schon auf dem Server waren: online zuerst, dann nach letztem Besuch, mit Suche, Filter (online,
+  auffällig) und Markierungen (eingefroren, gemeldet, blockiert /nosleep, Chunkloader gesperrt ...). Keine IP-Adressen.
+- Pro Spieler eine Seite: Ort, Spielmodus, Ping, Leben, erster Besuch, Spielzeit; Einfrieren
+  (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`); seine Tickets
+  (`mradmin.tickets.view`).
+- Darunter ein Teil pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt der Teil:
+  - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
+  - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
+    (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
+    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
+- Spieler in Tickets, Chunkloadern und auf der Schlafseite verlinken direkt auf ihre Seite.
+
+**Schlaf** (mit MRsleep; `mrsleep.admin.gui`, Blockaden aufheben mit `mrsleep.admin.clear`)
+- Jede Welt mit Tag/Nacht, wie viele schlafen und wie viele nötig sind, dazu wer gerade mit /nosleep blockiert -
+  einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
 **Datenschutz & Impressum**
 - Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt

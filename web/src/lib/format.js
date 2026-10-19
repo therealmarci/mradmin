@@ -25,3 +25,15 @@ export function tpsTone(tps) {
 export function head(uuid) {
   return `/api/head/${uuid}`;
 }
+
+/** A duration in ms as "2 d 3 h", "45 min" or "30 s" (the largest two units). */
+export function duration(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d) return h ? `${d} d ${h} h` : `${d} d`;
+  if (h) return m ? `${h} h ${m} min` : `${h} h`;
+  if (m) return `${m} min`;
+  return `${s} s`;
+}

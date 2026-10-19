@@ -22,6 +22,8 @@ public final class ChunkRoutes {
 
     public static final String PERM_VIEW = "mrchunks.admin.gui";
     public static final String PERM_MANAGE = "mrchunks.admin.manage";
+    public static final String PERM_LIMIT = "mrchunks.admin.limit";
+    public static final String PERM_BAN = "mrchunks.admin.ban";
     private static final Set<String> ACTIONS = Set.of("toggle", "unlock", "delete");
 
     private final WebServer server;

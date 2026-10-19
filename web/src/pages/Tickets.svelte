@@ -158,12 +158,17 @@
     gap: 10px;
   }
 
+  /* minmax(0, 1fr): a long one-line preview is cut with "…" instead of widening the page (grid items are at least
+     as wide as their content otherwise). */
   .list {
     display: grid;
     gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .item {
+    min-width: 0;
+    justify-content: flex-start;
     display: flex;
     gap: 14px;
     align-items: flex-start;
@@ -230,6 +235,11 @@
   .summary {
     font-weight: 600;
     margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  .meta {
+    overflow-wrap: anywhere;
   }
 
   .last {

@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 11
+config-version: 12
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -344,6 +344,9 @@ discord:
     player-unfreeze:
       enabled: true
       color: "#95A5A6"
+    player-kick:
+      enabled: true
+      color: "#E67E22"
     player-freeze-quit:
       enabled: true
       color: "#E74C3C"

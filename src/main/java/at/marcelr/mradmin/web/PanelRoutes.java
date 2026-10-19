@@ -19,7 +19,7 @@ import java.util.Map;
  * The team's pages: server overview, live updates and tickets. Every action has its own permission
  * (mradmin.tickets.view, .reply, .claim, .close, .reopen; mradmin.status; mradmin.maintenance.view).
  * <pre>
- *  GET  /api/overview                          dashboard: server state, tickets, MRchunks, maintenance, alerts
+ *  GET  /api/overview                          dashboard: server state, tickets, MRchunks, MRsleep, maintenance, alerts
  *  GET  /api/events                            live updates (Server-Sent Events)
  *  GET  /api/tickets?state=open|mine|closed    ticket list (mine = open, claimed by me) (mradmin.tickets.view)
  *  GET  /api/tickets/categories
@@ -105,6 +105,13 @@ public final class PanelRoutes {
             }
             if (((Number) c.get("warn")).intValue() > 0) {
                 alerts.add(alert("info", "chunksWarn", "chunks", Map.of("n", c.get("warn"))));
+            }
+        }
+        if (snapshot.get("mrsleep") instanceof Map<?, ?> s && may(http, SleepRoutes.PERM_VIEW)) {
+            result.put("mrsleep", s);
+            int blocked = ((Number) s.get("blocked")).intValue();
+            if (blocked > 0) {
+                alerts.add(alert("info", "sleepBlocked", "sleep", Map.of("n", blocked)));
             }
         }
         if (snapshot.get("maintenance") instanceof Map<?, ?> m && may(http, Perms.MAINTENANCE_VIEW)) {
