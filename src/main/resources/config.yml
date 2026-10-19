@@ -433,12 +433,12 @@ update-checker:
 # ------------------------------------------------------------------------------
 #   SERVERZUSTAND (Health)
 # ------------------------------------------------------------------------------
-# MRadmin misst alle 10 Sekunden TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU, Arbeitsspeicher, Garbage Collection,
+# MRadmin misst jede Sekunde TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU, Arbeitsspeicher, Garbage Collection,
 # Spieler, Chunks und Entities - wie der Health-Report von spark. Zu sehen in der Weboberfläche unter "Health"
 # (Permission mradmin.status.health). Die Messung kostet praktisch nichts: es werden nur Werte gelesen, die Java
 # und Paper ohnehin führen.
 health:
-  # Wie lange der Verlauf aufbewahrt wird: 24h, 7d oder 30d. Die letzten 24 Stunden sind immer im 10-Sekunden-Takt da,
+  # Wie lange der Verlauf aufbewahrt wird: 24h, 7d oder 30d. Die letzte Stunde ist sekündlich da, 24 Stunden im 10-Sekunden-Takt,
   # ältere Werte als 5-Minuten-Mittel (mit storage sqlite/mysql bzw. der Datei health.log - übersteht Neustarts).
   history: 7d
   # Warnung an das Team (ingame, mradmin.status.health) und ins Discord-Log, wenn die TPS so lange unter der Grenze

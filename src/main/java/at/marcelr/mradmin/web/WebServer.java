@@ -195,7 +195,7 @@ public final class WebServer {
 
     private void api(Http http, Settings.WebSettings s) throws Exception {
         boolean change = !http.method().equals("GET") && !http.method().equals("HEAD");
-        if (!allow("api:" + http.ip(), 300)) {
+        if (!allow("api:" + http.ip(), 900)) {
             throw new Http.WebException(429, "rate-limit");
         }
         if (change && (!"1".equals(http.header("X-MRadmin")) || !sameOrigin(http, s))) {

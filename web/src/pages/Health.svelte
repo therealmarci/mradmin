@@ -4,6 +4,7 @@
   import LineChart from '../components/LineChart.svelte';
 
   const RANGES = [
+    { key: '1m', ms: 60e3 },
     { key: '1h', ms: 3600e3 },
     { key: '6h', ms: 6 * 3600e3 },
     { key: '24h', ms: 24 * 3600e3 },
@@ -18,16 +19,29 @@
   let lagBusy = $state(false);
   let error = $state('');
   let loading = $state(false);
+  let live = $state(null);
 
-  async function loadHistory() {
-    loading = true;
+  // The range that was asked for - an answer for an older range (slow network) is dropped.
+  async function loadHistory(first = false) {
+    const asked = range;
+    if (first) loading = true;
     try {
-      history = await api('GET', '/health?range=' + range);
+      const result = await api('GET', '/health?range=' + asked);
+      if (asked === range) history = result;
       error = '';
     } catch (e) {
       error = errorText(e);
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadLatest() {
+    try {
+      const point = await api('GET', '/health/latest');
+      if (point && point.time) live = point;
+    } catch {
+      // the charts show the error
     }
   }
 
@@ -50,12 +64,21 @@
     }
   }
 
-  // Short ranges refresh every 10 s (one new point each time), long ones every minute.
+  // Live: 1 min and 1 h every second (the server measures every second), 6 h / 24 h every 10 s (its 10-second
+  // points), longer every minute. The key figures above always refresh every second.
+  const perSecond = $derived(range === '1m' || range === '1h');
   $effect(() => {
     range;
-    loadHistory();
-    const short = range === '1h' || range === '6h';
-    const timer = setInterval(loadHistory, short ? 10000 : 60000);
+    loadHistory(true);
+    const every = perSecond ? 1000 : range === '6h' || range === '24h' ? 10000 : 60000;
+    const timer = setInterval(loadHistory, every);
+    return () => clearInterval(timer);
+  });
+
+  $effect(() => {
+    if (perSecond) return;
+    loadLatest();
+    const timer = setInterval(loadLatest, 1000);
     return () => clearInterval(timer);
   });
 
@@ -77,7 +100,7 @@
 
   const points = $derived(history?.points ?? []);
   const long = $derived(range === '7d' || range === '30d');
-  const latest = $derived(system?.latest);
+  const latest = $derived((perSecond ? points.at(-1) : live) ?? system?.latest);
 
   const ms = (v) => (v ?? 0).toFixed(1) + ' ms';
   const pct = (v) => (v < 0 || v == null ? '–' : Math.round(v) + ' %');
@@ -149,30 +172,30 @@
   {/if}
 
   <div class="charts" class:refreshing={loading && history}>
-    <LineChart title={t('health.chart.tps')} {points} {long} yMax={20} format={tps}
+    <LineChart title={t('health.chart.tps')} {points} {long} seconds={range === '1m'} yMax={20} format={tps}
       series={[{ key: 'tps', label: 'TPS', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.mspt')} {points} {long} format={ms}
+    <LineChart title={t('health.chart.mspt')} {points} {long} seconds={range === '1m'} format={ms}
       refs={[{ value: 50, label: t('health.budget') }]}
       series={[
         { key: 'mspt', label: t('health.avg'), color: 'var(--series-1)' },
         { key: 'msptP95', label: '95 %', color: 'var(--series-2)' },
         { key: 'msptMax', label: t('health.max'), color: 'var(--series-3)' },
       ]} />
-    <LineChart title={t('health.chart.cpu')} {points} {long} yMax={100} format={pct}
+    <LineChart title={t('health.chart.cpu')} {points} {long} seconds={range === '1m'} yMax={100} format={pct}
       series={[
         { key: 'cpu', label: t('health.server'), color: 'var(--series-1)' },
         { key: 'cpuSystem', label: t('health.system'), color: 'var(--series-2)' },
       ]} />
-    <LineChart title={t('health.chart.ram')} {points} {long} format={mb}
+    <LineChart title={t('health.chart.ram')} {points} {long} seconds={range === '1m'} format={mb}
       refs={latest ? [{ value: latest.heapMax, label: t('health.max') }] : []}
       series={[{ key: 'heapUsed', label: t('health.used'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.players')} {points} {long} format={num}
+    <LineChart title={t('health.chart.players')} {points} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'players', label: t('health.players'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.gc')} {points} {long} format={(v) => Math.round(v ?? 0) + ' ms'}
+    <LineChart title={t('health.chart.gc')} {points} {long} seconds={range === '1m'} format={(v) => Math.round(v ?? 0) + ' ms'}
       series={[{ key: 'gc', label: 'GC', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.chunks')} {points} {long} format={num}
+    <LineChart title={t('health.chart.chunks')} {points} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'chunks', label: 'Chunks', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.entities')} {points} {long} format={num}
+    <LineChart title={t('health.chart.entities')} {points} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'entities', label: 'Entities', color: 'var(--series-1)' }]} />
   </div>
 

@@ -22,19 +22,23 @@ import java.util.function.ToDoubleFunction;
 import static at.marcelr.mradmin.Messages.tag;
 
 /**
- * Health of the server over time, like spark's health report: every 10 seconds one point with TPS, MSPT (average,
- * 95th percentile, maximum of the last 100 ticks), CPU, memory, garbage collection, players, chunks and entities.
+ * Health of the server over time, like spark's health report: every second one point with TPS (ticks of that
+ * second), MSPT (average, 95th percentile, maximum of the last 100 ticks), CPU, memory, garbage collection, players,
+ * chunks and entities.
  * <p>
- * Only values the JVM and Paper keep anyway are read - a sample costs well under a millisecond. The last 24 hours stay
- * in memory at full resolution; for longer ranges every 5 minutes are combined into one point, which is also stored
- * (health.history: 24h, 7d or 30d) and so survives restarts. Points are read by web threads (synchronized).
+ * Only values the JVM and Paper keep anyway are read - a sample costs well under a millisecond; counting the ticks is
+ * one tiny task per tick. Three resolutions keep memory small: the last hour per second, the last 24 hours as
+ * 10-second points, longer as 5-minute points - those are also stored (health.history: 24h, 7d or 30d) and so survive
+ * restarts. Combined points keep the highest spike (95 %, maximum), so a lag spike never vanishes in an average.
+ * Points are read by web threads (synchronized).
  * <p>
- * If the TPS stays below health.alert.below-tps for health.alert.minutes, the team (mradmin.status.health) and the
- * Discord log are told once, and again when it has recovered.
+ * If the TPS (1-minute average, so a single spike does not count) stays below health.alert.below-tps for
+ * health.alert.minutes, the team (mradmin.status.health) and the Discord log are told once, and again when it has
+ * recovered.
  */
 public final class HealthMonitor {
 
-    /** One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per 10 seconds. */
+    /** One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second. */
     public record Point(long time, double tps, double mspt, double msptP95, double msptMax, double cpu, double cpuSystem,
                         long heapUsed, long heapMax, double gc, int players, int chunks, int entities, int tiles) {
     }
@@ -43,17 +47,26 @@ public final class HealthMonitor {
     public record WorldInfo(String name, String environment, int chunks, int entities, int tiles, int players) {
     }
 
-    private static final long STEP = 10_000L;
-    private static final long FINE_KEEP = 24 * 3_600_000L;
-    private static final long COARSE_STEP = 5 * 60_000L;
+    private static final long HOUR = 3_600_000L;
+    private static final long DAY = 24 * HOUR;
+    private static final long TEN_SECONDS = 10_000L;
+    private static final long FIVE_MINUTES = 5 * 60_000L;
     private static final Gson GSON = new Gson();
 
     private final MRAdmin plugin;
-    private final Deque<Point> fine = new ArrayDeque<>();
+    /** per second, last hour */
+    private final Deque<Point> seconds = new ArrayDeque<>();
+    /** 10-second points, last 24 hours */
+    private final Deque<Point> tens = new ArrayDeque<>();
+    /** 5-minute points, health.history (stored) */
     private final Deque<Point> coarse = new ArrayDeque<>();
-    private final List<Point> bucket = new ArrayList<>();
+    private final List<Point> tenBucket = new ArrayList<>();
+    private final List<Point> coarseBucket = new ArrayList<>();
     private volatile List<WorldInfo> worlds = List.of();
-    private BukkitTask task;
+    private BukkitTask sampler;
+    private BukkitTask tickCounter;
+    private int ticks;
+    private long lastSample;
     private long lastGcTime = -1;
     private long lastPrune;
     private long lowSince;
@@ -69,7 +82,7 @@ public final class HealthMonitor {
 
     // --------------------------------------------------------------- lifecycle
 
-    /** Loads the stored history and samples every 10 seconds from now on. */
+    /** Loads the stored history and samples every second from now on. */
     public void start() {
         stop();
         long since = System.currentTimeMillis() - settings().history();
@@ -83,25 +96,38 @@ public final class HealthMonitor {
                 }
             }
         }
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::sample, 100L, STEP / 50);
+        lastSample = System.currentTimeMillis();
+        ticks = 0;
+        tickCounter = Bukkit.getScheduler().runTaskTimer(plugin, () -> ticks++, 1L, 1L);
+        sampler = Bukkit.getScheduler().runTaskTimer(plugin, this::sample, 20L, 20L);
     }
 
     public void stop() {
-        if (task != null) {
-            task.cancel();
-            task = null;
+        if (sampler != null) {
+            sampler.cancel();
+            sampler = null;
+        }
+        if (tickCounter != null) {
+            tickCounter.cancel();
+            tickCounter = null;
         }
     }
 
     // ----------------------------------------------------------------- sample
 
-    /** Server thread: one point (and the current worlds). */
+    /** Server thread, every 20 ticks: one point (and the current worlds). */
     private void sample() {
         long now = System.currentTimeMillis();
-        long[] ticks = Bukkit.getTickTimes().clone();
-        Arrays.sort(ticks);
-        double p95 = ticks.length == 0 ? 0 : ticks[(int) Math.min(ticks.length - 1, Math.ceil(ticks.length * 0.95) - 1)] / 1e6;
-        double max = ticks.length == 0 ? 0 : ticks[ticks.length - 1] / 1e6;
+        double elapsed = Math.max(0.001, (now - lastSample) / 1000.0);
+        // Ticks in the time since the last sample - the TPS of this second (Paper only offers 1-minute averages).
+        double tps = Math.min(20, ticks / elapsed);
+        ticks = 0;
+        lastSample = now;
+
+        long[] times = Bukkit.getTickTimes().clone();
+        Arrays.sort(times);
+        double p95 = times.length == 0 ? 0 : times[(int) Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)] / 1e6;
+        double max = times.length == 0 ? 0 : times[times.length - 1] / 1e6;
 
         double cpu = -1;
         double cpuSystem = -1;
@@ -114,7 +140,7 @@ public final class HealthMonitor {
         for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
             gcTime += Math.max(0, gc.getCollectionTime());
         }
-        double gc = lastGcTime < 0 ? 0 : Math.max(0, gcTime - lastGcTime);
+        double gc = lastGcTime < 0 ? 0 : Math.max(0, gcTime - lastGcTime) / elapsed;
         lastGcTime = gcTime;
 
         int chunks = 0;
@@ -133,34 +159,45 @@ public final class HealthMonitor {
         }
         worlds = List.copyOf(list);
 
-        double tps = Math.min(20, Bukkit.getTPS()[0]);
-        Point point = new Point(now, round(tps), round(Bukkit.getAverageTickTime()), round(p95), round(max), cpu, cpuSystem,
-                heap.getUsed() / 1_048_576, (heap.getMax() > 0 ? heap.getMax() : heap.getCommitted()) / 1_048_576, gc,
-                Bukkit.getOnlinePlayers().size(), chunks, entities, tiles);
-        add(point);
-        alert(tps, now);
+        add(new Point(now, round(tps), round(Bukkit.getAverageTickTime()), round(p95), round(max), cpu, cpuSystem,
+                heap.getUsed() / 1_048_576, (heap.getMax() > 0 ? heap.getMax() : heap.getCommitted()) / 1_048_576,
+                round(gc), Bukkit.getOnlinePlayers().size(), chunks, entities, tiles));
+        alert(Math.min(20, Bukkit.getTPS()[0]), now);
     }
 
     private synchronized void add(Point point) {
-        fine.addLast(point);
-        while (!fine.isEmpty() && fine.peekFirst().time() < point.time() - FINE_KEEP) {
-            fine.removeFirst();
+        long now = point.time();
+        seconds.addLast(point);
+        trim(seconds, now - HOUR);
+
+        // Every 10 seconds one point for the day view.
+        if (!tenBucket.isEmpty() && tenBucket.getFirst().time() / TEN_SECONDS != now / TEN_SECONDS) {
+            Point ten = combine(tenBucket);
+            tens.addLast(ten);
+            trim(tens, now - DAY);
+            tenBucket.clear();
+            coarseBucket.add(ten);
         }
-        // Every 5 minutes: one combined point for the long ranges, stored so it survives restarts.
-        if (!bucket.isEmpty() && bucket.getFirst().time() / COARSE_STEP != point.time() / COARSE_STEP) {
-            Point combined = combine(bucket);
+        tenBucket.add(point);
+
+        // Every 5 minutes one point for the long ranges, stored so it survives restarts.
+        if (!coarseBucket.isEmpty() && coarseBucket.getFirst().time() / FIVE_MINUTES != now / FIVE_MINUTES) {
+            Point combined = combine(coarseBucket);
             coarse.addLast(combined);
             plugin.storage().addHealth(combined.time(), GSON.toJson(combined));
-            bucket.clear();
+            coarseBucket.clear();
         }
-        bucket.add(point);
-        long limit = point.time() - settings().history();
-        while (!coarse.isEmpty() && coarse.peekFirst().time() < limit) {
-            coarse.removeFirst();
-        }
-        if (point.time() - lastPrune > 3_600_000L) {
-            lastPrune = point.time();
+        long limit = now - settings().history();
+        trim(coarse, limit);
+        if (now - lastPrune > HOUR) {
+            lastPrune = now;
             plugin.storage().pruneHealth(limit);
+        }
+    }
+
+    private static void trim(Deque<Point> points, long before) {
+        while (!points.isEmpty() && points.peekFirst().time() < before) {
+            points.removeFirst();
         }
     }
 
@@ -177,21 +214,22 @@ public final class HealthMonitor {
     // ----------------------------------------------------------------- reading
 
     /**
-     * The points of the last {@code millis}, at most {@code max} of them (neighbours combined like the 5-minute
-     * points). Up to 24 hours at full resolution, longer from the 5-minute points.
+     * The points of the last {@code millis}, at most {@code max} of them (neighbours combined like above). Up to an
+     * hour per second, up to a day from the 10-second points, longer from the 5-minute points.
      */
     public synchronized List<Point> range(long millis, int max) {
         long since = System.currentTimeMillis() - millis;
-        Deque<Point> source = millis <= FINE_KEEP ? fine : coarse;
         List<Point> points = new ArrayList<>();
-        for (Point p : source) {
-            if (p.time() >= since) {
-                points.add(p);
+        if (millis <= HOUR) {
+            collect(seconds, since, points);
+        } else if (millis <= DAY) {
+            collect(tens, since, points);
+            points.addAll(tenBucket.isEmpty() ? List.of() : List.of(combine(tenBucket)));
+        } else {
+            collect(coarse, since, points);
+            if (!coarseBucket.isEmpty()) {
+                points.add(combine(coarseBucket));
             }
-        }
-        if (source == coarse) {
-            // The newest minutes are not combined yet.
-            points.addAll(bucket);
         }
         if (points.size() <= max) {
             return points;
@@ -208,8 +246,16 @@ public final class HealthMonitor {
         return result;
     }
 
+    private static void collect(Deque<Point> source, long since, List<Point> into) {
+        for (Point p : source) {
+            if (p.time() >= since) {
+                into.add(p);
+            }
+        }
+    }
+
     public synchronized Point latest() {
-        return fine.peekLast();
+        return seconds.peekLast();
     }
 
     public List<WorldInfo> worlds() {

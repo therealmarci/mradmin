@@ -12,6 +12,7 @@
     yMax = null, // fixed top of the scale (e.g. 20 TPS, 100 %), otherwise from the data
     refs = [], // reference lines [{ value, label }]
     long = false, // range longer than a day: dates on the x axis
+    seconds = false, // short range: times with seconds
     height = 190,
   } = $props();
 
@@ -20,10 +21,11 @@
   let index = $state(-1);
   let table = $state(false);
 
+  const clock = { hour: '2-digit', minute: '2-digit' };
   const time = (ms) =>
-    new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+    new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit', ...clock } : seconds ? { ...clock, second: '2-digit' } : clock);
   const axisTime = (ms) =>
-    new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+    new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit' } : seconds ? { ...clock, second: '2-digit' } : clock);
 
   const t0 = $derived(points.length ? points[0].time : 0);
   const t1 = $derived(points.length ? points.at(-1).time : 1);

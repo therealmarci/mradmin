@@ -17,14 +17,15 @@ import java.util.Map;
 /**
  * The health dashboard (mradmin.status.health).
  * <pre>
- *  GET /api/health?range=1h|6h|24h|7d|30d   history (at most 360 points)
+ *  GET /api/health?range=1m|1h|6h|24h|7d|30d   history (at most 360 points)
+ *  GET /api/health/latest                  the newest point (every second)
  *  GET /api/health/system                   uptime, Java, CPU cores, disk, threads, worlds, latest point
  *  GET /api/health/lag                      chunks with the most entities (counted at most every 30 s)
  * </pre>
  */
 public final class HealthRoutes {
 
-    private static final Map<String, Long> RANGES = Map.of("1h", 3_600_000L, "6h", 6 * 3_600_000L,
+    private static final Map<String, Long> RANGES = Map.of("1m", 60_000L, "1h", 3_600_000L, "6h", 6 * 3_600_000L,
             "24h", 24 * 3_600_000L, "7d", 7 * 86_400_000L, "30d", 30 * 86_400_000L);
     private static final int MAX_POINTS = 360;
     private static final long LAG_CACHE_MILLIS = 30_000L;
@@ -43,6 +44,7 @@ public final class HealthRoutes {
         HealthRoutes r = new HealthRoutes(server);
         server.route("GET", "/api/health", r::history);
         server.route("GET", "/api/health/system", r::system);
+        server.route("GET", "/api/health/latest", r::latest);
         server.route("GET", "/api/health/lag", r::lag);
     }
 
@@ -64,6 +66,13 @@ public final class HealthRoutes {
         millis = Math.min(millis, Math.max(24 * 3_600_000L, plugin.settings().health().history()));
         http.json(200, Map.of("range", range, "history", plugin.settings().health().history(),
                 "points", plugin.health().range(millis, MAX_POINTS)));
+    }
+
+    /** The newest point (every second) - the key figures stay live even when a long range is shown. */
+    private void latest(Http http) throws Exception {
+        require(http);
+        var latest = plugin.health().latest();
+        http.json(200, latest == null ? Map.of() : latest);
     }
 
     private void system(Http http) throws Exception {
