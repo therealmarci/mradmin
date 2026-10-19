@@ -257,6 +257,14 @@ public final class MRAdmin extends JavaPlugin implements Listener {
                         ? "connected (dashboard button, player menu)." : "not connected (integrations." + integration.id() + ": false)."));
             }
         }
+        // LibertyBans: only through its API, for the player page of the web interface.
+        Plugin libertyBans = getServer().getPluginManager().getPlugin("LibertyBans");
+        if (libertyBans != null && libertyBans.isEnabled()) {
+            getLogger().info("LibertyBans found - " + (!getConfig().getBoolean("integrations.libertybans", true)
+                    ? "not connected (integrations.libertybans: false)."
+                    : at.marcelr.mradmin.hook.Bans.get(this) != null ? "connected (punishments on the player page in the web interface)."
+                    : "its API could not be reached."));
+        }
     }
 
     private boolean integrationOn(Integration integration) {

@@ -22,18 +22,26 @@ val socketIoVersion = providers.gradleProperty("socketIoVersion").get()
 val hikariVersion = providers.gradleProperty("hikariVersion").get()
 val sqliteVersion = providers.gradleProperty("sqliteVersion").get()
 val mariadbVersion = providers.gradleProperty("mariadbVersion").get()
+val libertyBansVersion = providers.gradleProperty("libertyBansVersion").get()
+val omnibusVersion = providers.gradleProperty("omnibusVersion").get()
 val supportedGameVersions = providers.gradleProperty("supportedGameVersions").get()
 val isPrerelease = pluginVersion.let { it.startsWith("0.") || it.contains("-") }
 
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    // LibertyBans-API (optional, nur zum Kompilieren) und Omnibus, über das LibertyBans seine API bereitstellt.
+    maven("https://mvn-repo.arim.space/affero-gpl3/")
+    maven("https://mvn-repo.arim.space/lesser-gpl3/")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApi")
     // Optional: Rechte schon vor dem Join prüfen (Wartungsmodus). Ohne LuckPerms wird erst beim Join gekickt.
     compileOnly("net.luckperms:api:5.5")
+    // Optional: Banns, Mutes, Warns und Kicks über LibertyBans auf der Spielerseite im Web. Ohne LibertyBans fehlt der Teil.
+    compileOnly("space.arim.libertybans:bans-api:$libertyBansVersion")
+    compileOnly("space.arim.omnibus:omnibus:$omnibusVersion")
     // Uptime-Kuma-Anbindung (Socket.IO). Steckt mit in der JAR (umbenannt nach at.marcelr.mradmin.lib, siehe shadowJar).
     implementation("io.socket:socket.io-client:$socketIoVersion")
     // Datenbank: nur zum Kompilieren - auf dem Server lädt Paper sie über "libraries" in der plugin.yml.

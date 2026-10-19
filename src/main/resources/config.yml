@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 12
+config-version: 13
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -56,6 +56,13 @@ features:
 integrations:
   mrsleep: true
   mrchunks: true
+  # LibertyBans: Banns, Mutes, Warns und Kicks auf der Spielerseite im Web. Es gelten die Permissions von LibertyBans
+  # (z.B. libertybans.ban.do.target.uuid, libertybans.list.history), auch seine Dauer-Permissions, falls eingeschaltet.
+  libertybans: true
+
+# Schnellauswahl für Banns und Mutes auf der Spielerseite im Web ("perm" = dauerhaft).
+libertybans:
+  durations: ["1h", "1d", "7d", "30d", "perm"]
 
 
 # ------------------------------------------------------------------------------

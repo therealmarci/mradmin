@@ -148,6 +148,12 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
   - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
     (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
+  - **LibertyBans:** aktive Strafen und Verlauf (`libertybans.commands` + `libertybans.list.history`), bannen, muten,
+    verwarnen und kicken (`libertybans.<typ>.do.target.uuid`), aufheben (`libertybans.<typ>.undo.target.uuid`). Die
+    Dauer kommt aus der Schnellauswahl `libertybans.durations` in der MRadmin-Config; hat LibertyBans seine
+    Dauer-Permissions eingeschaltet (`duration-permissions`), gelten sie auch hier. Ausgeführt wird über die API von
+    LibertyBans - also mit dessen Kick-Bildschirm, Meldungen und Benachrichtigungen. In der Spielerliste erscheinen
+    gebannte (`libertybans.list.banlist`) und gemutete (`libertybans.list.mutelist`) Spieler markiert.
 - Spieler in Tickets, Chunkloadern und auf der Schlafseite verlinken direkt auf ihre Seite.
 
 **Schlaf** (mit MRsleep; `mrsleep.admin.gui`, Blockaden aufheben mit `mrsleep.admin.clear`)

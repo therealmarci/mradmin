@@ -14,6 +14,10 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
   und Markierungen; pro Spieler eine Seite mit Infos, Tickets, Einfrieren und Kicken (neu: `mradmin.player.kick`,
   Discord-Log `player-kick`) und einem Teil pro Plugin: MRsleep (/nosleep, Cooldown, Bypass, Sperre) und MRchunks
   (Loader, Limits setzen, für Chunkloader sperren, alle löschen) - jeweils mit dessen Permissions.
+- **LibertyBans auf der Spielerseite** (optional, `integrations.libertybans`): aktive Strafen, Verlauf, bannen, muten,
+  verwarnen, kicken und aufheben - über die API von LibertyBans und mit dessen Permissions, auch den
+  Dauer-Permissions. Schnellauswahl der Dauer: `libertybans.durations`. Markierungen „gebannt“ und „gemutet“ in der
+  Spielerliste. Getestet mit LibertyBans 1.2.0-M1 (API 1.1.4).
 - **Schlaf (MRsleep) im Web**: Welten mit Schlafstatus und /nosleep-Blockaden, Blockaden aufheben. Auf dem Dashboard
   als Kachel und als Meldung bei Blockaden.
 - Am Handy zeigt die untere Leiste höchstens fünf Plätze, der Rest steckt unter **Mehr**.

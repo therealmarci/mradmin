@@ -8,4 +8,6 @@ export const FLAGS = {
   'chunks-locked': { icon: '🔒', tone: 'bad' },
   'chunks-warn': { icon: '!', tone: 'warn' },
   'chunks-banned': { icon: '✕', tone: 'bad' },
+  'lb-banned': { icon: '⛔', tone: 'bad' },
+  'lb-muted': { icon: '🔇', tone: 'warn' },
 };

@@ -2,7 +2,7 @@ name: MRadmin
 version: '${version}'
 main: at.marcelr.mradmin.MRAdmin
 api-version: '${mcVersion}'
-softdepend: [LuckPerms]
+softdepend: [LuckPerms, LibertyBans]
 # Datenbank-Treiber für storage.type sqlite/mysql - Paper lädt sie beim ersten Start herunter (Ordner libraries/).
 libraries:
   - com.zaxxer:HikariCP:${hikariVersion}

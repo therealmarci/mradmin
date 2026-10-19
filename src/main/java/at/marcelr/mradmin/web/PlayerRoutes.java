@@ -5,6 +5,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.Settings;
+import at.marcelr.mradmin.hook.Bans;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.ticket.Ticket;
 import org.bukkit.Bukkit;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static at.marcelr.mradmin.Messages.tag;
@@ -37,6 +39,8 @@ import static at.marcelr.mradmin.Messages.tag;
  *  GET  /api/players/{uuid}/mrsleep                        MRsleep's part (its actions: POST /api/mrsleep/action)
  *  GET  /api/players/{uuid}/mrchunks                       MRchunks' part
  *  POST /api/players/{uuid}/mrchunks   {action, kind?, value?, reason?}   limit | ban | unban | deleteAll
+ *  GET  /api/players/{uuid}/libertybans                LibertyBans: punishments and what the member may do
+ *  POST /api/players/{uuid}/libertybans   {action: punish|undo, type, duration?, reason?, id?}
  * </pre>
  * No IP addresses - they are personal data and not needed here.
  */
@@ -51,8 +55,16 @@ public final class PlayerRoutes {
             "limit", ChunkRoutes.PERM_LIMIT, "ban", ChunkRoutes.PERM_BAN, "unban", ChunkRoutes.PERM_BAN,
             "deleteAll", ChunkRoutes.PERM_MANAGE);
 
+    /** LibertyBans: prerequisite for all its commands, and for its part of the player page. */
+    private static final String LB_COMMANDS = "libertybans.commands";
+    private static final String LB_HISTORY = "libertybans.list.history";
+    private static final long LB_CACHE_MILLIS = 30_000L;
+    private static final int LB_HISTORY_LIMIT = 100;
+
     private final WebServer server;
     private final MRAdmin plugin;
+    private volatile Map<UUID, Set<String>> punishedCache = Map.of();
+    private volatile long punishedTime;
     private volatile List<Known> known = List.of();
     private volatile long knownTime;
 
@@ -75,6 +87,8 @@ public final class PlayerRoutes {
         server.route("GET", "/api/players/{uuid}/mrsleep", http -> r.part(http, SleepRoutes.hook(r.plugin), SleepRoutes.PERM_VIEW));
         server.route("GET", "/api/players/{uuid}/mrchunks", http -> r.part(http, ChunkRoutes.hook(r.plugin), ChunkRoutes.PERM_VIEW));
         server.route("POST", "/api/players/{uuid}/mrchunks", r::chunksAction);
+        server.route("GET", "/api/players/{uuid}/libertybans", r::punishments);
+        server.route("POST", "/api/players/{uuid}/libertybans", r::punishAction);
     }
 
     private boolean may(Http http, String permission) {
@@ -109,8 +123,14 @@ public final class PlayerRoutes {
         boolean tickets = may(http, Perms.TICKETS_VIEW);
         boolean sleep = may(http, SleepRoutes.PERM_VIEW);
         boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
+        // LibertyBans answers asynchronously - its marks are fetched here, never on the server thread.
+        Map<UUID, Set<String>> punished = punishedMarks(http);
         Map<String, Object> result = server.sync(() -> {
             Map<String, List<String>> flags = flags(tickets, sleep, chunks);
+            punished.forEach((id, types) -> {
+                List<String> f = flags.computeIfAbsent(id.toString(), k -> new ArrayList<>());
+                types.forEach(type -> f.add("lb-" + type));
+            });
             List<Map<String, Object>> rows = new ArrayList<>();
             for (Known k : all) {
                 boolean online = Bukkit.getPlayer(k.id()) != null;
@@ -187,6 +207,45 @@ public final class PlayerRoutes {
         return flags;
     }
 
+    /**
+     * Active bans and mutes from LibertyBans (cached 30 s): bans only with libertybans.list.banlist, mutes only with
+     * libertybans.list.mutelist (plus libertybans.commands) - like its /banlist and /mutelist.
+     */
+    private Map<UUID, Set<String>> punishedMarks(Http http) {
+        Bans bans = Bans.get(plugin);
+        if (bans == null || !may(http, LB_COMMANDS)) {
+            return Map.of();
+        }
+        boolean banlist = may(http, "libertybans.list.banlist");
+        boolean mutelist = may(http, "libertybans.list.mutelist");
+        if (!banlist && !mutelist) {
+            return Map.of();
+        }
+        if (System.currentTimeMillis() - punishedTime > LB_CACHE_MILLIS) {
+            try {
+                punishedCache = bans.activeBansAndMutes();
+                punishedTime = System.currentTimeMillis();
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not read active bans and mutes from LibertyBans: " + e);
+                return Map.of();
+            }
+        }
+        Map<UUID, Set<String>> result = new HashMap<>();
+        punishedCache.forEach((id, types) -> {
+            Set<String> allowed = new java.util.HashSet<>();
+            if (banlist && types.contains("ban")) {
+                allowed.add("banned");
+            }
+            if (mutelist && types.contains("mute")) {
+                allowed.add("muted");
+            }
+            if (!allowed.isEmpty()) {
+                result.put(id, allowed);
+            }
+        });
+        return result;
+    }
+
     private void addFlags(Map<String, List<String>> flags, Settings.HubButton hook, boolean allowed) {
         if (hook == null || !allowed || !(plugin.hooks().web(hook, "flags", Map.of()) instanceof Map<?, ?> answer)) {
             return;
@@ -209,6 +268,7 @@ public final class PlayerRoutes {
         boolean kick = may(http, Perms.PLAYER_KICK);
         boolean sleep = may(http, SleepRoutes.PERM_VIEW);
         boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
+        boolean punishments = Bans.get(plugin) != null && may(http, LB_COMMANDS) && may(http, LB_HISTORY);
         Map<String, Object> result = server.sync(() -> {
             OfflinePlayer p = Bukkit.getOfflinePlayer(id);
             Player online = p.getPlayer();
@@ -260,6 +320,7 @@ public final class PlayerRoutes {
             Map<String, Object> parts = new LinkedHashMap<>();
             parts.put("mrsleep", SleepRoutes.hook(plugin) != null && sleep);
             parts.put("mrchunks", ChunkRoutes.hook(plugin) != null && chunks);
+            parts.put("libertybans", punishments);
             r.put("parts", parts);
             return r;
         });
@@ -389,6 +450,139 @@ public final class PlayerRoutes {
             throw new Http.WebException(400, String.valueOf(error));
         }
         audit(http, "chunkloader-" + action, name(id) + (kind == null ? "" : " " + kind) + (value == null ? "" : " " + value));
+    }
+
+    // ------------------------------------------------------------ LibertyBans
+
+    /** LibertyBans or 404; its view permissions (libertybans.commands + libertybans.list.history). */
+    private Bans requireBans(Http http) throws Http.WebException {
+        require(http, Perms.PLAYER_VIEW);
+        Bans bans = Bans.get(plugin);
+        if (bans == null) {
+            throw new Http.WebException(404, "plugin-missing");
+        }
+        require(http, LB_COMMANDS);
+        require(http, LB_HISTORY);
+        return bans;
+    }
+
+    /**
+     * The player's punishments (newest first) and what the member may do: per type "do" / "undo" (LibertyBans'
+     * libertybans.&lt;type&gt;.do|undo.target.uuid) and the quick-select durations they may use for it (LibertyBans'
+     * duration permissions, if switched on there).
+     */
+    private void punishments(Http http) throws Exception {
+        Bans bans = requireBans(http);
+        UUID id = uuid(http);
+        List<Bans.Entry> history = bans.history(id, LB_HISTORY_LIMIT);
+
+        List<Map<String, Object>> entries = new ArrayList<>();
+        Map<UUID, String> names = new HashMap<>();
+        for (Bans.Entry e : history) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.id());
+            m.put("type", e.type());
+            m.put("reason", e.reason());
+            m.put("operator", e.operator() == null ? null : names.computeIfAbsent(e.operator(), PlayerRoutes::name));
+            m.put("operatorUuid", e.operator() == null ? null : e.operator().toString());
+            m.put("scope", e.scope());
+            m.put("start", e.start());
+            m.put("end", e.end());
+            m.put("active", e.active());
+            entries.add(m);
+        }
+
+        Bans.DurationRules rules = Bans.DurationRules.read();
+        List<String> durations = Bans.durations(plugin);
+        Map<String, Object> may = new LinkedHashMap<>();
+        for (String type : Bans.TYPES) {
+            Map<String, Object> t = new LinkedHashMap<>();
+            t.put("do", may(http, "libertybans." + type + ".do.target.uuid"));
+            t.put("undo", !type.equals("kick") && may(http, "libertybans." + type + ".undo.target.uuid"));
+            if (!type.equals("kick")) {
+                List<String> allowed = new ArrayList<>();
+                for (String d : durations) {
+                    if (rules.allows(type, Bans.parse(d), perm -> may(http, perm))) {
+                        allowed.add(d);
+                    }
+                }
+                t.put("durations", allowed);
+            }
+            may.put(type, t);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("entries", entries);
+        result.put("may", may);
+        result.put("online", server.sync(() -> Bukkit.getPlayer(id) != null));
+        result.put("self", id.equals(http.account().id()));
+        http.json(200, result);
+    }
+
+    /** {action: punish, type, duration?, reason?} or {action: undo, type, id} - with LibertyBans' permissions. */
+    private void punishAction(Http http) throws Exception {
+        Bans bans = requireBans(http);
+        UUID id = uuid(http);
+        String action = http.string("action");
+        String type = http.string("type");
+        if (type == null || !Bans.TYPES.contains(type) || !"punish".equals(action) && !"undo".equals(action)) {
+            throw new Http.WebException(400, "unknown-action");
+        }
+        String name = name(id);
+
+        if (action.equals("undo")) {
+            require(http, "libertybans." + type + ".undo.target.uuid");
+            long punishment;
+            try {
+                punishment = Long.parseLong(String.valueOf(http.string("id")));
+            } catch (NumberFormatException e) {
+                throw new Http.WebException(400, "not-active");
+            }
+            // Only this player's punishments - the ID must not reach someone else's.
+            boolean theirs = bans.history(id, LB_HISTORY_LIMIT).stream()
+                    .anyMatch(e -> e.id() == punishment && e.type().equals(type) && e.active());
+            String error = theirs ? bans.undo(punishment, type) : "not-active";
+            if (error != null) {
+                throw new Http.WebException(400, error);
+            }
+            plugin.getLogger().info(http.account().name() + " (web) lifted " + type + " #" + punishment + " of " + name + ".");
+            audit(http, "libertybans-un" + type, name + " #" + punishment);
+            punishedTime = 0;
+            return;
+        }
+
+        require(http, "libertybans." + type + ".do.target.uuid");
+        if (id.equals(http.account().id())) {
+            throw new Http.WebException(400, "not-yourself");
+        }
+        java.time.Duration duration = java.time.Duration.ZERO;
+        String rawDuration = http.string("duration");
+        if (type.equals("kick")) {
+            if (!server.sync(() -> Bukkit.getPlayer(id) != null)) {
+                throw new Http.WebException(400, "player-offline");
+            }
+        } else {
+            // Only the quick-select durations, and only those LibertyBans' duration permissions allow.
+            if (rawDuration == null || !Bans.durations(plugin).contains(rawDuration)) {
+                throw new Http.WebException(400, "invalid-duration");
+            }
+            duration = Bans.parse(rawDuration);
+            if (!Bans.DurationRules.read().allows(type, duration, perm -> may(http, perm))) {
+                throw new Http.WebException(403, "no-permission");
+            }
+        }
+        String raw = http.string("reason");
+        String reason = raw == null || raw.isBlank() ? plugin.messages().plain("kick-no-reason") : raw.strip();
+        if (reason.length() > MAX_REASON) {
+            reason = reason.substring(0, MAX_REASON);
+        }
+        String error = bans.punish(type, id, http.account().id(), duration, reason);
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+        plugin.getLogger().info(http.account().name() + " (web) " + type + ": " + name
+                + (type.equals("kick") ? "" : " (" + rawDuration + ")") + " - " + reason);
+        audit(http, "libertybans-" + type, name + (type.equals("kick") ? "" : " " + rawDuration) + " - " + reason);
+        punishedTime = 0;
     }
 
     // ---------------------------------------------------------------- helpers
