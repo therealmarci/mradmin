@@ -105,6 +105,16 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
   und meldet alle Geräte ab.
 
+**Health-Dashboard** (`mradmin.status.health`)
+- Wie der Health-Report von spark: TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU (Server und System),
+  Arbeitsspeicher, Garbage Collection, Spieler, Chunks und Entities als Verlauf über 1 Std bis 30 Tage, dazu
+  Welten, Systeminfos und die Chunks mit den meisten Entities.
+- Gemessen wird alle 10 Sekunden aus Werten, die Java und Paper ohnehin führen (kein Lag). Die letzten 24 Stunden
+  sind im 10-Sekunden-Takt da, ältere als 5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten). Aufbewahrung
+  `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über Neustarts hinweg.
+- `health.alert`: Warnung an das Team (ingame) und ins Discord-Log, wenn die TPS länger unter einer Grenze liegt,
+  und Entwarnung, sobald sie sich erholt hat.
+
 **Datenschutz & Impressum**
 - Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt
   MRadmin Vorlagen in `plugins/MRadmin/web/impressum.md` und `datenschutz.md` an. Die Datenschutz-Vorlage beschreibt,

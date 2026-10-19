@@ -30,8 +30,16 @@ public record Settings(
         TicketSettings tickets,
         Set<Feature> features,
         StorageSettings storage,
-        WebSettings web
+        WebSettings web,
+        HealthSettings health
 ) {
+
+    /**
+     * Health dashboard: {@code history} in ms (24h, 7d or 30d); a warning (Discord, team in game) when the TPS has been
+     * below {@code alertTps} for {@code alertMinutes}.
+     */
+    public record HealthSettings(long history, boolean alert, double alertTps, int alertMinutes) {
+    }
 
     /**
      * The web interface. {@code publicUrl} without trailing slash (empty = not set up yet); {@code roles} maps a role to
@@ -268,7 +276,24 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log));
+                storage(c, log), web(c, log), health(c, log));
+    }
+
+    private static HealthSettings health(FileConfiguration c, Logger log) {
+        String raw = c.getString("health.history", "7d").trim().toLowerCase(Locale.ROOT);
+        long history = switch (raw) {
+            case "24h", "1d" -> 86_400_000L;
+            case "30d", "1mo", "1m", "month" -> 30 * 86_400_000L;
+            case "7d", "1w" -> 7 * 86_400_000L;
+            default -> {
+                log.warning("health.history '" + raw + "' is unknown (24h, 7d, 30d), using 7d.");
+                yield 7 * 86_400_000L;
+            }
+        };
+        return new HealthSettings(history,
+                c.getBoolean("health.alert.enabled", true),
+                Math.clamp(c.getDouble("health.alert.below-tps", 15), 1, 19.9),
+                Math.clamp(c.getInt("health.alert.minutes", 5), 1, 120));
     }
 
     private static WebSettings web(FileConfiguration c, Logger log) {

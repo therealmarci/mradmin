@@ -38,6 +38,8 @@ help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>reload the configu
 help-storage: "<gold>/mradmin storage</gold> <dark_gray>- <gray>show the storage (YAML, SQLite, MySQL)"
 storage-status: "<prefix><gray>Storage: <white><type></white> <dark_gray>(<target>)"
 storage-pending: "<prefix><yellow>The config says <white><type></white> - it applies after a restart <gray>(or the database was not reachable at start, see console)</gray>."
+health-alert: "<prefix><red>🐢 The server has been lagging for <minutes> minutes <gray>(<white><tps></white> TPS)</gray>. Details in the web interface under Health."
+health-recovered: "<prefix><green>✅ The server runs smoothly again <gray>(<white><tps></white> TPS)</gray>."
 
 # --- Web interface (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>web interface: set up your account, signed-in devices"
@@ -635,6 +637,8 @@ discord:
   staff-chat: "💬 **{player}**: {text}"
   web-login: "🌐 **{player}** signed in to the web interface ({device}, {ip})."
   web-setup: "🔑 **{player}** set up or reset their web account ({device}, {ip})."
+  health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
+  health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
 # Texts for the community Discord (discord-announce in config.yml). Markdown like in Discord.
 # Placeholders: {title} (topic) {start} {end} (Discord timestamps, everyone sees their own timezone) {start-relative} {end-relative} ("in 2 hours").
 discord-announce:

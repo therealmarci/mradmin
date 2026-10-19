@@ -131,6 +131,8 @@ final class SqlStorage implements Storage {
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "audit_log ("
                     + "server VARCHAR(64) NOT NULL, time BIGINT NOT NULL, account VARCHAR(36), name VARCHAR(64), "
                     + "ip VARCHAR(64), action VARCHAR(64) NOT NULL, detail TEXT)" + suffix);
+            st.execute("CREATE TABLE IF NOT EXISTS " + p + "health ("
+                    + "server VARCHAR(64) NOT NULL, time BIGINT NOT NULL, data TEXT NOT NULL)" + suffix);
         }
     }
 
@@ -409,6 +411,49 @@ final class SqlStorage implements Storage {
     public void pruneAudit(long before) {
         write("clean up the web log", c -> {
             try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + p + "audit_log WHERE server = ? AND time < ?")) {
+                ps.setString(1, server);
+                ps.setLong(2, before);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    // ---------------------------------------------------------- health history
+
+    @Override
+    public void addHealth(long time, String json) {
+        write("save the health history", c -> {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO " + p + "health (server, time, data) VALUES (?, ?, ?)")) {
+                ps.setString(1, server);
+                ps.setLong(2, time);
+                ps.setString(3, json);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    @Override
+    public List<String> loadHealth(long since) {
+        List<String> result = new ArrayList<>();
+        try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
+                "SELECT data FROM " + p + "health WHERE server = ? AND time >= ? ORDER BY time")) {
+            ps.setString(1, server);
+            ps.setLong(2, since);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(rs.getString(1));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Could not load the health history: " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public void pruneHealth(long before) {
+        write("clean up the health history", c -> {
+            try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + p + "health WHERE server = ? AND time < ?")) {
                 ps.setString(1, server);
                 ps.setLong(2, before);
                 ps.executeUpdate();

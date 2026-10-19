@@ -56,6 +56,17 @@ public interface Storage {
     /** Deletes entries older than {@code before} (epoch ms) in the background - retention period, GDPR. */
     void pruneAudit(long before);
 
+    // ---------------------------------------------------------- health history
+
+    /** Appends a point of the health history (as JSON) in the background. */
+    void addHealth(long time, String json);
+
+    /** The points since {@code since} (epoch ms), oldest first. Blocking - only while enabling. */
+    List<String> loadHealth(long since);
+
+    /** Deletes points older than {@code before} in the background. */
+    void pruneHealth(long before);
+
     /** Writes everything still pending and closes connections. */
     void close();
 

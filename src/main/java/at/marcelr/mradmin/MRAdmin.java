@@ -17,6 +17,7 @@ import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
 import at.marcelr.mradmin.hook.LockTickets;
 import at.marcelr.mradmin.storage.Storage;
+import at.marcelr.mradmin.health.HealthMonitor;
 import at.marcelr.mradmin.web.AuthRoutes;
 import at.marcelr.mradmin.web.WebServer;
 import at.marcelr.mradmin.web.auth.WebAuth;
@@ -78,6 +79,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private LockTickets lockTickets;
     private Storage storage;
     private WebServer web;
+    private HealthMonitor health;
     private StaffChat staffChat;
     private MenuListener menuListener;
 
@@ -94,6 +96,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         AuthRoutes.register(web);
         at.marcelr.mradmin.web.PanelRoutes.register(web);
         at.marcelr.mradmin.web.SiteRoutes.register(web);
+        at.marcelr.mradmin.web.HealthRoutes.register(web);
+        health = new HealthMonitor(this);
 
         freeze = new FreezeManager(this);
         freeze.load();
@@ -158,6 +162,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             web.stop();
             web.auth().flush();
         }
+        if (health != null) {
+            health.stop();
+        }
         // Last: everything above may still save something.
         if (storage != null) {
             storage.close();
@@ -191,6 +198,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         hooks.clear();
         web.permissions().clear();
         web.start();
+        if (feature(Feature.SERVER_STATUS)) {
+            health.start();
+        } else {
+            health.stop();
+        }
         freeze.start();
         maintenance.start();
         adminMode.start();
@@ -338,6 +350,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public WebServer web() {
         return web;
+    }
+
+    public HealthMonitor health() {
+        return health;
     }
 
     public PluginHooks hooks() {

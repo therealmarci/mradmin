@@ -317,6 +317,72 @@ final class YamlStorage implements Storage {
         });
     }
 
+    // ---------------------------------------------------------- health history
+
+    private static final String HEALTH = "health.log";
+
+    /** One JSON object per line (with its "time"), like the web log. */
+    @Override
+    public void addHealth(long time, String json) {
+        String line = json + "\n";
+        executor.execute(() -> {
+            try {
+                Files.writeString(new File(folder, HEALTH).toPath(), line, StandardCharsets.UTF_8,
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not write " + HEALTH + ": " + e.getMessage());
+            }
+        });
+    }
+
+    @Override
+    public List<String> loadHealth(long since) {
+        File file = new File(folder, HEALTH);
+        if (!file.exists()) {
+            return List.of();
+        }
+        try {
+            List<String> result = new ArrayList<>();
+            for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                if (!line.isBlank() && time(line) >= since) {
+                    result.add(line);
+                }
+            }
+            return result;
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Could not read " + HEALTH + ": " + e.getMessage());
+            return List.of();
+        }
+    }
+
+    @Override
+    public void pruneHealth(long before) {
+        executor.execute(() -> {
+            File file = new File(folder, HEALTH);
+            if (!file.exists()) {
+                return;
+            }
+            try {
+                List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+                List<String> keep = lines.stream().filter(l -> !l.isBlank() && time(l) >= before).toList();
+                if (keep.size() < lines.size()) {
+                    write(file, keep.isEmpty() ? "" : String.join("\n", keep) + "\n");
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not clean up " + HEALTH + ": " + e.getMessage());
+            }
+        });
+    }
+
+    /** The "time" of a JSON line, 0 if it is broken (a line cut off by a crash). */
+    private static long time(String line) {
+        try {
+            return com.google.gson.JsonParser.parseString(line).getAsJsonObject().get("time").getAsLong();
+        } catch (RuntimeException e) {
+            return 0;
+        }
+    }
+
     /** Writes to a temporary file first and then replaces the old one, so a crash never leaves half a file. */
     private void write(File file, String content) {
         File temp = new File(file.getParentFile(), file.getName() + ".tmp");

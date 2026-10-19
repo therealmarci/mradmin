@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 10
+config-version: 11
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -358,6 +358,13 @@ discord:
     web-setup:
       enabled: true
       color: "#9B59B6"
+    # Der Server laggt länger (health.alert) bzw. hat sich wieder erholt.
+    health-alert:
+      enabled: true
+      color: "#E74C3C"
+    health-recovered:
+      enabled: true
+      color: "#2ECC71"
 
 
 # ------------------------------------------------------------------------------
@@ -421,6 +428,25 @@ update-checker:
   interval-hours: 6
   # Spieler mit "mradmin.admin.update" beim Betreten des Servers informieren.
   notify-on-join: true
+
+
+# ------------------------------------------------------------------------------
+#   SERVERZUSTAND (Health)
+# ------------------------------------------------------------------------------
+# MRadmin misst alle 10 Sekunden TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU, Arbeitsspeicher, Garbage Collection,
+# Spieler, Chunks und Entities - wie der Health-Report von spark. Zu sehen in der Weboberfläche unter "Health"
+# (Permission mradmin.status.health). Die Messung kostet praktisch nichts: es werden nur Werte gelesen, die Java
+# und Paper ohnehin führen.
+health:
+  # Wie lange der Verlauf aufbewahrt wird: 24h, 7d oder 30d. Die letzten 24 Stunden sind immer im 10-Sekunden-Takt da,
+  # ältere Werte als 5-Minuten-Mittel (mit storage sqlite/mysql bzw. der Datei health.log - übersteht Neustarts).
+  history: 7d
+  # Warnung an das Team (ingame, mradmin.status.health) und ins Discord-Log, wenn die TPS so lange unter der Grenze
+  # liegt - und Entwarnung, sobald sie sich erholt hat.
+  alert:
+    enabled: true
+    below-tps: 15
+    minutes: 5
 
 
 # ------------------------------------------------------------------------------

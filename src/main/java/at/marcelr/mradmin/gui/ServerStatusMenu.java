@@ -3,6 +3,7 @@ package at.marcelr.mradmin.gui;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
+import at.marcelr.mradmin.health.HotChunks;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.util.Layout;
 import org.bukkit.Bukkit;
@@ -42,11 +43,8 @@ public final class ServerStatusMenu extends Menu {
     private static final long RECOUNT_MS = 5_000;
     private static final int TOP = 21;
 
-    private record HotChunk(World world, int x, int z, int count, Map<EntityType, Integer> types) {
-    }
-
     private final Runnable back;
-    private List<HotChunk> hot = List.of();
+    private List<HotChunks.Chunk> hot = List.of();
     private long counted;
 
     public ServerStatusMenu(MRAdmin plugin, Player viewer, Runnable back) {
@@ -146,13 +144,13 @@ public final class ServerStatusMenu extends Menu {
     private void drawHotChunks() {
         Messages messages = plugin.messages();
         if (System.currentTimeMillis() - counted > RECOUNT_MS) {
-            hot = countHotChunks();
+            hot = HotChunks.count(TOP);
             counted = System.currentTimeMillis();
         }
         boolean teleport = viewer.hasPermission(AdminModeManager.PERM_TELEPORT) && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT);
         // 3 rows of 7 (columns 1-7), so the block is centered.
         int index = 0;
-        for (HotChunk chunk : hot) {
+        for (HotChunks.Chunk chunk : hot) {
             int slot = 18 + (index / 7) * 9 + 1 + index % 7;
             index++;
             String types = chunk.types().entrySet().stream()
@@ -180,29 +178,6 @@ public final class ServerStatusMenu extends Menu {
         if (hot.isEmpty()) {
             set(31, Items.of(Material.LIME_DYE).name(messages.item("gui-status-no-chunks")).build());
         }
-    }
-
-    /** The {@value #TOP} chunks with the most entities (players do not count). */
-    private record ChunkKey(World world, int x, int z) {
-    }
-
-    private static List<HotChunk> countHotChunks() {
-        Map<ChunkKey, Map<EntityType, Integer>> perChunk = new HashMap<>();
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof Player) {
-                    continue;
-                }
-                Location l = entity.getLocation();
-                perChunk.computeIfAbsent(new ChunkKey(world, l.getBlockX() >> 4, l.getBlockZ() >> 4), c -> new HashMap<>())
-                        .merge(entity.getType(), 1, Integer::sum);
-            }
-        }
-        List<HotChunk> chunks = new ArrayList<>();
-        perChunk.forEach((key, types) -> chunks.add(new HotChunk(key.world(), key.x(), key.z(),
-                types.values().stream().mapToInt(Integer::intValue).sum(), types)));
-        chunks.sort(Comparator.comparingInt(HotChunk::count).reversed());
-        return chunks.subList(0, Math.min(TOP, chunks.size()));
     }
 
     private static String format(double value) {
