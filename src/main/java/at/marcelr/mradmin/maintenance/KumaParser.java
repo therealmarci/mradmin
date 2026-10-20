@@ -87,7 +87,7 @@ public final class KumaParser {
     }
 
     /** The maintenance's own timezone; "SAME_AS_SERVER"/"UTC" names and offsets are understood. */
-    static ZoneId zone(JsonObject m, ZoneId fallback) {
+    public static ZoneId zone(JsonObject m, ZoneId fallback) {
         String name = string(m, "timezone");
         if (!name.isEmpty() && !name.equalsIgnoreCase("SAME_AS_SERVER") && !name.equalsIgnoreCase("auto")) {
             try {
@@ -108,7 +108,7 @@ public final class KumaParser {
     }
 
     /** ISO instant / offset date-time, or a wall-clock time ("2026-10-18 20:00[:00]") in {@code zone}. */
-    static Instant time(String raw, ZoneId zone) {
+    public static Instant time(String raw, ZoneId zone) {
         if (raw == null || raw.isBlank()) {
             return null;
         }

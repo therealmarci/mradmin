@@ -170,6 +170,17 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 - Jede Welt mit Tag/Nacht, wie viele schlafen und wie viele nötig sind, dazu wer gerade mit /nosleep blockiert -
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
+**Wartung & Ankündigungen** (`mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen)
+- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - Liste der
+  Wartungen dieses Servers mit Status (läuft, geplant, pausiert, vorbei), neue anlegen (jetzt bis zum Beenden, jetzt
+  mit Dauer oder geplant), verlängern, pausieren/fortsetzen, löschen. Neue Wartungen hängt MRadmin an
+  `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren Status-Seiten erscheinen); geändert
+  werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden angezeigt, bearbeitet in Kuma.
+- **Ohne Uptime Kuma**: die eigene Wartung von MRadmin wie `/mradmin maintenance` - jetzt starten oder mit Countdown
+  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
+- Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
+  Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+
 **Konsole** (`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle - beide in keinem Paket)
 - Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
   farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).

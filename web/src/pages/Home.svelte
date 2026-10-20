@@ -43,6 +43,7 @@
     'tickets-mine': () => me.may.tickets && '/tickets',
     chunks: () => me.may.mrchunks && '/chunks',
     sleep: () => me.may.mrsleep && '/sleep',
+    maintenance: () => me.may.maintenance && '/maintenance',
   };
   const target = (a) => (a.page && pages[a.page]?.()) || null;
 
@@ -201,7 +202,7 @@
 
       {#if data.maintenance}
         {@const m = data.maintenance}
-        <section class="card">
+        <button class="card tile" onclick={() => go('/maintenance')}>
           <div class="label">{t('overview.maintenance')}</div>
           <div class="big small-big {phaseTone[m.phase]}">{t('overview.phase.' + m.phase)}</div>
           <div class="facts">
@@ -211,8 +212,8 @@
               <div><span class="muted">{t('overview.until')}</span> {m.end ? dateTime(m.end) : t('overview.openEnd')}</div>
             {/if}
           </div>
-          <div></div>
-        </section>
+          <div class="small link">{t('home.toMaintenance')} →</div>
+        </button>
       {/if}
     </div>
 

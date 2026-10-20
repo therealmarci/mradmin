@@ -129,6 +129,12 @@ public final class KumaClient {
         });
         // Kuma with disabled authentication logs every client in by itself.
         created.on("autoLogin", args -> loggedIn(created));
+        // After the login Kuma tells its version (shown in the web interface).
+        created.on("info", args -> {
+            if (args.length > 0 && args[0] instanceof JSONObject info && info.has("version")) {
+                version = info.optString("version", null);
+            }
+        });
         created.on("maintenanceList", args -> {
             if (args.length > 0 && args[0] instanceof JSONObject list) {
                 receive(created, list);
@@ -282,7 +288,184 @@ public final class KumaClient {
     private void deliver(List<JsonObject> maintenances) {
         lastUpdate = Instant.now();
         lastCount = maintenances.size();
+        lastList = List.copyOf(maintenances);
         Bukkit.getScheduler().runTask(plugin, () -> onList.accept(maintenances));
+    }
+
+    // ---------------------------------------------------------------- manage
+
+    private static final long CALL_SECONDS = 15;
+    private static final java.time.format.DateTimeFormatter KUMA_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+    /** The maintenances for this server as Kuma sent them (filtered like the schedule), for the web interface. */
+    private volatile List<JsonObject> lastList = List.of();
+
+    public List<JsonObject> maintenances() {
+        return lastList;
+    }
+
+    /** Kuma's version (after the login), or null. */
+    public String version() {
+        return version;
+    }
+
+    private volatile String version;
+
+    /**
+     * Whether new maintenances made here show up for this server: with maintenance-ids only, a new one would not be
+     * in the list - then only the listed ones can be managed.
+     */
+    public boolean canCreate() {
+        return settings != null && (settings.maintenanceIds().isEmpty() || !settings.monitorIds().isEmpty());
+    }
+
+    /** Whether this maintenance is one of this server's (only those may be changed from here). */
+    public boolean owns(int id) {
+        return lastList.stream().anyMatch(m -> m.has("id") && m.get("id").getAsInt() == id);
+    }
+
+    /**
+     * New maintenance in Kuma: {@code start}/{@code end} null = "manual" (active until it is paused or deleted),
+     * otherwise a single window. Times go in MRadmin's timezone. It is attached to uptime-kuma.monitor-ids, so it
+     * counts for this server (and shows on those monitors' status pages). Blocking - web thread only.
+     * @return null or an error text
+     */
+    public String add(String title, String description, Instant start, Instant end, java.time.ZoneId zone) {
+        JSONObject m = new JSONObject();
+        try {
+            boolean manual = start == null;
+            m.put("title", title);
+            m.put("description", description == null ? "" : description);
+            m.put("strategy", manual ? "manual" : "single");
+            m.put("active", true);
+            m.put("intervalDay", 1);
+            org.json.JSONArray range = new org.json.JSONArray();
+            if (!manual) {
+                range.put(KUMA_TIME.format(start.atZone(zone)));
+                range.put(KUMA_TIME.format(end.atZone(zone)));
+            }
+            m.put("dateRange", range);
+            // Only used by recurring maintenances, but Kuma expects the fields.
+            org.json.JSONArray times = new org.json.JSONArray();
+            times.put(new JSONObject().put("hours", 2).put("minutes", 0));
+            times.put(new JSONObject().put("hours", 3).put("minutes", 0));
+            m.put("timeRange", times);
+            m.put("weekdays", new org.json.JSONArray());
+            m.put("daysOfMonth", new org.json.JSONArray());
+            m.put("cron", "30 3 * * *");
+            m.put("durationMinutes", 60);
+            m.put("timezoneOption", zone.getId());
+        } catch (org.json.JSONException e) {
+            return e.getMessage();
+        }
+        JSONObject result = call("addMaintenance", m);
+        if (!result.optBoolean("ok")) {
+            return result.optString("msg", "failed");
+        }
+        int id = result.optInt("maintenanceID", -1);
+        if (id > 0 && !settings.monitorIds().isEmpty()) {
+            org.json.JSONArray monitors = new org.json.JSONArray();
+            try {
+                for (int monitor : settings.monitorIds()) {
+                    monitors.put(new JSONObject().put("id", monitor));
+                }
+            } catch (org.json.JSONException e) {
+                return e.getMessage();
+            }
+            JSONObject linked = call("addMonitorMaintenance", id, monitors);
+            if (!linked.optBoolean("ok")) {
+                return linked.optString("msg", "failed");
+            }
+        }
+        refresh();
+        return null;
+    }
+
+    /**
+     * Changes title/description and - for a single window - start and end (null = unchanged). Blocking.
+     * @return null or an error text
+     */
+    public String edit(int id, String title, String description, Instant start, Instant end, java.time.ZoneId zone) {
+        JSONObject current = call("getMaintenance", id);
+        JSONObject m = current.optJSONObject("maintenance");
+        if (!current.optBoolean("ok") || m == null) {
+            return current.optString("msg", "not found");
+        }
+        try {
+            if (title != null) {
+                m.put("title", title);
+            }
+            if (description != null) {
+                m.put("description", description);
+            }
+            if (start != null || end != null) {
+                if (!"single".equals(m.optString("strategy"))) {
+                    return "only single maintenances can be moved";
+                }
+                java.time.ZoneId own = KumaParser.zone(JsonParser.parseString(m.toString()).getAsJsonObject(), zone);
+                org.json.JSONArray range = m.optJSONArray("dateRange");
+                Instant oldStart = range == null ? null : KumaParser.time(range.optString(0, null), own);
+                Instant oldEnd = range == null ? null : KumaParser.time(range.optString(1, null), own);
+                Instant newStart = start != null ? start : oldStart;
+                Instant newEnd = end != null ? end : oldEnd;
+                if (newStart == null || newEnd == null || !newEnd.isAfter(newStart)) {
+                    return "end before start";
+                }
+                org.json.JSONArray updated = new org.json.JSONArray();
+                updated.put(KUMA_TIME.format(newStart.atZone(zone)));
+                updated.put(KUMA_TIME.format(newEnd.atZone(zone)));
+                m.put("dateRange", updated);
+                m.put("timezoneOption", zone.getId());
+            }
+        } catch (org.json.JSONException e) {
+            return e.getMessage();
+        }
+        JSONObject result = call("editMaintenance", m);
+        if (!result.optBoolean("ok")) {
+            return result.optString("msg", "failed");
+        }
+        refresh();
+        return null;
+    }
+
+    /** pause | resume | delete. Blocking. @return null or an error text */
+    public String simple(String event, int id) {
+        JSONObject result = call(event, id);
+        if (!result.optBoolean("ok")) {
+            return result.optString("msg", "failed");
+        }
+        refresh();
+        return null;
+    }
+
+    /** Sends an event and waits for Kuma's answer (empty object without connection or after the timeout). */
+    private JSONObject call(String event, Object... args) {
+        Socket current = socket;
+        if (current == null || state != State.CONNECTED) {
+            JSONObject offline = new JSONObject();
+            try {
+                offline.put("ok", false).put("msg", "Uptime Kuma is not connected");
+            } catch (org.json.JSONException ignored) {
+                // cannot happen
+            }
+            return offline;
+        }
+        CompletableFuture<JSONObject> answer = new CompletableFuture<>();
+        Object[] withAck = java.util.Arrays.copyOf(args, args.length + 1);
+        withAck[args.length] = (Ack) reply -> answer.complete(result(reply));
+        current.emit(event, withAck);
+        try {
+            return answer.get(CALL_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            JSONObject failed = new JSONObject();
+            try {
+                failed.put("ok", false).put("msg", "no answer from Uptime Kuma");
+            } catch (org.json.JSONException ignored) {
+                // cannot happen
+            }
+            return failed;
+        }
     }
 
     // ---------------------------------------------------------------- status

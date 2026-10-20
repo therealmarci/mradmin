@@ -59,6 +59,15 @@ public final class Announcer {
         return plugin.messages().has(PRESETS + "." + preset + ".discord");
     }
 
+    /** The preset's title and subtitle as plain text (for the web interface's list). */
+    public String preview(String preset) {
+        Messages messages = plugin.messages();
+        String base = PRESETS + "." + preset + ".";
+        String title = PLAIN.serialize(messages.get(base + "title"));
+        String subtitle = messages.has(base + "subtitle") ? PLAIN.serialize(messages.get(base + "subtitle")) : "";
+        return subtitle.isBlank() ? title : title + " - " + subtitle;
+    }
+
     /** The preset with this name (case-insensitive), if there is one. */
     public Optional<String> preset(String name) {
         return presets().stream().filter(p -> p.equalsIgnoreCase(name)).findFirst();

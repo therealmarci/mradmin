@@ -20,6 +20,7 @@
   import Sleep from './pages/Sleep.svelte';
   import Players from './pages/Players.svelte';
   import Console from './pages/Console.svelte';
+  import Maintenance from './pages/Maintenance.svelte';
   import PlayerView from './pages/PlayerView.svelte';
 
   // null = signed out, undefined = still asking the server
@@ -70,6 +71,7 @@
           ...(me.may.health ? [{ path: '/health', label: t('nav.health'), icon: 'pulse' }] : []),
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
+          ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
           ...(me.may.audit ? [{ path: '/audit', label: t('nav.audit'), icon: 'list' }] : []),
         ]
@@ -85,6 +87,7 @@
   const icons = {
     more: 'M5 12h.01M12 12h.01M19 12h.01',
     terminal: 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5',
+    tool: 'M14.7 6.3a4 4 0 0 0-5.4 5.2L4 16.8V20h3.2l5.3-5.3a4 4 0 0 0 5.2-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
     home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     ticket: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z',
     user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5Z',
@@ -147,6 +150,8 @@
       {#key playerId}<PlayerView uuid={playerId} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}
       <Players />
+    {:else if route.path === '/maintenance' && (me.may.maintenance || me.may.announce)}
+      <Maintenance {me} />
     {:else if route.path === '/console' && me.may.console}
       <Console {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}

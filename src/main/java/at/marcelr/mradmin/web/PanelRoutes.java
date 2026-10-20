@@ -118,9 +118,9 @@ public final class PanelRoutes {
             result.put("maintenance", m);
             Object phase = m.get("phase");
             if ("active".equals(phase)) {
-                alerts.add(alert("warn", "maintenanceActive", null, Map.of()));
+                alerts.add(alert("warn", "maintenanceActive", "maintenance", Map.of()));
             } else if ("upcoming".equals(phase) || "planned".equals(phase)) {
-                alerts.add(alert("info", "maintenanceSoon", null, Map.of("start", m.get("start") instanceof Number n ? n : 0)));
+                alerts.add(alert("info", "maintenanceSoon", "maintenance", Map.of("start", m.get("start") instanceof Number n ? n : 0)));
             }
         }
         List<String> order = List.of("bad", "warn", "info");
