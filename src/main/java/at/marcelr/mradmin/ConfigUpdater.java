@@ -29,7 +29,7 @@ public final class ConfigUpdater {
      * 8: storage (yaml, sqlite, mysql); 9: web interface (web, Discord events web-login/web-setup);
      * 10: web.legal (imprint, privacy policy), web.privacy (retention, shortened IPs); 11: health (history, alert).
      */
-    public static final int CURRENT_VERSION = 15;
+    public static final int CURRENT_VERSION = 16;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

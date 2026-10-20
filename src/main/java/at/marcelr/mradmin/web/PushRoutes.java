@@ -2,6 +2,7 @@ package at.marcelr.mradmin.web;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.web.push.PushService;
+import at.marcelr.mradmin.web.push.WebPush;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -93,9 +94,20 @@ public final class PushRoutes {
         if (!server.allow("push-test:" + http.account().id(), 5)) {
             throw new Http.WebException(429, "rate-limit");
         }
-        int count = push().test(http.account().id(), plugin.messages().plain("push-test-title"),
-                plugin.messages().plain("push-test-body"));
-        http.json(200, Map.of("devices", count));
+        List<PushService.TestResult> results = push().test(http.account().id(),
+                plugin.messages().plain("push-test-title"), plugin.messages().plain("push-test-body"));
+        // Refused pushes with the push service's answer (Apple e.g. "BadJwtToken"), so the cause shows in the web UI.
+        List<Map<String, Object>> failed = new ArrayList<>();
+        for (PushService.TestResult r : results) {
+            if (r.result().outcome() != WebPush.Outcome.SENT) {
+                Map<String, Object> f = new LinkedHashMap<>();
+                f.put("device", r.device());
+                f.put("status", r.result().status());
+                f.put("reason", r.result().reason());
+                failed.add(f);
+            }
+        }
+        http.json(200, Map.of("devices", results.size(), "failed", failed));
     }
 
     /** "Chrome on Windows" from the user agent - only for telling devices apart. */

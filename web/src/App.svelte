@@ -22,6 +22,9 @@
   import Maintenance from './pages/Maintenance.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
+  import Contact from './pages/Contact.svelte';
+  import Unban from './pages/Unban.svelte';
+  import RequestStatus from './pages/RequestStatus.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -51,9 +54,15 @@
     }
   }
 
-  // Ask who is signed in as soon as a page needs it (not on setup, imprint and privacy - they work without).
+  // Public pages work without signing in: setup, imprint, privacy, contact, unban request, request status.
+  const requestToken = $derived(route.path.match(/^\/anfrage\/([A-Za-z0-9_-]{16,64})$/)?.[1] ?? null);
+  const publicPage = $derived(
+    ['/setup', '/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung'].includes(route.path) || requestToken !== null,
+  );
+
+  // Ask who is signed in as soon as a page needs it.
   $effect(() => {
-    if (me === undefined && !['/setup', '/impressum', '/datenschutz', '/discord'].includes(route.path)) untrack(loadMe);
+    if (me === undefined && !publicPage) untrack(loadMe);
   });
 
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
@@ -101,6 +110,15 @@
 
 {#if route.path === '/impressum' || route.path === '/datenschutz'}
   <Legal page={route.path === '/impressum' ? 'imprint' : 'privacy'} />
+  <Footer />
+{:else if route.path === '/kontakt'}
+  <Contact />
+  <Footer />
+{:else if route.path === '/entbannung'}
+  <Unban />
+  <Footer />
+{:else if requestToken}
+  <RequestStatus token={requestToken} />
   <Footer />
 {:else if route.path === '/discord'}
   <Discord onSignedIn={loadMe} />

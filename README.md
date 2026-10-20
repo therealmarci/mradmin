@@ -405,6 +405,29 @@ Entities und Spieler. Darunter stehen:
   **Chunkloader-Menü** das Menü des Loaders (Teleport, an/aus, Grenze, Lag-Sperre aufheben). Wird der Loader erneut gesperrt oder entsperrt, auch außerhalb
   des Tickets, steht das im selben Ticket. Abschaltbar mit `tickets.chunkloader-locks: false`.
 
+### Entbannungsanträge & Kontaktformular (Weboberfläche)
+Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`web.requests` in der Config).
+
+- **Entbannung** (`<public-url>/entbannung`, braucht LibertyBans): Wer gebannt ist und joinen will, sieht in der
+  Ban-Meldung die Adresse und einen **persönlichen Code** (z. B. `1-K7F2QX`). Nur mit Name und Code sieht man den
+  Bangrund und kann einen Antrag stellen, so kann niemand für andere Anträge stellen. Der Code wird nicht gespeichert,
+  sondern aus Spieler, Ban und einem Server-Geheimnis berechnet.
+  - **Ein Antrag pro Ban.** Im Ticket stehen die Stellungnahme und die Ban-Details. Das Team antwortet wie gewohnt
+    und entscheidet mit **Entbannen** (hebt den Ban in LibertyBans auf, braucht `libertybans.ban.undo.target.uuid`)
+    oder **Ablehnen**. Ein normales Schließen zählt als Ablehnung.
+  - Nach einer Ablehnung ist **einmal Einspruch** möglich, dann öffnet sich das Ticket wieder. Danach ist die
+    Entscheidung endgültig.
+  - Entbannungsanträge sind auch **ingame** im Ticket-Menü sichtbar.
+- **Kontakt** (`<public-url>/kontakt`, verlinkt unter dem Impressum und in der Fußzeile): Name, Mail-Adresse, Betreff,
+  Nachricht. Diese Anfragen gibt es **nur im Web**, ingame tauchen sie nie auf.
+- Nach dem Absenden bekommt man einen **privaten Statuslink** (`/anfrage/...`): Stand, Verlauf, antworten,
+  Einspruch.
+- **Mails** (optional, Abschnitt `mail`): Eingangsbestätigung mit Statuslink, Antworten des Teams und die
+  Entscheidung. Testen mit `/mradmin mail test <adresse>`. Ohne Mailversand sieht man Antworten über den Statuslink,
+  und bei Kontaktanfragen öffnet ein Knopf im Ticket das eigene Mailprogramm.
+- **Spamschutz ohne externe Dienste:** unsichtbares Lockfeld, Mindest-Ausfüllzeit, eine kleine Rechenaufgabe im
+  Browser (Proof of Work, ca. 1 s), Limits pro IP und Minute/Stunde, Obergrenze offener Kontaktanfragen.
+
 ### Staff-Chat
 `/sc <nachricht>` schreibt an alle mit `mradmin.staffchat`, auch von der Konsole. `/sc` ohne Text schaltet um:
 Dann geht dein normaler Chat ans Team. Das Spiegeln in den Admin-Discord ist optional (Event `staff-chat`, aus).

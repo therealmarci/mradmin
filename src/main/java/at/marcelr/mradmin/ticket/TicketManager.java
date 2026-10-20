@@ -267,6 +267,131 @@ public final class TicketManager {
                 "world", ticket.world(), "x", ticket.blockX(), "y", ticket.blockY(), "z", ticket.blockZ());
     }
 
+    // ------------------------------------------------------ public web forms
+
+    /** "Creator" of contact requests from the imprint - nobody in game. */
+    public static final UUID GUEST = new UUID(0L, 1L);
+
+    /**
+     * A ticket from the public web forms (unban request or contact). The first message is what the person wrote;
+     * {@code note} (may be null) follows as a message of MRadmin, e.g. the ban details. Contact requests are announced
+     * only in the web (push), unban requests also to the team in game. Server thread only.
+     */
+    public Ticket createRequest(WebRequest request, UUID creator, String creatorName, String subject, String text,
+                                String note) {
+        Ticket ticket = new Ticket(nextId++, creator, creatorName, null, null, request.kind(), subject, Instant.now(),
+                "", 0, 0, 0);
+        ticket.request(request);
+        ticket.add(new Ticket.Message(creator, creatorName, false, text, Instant.now()));
+        if (note != null) {
+            ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, note, Instant.now()));
+        }
+        ticket.creatorUnread(false);
+        ticket.staffUnread(true);
+        tickets.put(ticket.id(), ticket);
+        save(ticket);
+        notifyNew(ticket);
+        plugin.getLogger().info("Ticket #" + ticket.id() + " (" + request.kind() + ", web) by " + creatorName + ": "
+                + subject);
+        plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(request.kind()), "creator", creatorName,
+                "summary", subject, "text", TicketText.preview(text, 300), "world", "-", "x", 0, "y", 0, "z", 0);
+        return ticket;
+    }
+
+    /** The person behind a web request answered through their status link. @return error key or null */
+    public String requesterReply(Ticket ticket, String text) {
+        if (!ticket.open()) {
+            return "ticket-closed";
+        }
+        ticket.add(new Ticket.Message(ticket.creator(), ticket.creatorName(), false, text, Instant.now()));
+        ticket.creatorUnread(false);
+        save(ticket);
+        if (ticket.visibleInGame()) {
+            notifyStaff(ticket, null, "ticket-notify-message", tag("id", ticket.id()), tag("player", ticket.creatorName()),
+                    tag("text", TicketText.preview(text, PREVIEW)), tag("open", openButton(ticket)));
+        }
+        pushMessage(ticket, ticket.creatorName(), text, null);
+        plugin.discord().log("ticket-message", "id", ticket.id(), "author", ticket.creatorName(),
+                "text", TicketText.preview(text, 300), "summary", summary(ticket));
+        return null;
+    }
+
+    /**
+     * The one appeal after a rejected unban request: the ticket opens again as appeal, MRadmin notes it, the appeal
+     * text follows. The caller has checked that it is allowed.
+     */
+    public void appeal(Ticket ticket, String text) {
+        ticket.request(ticket.request().asAppeal());
+        ticket.reopen();
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().plain("request-appeal-note"), Instant.now()));
+        ticket.add(new Ticket.Message(ticket.creator(), ticket.creatorName(), false, text, Instant.now()));
+        ticket.creatorUnread(false);
+        ticket.staffUnread(true);
+        save(ticket);
+        notifyNew(ticket);
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", ticket.creatorName(), "summary", summary(ticket));
+    }
+
+    /**
+     * Decides an unban request (accepted: the caller has lifted the ban already) and closes it; {@code text} (may be
+     * empty) goes to the person first. @return error key or null
+     */
+    public String decide(Ticket ticket, boolean accepted, UUID who, String name, String text) {
+        if (ticket.request() == null || !ticket.request().unban()) {
+            return "not-unban";
+        }
+        if (!ticket.open()) {
+            return "ticket-closed";
+        }
+        String clean = text == null ? "" : TicketText.limit(TicketText.clean(text), settings().maxTextLength());
+        if (!clean.isEmpty()) {
+            ticket.add(new Ticket.Message(who, name, true, clean, Instant.now()));
+        }
+        ticket.request(ticket.request().withDecision(accepted ? WebRequest.ACCEPTED : WebRequest.REJECTED));
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().plain(accepted ? "request-accepted-note"
+                : "request-rejected-note", "admin", name), Instant.now()));
+        ticket.close(name, Instant.now());
+        ticket.creatorUnread(true);
+        ticket.staffUnread(false);
+        save(ticket);
+        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        // One mail with the decision and the answer.
+        requestChanged(ticket, clean);
+        return null;
+    }
+
+    /** The ticket of a status link, or null. */
+    public Ticket byToken(String token) {
+        return tickets.values().stream()
+                .filter(t -> t.request() != null && token.equals(t.request().token()))
+                .findFirst().orElse(null);
+    }
+
+    /** The unban request about this ban (open or closed, while it is kept), or null. */
+    public Ticket unbanRequest(long banId) {
+        return tickets.values().stream()
+                .filter(t -> t.request() != null && t.request().unban() && t.request().banId() == banId)
+                .findFirst().orElse(null);
+    }
+
+    /** Open contact requests (the form takes no new ones above web.requests.spam.max-open-contact). */
+    public int openContactRequests() {
+        return (int) tickets.values().stream().filter(t -> t.open() && !t.visibleInGame()).count();
+    }
+
+    /** Tells MRadmin's request service about a team answer or closing (mail to the person, request bookkeeping). */
+    private void requestChanged(Ticket ticket, String answer) {
+        if (ticket.request() == null || plugin.web() == null) {
+            return;
+        }
+        if (!ticket.open() && ticket.request().unban() && ticket.request().decision() == null) {
+            // Closed without a decision (in game or plain close in the web): the ban stays, so it counts as rejected.
+            ticket.request(ticket.request().withDecision(WebRequest.REJECTED));
+            save(ticket);
+        }
+        plugin.web().requests().changed(ticket, answer);
+    }
+
     /** A message of the plugin itself in the ticket (the creator sees it as unread; the team too if asked). */
     private void note(Ticket ticket, String source, String text, boolean forStaff) {
         ticket.add(new Ticket.Message(SYSTEM, source, true, text, Instant.now()));
@@ -364,6 +489,9 @@ public final class TicketManager {
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", author.getName(),
                 "text", TicketText.preview(clean, 300), "summary", summary(ticket));
+        if (staff) {
+            requestChanged(ticket, clean);
+        }
         return true;
     }
 
@@ -408,6 +536,7 @@ public final class TicketManager {
             }
         }
         plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", by.getName(), "summary", summary(ticket));
+        requestChanged(ticket, null);
     }
 
     /** Opens a closed ticket again (team only). */
@@ -487,6 +616,9 @@ public final class TicketManager {
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", name,
                 "text", TicketText.preview(clean, 300), "summary", summary(ticket));
+        if (staff) {
+            requestChanged(ticket, clean);
+        }
         return null;
     }
 
@@ -504,6 +636,7 @@ public final class TicketManager {
                     tag("summary", summary(ticket)), tag("open", openButton(ticket)));
             sound(creator);
         }
+        requestChanged(ticket, null);
         plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", summary(ticket));
         return null;
     }
@@ -607,7 +740,7 @@ public final class TicketManager {
     }
 
     private void notifyNew(Ticket ticket) {
-        for (Player staff : Bukkit.getOnlinePlayers()) {
+        for (Player staff : ticket.visibleInGame() ? Bukkit.getOnlinePlayers() : List.<Player>of()) {
             if (staff.hasPermission(PERM_NOTIFY) && !ticket.isCreator(staff.getUniqueId())) {
                 messages().send(staff, "ticket-notify-new", tag("id", ticket.id()), tag("type", categoryName(ticket.category())),
                         tag("player", ticket.creatorName()), tag("summary", summary(ticket)),
@@ -618,7 +751,8 @@ public final class TicketManager {
         }
         // Push to the team's devices - not for lock tickets, those come as "chunk loader locked".
         if (ticket.source() == null) {
-            plugin.push("ticket-new", "ticket-new", "/tickets/" + ticket.id(), id -> !ticket.isCreator(id),
+            plugin.push("ticket-new", ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/tickets/" + ticket.id(),
+                    id -> !ticket.isCreator(id),
                     "id", ticket.id(), "player", ticket.creatorName(), "summary", summary(ticket));
         }
     }
@@ -665,9 +799,9 @@ public final class TicketManager {
                     .clickEvent(ClickEvent.runCommand("/report"))
                     .hoverEvent(HoverEvent.showText(messages().get("ticket-button-mine-hover")))));
         }
-        int open = openCount();
+        int open = openCountInGame();
         if (open > 0 && player.hasPermission(PERM_NOTIFY)) {
-            messages().send(player, "ticket-join-staff", tag("count", open), tag("unread", staffUnreadCount()),
+            messages().send(player, "ticket-join-staff", tag("count", open), tag("unread", staffUnreadCountInGame()),
                     tag("list", listButton()));
         }
     }
@@ -708,6 +842,25 @@ public final class TicketManager {
 
     public int openCount() {
         return (int) tickets.values().stream().filter(Ticket::open).count();
+    }
+
+    /** Like {@link #list}, without the contact requests that exist only in the web interface. */
+    public List<Ticket> listInGame(String category, boolean open, UUID about) {
+        return list(category, open, about).stream().filter(Ticket::visibleInGame).toList();
+    }
+
+    public int openCountInGame() {
+        return (int) tickets.values().stream().filter(t -> t.open() && t.visibleInGame()).count();
+    }
+
+    public int staffUnreadCountInGame() {
+        return (int) tickets.values().stream().filter(t -> t.open() && t.staffUnread() && t.visibleInGame()).count();
+    }
+
+    /** A ticket by id for in-game commands - contact requests do not exist there. */
+    public Ticket getInGame(int id) {
+        Ticket ticket = tickets.get(id);
+        return ticket == null || !ticket.visibleInGame() ? null : ticket;
     }
 
     /** Open tickets per team member who claimed them. */
@@ -766,6 +919,7 @@ public final class TicketManager {
         if (r.source() != null) {
             ticket.source(r.source(), r.sourceId());
         }
+        ticket.request(WebRequest.parse(r.extra()));
         ticket.saved(messages.size());
         return ticket;
     }
@@ -774,7 +928,7 @@ public final class TicketManager {
         return new Storage.TicketRow(t.id(), t.creator(), t.creatorName(), t.target(), t.targetName(), t.category(),
                 t.subject(), t.created().toEpochMilli(), t.world(), t.x(), t.y(), t.z(), t.claimedBy(), t.claimedByName(),
                 t.closedBy(), t.closedAt() == null ? 0 : t.closedAt().toEpochMilli(), t.creatorUnread(), t.staffUnread(),
-                t.source(), t.sourceId());
+                t.source(), t.sourceId(), t.request() == null ? null : t.request().json());
     }
 
     /** reports.yml of version 0.1.0: every report becomes a player ticket, the old file is kept as backup. */

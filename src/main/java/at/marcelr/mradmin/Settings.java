@@ -31,8 +31,27 @@ public record Settings(
         Set<Feature> features,
         StorageSettings storage,
         WebSettings web,
-        HealthSettings health
+        HealthSettings health,
+        MailSettings mail,
+        RequestSettings requests
 ) {
+
+    /**
+     * Outgoing mail (SMTP) for answers to unban and contact requests. {@code security}: "ssl" (465), "starttls" (587)
+     * or "none" (only for a relay on the same machine).
+     */
+    public record MailSettings(boolean enabled, String host, int port, String security, String username, String password,
+                               String from, String fromName, String replyTo) {
+    }
+
+    /**
+     * The public forms of the web interface: unban requests (with the code from the ban message, needs LibertyBans) and
+     * the contact form below the imprint. Spam protection: at most {@code perIpPerHour} requests per address, at most
+     * {@code maxOpenContact} open contact requests, a small proof of work ({@code powBits}) in the browser.
+     */
+    public record RequestSettings(boolean unban, boolean kickMessage, boolean contact, int perIpPerHour, int maxOpenContact,
+                                  int powBits, int minTextLength, int maxTextLength, boolean notifyByMail) {
+    }
 
     /**
      * Health dashboard: {@code history} in ms (24h, 7d or 30d); a warning (Discord, team in game) when the TPS has been
@@ -44,11 +63,13 @@ public record Settings(
     /**
      * The web interface. {@code publicUrl} without trailing slash (empty = not set up yet); {@code roles} maps a role to
      * its permissions and {@code players} a player (name or UUID, lower case) to a role - only used without LuckPerms.
+     * {@code pushContact} is the contact sent to the push services (mailto:... or https:..., empty = from publicUrl).
      */
     public record WebSettings(boolean enabled, String bind, int port, String publicUrl, Set<String> trustedProxies,
                               int sessionDays, boolean passkeys, boolean password,
                               java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
-                              String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp) {
+                              String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp,
+                              String pushContact) {
 
         /** Cookies only over HTTPS when the public address is HTTPS (plain http is only for local tests). */
         public boolean secure() {
@@ -276,7 +297,33 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c));
+    }
+
+    private static MailSettings mail(FileConfiguration c, Logger log) {
+        String security = c.getString("mail.security", "starttls").trim().toLowerCase(Locale.ROOT);
+        if (!security.equals("ssl") && !security.equals("starttls") && !security.equals("none")) {
+            log.warning("mail.security '" + security + "' is unknown (ssl, starttls, none), using starttls.");
+            security = "starttls";
+        }
+        int defaultPort = security.equals("ssl") ? 465 : security.equals("starttls") ? 587 : 25;
+        return new MailSettings(c.getBoolean("mail.enabled", false), c.getString("mail.host", "").trim(),
+                Math.clamp(c.getInt("mail.port", defaultPort), 1, 65535), security,
+                c.getString("mail.username", "").trim(), c.getString("mail.password", ""),
+                c.getString("mail.from", "").trim(), c.getString("mail.from-name", "").trim(),
+                c.getString("mail.reply-to", "").trim());
+    }
+
+    private static RequestSettings requests(FileConfiguration c) {
+        return new RequestSettings(c.getBoolean("web.requests.unban.enabled", true),
+                c.getBoolean("web.requests.unban.kick-message", true),
+                c.getBoolean("web.requests.contact.enabled", true),
+                Math.clamp(c.getInt("web.requests.spam.per-ip-per-hour", 5), 1, 1000),
+                Math.clamp(c.getInt("web.requests.spam.max-open-contact", 50), 1, 10_000),
+                Math.clamp(c.getInt("web.requests.spam.proof-of-work", 16), 0, 24),
+                Math.clamp(c.getInt("web.requests.min-text-length", 20), 1, 1000),
+                Math.clamp(c.getInt("web.requests.max-text-length", 3000), 100, 4000),
+                c.getBoolean("web.requests.notify-by-mail", true));
     }
 
     private static HealthSettings health(FileConfiguration c, Logger log) {
@@ -333,7 +380,8 @@ public record Settings(
                 c.getString("web.legal.imprint-url", "").trim(),
                 c.getString("web.legal.privacy-url", "").trim(),
                 duration(c, "web.privacy.audit-retention", 90 * 86_400_000L, log),
-                c.getBoolean("web.privacy.mask-ip", false));
+                c.getBoolean("web.privacy.mask-ip", false),
+                c.getString("web.push.contact", "").trim());
     }
 
     private static StorageSettings storage(FileConfiguration c, Logger log) {

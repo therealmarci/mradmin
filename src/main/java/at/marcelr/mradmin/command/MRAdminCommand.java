@@ -121,6 +121,11 @@ public final class MRAdminCommand implements TabExecutor {
                 }
             }
             case "web" -> webCommand.handle(sender, args);
+            case "mail" -> {
+                if (check(sender, at.marcelr.mradmin.Perms.WEB_MANAGE)) {
+                    mailTest(sender, args);
+                }
+            }
             case "storage", "speicher", "db" -> {
                 if (check(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE)) {
                     storage(sender);
@@ -216,7 +221,7 @@ public final class MRAdminCommand implements TabExecutor {
             }
             Ticket ticket;
             try {
-                ticket = plugin.tickets().get(Integer.parseInt(args[2].replace("#", "")));
+                ticket = plugin.tickets().getInGame(Integer.parseInt(args[2].replace("#", "")));
             } catch (NumberFormatException e) {
                 ticket = null;
             }
@@ -477,6 +482,37 @@ public final class MRAdminCommand implements TabExecutor {
     }
 
     /** /mradmin storage - where the data is kept, and whether a changed setting still waits for a restart. */
+    /** /mradmin mail test <address> - sends a test mail right away (off the server thread) and reports the result. */
+    private void mailTest(CommandSender sender, String[] args) {
+        if (args.length < 3 || !args[1].equalsIgnoreCase("test")) {
+            messages().send(sender, "mail-test-usage");
+            return;
+        }
+        var mailer = plugin.web().requests().mailer();
+        if (!mailer.enabled()) {
+            messages().send(sender, "mail-test-off");
+            return;
+        }
+        String address = args[2];
+        messages().send(sender, "mail-test-sending", tag("address", address));
+        Thread.ofVirtual().start(() -> {
+            String error = null;
+            try {
+                mailer.sendNow(address, messages().plain("mail-test-subject"), messages().plain("mail-test-body"));
+            } catch (Exception e) {
+                error = String.valueOf(e.getMessage());
+            }
+            String result = error;
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (result == null) {
+                    messages().send(sender, "mail-test-sent");
+                } else {
+                    messages().send(sender, "mail-test-failed", tag("error", result));
+                }
+            });
+        });
+    }
+
     private void storage(CommandSender sender) {
         var active = plugin.storage();
         messages().send(sender, "storage-status", tag("type", active.type()), tag("target", active.describe()));
@@ -532,6 +568,7 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, PERM_RELOAD, options, "reload");
             addIf(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE, options, "storage");
             addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
+            addIf(sender, at.marcelr.mradmin.Perms.WEB_MANAGE, options, "mail");
             options.add("help");
             addIf(sender, at.marcelr.mradmin.Perms.PLAYER_VIEW, options, "player");
             addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");
@@ -579,6 +616,11 @@ public final class MRAdminCommand implements TabExecutor {
                     }
                 }
                 case "web" -> options.addAll(WebCommand.complete(sender, args));
+                case "mail" -> {
+                    if (args.length == 2) {
+                        options.add("test");
+                    }
+                }
                 case "discord" -> {
                     if (args.length == 2) {
                         options.add("test");

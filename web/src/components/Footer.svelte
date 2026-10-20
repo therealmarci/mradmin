@@ -4,7 +4,7 @@
   import { go } from '../lib/router.svelte.js';
 
   // Own website (from the config) or the texts in MRadmin.
-  let links = $state({ imprint: '', privacy: '' });
+  let links = $state({ imprint: '', privacy: '', contact: false });
   api('GET', '/legal').then((l) => (links = l)).catch(() => {});
 </script>
 
@@ -19,6 +19,10 @@
     <a href={links.privacy} target="_blank" rel="noopener noreferrer">{t('footer.privacy')}</a>
   {:else}
     <a href="/datenschutz" onclick={(e) => { e.preventDefault(); go('/datenschutz'); }}>{t('footer.privacy')}</a>
+  {/if}
+  {#if links.contact}
+    <span>·</span>
+    <a href="/kontakt" onclick={(e) => { e.preventDefault(); go('/kontakt'); }}>{t('footer.contact')}</a>
   {/if}
 </footer>
 

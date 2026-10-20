@@ -15,7 +15,7 @@ import java.util.UUID;
 /**
  * Imprint, privacy policy and player heads.
  * <pre>
- *  GET /api/legal               open   links (own website) or whether the texts are here
+ *  GET /api/legal               open   links (own website) or whether the texts are here; contact/unban forms on
  *  GET /api/legal/{page}        open   imprint | privacy: text (Markdown) from plugins/MRadmin/web/
  *  GET /api/head/{uuid}                player head as PNG (made by MRadmin, see Heads)
  * </pre>
@@ -63,7 +63,9 @@ public final class SiteRoutes {
 
     private void links(Http http) throws IOException {
         Settings.WebSettings s = plugin.settings().web();
-        http.json(200, Map.of("imprint", s.imprintUrl(), "privacy", s.privacyUrl()));
+        var requests = plugin.web().requests();
+        http.json(200, Map.of("imprint", s.imprintUrl(), "privacy", s.privacyUrl(),
+                "contact", requests.contactAvailable(), "unban", requests.unbanAvailable()));
     }
 
     private void page(Http http) throws IOException {

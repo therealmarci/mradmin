@@ -104,7 +104,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
+        at.marcelr.mradmin.web.PublicRoutes.register(web);
         web.push().load();
+        web.requests().load();
         health = new HealthMonitor(this);
 
         freeze = new FreezeManager(this);
@@ -128,6 +130,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(this, this);
         pm.registerEvents(new FreezeListener(this), this);
         pm.registerEvents(staffChat, this);
+        pm.registerEvents(web.requests(), this);
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);

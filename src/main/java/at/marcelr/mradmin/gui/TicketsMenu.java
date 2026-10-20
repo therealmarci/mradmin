@@ -50,7 +50,7 @@ public final class TicketsMenu extends Menu {
     protected void draw() {
         Messages messages = plugin.messages();
         TicketManager tickets = plugin.tickets();
-        List<Ticket> shown = tickets.list(category, open, about);
+        List<Ticket> shown = tickets.listInGame(category, open, about);
         int pages = Pages.count(shown.size(), PER_PAGE);
         page = Math.min(page, pages - 1);
         if (shown.isEmpty()) {
@@ -86,8 +86,8 @@ public final class TicketsMenu extends Menu {
         }
         set(52, Items.of(open ? Material.WRITABLE_BOOK : Material.BOOK)
                 .name(messages.item(open ? "gui-tickets-filter-open" : "gui-tickets-filter-closed"))
-                .lore(messages.lore("gui-tickets-filter-status-lore", tag("open", tickets.openCount()),
-                        tag("unread", tickets.staffUnreadCount()))).build(), click -> {
+                .lore(messages.lore("gui-tickets-filter-status-lore", tag("open", tickets.openCountInGame()),
+                        tag("unread", tickets.staffUnreadCountInGame()))).build(), click -> {
             open = !open;
             page = 0;
             clickSound();

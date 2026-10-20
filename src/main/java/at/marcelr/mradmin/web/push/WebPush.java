@@ -41,6 +41,13 @@ public final class WebPush {
     /** Result of one push: delivered, the subscription is gone (delete it), or another error. */
     public enum Outcome { SENT, GONE, FAILED }
 
+    /**
+     * Outcome with the HTTP status (0 = no answer) and what the push service said - Apple answers e.g.
+     * {"reason":"BadJwtToken"}, which is the only hint why a push was refused.
+     */
+    public record Result(Outcome outcome, int status, String reason) {
+    }
+
     private static final Base64.Encoder B64 = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder B64D = Base64.getUrlDecoder();
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -48,14 +55,45 @@ public final class WebPush {
 
     private final ECPrivateKey vapidPrivate;
     private final ECPublicKey vapidPublic;
-    private final String subject;
+    private final java.util.function.Supplier<String> subject;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
-    /** @param subject contact for the push services ("mailto:..." or "https://...") */
-    public WebPush(KeyPair vapid, String subject) {
+    /** @param subject contact for the push services ("mailto:..." or "https://..."), asked at every push (reload) */
+    public WebPush(KeyPair vapid, java.util.function.Supplier<String> subject) {
         this.vapidPrivate = (ECPrivateKey) vapid.getPrivate();
         this.vapidPublic = (ECPublicKey) vapid.getPublic();
         this.subject = subject;
+    }
+
+    /**
+     * Whether Apple accepts this as VAPID subject: "mailto:name@domain.tld" or "https://domain.tld..." with a public
+     * host name. Apple answers 403 BadJwtToken for localhost, .local, hosts without a dot and spaces / angle brackets
+     * (Google and Mozilla accept those, so it only shows on iPhones, iPads and Safari).
+     */
+    public static boolean appleContact(String contact) {
+        String host;
+        if (contact.startsWith("mailto:")) {
+            String address = contact.substring("mailto:".length());
+            int at = address.indexOf('@');
+            if (at <= 0 || address.indexOf('@', at + 1) >= 0) {
+                return false;
+            }
+            host = address.substring(at + 1);
+        } else if (contact.startsWith("https://")) {
+            try {
+                host = URI.create(contact).getHost();
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+        if (host == null || contact.chars().anyMatch(c -> c <= ' ' || c == '<' || c == '>' || c == '"')) {
+            return false;
+        }
+        host = host.toLowerCase(java.util.Locale.ROOT);
+        return host.contains(".") && !host.endsWith(".") && !host.equals("localhost") && !host.endsWith(".localhost")
+                && !host.endsWith(".local");
     }
 
     // ---------------------------------------------------------------- keys
@@ -92,7 +130,7 @@ public final class WebPush {
      * Sends one message (UTF-8 JSON, a few KB at most) to one subscription. Asynchronous.
      * @param p256dh the browser's public key (base64url), @param auth its auth secret (base64url)
      */
-    public CompletableFuture<Outcome> send(String endpoint, String p256dh, String auth, String payload, int ttlSeconds,
+    public CompletableFuture<Result> send(String endpoint, String p256dh, String auth, String payload, int ttlSeconds,
                                            boolean urgent) {
         try {
             byte[] body = encrypt(payload.getBytes(StandardCharsets.UTF_8), B64D.decode(p256dh), B64D.decode(auth));
@@ -107,18 +145,20 @@ public final class WebPush {
                     .header("Authorization", "vapid t=" + jwt(audience) + ", k=" + publicKey())
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                     .build();
-            return http.sendAsync(request, HttpResponse.BodyHandlers.discarding()).handle((response, error) -> {
+            return http.sendAsync(request, HttpResponse.BodyHandlers.ofString()).handle((response, error) -> {
                 if (error != null) {
-                    return Outcome.FAILED;
+                    return new Result(Outcome.FAILED, 0, String.valueOf(error.getMessage()));
                 }
                 int code = response.statusCode();
+                String text = response.body() == null ? "" : response.body().strip();
+                String reason = text.length() > 200 ? text.substring(0, 200) : text;
                 if (code == 404 || code == 410) {
-                    return Outcome.GONE;
+                    return new Result(Outcome.GONE, code, reason);
                 }
-                return code >= 200 && code < 300 ? Outcome.SENT : Outcome.FAILED;
+                return new Result(code >= 200 && code < 300 ? Outcome.SENT : Outcome.FAILED, code, reason);
             });
         } catch (GeneralSecurityException | IllegalArgumentException e) {
-            return CompletableFuture.completedFuture(Outcome.FAILED);
+            return CompletableFuture.completedFuture(new Result(Outcome.FAILED, 0, String.valueOf(e.getMessage())));
         }
     }
 
@@ -164,7 +204,7 @@ public final class WebPush {
         String header = B64.encodeToString("{\"typ\":\"JWT\",\"alg\":\"ES256\"}".getBytes(StandardCharsets.UTF_8));
         long exp = System.currentTimeMillis() / 1000 + 12 * 3600;
         String claims = B64.encodeToString(("{\"aud\":\"" + audience + "\",\"exp\":" + exp + ",\"sub\":\""
-                + subject.replace("\"", "") + "\"}").getBytes(StandardCharsets.UTF_8));
+                + subject.get().replace("\"", "") + "\"}").getBytes(StandardCharsets.UTF_8));
         String input = header + "." + claims;
         Signature signer = Signature.getInstance("SHA256withECDSAinP1363Format");
         signer.initSign(vapidPrivate);

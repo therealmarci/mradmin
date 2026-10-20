@@ -47,6 +47,8 @@ public final class Ticket {
     private String source;
     /** What it is about in that plugin (e.g. the chunk loader id). */
     private String sourceId;
+    /** Unban or contact request from the public web forms, otherwise null. */
+    private WebRequest request;
     /** How many messages are already in the storage (the rest is written with the next save). */
     private int saved;
 
@@ -196,6 +198,16 @@ public final class Ticket {
         return sourceId;
     }
 
+    /** Unban or contact request from the public web forms, otherwise null. */
+    public WebRequest request() {
+        return request;
+    }
+
+    /** Contact requests from the imprint exist only in the web interface - never in game. */
+    public boolean visibleInGame() {
+        return request == null || !request.contact();
+    }
+
     /** Opened automatically by a plugin: only the team may close it (the creator must not hide it). */
     public boolean teamCloseOnly() {
         return source != null;
@@ -225,6 +237,9 @@ public final class Ticket {
     void reopen() {
         closedBy = null;
         closedAt = null;
+        if (request != null && request.decision() != null) {
+            request = request.withDecision(null);
+        }
     }
 
     void creatorUnread(boolean unread) {
@@ -241,6 +256,10 @@ public final class Ticket {
 
     void saved(int count) {
         saved = count;
+    }
+
+    void request(WebRequest request) {
+        this.request = request;
     }
 
     void source(String source, String sourceId) {
