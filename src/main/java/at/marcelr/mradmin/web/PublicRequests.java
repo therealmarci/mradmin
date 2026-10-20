@@ -69,6 +69,7 @@ public final class PublicRequests implements Listener {
     private final Map<String, Long> usedChallenges = new ConcurrentHashMap<>();
     /** ip -> times of requests within the last hour */
     private final Map<String, Deque<Long>> hourly = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicBoolean warnedNoUrl = new java.util.concurrent.atomic.AtomicBoolean();
 
     public PublicRequests(MRAdmin plugin, WebServer server) {
         this.plugin = plugin;
@@ -92,6 +93,11 @@ public final class PublicRequests implements Listener {
         secret = Base64.getDecoder().decode(stored);
         usedBans.clear();
         y.getLongList("used-bans").forEach(usedBans::add);
+        if (settings().unban() && settings().kickMessage() && plugin.settings().web().enabled()
+                && plugin.settings().web().publicUrl().isEmpty()) {
+            plugin.getLogger().warning("Unban requests are on, but web.public-url is not set - ban messages get no"
+                    + " unban link and code until it is.");
+        }
     }
 
     /** Whether this ban already had its one request. */
@@ -173,8 +179,15 @@ public final class PublicRequests implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
         if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.KICK_BANNED || !settings().kickMessage()
-                || !plugin.settings().web().enabled() || plugin.settings().web().publicUrl().isEmpty()
-                || !unbanAvailable()) {
+                || !plugin.settings().web().enabled() || !unbanAvailable()) {
+            return;
+        }
+        if (plugin.settings().web().publicUrl().isEmpty()) {
+            // Without an address the player would get a code but no place to use it.
+            if (!warnedNoUrl.getAndSet(true)) {
+                plugin.getLogger().warning("Banned player " + event.getName() + " got no unban link: set web.public-url"
+                        + " (the address of the web interface) so ban messages show where to request an unban.");
+            }
             return;
         }
         Bans bans = Bans.get(plugin);

@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 15
+config-version: 16
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
