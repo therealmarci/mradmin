@@ -32,6 +32,12 @@ Für Minecraft **26.3** (`mc26.3-v0.3.0`).
 - Abgelehnte Push-Nachrichten werden mit der Antwort des Push-Dienstes geloggt (höchstens alle 10 Minuten pro Dienst),
   und der Test-Button zeigt pro Gerät, ob und warum der Push-Dienst abgelehnt hat.
 - iPads wurden nicht als iOS erkannt und bekamen „nicht unterstützt“ statt des Hinweises zum Home-Bildschirm.
+- **Impressum/Datenschutz im Web leer**, wenn `impressum.md`/`datenschutz.md` mit Umlauten als ANSI (Windows-1252)
+  gespeichert waren. Jetzt werden UTF-8 (mit/ohne BOM) und ANSI gelesen.
+- **Discord-Ankündigung einer Wartung wurde nach Neustarts nicht mehr aktualisiert:** Die Nachrichten-ID wurde beim
+  Herunterfahren gespeichert, bevor laufende Posts fertig waren, und sonst nur 3 Sekunden nach dem Posten. Jetzt wird
+  sie gespeichert, sobald Discord sie liefert, und beim Stoppen erst nach den letzten Posts. Fehlt die ID, steht
+  das jetzt in der Konsole.
 
 ## [0.2.0] - 2026-10-20
 Für Minecraft **26.3** (`mc26.3-v0.2.0`).

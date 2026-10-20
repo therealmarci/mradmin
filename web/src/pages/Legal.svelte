@@ -16,7 +16,10 @@
     html = null;
     api('GET', '/legal/' + page)
       .then((r) => (html = r.text.trim() ? markdown(r.text) : ''))
-      .catch(() => (html = ''));
+      .catch((e) => {
+        console.error('legal page', page, e);
+        html = '';
+      });
   });
 </script>
 

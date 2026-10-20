@@ -6,6 +6,9 @@ import at.marcelr.mradmin.Settings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Locale;
@@ -74,8 +77,19 @@ public final class SiteRoutes {
             throw new Http.WebException(404, "not-found");
         }
         File target = new File(new File(plugin.getDataFolder(), "web"), file);
-        String text = target.exists() ? Files.readString(target.toPath(), StandardCharsets.UTF_8) : "";
+        String text = target.exists() ? read(target) : "";
         http.json(200, Map.of("text", text));
+    }
+
+    /** UTF-8 (with or without BOM); files saved as ANSI by Windows editors fall back to Windows-1252. */
+    private static String read(File file) throws IOException {
+        byte[] data = Files.readAllBytes(file.toPath());
+        try {
+            String text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data)).toString();
+            return !text.isEmpty() && text.charAt(0) == 0xFEFF ? text.substring(1) : text;
+        } catch (CharacterCodingException e) {
+            return new String(data, Charset.forName("windows-1252"));
+        }
     }
 
     private void head(Http http) throws IOException {

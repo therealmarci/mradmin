@@ -32,6 +32,7 @@ final class AnnounceWebhook {
     });
     private final String userAgent;
     private final Consumer<String> onError;
+    private final Runnable onPosted;
 
     /** A posted message; the id is filled in by the background thread once Discord has answered. */
     static final class Post {
@@ -42,9 +43,11 @@ final class AnnounceWebhook {
         }
     }
 
-    AnnounceWebhook(String userAgent, Consumer<String> onError) {
+    /** @param onPosted runs on the background thread whenever a post got its id (so it can be saved right away) */
+    AnnounceWebhook(String userAgent, Consumer<String> onError, Runnable onPosted) {
         this.userAgent = userAgent;
         this.onError = onError;
+        this.onPosted = onPosted;
     }
 
     /** Posts a message ({@code ?wait=true}, so Discord returns it) and stores its id in the returned post. */
@@ -57,6 +60,7 @@ final class AnnounceWebhook {
             if (answer != null) {
                 try {
                     post.id = JsonParser.parseString(answer).getAsJsonObject().get("id").getAsString();
+                    onPosted.run();
                 } catch (RuntimeException e) {
                     onError.accept("unexpected answer from Discord: " + answer);
                 }
@@ -70,6 +74,7 @@ final class AnnounceWebhook {
         String body = payload.toString();
         executor.execute(() -> {
             if (post == null || post.id == null) {
+                onError.accept("cannot update the announcement, its message id is unknown (the post failed or was not saved)");
                 return;
             }
             String base = webhook.toString();

@@ -62,7 +62,13 @@ public final class DiscordAnnouncer {
     public DiscordAnnouncer(MRAdmin plugin) {
         this.plugin = plugin;
         this.webhook = new AnnounceWebhook("MRadmin/" + plugin.getPluginMeta().getVersion(),
-                error -> plugin.getLogger().warning("Discord announcement webhook: " + error));
+                error -> plugin.getLogger().warning("Discord announcement webhook: " + error),
+                () -> {
+                    // While shutting down the scheduler is gone; shutdown() saves after the last post instead.
+                    if (plugin.isEnabled()) {
+                        plugin.getServer().getScheduler().runTask(plugin, this::saveNow);
+                    }
+                });
     }
 
     // ------------------------------------------------------------------ config
@@ -362,9 +368,8 @@ public final class DiscordAnnouncer {
         }
     }
 
+    /** Message ids arrive a moment after posting - the webhook saves again once they are there (onPosted). */
     private void save() {
-        // Message ids arrive a moment after posting; save again once they are there.
-        plugin.getServer().getScheduler().runTaskLater(plugin, this::saveNow, 60L);
         saveNow();
     }
 
@@ -385,8 +390,9 @@ public final class DiscordAnnouncer {
     }
 
     public void shutdown() {
-        saveNow();
+        // First let pending posts finish, so their message ids are known when saving.
         webhook.shutdown();
+        saveNow();
     }
 
     // ------------------------------------------------------------------ helpers
