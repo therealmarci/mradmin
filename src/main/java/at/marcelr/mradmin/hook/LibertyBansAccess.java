@@ -1,6 +1,7 @@
 package at.marcelr.mradmin.hook;
 
 import space.arim.libertybans.api.LibertyBans;
+import space.arim.libertybans.api.NetworkAddress;
 import space.arim.libertybans.api.PlayerOperator;
 import space.arim.libertybans.api.PlayerVictim;
 import space.arim.libertybans.api.PunishmentType;
@@ -51,12 +52,32 @@ final class LibertyBansAccess implements Bans {
         }
         List<Entry> result = new ArrayList<>();
         for (Punishment p : all) {
-            UUID operator = p.getOperator() instanceof PlayerOperator op ? op.getUUID() : null;
-            result.add(new Entry(p.getIdentifier(), name(p.getType()), p.getReason(), operator,
-                    String.valueOf(p.getScope()), p.getStartDate().toEpochMilli(),
-                    p.isPermanent() ? 0 : p.getEndDate().toEpochMilli(), active.contains(p.getIdentifier())));
+            result.add(entry(p, active.contains(p.getIdentifier())));
         }
         return result;
+    }
+
+    @Override
+    public Entry activeBan(long id) throws Exception {
+        return api.getSelector().getActivePunishmentByIdAndType(id, PunishmentType.BAN).toCompletableFuture()
+                .get(TIMEOUT_SECONDS, TimeUnit.SECONDS).map(p -> entry(p, true)).orElse(null);
+    }
+
+    @Override
+    public Entry applicableBan(UUID player, java.net.InetAddress address) throws Exception {
+        return api.getSelector().getApplicablePunishment(player, NetworkAddress.of(address), PunishmentType.BAN)
+                .toCompletableFuture().get(TIMEOUT_SECONDS, TimeUnit.SECONDS).map(p -> entry(p, true)).orElse(null);
+    }
+
+    @Override
+    public UUID lookup(String name) throws Exception {
+        return api.getUserResolver().lookupUUID(name).get(TIMEOUT_SECONDS, TimeUnit.SECONDS).orElse(null);
+    }
+
+    private static Entry entry(Punishment p, boolean active) {
+        UUID operator = p.getOperator() instanceof PlayerOperator op ? op.getUUID() : null;
+        return new Entry(p.getIdentifier(), name(p.getType()), p.getReason(), operator, String.valueOf(p.getScope()),
+                p.getStartDate().toEpochMilli(), p.isPermanent() ? 0 : p.getEndDate().toEpochMilli(), active);
     }
 
     @Override

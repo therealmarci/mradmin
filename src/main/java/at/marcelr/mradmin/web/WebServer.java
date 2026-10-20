@@ -68,6 +68,14 @@ public final class WebServer {
         this.passkeys = new at.marcelr.mradmin.web.auth.Passkeys(plugin, auth);
         this.push = new at.marcelr.mradmin.web.push.PushService(plugin, auth, permissions);
         this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
+        this.requests = new PublicRequests(plugin, this);
+    }
+
+    private final PublicRequests requests;
+
+    /** Unban requests and the contact form (public, without sign-in). */
+    public PublicRequests requests() {
+        return requests;
     }
 
     private final at.marcelr.mradmin.web.auth.DiscordLogin discord;

@@ -28,6 +28,8 @@ import java.util.Map;
  *  POST /api/tickets/{id}/claim                claim / release
  *  POST /api/tickets/{id}/close   {text?}      optional last message, then closed
  *  POST /api/tickets/{id}/reopen
+ *  POST /api/tickets/{id}/decide  {decision: accept|reject, text?}  unban requests: lift the ban (LibertyBans'
+ *                                  libertybans.ban.undo.target.uuid) or reject, then closed
  * </pre>
  * Ticket data lives on the server thread, so every ticket call runs there briefly ({@link WebServer#sync}).
  */
@@ -53,6 +55,7 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/claim", r::claim);
         server.route("POST", "/api/tickets/{id}/close", r::close);
         server.route("POST", "/api/tickets/{id}/reopen", r::reopen);
+        server.route("POST", "/api/tickets/{id}/decide", r::decide);
     }
 
     private boolean may(Http http, String permission) {
@@ -214,6 +217,9 @@ public final class PanelRoutes {
             }
             result.add(Map.of("id", TicketManager.LOCK_CATEGORY,
                     "name", plugin.tickets().categoryName(TicketManager.LOCK_CATEGORY), "player", false));
+            for (String kind : List.of(at.marcelr.mradmin.ticket.WebRequest.UNBAN, at.marcelr.mradmin.ticket.WebRequest.CONTACT)) {
+                result.add(Map.of("id", kind, "name", plugin.tickets().categoryName(kind), "player", false));
+            }
             return result;
         });
         http.json(200, list);
@@ -298,6 +304,46 @@ public final class PanelRoutes {
         act(http, "ticket-reopen", (tickets, t) -> tickets.webReopen(http.account().id(), http.account().name(), t), "");
     }
 
+    /**
+     * Unban requests: accept lifts the ban first (LibertyBans, off the server thread; already lifted counts as done),
+     * then the request is decided and closed - the person gets the answer through their status link and by mail.
+     */
+    private void decide(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_CLOSE);
+        boolean accept = "accept".equals(http.string("decision"));
+        if (!accept && !"reject".equals(http.string("decision"))) {
+            throw new Http.WebException(400, "unknown-action");
+        }
+        String text = http.string("text");
+        if (text != null && text.length() > 4000) {
+            throw new Http.WebException(400, "reply-empty");
+        }
+        int id = id(http);
+        at.marcelr.mradmin.ticket.WebRequest request = server.sync(() -> {
+            Ticket t = plugin.tickets().get(id);
+            return t == null ? null : t.request();
+        });
+        if (request == null || !request.unban()) {
+            throw new Http.WebException(404, "not-found");
+        }
+        if (accept) {
+            require(http, "libertybans.ban.undo.target.uuid");
+            at.marcelr.mradmin.hook.Bans bans = at.marcelr.mradmin.hook.Bans.get(plugin);
+            if (bans == null) {
+                throw new Http.WebException(503, "libertybans-missing");
+            }
+            String error = bans.undo(request.banId(), "ban");
+            if (error != null && !error.equals("not-active")) {
+                throw new Http.WebException(400, error);
+            }
+            plugin.getLogger().info(http.account().name() + " (web) lifted ban #" + request.banId()
+                    + " through unban request #" + id + ".");
+        }
+        act(http, accept ? "unban-accept" : "unban-reject", (tickets, t) -> tickets.decide(t, accept,
+                http.account().id(), http.account().name(), text), "");
+    }
+
     private interface Action {
         String run(TicketManager tickets, Ticket ticket);
     }
@@ -343,6 +389,22 @@ public final class PanelRoutes {
         s.put("lastActivity", t.lastActivity().toEpochMilli());
         s.put("count", t.messages().size());
         s.put("source", t.source() == null ? null : t.source().toLowerCase(Locale.ROOT));
+        at.marcelr.mradmin.ticket.WebRequest request = t.request();
+        if (request != null) {
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("kind", request.kind());
+            r.put("email", request.email() == null ? "" : request.email());
+            if (request.unban()) {
+                r.put("stage", request.stage());
+                r.put("decision", request.decision());
+                r.put("banId", request.banId());
+                r.put("banReason", String.valueOf(request.banReason()));
+                r.put("banOperator", String.valueOf(request.banOperator()));
+                r.put("banStart", request.banStart());
+                r.put("banEnd", request.banEnd());
+            }
+            s.put("request", r);
+        }
         Ticket.Message last = t.lastMessage();
         if (last != null) {
             s.put("last", Map.of("name", last.authorName(), "staff", last.staff(),

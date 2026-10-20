@@ -555,6 +555,13 @@ web:
   legal:
     imprint-url: ""
     privacy-url: ""
+  # Push-Benachrichtigungen (Konto -> Benachrichtigungen).
+  push:
+    # Kontakt, den MRadmin bei jeder Push-Nachricht an die Push-Dienste (Google, Mozilla, Apple) mitschickt:
+    # "mailto:du@deinserver.de" oder "https://deinserver.de". Leer = public-url (wenn sie mit https:// beginnt).
+    # Apple (iPhone, iPad, Safari) lehnt Push-Nachrichten ohne gültigen Kontakt ab - also ohne https-public-url und
+    # ohne contact, oder mit localhost / .local. Dann kommt auf Apple-Geräten nichts an.
+    contact: ""
   privacy:
     # Einträge im Protokoll der Weboberfläche (mit IP-Adressen) nach dieser Zeit automatisch löschen.
     audit-retention: "90d"
@@ -578,3 +585,50 @@ web:
     # Links und IP-Adressen in der Ausgabe ausblenden (z.B. Einrichtungslinks, IPs beim Join).
     hide-links: true
     hide-ips: true
+  # Öffentliche Formulare der Weboberfläche - ohne Anmeldung erreichbar, landen als Tickets bei euch.
+  requests:
+    # Entbannungsanträge unter <public-url>/entbannung (braucht LibertyBans). Wer gebannt ist, sieht beim Joinen in
+    # der Ban-Meldung einen persönlichen Code - nur damit lässt sich ein Antrag stellen und der Bangrund ansehen.
+    # Pro Ban gibt es einen Antrag; lehnt ihr ab, einmal Einspruch. Danach ist die Entscheidung endgültig.
+    unban:
+      enabled: true
+      # Adresse und Code an die Ban-Meldung von LibertyBans anhängen (Text: "unban-kick" in der Sprachdatei).
+      kick-message: true
+    # Kontaktformular unter <public-url>/kontakt, verlinkt unter dem Impressum. Diese Anfragen gibt es nur im Web,
+    # ingame tauchen sie nie auf. Antworten gehen per Mail (siehe "mail" unten).
+    contact:
+      enabled: true
+    # Antworten des Teams und Entscheidungen auch per Mail schicken (wenn eine Adresse angegeben ist und "mail"
+    # eingerichtet ist). Den Statuslink bekommt man immer direkt nach dem Absenden angezeigt.
+    notify-by-mail: true
+    # Länge der Nachricht (Rechtfertigung, Einspruch, Kontaktanfrage).
+    min-text-length: 20
+    max-text-length: 3000
+    # Spamschutz, ganz ohne externe Dienste: ein unsichtbares Lockfeld, eine Mindest-Ausfüllzeit, eine kleine
+    # Rechenaufgabe, die der Browser im Hintergrund löst, und diese Grenzen.
+    spam:
+      # Höchstens so viele Anträge/Anfragen pro IP-Adresse und Stunde.
+      per-ip-per-hour: 5
+      # Sind so viele Kontaktanfragen offen, nimmt das Formular keine neuen an, bis ihr welche geschlossen habt.
+      max-open-contact: 50
+      # Schwierigkeit der Rechenaufgabe (0 = aus, 16 = etwa eine Sekunde am Handy, jede +1 verdoppelt die Zeit).
+      proof-of-work: 16
+
+# Mailversand (SMTP) für Antworten auf Entbannungsanträge und Kontaktanfragen. Ohne Mailversand funktioniert alles
+# trotzdem: Antragsteller sehen Antworten über ihren Statuslink, und bei Kontaktanfragen öffnet ein Knopf im Ticket
+# euer eigenes Mailprogramm. Testen: /mradmin mail test <adresse>
+mail:
+  enabled: false
+  host: ""
+  # ssl (meist Port 465), starttls (meist 587) oder none (nur für einen Mailserver auf demselben Rechner).
+  security: "starttls"
+  port: 587
+  username: ""
+  # Geheim halten. Bei vielen Anbietern (Gmail, Outlook ...) braucht es ein eigenes App-Passwort.
+  password: ""
+  # Absender, z.B. "noreply@deinserver.de" - muss euer Mailserver erlauben.
+  from: ""
+  from-name: "MRadmin"
+  # Wohin Antworten auf die Mails gehen sollen (leer = an den Absender). Achtung: was dort ankommt, landet NICHT im
+  # Ticket - die Mails weisen darauf hin, über den Statuslink zu antworten.
+  reply-to: ""

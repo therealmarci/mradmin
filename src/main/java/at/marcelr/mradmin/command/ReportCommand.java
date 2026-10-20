@@ -58,7 +58,7 @@ public final class ReportCommand implements TabExecutor {
     private void view(Player player, String id) {
         Ticket ticket;
         try {
-            ticket = plugin.tickets().get(Integer.parseInt(id));
+            ticket = plugin.tickets().getInGame(Integer.parseInt(id));
         } catch (NumberFormatException e) {
             ticket = null;
         }

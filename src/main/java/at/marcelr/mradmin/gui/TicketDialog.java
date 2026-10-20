@@ -309,7 +309,9 @@ public final class TicketDialog {
                 again.run();
             })));
         }
-        if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_TELEPORT) && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT)) {
+        // Requests from the web forms have no place in the world.
+        if (ticket.request() == null && viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_TELEPORT)
+                && plugin.feature(at.marcelr.mradmin.Feature.TELEPORT)) {
             buttons.add(ActionButton.create(messages.get("ticket-view-teleport"), messages.get("ticket-view-teleport-hover"), 150,
                     action(plugin, viewer, response -> tickets.teleport(viewer, ticket))));
         }

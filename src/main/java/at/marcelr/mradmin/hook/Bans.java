@@ -37,6 +37,15 @@ public interface Bans {
     /** All punishments of the player (newest first, at most {@code limit}). */
     List<Entry> history(UUID player, int limit) throws Exception;
 
+    /** A ban by its id while it is in force - null when it was lifted, has expired or is no ban. */
+    Entry activeBan(long id) throws Exception;
+
+    /** The ban that keeps this player out right now (also IP bans), or null. */
+    Entry applicableBan(UUID player, java.net.InetAddress address) throws Exception;
+
+    /** The UUID LibertyBans knows for a player name (players who were on the server), or null. */
+    UUID lookup(String name) throws Exception;
+
     /** Players with an active ban or mute: uuid -> "ban" / "mute" (for the marks in the player list). */
     Map<UUID, Set<String>> activeBansAndMutes() throws Exception;
 

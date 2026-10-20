@@ -34,7 +34,7 @@ import java.util.logging.Level;
 final class SqlStorage implements Storage {
 
     /** Version of the tables; raise it and add the changes in {@link #migrateSchema} when they change. */
-    private static final int SCHEMA = 1;
+    private static final int SCHEMA = 2;
     /** Documents that were YAML files before. */
     private static final List<String> STATE_FILES = List.of("maintenance", "frozen", "discord-announce");
     private static final String NEXT_ID = "ticket-next-id";
@@ -144,7 +144,7 @@ final class SqlStorage implements Storage {
                     + "subject VARCHAR(255) NOT NULL, created BIGINT NOT NULL, world VARCHAR(128) NOT NULL, "
                     + "x DOUBLE NOT NULL, y DOUBLE NOT NULL, z DOUBLE NOT NULL, "
                     + "claimed_by VARCHAR(36), claimed_by_name VARCHAR(64), closed_by VARCHAR(64), closed_at BIGINT, "
-                    + "creator_unread INT NOT NULL, staff_unread INT NOT NULL, source VARCHAR(64), source_id VARCHAR(64))"
+                    + "creator_unread INT NOT NULL, staff_unread INT NOT NULL, source VARCHAR(64), source_id VARCHAR(64), extra TEXT)"
                     + suffix);
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "ticket_messages ("
                     + "ticket_id INT NOT NULL, seq INT NOT NULL, author VARCHAR(36) NOT NULL, "
@@ -177,7 +177,13 @@ final class SqlStorage implements Storage {
         if (version == SCHEMA) {
             return;
         }
-        // Future changes: if (version < 2) { ALTER TABLE ... }
+        // A fresh database (version 0) already has every column from createTables.
+        if (version == 1) {
+            // 2: data of tickets from the public web forms (unban requests, contact)
+            try (Statement st = c.createStatement()) {
+                st.execute("ALTER TABLE " + p + "tickets ADD COLUMN extra TEXT");
+            }
+        }
         try (Statement st = c.createStatement()) {
             st.execute("DELETE FROM " + p + "schema_version");
             st.execute("INSERT INTO " + p + "schema_version (version) VALUES (" + SCHEMA + ")");
@@ -292,7 +298,7 @@ final class SqlStorage implements Storage {
                             rs.getDouble("x"), rs.getDouble("y"), rs.getDouble("z"),
                             uuid(rs.getString("claimed_by")), rs.getString("claimed_by_name"), rs.getString("closed_by"),
                             rs.wasNull() ? 0 : closedAt, rs.getInt("creator_unread") != 0, rs.getInt("staff_unread") != 0,
-                            rs.getString("source"), rs.getString("source_id"));
+                            rs.getString("source"), rs.getString("source_id"), rs.getString("extra"));
                     tickets.put(id, new LoadedTicket(row, List.copyOf(messages.getOrDefault(id, List.of()))));
                     next = Math.max(next, id + 1);
                 }
@@ -327,8 +333,8 @@ final class SqlStorage implements Storage {
     private void writeTicket(Connection c, TicketRow t) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("REPLACE INTO " + p + "tickets (id, server, creator, creator_name, "
                 + "target, target_name, category, subject, created, world, x, y, z, claimed_by, claimed_by_name, closed_by, "
-                + "closed_at, creator_unread, staff_unread, source, source_id) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                + "closed_at, creator_unread, staff_unread, source, source_id, extra) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             ps.setInt(1, t.id());
             ps.setString(2, server);
             ps.setString(3, t.creator().toString());
@@ -354,6 +360,7 @@ final class SqlStorage implements Storage {
             ps.setInt(19, t.staffUnread() ? 1 : 0);
             ps.setString(20, t.source());
             ps.setString(21, t.sourceId());
+            ps.setString(22, t.extra());
             ps.executeUpdate();
         }
     }

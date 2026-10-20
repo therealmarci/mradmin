@@ -64,6 +64,16 @@
     if (await action('close', { text })) text = '';
   }
 
+  // Unban requests: accept lifts the ban in LibertyBans; both close the ticket, the text goes to the player first.
+  async function decide(accept) {
+    if (!confirm(t(accept ? 'request.acceptConfirm' : 'request.rejectConfirm', { name: ticket.creator }))) return;
+    if (await action('decide', { decision: accept ? 'accept' : 'reject', text })) text = '';
+  }
+
+  const request = $derived(ticket?.request ?? null);
+  const mailto = $derived(request?.email
+    ? `mailto:${request.email}?subject=${encodeURIComponent('Re: ' + (ticket.summary || ''))}` : null);
+
   function keys(event) {
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
@@ -105,9 +115,19 @@
       <div class="facts">
         <div class="fact">
           <div class="flabel">{t('ticket.by')}</div>
-          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
-            <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
+          {#if request?.kind === 'contact'}
+            <div class="fvalue">{ticket.creator}</div>
+          {:else}
+            <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
+              <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
+          {/if}
         </div>
+        {#if request?.email}
+          <div class="fact">
+            <div class="flabel">{t('request.email')}</div>
+            <a class="fvalue" href={mailto}>{request.email}</a>
+          </div>
+        {/if}
         {#if ticket.report}
           <div class="fact">
             <div class="flabel">{t('ticket.reported')}</div>
@@ -119,11 +139,13 @@
           <div class="flabel">{t('ticket.created')}</div>
           <div class="fvalue">{dateTime(ticket.created)}</div>
         </div>
-        <div class="fact">
-          <div class="flabel">{t('ticket.location')}</div>
-          <!-- Wrapped only between the values - never inside one. -->
-          <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
-        </div>
+        {#if !request}
+          <div class="fact">
+            <div class="flabel">{t('ticket.location')}</div>
+            <!-- Wrapped only between the values - never inside one. -->
+            <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
+          </div>
+        {/if}
         <div class="fact">
           <div class="flabel">{t('ticket.claimedBy')}</div>
           <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
@@ -131,6 +153,24 @@
       </div>
       {#if ticket.source === 'mrchunks'}
         <div class="notice small">{t('ticket.lockHint')}</div>
+      {/if}
+      {#if request?.kind === 'unban'}
+        <div class="ban">
+          <div class="ban-top">
+            <span class="muted small">{t('request.ban', { id: request.banId })}</span>
+            <span class="tag">{request.stage === 'appeal' ? t('request.stageAppeal') : t('request.stageRequest')}</span>
+            {#if request.decision}<span class="tag {request.decision}">{t('request.decision.' + request.decision)}</span>{/if}
+          </div>
+          <div class="reason">{request.banReason}</div>
+          <div class="muted small">{t('request.banFacts', { by: request.banOperator, since: dateTime(request.banStart),
+            until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
+        </div>
+        <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
+      {:else if request?.kind === 'contact'}
+        <div class="notice small">
+          {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
+          {#if !me.may.mail && mailto}<a href={mailto}>{t('request.writeMail')}</a>{/if}
+        </div>
       {/if}
     </section>
 
@@ -166,7 +206,12 @@
               {mineClaimed ? t('ticket.release') : t('ticket.claim')}
             </button>
           {/if}
-          {#if me.may.ticketsClose}
+          {#if me.may.ticketsClose && request?.kind === 'unban'}
+            {#if me.may.unban}
+              <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
+            {/if}
+            <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
+          {:else if me.may.ticketsClose}
             <button class="danger" onclick={close} disabled={busy}>
               {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
             </button>
@@ -346,6 +391,53 @@
 
   .closed-note {
     text-align: center;
+  }
+
+  .ban {
+    background: var(--surface-2);
+    border-left: 4px solid var(--bad);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: grid;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .ban-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .reason {
+    font-weight: 600;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+  }
+
+  .tag.accepted {
+    background: color-mix(in srgb, var(--good) 15%, transparent);
+    color: var(--good);
+  }
+
+  .tag.rejected {
+    background: color-mix(in srgb, var(--bad) 12%, transparent);
+    color: var(--bad);
+  }
+
+  button.good {
+    background: var(--good);
+    color: #fff;
   }
 
   .composer textarea {

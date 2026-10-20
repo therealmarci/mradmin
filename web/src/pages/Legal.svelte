@@ -2,10 +2,15 @@
   import { api } from '../lib/api.js';
   import { t } from '../lib/i18n.js';
   import { markdown } from '../lib/markdown.js';
+  import { go } from '../lib/router.svelte.js';
 
   let { page } = $props();
 
   let html = $state(null);
+  let contact = $state(false);
+
+  // Below the imprint: the contact form (if switched on).
+  api('GET', '/legal').then((l) => (contact = l.contact)).catch(() => {});
 
   $effect(() => {
     html = null;
@@ -25,6 +30,12 @@
       <p class="muted">{t('legal.empty')}</p>
     {:else}
       {@html html}
+    {/if}
+    {#if page === 'imprint' && contact}
+      <div class="contact">
+        <p class="muted small">{t('pub.contactLead')}</p>
+        <button onclick={() => go('/kontakt')}>{t('pub.contactButton')}</button>
+      </div>
     {/if}
   </article>
 </div>
@@ -61,5 +72,20 @@
 
   .legal :global(ul) {
     padding-left: 1.3em;
+  }
+
+  .contact {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .contact p {
+    margin: 0;
   }
 </style>

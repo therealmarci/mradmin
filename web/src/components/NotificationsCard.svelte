@@ -7,7 +7,8 @@
   let { me } = $props();
 
   const supported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  const ios = /iPhone|iPad/.test(navigator.userAgent);
+  // iPadOS reports itself as a Mac - only the touch screen gives it away.
+  const ios = /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const installed = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 
   let data = $state(null);
@@ -94,7 +95,15 @@
     error = '';
     try {
       const r = await api('POST', '/push/test');
-      message = t('push.testSent', { n: r.devices });
+      const failed = r.failed ?? [];
+      message = failed.length < r.devices ? t('push.testSent', { n: r.devices - failed.length }) : '';
+      // The push service's answer, e.g. Apple's "BadJwtToken" - the only way to see why nothing arrives.
+      if (failed.length) {
+        error = failed
+          .map((f) => t('push.testFailed', { device: f.device, reason: (f.status ? 'HTTP ' + f.status + ' ' : '') + (f.reason || '?') })
+            + (String(f.reason).includes('BadJwtToken') ? ' ' + t('push.badJwt') : ''))
+          .join('\n');
+      }
     } catch (e) {
       error = errorText(e);
     }

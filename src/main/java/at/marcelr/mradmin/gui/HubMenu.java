@@ -162,8 +162,8 @@ public final class HubMenu extends Menu {
         }
 
         if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_VIEW) && plugin.feature(Feature.TICKETS)) {
-            int open = plugin.tickets().openCount();
-            int unread = plugin.tickets().staffUnreadCount();
+            int open = plugin.tickets().openCountInGame();
+            int unread = plugin.tickets().staffUnreadCountInGame();
             // Red while players wait for an answer, yellow while tickets are open at all.
             State state = unread > 0 ? State.BAD : open > 0 ? State.WARN : State.GOOD;
             tiles.add(new Tile(Items.of(open > 0 ? Material.WRITABLE_BOOK : Material.BOOK)

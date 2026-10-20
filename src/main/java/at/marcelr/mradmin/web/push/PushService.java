@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -55,6 +58,8 @@ public final class PushService {
     private final Map<UUID, List<Subscription>> subscriptions = new HashMap<>();
     private final Map<UUID, Map<String, Boolean>> prefs = new HashMap<>();
     private WebPush push;
+    private final Map<String, Long> lastFailureLog = new HashMap<>();
+    private volatile String warnedContact;
 
     public PushService(MRAdmin plugin, WebAuth auth, WebPermissions permissions) {
         this.plugin = plugin;
@@ -78,8 +83,8 @@ public final class PushService {
             } else {
                 pair = WebPush.load(priv, pub);
             }
-            String url = plugin.settings().web().publicUrl();
-            push = new WebPush(pair, url.startsWith("https://") ? url : "mailto:mradmin@localhost");
+            push = new WebPush(pair, this::contact);
+            contact();
         } catch (GeneralSecurityException e) {
             plugin.getLogger().warning("Push notifications are off - no key: " + e.getMessage());
             push = null;
@@ -116,6 +121,25 @@ public final class PushService {
             }
         }
         save(y);
+    }
+
+    /** web.push.contact, else the public https address; warns when Apple devices would refuse it. */
+    private String contact() {
+        var web = plugin.settings().web();
+        String contact = web.pushContact().isEmpty() && web.publicUrl().startsWith("https://")
+                ? web.publicUrl() : web.pushContact();
+        if (WebPush.appleContact(contact)) {
+            return contact;
+        }
+        // Asked at every push: warn once per value (again after a reload changed it).
+        if (web.enabled() && !contact.equals(warnedContact)) {
+            warnedContact = contact;
+            plugin.getLogger().warning("Push notifications will not reach iPhones, iPads and Safari: set web.push.contact"
+                    + " to \"mailto:you@yourdomain.com\" or a public https:// address (now: "
+                    + (contact.isEmpty() ? "nothing" : "\"" + contact + "\"") + ").");
+        }
+        // Google and Mozilla take this, Apple does not.
+        return contact.startsWith("mailto:") || contact.startsWith("https://") ? contact : "mailto:mradmin@localhost";
     }
 
     private synchronized void save() {
@@ -256,27 +280,67 @@ public final class PushService {
         });
     }
 
-    /** A test notification to the member's own devices. @return how many devices */
-    public int test(UUID account, String title, String body) {
-        List<Subscription> list = devices(account);
-        for (Subscription s : list) {
-            deliver(account, s, title, body, "/account", "test", true);
-        }
-        return list.size();
+    /** What a test push to one device gave: the device name and the push service's answer. */
+    public record TestResult(String device, WebPush.Result result) {
     }
 
-    private void deliver(UUID account, Subscription s, String title, String body, String url, String tag, boolean urgent) {
+    /** A test notification to the member's own devices; waits for the push services (call off the main thread). */
+    public List<TestResult> test(UUID account, String title, String body) {
+        List<Subscription> list = devices(account);
+        List<CompletableFuture<WebPush.Result>> sent = new ArrayList<>();
+        for (Subscription s : list) {
+            sent.add(deliver(account, s, title, body, "/account", "test", true));
+        }
+        List<TestResult> results = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            WebPush.Result result;
+            try {
+                result = sent.get(i).get(20, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                result = new WebPush.Result(WebPush.Outcome.FAILED, 0, "timeout");
+            }
+            results.add(new TestResult(list.get(i).device(), result));
+        }
+        return results;
+    }
+
+    private CompletableFuture<WebPush.Result> deliver(UUID account, Subscription s, String title, String body,
+                                                      String url, String tag, boolean urgent) {
         JsonObject payload = new JsonObject();
         payload.addProperty("title", title);
         payload.addProperty("body", body.length() > 300 ? body.substring(0, 300) + "…" : body);
         payload.addProperty("url", url);
         payload.addProperty("tag", tag);
-        push.send(s.endpoint(), s.p256dh(), s.auth(), payload.toString(), TTL_SECONDS, urgent).thenAccept(outcome -> {
-            if (outcome == WebPush.Outcome.GONE) {
+        return push.send(s.endpoint(), s.p256dh(), s.auth(), payload.toString(), TTL_SECONDS, urgent).thenApply(result -> {
+            if (result.outcome() == WebPush.Outcome.GONE) {
                 // The browser revoked the permission or the subscription expired.
                 unsubscribe(account, s.endpoint());
+            } else if (result.outcome() == WebPush.Outcome.FAILED) {
+                logFailure(s, result);
             }
+            return result;
         });
+    }
+
+    /** Push services that refuse a push say why - logged at most every 10 minutes per service. */
+    private void logFailure(Subscription s, WebPush.Result result) {
+        String host;
+        try {
+            host = URI.create(s.endpoint()).getHost();
+        } catch (IllegalArgumentException e) {
+            host = "?";
+        }
+        long now = System.currentTimeMillis();
+        synchronized (lastFailureLog) {
+            if (now - lastFailureLog.getOrDefault(host, 0L) < 10 * 60_000L) {
+                return;
+            }
+            lastFailureLog.put(host, now);
+        }
+        plugin.getLogger().warning("Push to " + s.device() + " refused by " + host + ": "
+                + (result.status() == 0 ? "" : "HTTP " + result.status() + " ")
+                + (result.reason().isEmpty() ? "(no reason)" : result.reason())
+                + (result.reason().contains("BadJwtToken") ? " - set web.push.contact (see config.yml)." : ""));
     }
 
     /** When a web account is deleted. */

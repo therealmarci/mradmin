@@ -13,6 +13,7 @@ import java.security.spec.ECPrivateKeySpec;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WebPushTest {
@@ -44,7 +45,7 @@ class WebPushTest {
     @Test
     void signsAValidVapidToken() throws Exception {
         KeyPair vapid = WebPush.newKeyPair();
-        WebPush push = new WebPush(vapid, "mailto:test@example.com");
+        WebPush push = new WebPush(vapid, () -> "mailto:test@example.com");
         String jwt = push.jwt("https://push.example.net");
         String[] parts = jwt.split("\\.");
         assertEquals(3, parts.length);
@@ -61,5 +62,21 @@ class WebPushTest {
         KeyPair pair = WebPush.newKeyPair();
         KeyPair loaded = WebPush.load(WebPush.privateText(pair), WebPush.publicText(pair));
         assertEquals(WebPush.publicText(pair), WebPush.publicText(loaded));
+    }
+
+    @Test
+    void appleContact() {
+        // Accepted by Apple
+        assertTrue(WebPush.appleContact("mailto:admin@example.com"));
+        assertTrue(WebPush.appleContact("https://admin.example.com"));
+        assertTrue(WebPush.appleContact("https://admin.example.com:8443/path"));
+        // Refused by Apple (403 BadJwtToken)
+        assertFalse(WebPush.appleContact("mailto:mradmin@localhost"));
+        assertFalse(WebPush.appleContact("mailto:me@server.local"));
+        assertFalse(WebPush.appleContact("mailto: <admin@example.com>"));
+        assertFalse(WebPush.appleContact("https://localhost:8125"));
+        assertFalse(WebPush.appleContact("http://admin.example.com"));
+        assertFalse(WebPush.appleContact("admin@example.com"));
+        assertFalse(WebPush.appleContact(""));
     }
 }

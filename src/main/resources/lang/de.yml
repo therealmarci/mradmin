@@ -450,6 +450,9 @@ ticket-categories:
   other: "Frage / Sonstiges"
   # Wird automatisch geöffnet, wenn MRchunks einen Chunkloader wegen Lag sperrt (nicht zum Erstellen wählbar).
   chunkloader-lock: "Chunkloader-Sperre"
+  # Aus den öffentlichen Formularen der Weboberfläche (nicht zum Erstellen wählbar). Kontaktanfragen gibt es nur im Web.
+  unban: "Entbannungsantrag"
+  contact: "Kontaktanfrage"
 ticket-staff-anonymous: "Team"
 ticket-status-open: "<green>offen"
 ticket-status-closed: "<gray>geschlossen"
@@ -712,3 +715,98 @@ update-reason-disabled: "Update-Check ist deaktiviert"
 update-reason-not-found: "Projekt nicht gefunden (HTTP 404) - noch nicht veröffentlicht?"
 update-reason-no-release: "Keine veröffentlichte Version gefunden"
 update-reason-no-repository: "Kein GitHub-Repository hinterlegt"
+
+# --- Öffentliche Formulare: Entbannung & Kontakt -----------------------------
+# Wird an die Ban-Meldung von LibertyBans angehängt (web.requests.unban.kick-message). <url>, <code>
+unban-kick: "<newline><newline><gray>Entbannung beantragen: <white><url></white><newline><gray>Dein persönlicher Code: <yellow><bold><code></bold></yellow>"
+request-unban-subject: "Entbannung: <name>"
+# Hinweis von MRadmin im Ticket, direkt nach der Rechtfertigung. <id> <reason> <operator> <start> <end>
+request-ban-note: "Ban #<id>: <reason>\nVon: <operator> · Seit: <start> · Bis: <end>"
+request-ban-permanent: "permanent"
+request-ban-console: "Konsole"
+request-appeal-note: "Der Antrag wurde abgelehnt - der Spieler hat Einspruch eingelegt (einmal möglich, danach ist die Entscheidung endgültig)."
+request-accepted-note: "Entbannt von <admin>."
+request-rejected-note: "Abgelehnt von <admin>."
+push-ticket-contact-title: "Kontaktanfrage #<id>"
+push-ticket-contact-body: "<player>: <summary>"
+mail-test-usage: "<prefix><gray>Verwendung: <white>/mradmin mail test <adresse>"
+mail-test-off: "<prefix><red>Mailversand ist aus oder nicht vollständig eingerichtet (mail.enabled, host, from in der config.yml)."
+mail-test-sending: "<prefix><gray>Sende Testmail an <white><address></white> ..."
+mail-test-sent: "<prefix><green>Testmail verschickt - schau ins Postfach (auch in den Spam-Ordner)."
+mail-test-failed: "<prefix><red>Testmail fehlgeschlagen: <white><error>"
+
+# Mails an Antragsteller (reiner Text, kein MiniMessage). Platzhalter: <name> <id> <subject> <answer> <link> <server> <time>
+mail-server-name: "Minecraft-Server"
+mail-no-text: "(ohne weitere Nachricht)"
+mail-test-subject: "MRadmin: Testmail"
+mail-test-body: |-
+  Hallo,
+
+  das ist eine Testmail von MRadmin. Der Mailversand funktioniert.
+mail-unban-received-subject: "Dein Entbannungsantrag (#<id>)"
+mail-unban-received-body: |-
+  Hallo <name>,
+
+  wir haben deinen Entbannungsantrag erhalten und melden uns, sobald ihn jemand aus dem Team bearbeitet hat.
+
+  Stand und Antworten siehst du hier - dort kannst du auch antworten:
+  <link>
+
+  Bitte antworte nicht auf diese Mail, sie wird nicht gelesen.
+mail-contact-received-subject: "Deine Anfrage: <subject>"
+mail-contact-received-body: |-
+  Hallo <name>,
+
+  danke für deine Nachricht - wir melden uns so bald wie möglich.
+
+  Stand und Antworten siehst du hier - dort kannst du auch antworten:
+  <link>
+
+  Bitte antworte nicht auf diese Mail, sie wird nicht gelesen.
+mail-request-answer-subject: "Neue Antwort zu deiner Anfrage (#<id>)"
+mail-request-answer-body: |-
+  Hallo <name>,
+
+  das Team hat geantwortet:
+
+  <answer>
+
+  Antworten kannst du hier:
+  <link>
+mail-unban-accepted-subject: "Dein Entbannungsantrag wurde angenommen"
+mail-unban-accepted-body: |-
+  Hallo <name>,
+
+  gute Nachrichten: dein Ban wurde aufgehoben, du kannst wieder auf den Server.
+
+  <answer>
+
+  Der ganze Verlauf: <link>
+mail-unban-rejected-subject: "Dein Entbannungsantrag wurde abgelehnt"
+mail-unban-rejected-body: |-
+  Hallo <name>,
+
+  dein Entbannungsantrag wurde abgelehnt.
+
+  <answer>
+
+  Wenn du nicht einverstanden bist, kannst du einmal Einspruch einlegen:
+  <link>
+mail-unban-rejected-final-subject: "Dein Einspruch wurde abgelehnt"
+mail-unban-rejected-final-body: |-
+  Hallo <name>,
+
+  dein Einspruch wurde abgelehnt. Die Entscheidung ist endgültig.
+
+  <answer>
+
+  Der ganze Verlauf: <link>
+mail-contact-closed-subject: "Deine Anfrage wurde abgeschlossen (#<id>)"
+mail-contact-closed-body: |-
+  Hallo <name>,
+
+  deine Anfrage "<subject>" wurde abgeschlossen.
+
+  <answer>
+
+  Der ganze Verlauf: <link>

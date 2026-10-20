@@ -194,6 +194,9 @@ final class YamlStorage implements Storage {
                 y.set(p + "source", t.source());
                 y.set(p + "source-id", t.sourceId());
             }
+            if (t.extra() != null) {
+                y.set(p + "extra", t.extra());
+            }
             List<Map<String, Object>> list = new ArrayList<>();
             for (MessageRow m : messages.getOrDefault(t.id(), List.of())) {
                 Map<String, Object> map = new LinkedHashMap<>();
@@ -248,7 +251,8 @@ final class YamlStorage implements Storage {
                 closedBy.isEmpty() ? null : closedBy,
                 closedBy.isEmpty() ? 0 : closedAt.isEmpty() ? System.currentTimeMillis() : Instant.parse(closedAt).toEpochMilli(),
                 t.getBoolean("creator-unread", false), t.getBoolean("staff-unread", false),
-                source.isEmpty() ? null : source, source.isEmpty() ? null : t.getString("source-id", ""));
+                source.isEmpty() ? null : source, source.isEmpty() ? null : t.getString("source-id", ""),
+                t.getString("extra"));
         List<MessageRow> list = new ArrayList<>();
         for (Map<?, ?> m : t.getMapList("messages")) {
             list.add(new MessageRow(UUID.fromString(String.valueOf(m.get("author"))), String.valueOf(m.get("name")),
