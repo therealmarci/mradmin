@@ -102,6 +102,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
+        at.marcelr.mradmin.web.PushRoutes.register(web);
+        at.marcelr.mradmin.web.DiscordRoutes.register(web);
+        web.push().load();
         health = new HealthMonitor(this);
 
         freeze = new FreezeManager(this);
@@ -359,6 +362,19 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public Storage storage() {
         return storage;
+    }
+
+    /**
+     * A push notification to the team members who want this kind (texts "push-&lt;text&gt;-title/-body" from the
+     * language file, placeholders as name/value pairs). Does nothing while the web interface is off.
+     */
+    public void push(String kind, String text, String url, java.util.function.Predicate<java.util.UUID> who,
+                     Object... placeholders) {
+        if (web == null) {
+            return;
+        }
+        web.push().notify(kind, messages().plain("push-" + text + "-title", placeholders),
+                messages().plain("push-" + text + "-body", placeholders), url, who);
     }
 
     public WebServer web() {

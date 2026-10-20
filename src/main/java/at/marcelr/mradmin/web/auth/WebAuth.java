@@ -51,6 +51,9 @@ public final class WebAuth {
         /** Random, fixed ID for passkeys (base64url) - never the UUID, so passkeys do not reveal the player. */
         String userHandle;
         List<Passkey> passkeys = new ArrayList<>();
+        /** The linked Discord account (ID and the name it had when linked), or null. */
+        String discordId;
+        String discordName;
 
         Account(UUID id, String name) {
             this.id = id;
@@ -187,6 +190,8 @@ public final class WebAuth {
             account.lastTotpStep = step;
             // A reset (lost phone, forgotten password) also removes the passkeys - a lost device must not sign in.
             account.passkeys = new ArrayList<>();
+            account.discordId = null;
+            account.discordName = null;
             if (account.created == 0) {
                 account.created = System.currentTimeMillis();
             }
@@ -326,7 +331,7 @@ public final class WebAuth {
         if (account == null || account.passkeys.stream().noneMatch(p -> p.id().equals(credentialId))) {
             return "not-found";
         }
-        if (account.totp == null && account.passkeys.size() <= 1) {
+        if (account.totp == null && account.passkeys.size() <= 1 && account.discordId == null) {
             return "last-passkey";
         }
         account.passkeys.removeIf(p -> p.id().equals(credentialId));
@@ -345,6 +350,68 @@ public final class WebAuth {
         }
     }
 
+    // ----------------------------------------------------------------- Discord
+
+    /** The linked Discord account: [id, name], or null. */
+    public synchronized String[] discord(UUID id) {
+        Account account = accounts.get(id);
+        return account == null || account.discordId == null ? null : new String[] {account.discordId, account.discordName};
+    }
+
+    /** Links a Discord account (one Discord account belongs to one web account). @return null or "discord-taken" */
+    public synchronized String linkDiscord(UUID id, String discordId, String discordName) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            return "invalid";
+        }
+        for (Account other : accounts.values()) {
+            if (other != account && discordId.equals(other.discordId)) {
+                return "discord-taken";
+            }
+        }
+        account.discordId = discordId;
+        account.discordName = discordName;
+        saveAccounts();
+        return null;
+    }
+
+    /** @return null or "last-method" (without 2FA and passkeys Discord is the only way in) */
+    public synchronized String unlinkDiscord(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null || account.discordId == null) {
+            return "not-found";
+        }
+        if (account.totp == null && account.passkeys.isEmpty()) {
+            return "last-method";
+        }
+        account.discordId = null;
+        account.discordName = null;
+        saveAccounts();
+        return null;
+    }
+
+    public synchronized Account byDiscord(String discordId) {
+        return accounts.values().stream().filter(a -> discordId.equals(a.discordId)).findFirst().orElse(null);
+    }
+
+    /** Sign-in with the linked Discord account (checked by Discord itself) - counts like a passkey. */
+    public synchronized Result discordLogin(UUID id, String discordName, String ip, String agent) {
+        Account account = accounts.get(id);
+        if (account == null || account.discordId == null) {
+            return Result.fail("discord-unknown");
+        }
+        if (account.lockedUntil > System.currentTimeMillis()) {
+            return Result.fail("locked");
+        }
+        account.discordName = discordName;
+        account.failed = 0;
+        account.lastLogin = System.currentTimeMillis();
+        Result result = startSession(account, ip, agent);
+        saveAccounts();
+        saveSessions();
+        return result;
+    }
+
     // ---------------------------------------------------------------- 2FA on/off
 
     /** account -> 2FA secret being set up again (until the first code confirms it) */
@@ -361,7 +428,7 @@ public final class WebAuth {
      */
     public synchronized String disableTotp(UUID id) {
         Account account = accounts.get(id);
-        if (account == null || account.passkeys.isEmpty()) {
+        if (account == null || account.passkeys.isEmpty() && account.discordId == null) {
             return "need-passkey";
         }
         account.totp = null;
@@ -596,6 +663,8 @@ public final class WebAuth {
                     account.lockedUntil = s.getLong("locked-until");
                     account.lastTotpStep = s.getLong("last-code");
                     account.userHandle = s.getString("user-handle");
+                    account.discordId = s.getString("discord-id");
+                    account.discordName = s.getString("discord-name");
                     ConfigurationSection keys = s.getConfigurationSection("passkeys");
                     if (keys != null) {
                         for (String k : keys.getKeys(false)) {
@@ -646,6 +715,8 @@ public final class WebAuth {
             y.set(p + "locked-until", a.lockedUntil);
             y.set(p + "last-code", a.lastTotpStep);
             y.set(p + "user-handle", a.userHandle);
+            y.set(p + "discord-id", a.discordId);
+            y.set(p + "discord-name", a.discordName);
             for (int i = 0; i < a.passkeys.size(); i++) {
                 Passkey k = a.passkeys.get(i);
                 String q = p + "passkeys." + i + ".";

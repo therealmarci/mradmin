@@ -240,6 +240,7 @@ public final class TicketManager {
         if (!type.equals("lock") || !(data.get("owner") instanceof UUID owner)) {
             return;
         }
+        plugin.push("chunks-locked", "lock", "/chunks/" + id, null, "name", name, "owner", string(data, "owner-name"));
         String details = string(data, "details");
         if (open != null) {
             note(open, source, messages().plain("ticket-lock-again") + "\n" + details, true);
@@ -359,6 +360,7 @@ public final class TicketManager {
         } else {
             notifyStaff(ticket, author, "ticket-notify-message", tag("id", ticket.id()), tag("player", author.getName()),
                     tag("text", TicketText.preview(clean, PREVIEW)), tag("open", openButton(ticket)));
+            pushMessage(ticket, author.getName(), clean, author.getUniqueId());
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", author.getName(),
                 "text", TicketText.preview(clean, 300), "summary", summary(ticket));
@@ -481,6 +483,7 @@ public final class TicketManager {
         } else {
             notifyStaff(ticket, null, "ticket-notify-message", tag("id", ticket.id()), tag("player", name),
                     tag("text", TicketText.preview(clean, PREVIEW)), tag("open", openButton(ticket)));
+            pushMessage(ticket, name, clean, ticket.creator());
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", name,
                 "text", TicketText.preview(clean, 300), "summary", summary(ticket));
@@ -613,6 +616,25 @@ public final class TicketManager {
                 sound(staff);
             }
         }
+        // Push to the team's devices - not for lock tickets, those come as "chunk loader locked".
+        if (ticket.source() == null) {
+            plugin.push("ticket-new", "ticket-new", "/tickets/" + ticket.id(), id -> !ticket.isCreator(id),
+                    "id", ticket.id(), "player", ticket.creatorName(), "summary", summary(ticket));
+        }
+    }
+
+    /**
+     * Push for a new message from the player: the one who claimed the ticket gets "assigned to me", everyone else
+     * (who wants it) "any ticket message". The author never gets their own message.
+     */
+    private void pushMessage(Ticket ticket, String author, String text, UUID except) {
+        String url = "/tickets/" + ticket.id();
+        Object[] values = {"id", ticket.id(), "player", author, "text", TicketText.preview(text, 200)};
+        UUID claimer = ticket.claimedBy();
+        if (claimer != null) {
+            plugin.push("ticket-mine", "ticket-message", url, id -> id.equals(claimer) && !id.equals(except), values);
+        }
+        plugin.push("ticket-message", "ticket-message", url, id -> !id.equals(claimer) && !id.equals(except), values);
     }
 
     /** To the member who claimed the ticket if they are online, otherwise to the whole team on duty. */

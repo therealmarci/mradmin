@@ -4,6 +4,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import { ago, dateTime } from '../lib/format.js';
   import * as passkeys from '../lib/passkeys.js';
+  import * as discord from '../lib/discord.js';
 
   let { me } = $props();
 
@@ -36,14 +37,29 @@
     return 'Passkey';
   }
 
+  // Without 2FA and without a passkey, Discord confirms. Back from there the form is open; the browser only creates a
+  // passkey after a real click, so the member clicks "Continue" once more (the confirmation counts for 2 minutes).
+  const viaDiscord = $derived(!me.totp && me.passkeys === 0 && !!me.discord);
+  let discordReady = $state(false);
+  if (discord.confirmed('passkey-add')) {
+    adding = true;
+    discordReady = true;
+    message = t('passkey.discordReady');
+  }
+
   async function add(event) {
     event.preventDefault();
+    if (viaDiscord && !discordReady) {
+      await discord.confirm('passkey-add');
+      return;
+    }
     busy = true;
     error = '';
     message = '';
     try {
-      // Confirmed with the 2FA code - without 2FA with an existing passkey.
-      const proof = me.totp ? { code: code.trim() } : await passkeys.proof(api);
+      // Confirmed with the 2FA code - without 2FA with an existing passkey, or with Discord.
+      const proof = me.totp ? { code: code.trim() } : discordReady ? discord.body : await passkeys.proof(api);
+      discordReady = false;
       const start = await api('POST', '/passkeys/start', proof);
       code = '';
       const credential = await passkeys.create(start.options);
@@ -92,6 +108,8 @@
             <label for="pk-code">{t('passkey.code')}</label>
             <input id="pk-code" class="mono" bind:value={code} inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
           </div>
+        {:else if viaDiscord}
+          <p class="muted small">{discordReady ? t('passkey.discordReady') : t('passkey.confirmWithDiscord')}</p>
         {:else}
           <p class="muted small">{t('passkey.confirmWithPasskey')}</p>
         {/if}

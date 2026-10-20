@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 14
+config-version: 15
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -531,6 +531,15 @@ web:
     passkeys: true
     # Passwort - immer zusammen mit einem Code aus der Authenticator-App.
     password: true
+    # Anmelden mit Discord: Discord-Anwendung anlegen (https://discord.com/developers/applications), unter OAuth2 die
+    # Weiterleitung "<public-url>/api/discord/callback" eintragen (ohne public-url: http://localhost:<port>/...),
+    # Client ID und Secret hier eintragen. Jeder verknüpft sein Discord im Web unter Konto -> Sicherheit (nur
+    # angemeldet möglich). Mit verknüpftem Discord lässt sich 2FA ausschalten - wie mit einem Passkey.
+    # Das Secret ist geheim: nicht weitergeben; falls es doch passiert, in Discord neu erzeugen.
+    discord:
+      enabled: false
+      client-id: ""
+      client-secret: ""
   # Nur OHNE LuckPerms: welche Rechte Web-Nutzer haben. Mit LuckPerms gelten einfach die normalen Permissions.
   # Operatoren dürfen alles; sonst Rolle -> Permissions ("*" = alles, "mradmin.*" = alles von MRadmin) und
   # Spieler (Name oder UUID) -> Rolle. Beispiel:

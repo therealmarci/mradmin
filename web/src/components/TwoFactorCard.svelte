@@ -5,6 +5,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import * as passkeys from '../lib/passkeys.js';
+  import * as discord from '../lib/discord.js';
 
   let { me } = $props();
 
@@ -18,13 +19,18 @@
   let qr = $state('');
   let newCodes = $state(null);
 
-  async function disable(event, withPasskey = false) {
+  // Confirmed with the code, a passkey or Discord (Discord leaves the page and comes back - see the end).
+  async function disable(event, how = 'code', asked = false) {
     event?.preventDefault();
-    if (!confirm(t('twofa.offConfirm'))) return;
+    if (!asked && !confirm(t('twofa.offConfirm'))) return;
+    if (how === 'discord') {
+      await discord.confirm('totp-off');
+      return;
+    }
     busy = true;
     error = '';
     try {
-      const proof = withPasskey ? await passkeys.proof(api) : { code: code.trim() };
+      const proof = how === 'passkey' ? await passkeys.proof(api) : how === 'discord-done' ? discord.body : { code: code.trim() };
       await api('POST', '/account/totp/disable', proof);
       me.totp = false;
       me.recoveryLeft = 0;
@@ -38,12 +44,16 @@
     }
   }
 
-  async function startOn() {
+  async function startOn(how = me.passkeys > 0 && passkeys.supported ? 'passkey' : 'discord') {
+    if (how === 'discord') {
+      await discord.confirm('totp-on');
+      return;
+    }
     busy = true;
     error = '';
     message = '';
     try {
-      setup = await api('POST', '/account/totp/start', await passkeys.proof(api));
+      setup = await api('POST', '/account/totp/start', how === 'discord-done' ? discord.body : await passkeys.proof(api));
       qr = await QRCode.toDataURL(setup.uri, { margin: 1, width: 220 });
     } catch (e) {
       if (!passkeys.cancelled(e)) error = errorText(e);
@@ -51,6 +61,13 @@
       busy = false;
     }
   }
+
+  // Back from Discord with a confirmation: carry on where the member was.
+  if (discord.confirmed('totp-off')) disable(null, 'discord-done', true);
+  if (discord.confirmed('totp-on')) startOn('discord-done');
+
+  // Another way in besides 2FA: a passkey or Discord.
+  const otherWay = $derived(me.passkeys > 0 || !!me.discord);
 
   async function finishOn(event) {
     event.preventDefault();
@@ -82,7 +99,7 @@
 
   {#if me.totp}
     <p class="muted small">{t('twofa.onHint')}</p>
-    {#if me.passkeys > 0}
+    {#if otherWay}
       {#if offOpen}
         <form class="box" onsubmit={disable}>
           <p class="small">{t('twofa.offWarning')}</p>
@@ -91,8 +108,11 @@
             <button type="submit" class="danger" disabled={busy || code.trim().length < 6}>{t('twofa.turnOff')}</button>
           </div>
           <div class="links">
-            {#if passkeys.supported}
-              <button type="button" class="linkish" disabled={busy} onclick={() => disable(null, true)}>{t('twofa.withPasskey')}</button>
+            {#if passkeys.supported && me.passkeys > 0}
+              <button type="button" class="linkish" disabled={busy} onclick={() => disable(null, 'passkey')}>{t('twofa.withPasskey')}</button>
+            {/if}
+            {#if me.discord}
+              <button type="button" class="linkish" disabled={busy} onclick={() => disable(null, 'discord')}>{t('twofa.withDiscord')}</button>
             {/if}
             <button type="button" class="linkish" onclick={() => (offOpen = false)}>{t('common.cancel')}</button>
           </div>
@@ -115,8 +135,15 @@
           <button type="submit" disabled={busy || code.trim().length < 6}>{t('twofa.turnOn')}</button>
         </div>
       </form>
-    {:else if passkeys.supported}
-      <button class="secondary" disabled={busy} onclick={startOn}>🔑 {t('twofa.turnOnStart')}</button>
+    {:else}
+      <div class="links">
+        {#if passkeys.supported && me.passkeys > 0}
+          <button class="secondary" disabled={busy} onclick={() => startOn('passkey')}>🔑 {t('twofa.turnOnStart')}</button>
+        {/if}
+        {#if me.discord}
+          <button class="secondary" disabled={busy} onclick={() => startOn('discord')}>💬 {t('twofa.turnOnDiscord')}</button>
+        {/if}
+      </div>
     {/if}
   {/if}
 

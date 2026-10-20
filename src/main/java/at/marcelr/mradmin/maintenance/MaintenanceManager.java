@@ -331,10 +331,20 @@ public final class MaintenanceManager {
         messages().broadcast("maintenance-announced", resolvers(window, now));
         playSound(plugin.settings().maintenance());
         plugin.getLogger().info("Maintenance starts at " + window.start() + (window.end() == null ? "" : " and ends at " + window.end()) + ".");
+        plugin.push("maintenance", "maintenance-soon", "/maintenance", null, "title", title(window),
+                "start", Texts.at(plugin, window.start()));
+    }
+
+    /** For push notifications: the window's title, or the default one. */
+    private String title(Window window) {
+        return window.title() == null || window.title().isBlank()
+                ? messages().plain("push-maintenance-default") : window.title();
     }
 
     private void started(Window window) {
         Instant now = Instant.now();
+        plugin.push("maintenance", "maintenance-start", "/maintenance", null, "title", title(window),
+                "end", window.end() == null ? messages().plain("push-open-end") : Texts.at(plugin, window.end()));
         Settings.MaintenanceSettings m = plugin.settings().maintenance();
         messages().broadcast("maintenance-started", resolvers(window, now));
         Title title = Title.title(messages().get("maintenance-start-title", resolvers(window, now)),

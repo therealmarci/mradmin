@@ -104,6 +104,11 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
   entsperren, Passkey hinzufügen), bestätigt man dann mit einem Passkey. Der letzte Passkey lässt sich ohne 2FA nicht
   entfernen; 2FA kann jederzeit wieder eingeschaltet werden (neuer QR-Code, neue Wiederherstellungscodes).
   Abschalten: `web.login.passkeys: false`.
+- **Mit Discord anmelden** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung
+  `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config. Jeder verknüpft sein Discord
+  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt). Danach Anmeldung mit
+  einem Klick; zählt wie ein Passkey - 2FA lässt sich ausschalten, Bestätigungen (Konsole, 2FA, Passkey hinzufügen)
+  gehen auch per Discord. Abgefragt wird nur `identify` (ID, Name, Avatar).
 - Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
   Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein.
 - Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`. Änderungen nur mit eigenem Header und passender
@@ -180,6 +185,14 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
   planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+
+**Push-Benachrichtigungen** (Konto → Benachrichtigungen)
+- Meldungen direkt aufs Gerät, auch bei geschlossener Seite: neue Tickets, Nachrichten in meinen Tickets, alle
+  Ticket-Nachrichten, gesperrte Chunkloader, Lag-Alarm, Wartungen. Jeder legt selbst fest, welche er bekommt - und
+  bekommt nur, wofür er die Rechte hat.
+- Pro Gerät einschaltbar (mehrere Geräte möglich, „Test senden“). Ein Gerät, das abgemeldet wird, bekommt nichts mehr.
+- Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
+  Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
 **Konsole** (`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle - beide in keinem Paket)
 - Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler

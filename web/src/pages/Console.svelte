@@ -4,6 +4,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import * as passkeys from '../lib/passkeys.js';
+  import * as discord from '../lib/discord.js';
 
   let { me } = $props();
 
@@ -70,12 +71,17 @@
   });
 
   // With a 2FA code - or with a passkey (the only way when 2FA is off).
-  async function unlock(event, withPasskey = false) {
+  // how: code | passkey | discord (leaves the page; back here it finishes by itself, see below)
+  async function unlock(event, how = 'code') {
     event?.preventDefault();
+    if (how === 'discord') {
+      await discord.confirm('console');
+      return;
+    }
     busy = true;
     error = '';
     try {
-      const body = withPasskey ? await passkeys.proof(api) : { code: code.trim() };
+      const body = how === 'passkey' ? await passkeys.proof(api) : how === 'discord-done' ? discord.body : { code: code.trim() };
       await api('POST', '/console/unlock', body);
       code = '';
       await loadState();
@@ -85,6 +91,8 @@
       busy = false;
     }
   }
+
+  if (discord.confirmed('console')) unlock(null, 'discord-done');
 
   async function lock() {
     await api('POST', '/console/lock').catch(() => {});
@@ -166,7 +174,11 @@
       {/if}
       {#if me.passkeys > 0 && passkeys.supported}
         <button type="button" class:secondary={me.totp} disabled={busy}
-          onclick={() => unlock(null, true)}>🔑 {t('console.unlockPasskey')}</button>
+          onclick={() => unlock(null, 'passkey')}>🔑 {t('console.unlockPasskey')}</button>
+      {/if}
+      {#if me.discord}
+        <button type="button" class="secondary" disabled={busy}
+          onclick={() => unlock(null, 'discord')}>💬 {t('console.unlockDiscord')}</button>
       {/if}
     </form>
   {:else if info}

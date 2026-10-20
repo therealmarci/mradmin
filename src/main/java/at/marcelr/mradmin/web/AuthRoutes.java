@@ -313,6 +313,9 @@ public final class AuthRoutes {
         me.put("recoveryLeft", account.recoveryLeft());
         me.put("passkeys", auth.passkeys(account.id()).size());
         me.put("totp", auth.hasTotp(account.id()));
+        String[] discordLink = auth.discord(account.id());
+        me.put("discord", discordLink == null ? null : discordLink[1]);
+        me.put("discordAvailable", server.discord().enabled());
         me.put("version", plugin.updateChecker().currentVersion());
         me.put("may", may);
         http.json(200, me);

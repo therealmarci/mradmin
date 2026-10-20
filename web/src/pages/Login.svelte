@@ -3,6 +3,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import Footer from '../components/Footer.svelte';
   import * as passkeys from '../lib/passkeys.js';
+  import * as discord from '../lib/discord.js';
 
   let { onSignedIn } = $props();
 
@@ -30,6 +31,21 @@
       error = errorText(e);
       code = '';
     } finally {
+      busy = false;
+    }
+  }
+
+  // Which methods the server offers (Discord only when set up there).
+  let options = $state({ discord: false, passkeys: true });
+  api('GET', '/login/options').then((o) => (options = o)).catch(() => {});
+
+  async function withDiscord() {
+    busy = true;
+    error = '';
+    try {
+      await discord.start('login', '/');
+    } catch (e) {
+      error = errorText(e);
       busy = false;
     }
   }
@@ -65,8 +81,16 @@
       <div class="error" role="alert">{error}</div>
     {/if}
 
-    {#if passkeys.supported}
-      <button class="block passkey" type="button" onclick={withPasskey} disabled={busy}>🔑 {t('passkey.signIn')}</button>
+    {#if (passkeys.supported && options.passkeys) || options.discord}
+      {#if passkeys.supported && options.passkeys}
+        <button class="block passkey" type="button" onclick={withPasskey} disabled={busy}>🔑 {t('passkey.signIn')}</button>
+      {/if}
+      {#if options.discord}
+        <button class="block discord" type="button" onclick={withDiscord} disabled={busy}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.2a18 18 0 0 0-5.6 0L8.6 3a19.6 19.6 0 0 0-4.9 1.5C.6 9 .1 13.4.3 17.8a19.8 19.8 0 0 0 6 3l1.3-2a12.7 12.7 0 0 1-2-1l.5-.4a14.1 14.1 0 0 0 12 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.7 19.7 0 0 0 6-3c.5-5.1-.8-9.5-3.6-13.4ZM8.5 15.1c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4Zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4Z"/></svg>
+          {t('discord.signIn')}
+        </button>
+      {/if}
       <div class="or"><span>{t('passkey.or')}</span></div>
     {/if}
 
@@ -116,8 +140,15 @@
     margin: 0;
   }
 
-  .passkey {
+  .passkey,
+  .discord {
     padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .discord {
+    background: #5865f2;
+    color: #fff;
   }
 
   /* "or" between passkey and password, with a line on both sides. */

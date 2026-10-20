@@ -9,7 +9,6 @@
   import Setup from './pages/Setup.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
-  import Audit from './pages/Audit.svelte';
   import Tickets from './pages/Tickets.svelte';
   import TicketView from './pages/TicketView.svelte';
   import Legal from './pages/Legal.svelte';
@@ -21,6 +20,7 @@
   import Players from './pages/Players.svelte';
   import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
+  import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
 
   // null = signed out, undefined = still asking the server
@@ -53,7 +53,7 @@
 
   // Ask who is signed in as soon as a page needs it (not on setup, imprint and privacy - they work without).
   $effect(() => {
-    if (me === undefined && !['/setup', '/impressum', '/datenschutz'].includes(route.path)) untrack(loadMe);
+    if (me === undefined && !['/setup', '/impressum', '/datenschutz', '/discord'].includes(route.path)) untrack(loadMe);
   });
 
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
@@ -73,7 +73,6 @@
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
-          ...(me.may.audit ? [{ path: '/audit', label: t('nav.audit'), icon: 'list' }] : []),
         ]
       : [],
   );
@@ -103,6 +102,8 @@
 {#if route.path === '/impressum' || route.path === '/datenschutz'}
   <Legal page={route.path === '/impressum' ? 'imprint' : 'privacy'} />
   <Footer />
+{:else if route.path === '/discord'}
+  <Discord onSignedIn={loadMe} />
 {:else if route.path === '/setup'}
   <Setup onDone={() => { loadMe(); go('/', true); }} />
 {:else if me === undefined}
@@ -156,8 +157,6 @@
       <Console {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
-    {:else if route.path === '/audit' && me.may.audit}
-      <Audit />
     {:else}
       <Home {me} />
     {/if}

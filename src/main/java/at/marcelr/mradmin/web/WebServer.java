@@ -66,6 +66,29 @@ public final class WebServer {
         this.auth = auth;
         this.permissions = permissions;
         this.passkeys = new at.marcelr.mradmin.web.auth.Passkeys(plugin, auth);
+        this.push = new at.marcelr.mradmin.web.push.PushService(plugin, auth, permissions);
+        this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
+    }
+
+    private final at.marcelr.mradmin.web.auth.DiscordLogin discord;
+    /** session id -> until when a Discord confirmation counts (once) */
+    private final Map<String, Long> discordConfirmed = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long DISCORD_CONFIRM_MILLIS = 2 * 60_000L;
+
+    public at.marcelr.mradmin.web.auth.DiscordLogin discord() {
+        return discord;
+    }
+
+    /** After a Discord check for this session: the next sensitive step within 2 minutes is confirmed. */
+    public void discordConfirmed(String session) {
+        discordConfirmed.put(session, System.currentTimeMillis() + DISCORD_CONFIRM_MILLIS);
+    }
+
+    private final at.marcelr.mradmin.web.push.PushService push;
+
+    /** Push notifications - also used by tickets, health, maintenance to notify the team. */
+    public at.marcelr.mradmin.web.push.PushService push() {
+        return push;
     }
 
     private final at.marcelr.mradmin.web.auth.Passkeys passkeys;
@@ -83,6 +106,10 @@ public final class WebServer {
      * one of their passkeys ({request, credential}, after POST /api/confirm/passkey).
      */
     public boolean confirmed(Http http) throws java.io.IOException {
+        if ("true".equals(http.string("discord"))) {
+            Long until = discordConfirmed.remove(http.session().id());
+            return until != null && until >= System.currentTimeMillis();
+        }
         var credential = http.body().get("credential");
         if (credential != null && !credential.isJsonNull()) {
             return passkeys.finishConfirm(http.account().id(), http.string("request"), credential.toString());
