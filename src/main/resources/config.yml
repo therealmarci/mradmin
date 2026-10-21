@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 16
+config-version: 17
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -51,11 +51,13 @@ features:
 
 # Zusammenarbeit mit meinen anderen Plugins. MRadmin erkennt sie automatisch - auch wenn sie später geladen oder
 # entfernt werden - und passt die Menüs von selbst an: Knopf im Dashboard mit Live-Infos, Infos im Spieler-Menü,
-# bei MRchunks auffällige Chunkloader im Serverzustand. Ist ein Plugin nicht installiert, fehlt nur sein Teil.
+# bei MRchunks auffällige Chunkloader im Serverzustand, bei MRtoolbar die Gürtel eines Spielers (nur ansehen, wie Inventar
+# und Enderchest). Ist ein Plugin nicht installiert, fehlt nur sein Teil.
 # Alle Plugins laufen auch einzeln. false = nicht verbinden, auch wenn das Plugin installiert ist.
 integrations:
   mrsleep: true
   mrchunks: true
+  mrtoolbar: true
   # LibertyBans: Banns, Mutes, Warns und Kicks auf der Spielerseite im Web. Es gelten die Permissions von LibertyBans
   # (z.B. libertybans.ban.do.target.uuid, libertybans.list.history), auch seine Dauer-Permissions, falls eingeschaltet.
   libertybans: true
@@ -152,6 +154,16 @@ uptime-kuma:
 # /mradmin announce <text>               eigener Text (MiniMessage erlaubt, z.B. <red>Achtung!)
 # /mradmin announce <preset> [werte...]  vorbereitete Ankündigung aus der Sprachdatei (announce-presets)
 # Auch von der Konsole/RCON nutzbar, z.B. im Restart-Script:  mradmin announce restart 5m
+#
+# Für Scripts frei zusammensetzbar - jeder Teil ist optional, nur Angegebenes wird gezeigt (Werte mit Leerzeichen
+# in "Anführungszeichen"):
+#   mradmin announce title="<red><bold>Neustart" subtitle="<gray>in <white>5 Minuten" chat="..." actionbar="..."
+#                    discord="Neustart in **5 Minuten**" id=restart sound=BLOCK_NOTE_BLOCK_BELL stay=4 to=all
+#   discord = Text für den Community-Discord, id = Name für die Sperrzeit (ein Countdown postet so nur einmal),
+#   sound = Bukkit-Name oder Key ("none" = still), stay/fade-in/fade-out in Sekunden,
+#   to = "all" oder eine Permission (z.B. mradmin.staffchat für nur das Team). -q = nicht in den Discord.
+# Eigene Presets können benannte Werte nutzen: <grund> im Text, aufgerufen mit  mradmin announce wartung grund="Backup"
+# (im discord-Text als {grund}). Die mitgelieferten Presets nutzen <args>:  mradmin announce restart 5m
 announce:
   # Wie lange der Text auf dem Bildschirm steht (in Sekunden).
   fade-in: 0.5
@@ -188,10 +200,10 @@ admin-mode:
   #   false = bleibt aktiv, beim nächsten Join geht es im Admin-Modus weiter
   end-on-quit: false
 
-  # Eigene Knöpfe im Dashboard (Reihe "Werkzeuge"), z.B. für das Admin-Menü eines anderen Plugins. MRsleep und
-  # MRchunks brauchen hier keinen Eintrag, sie kommen automatisch (siehe integrations oben). Jeder Knopf führt einen
-  # Befehl als Spieler aus, die Rechte prüft dann das jeweilige Plugin selbst. Höchstens 6 Knöpfe inkl. MRsleep und
-  # MRchunks, Reihenfolge wie hier.
+  # Eigene Knöpfe im Dashboard (Reihe "Werkzeuge"), z.B. für das Admin-Menü eines anderen Plugins. MRsleep,
+  # MRchunks und MRtoolbar brauchen hier keinen Eintrag, sie kommen automatisch (siehe integrations oben). Jeder Knopf führt einen
+  # Befehl als Spieler aus, die Rechte prüft dann das jeweilige Plugin selbst. Höchstens 6 Knöpfe inkl. MRsleep,
+  # MRchunks und MRtoolbar, Reihenfolge wie hier.
   #   plugin:     nur anzeigen, wenn dieses Plugin installiert ist ("" = immer)
   #   permission: nur anzeigen, wenn der Spieler diese Permission hat ("" = alle mit Dashboard)
   #   enabled:    false = Knopf ausblenden (z.B. statt ihn zu löschen)

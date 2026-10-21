@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 10
+lang-version: 11
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -75,9 +75,11 @@ help-staffchat: "<gold>/sc [text]</gold> <dark_gray>- <gray>Staff-Chat (ohne Tex
 announce-usage: |-
   <prefix><gray>Verwendung:
   <gold>/mradmin announce <text></gold> <dark_gray>- <gray>eigener Text, mit <white>|</white> getrennt: <white>Titel | Untertitel</white>
-  <gold>/mradmin announce <preset> [werte...]</gold> <dark_gray>- <gray>Presets: <white><presets>
+  <gold>/mradmin announce <preset> [werte...] [name="wert"...]</gold> <dark_gray>- <gray>Presets: <white><presets>
+  <gold>/mradmin announce title="..." subtitle="..." chat="..." discord="..."</gold> <dark_gray>- <gray>frei zusammengesetzt (für Scripts), dazu actionbar, sound, stay, to, id
   <gray>Mit <white>-d</white> geht ein eigener Text auch in den Community-Discord, mit <white>-q</white> ein Preset nicht.
 announce-sent: "<prefix><green>Ankündigung gesendet."
+announce-invalid-part: "<prefix><red>Ungültiger Wert für <white><part></white>: <white><value></white> <gray>(Zahlen in Sekunden, Töne als Bukkit-Name oder Key)"
 # Überschrift bei eigenem Text ohne "|"
 announce-custom-title: "<gold><bold>Ankündigung"
 # Chat-Ausgabe bei eigenem Text. Platzhalter: <title> <message>
@@ -264,6 +266,12 @@ gui-hub-buttons:
     name: "<green><bold>MRchunks"
     lore:
       - "<gray>Alle Spieler und ihre Chunkloader"
+      - ""
+      - "<yellow>Klick: Admin-Menü öffnen"
+  mrtoolbar:
+    name: "<gold><bold>MRtoolbar"
+    lore:
+      - "<gray>Tool-Slots und Gürtel der Spieler"
       - ""
       - "<yellow>Klick: Admin-Menü öffnen"
 gui-teleport-empty: "<gray>Außer dir ist niemand online."

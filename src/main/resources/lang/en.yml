@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 10
+lang-version: 11
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -75,9 +75,11 @@ help-staffchat: "<gold>/sc [text]</gold> <dark_gray>- <gray>staff chat (without 
 announce-usage: |-
   <prefix><gray>Usage:
   <gold>/mradmin announce <text></gold> <dark_gray>- <gray>own text, split with <white>|</white>: <white>Title | Subtitle</white>
-  <gold>/mradmin announce <preset> [values...]</gold> <dark_gray>- <gray>presets: <white><presets>
+  <gold>/mradmin announce <preset> [values...] [name="value"...]</gold> <dark_gray>- <gray>presets: <white><presets>
+  <gold>/mradmin announce title="..." subtitle="..." chat="..." discord="..."</gold> <dark_gray>- <gray>put together freely (for scripts), also actionbar, sound, stay, to, id
   <gray>With <white>-d</white> an own text also goes to the community Discord, with <white>-q</white> a preset does not.
 announce-sent: "<prefix><green>Announcement sent."
+announce-invalid-part: "<prefix><red>Invalid value for <white><part></white>: <white><value></white> <gray>(numbers in seconds, sounds as Bukkit name or key)"
 # Heading for own texts without "|"
 announce-custom-title: "<gold><bold>Announcement"
 # Chat line for own texts. Placeholders: <title> <message>
@@ -264,6 +266,12 @@ gui-hub-buttons:
     name: "<green><bold>MRchunks"
     lore:
       - "<gray>All players and their chunk loaders"
+      - ""
+      - "<yellow>Click: open admin menu"
+  mrtoolbar:
+    name: "<gold><bold>MRtoolbar"
+    lore:
+      - "<gray>Tool slots and belts of the players"
       - ""
       - "<yellow>Click: open admin menu"
 gui-teleport-empty: "<gray>Nobody else is online."

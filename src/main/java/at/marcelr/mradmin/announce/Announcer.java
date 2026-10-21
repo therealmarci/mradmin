@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -15,7 +16,10 @@ import org.bukkit.entity.Player;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static at.marcelr.mradmin.Messages.tag;
 
@@ -75,15 +79,23 @@ public final class Announcer {
 
     /** Announces a preset with its arguments; {@code toDiscord} false keeps it off the community Discord (-q). */
     public void announcePreset(String preset, List<String> args, String by, boolean toDiscord) {
+        announcePreset(preset, args, Map.of(), by, toDiscord);
+    }
+
+    /**
+     * Announces a preset with values by position ({@code <args>}, {@code <arg1>} ...) and by name
+     * ({@code time="5m"} fills {@code <time>} and {@code {time}} in the Discord text).
+     */
+    public void announcePreset(String preset, List<String> args, Map<String, String> named, String by, boolean toDiscord) {
         plugin.messages().forPlayers(() -> {
-            buildPreset(preset, args, by, toDiscord);
+            buildPreset(preset, args, named, by, toDiscord);
             return null;
         });
     }
 
-    private void buildPreset(String preset, List<String> args, String by, boolean toDiscord) {
+    private void buildPreset(String preset, List<String> args, Map<String, String> named, String by, boolean toDiscord) {
         Messages messages = plugin.messages();
-        TagResolver[] resolvers = argResolvers(args);
+        TagResolver[] resolvers = argResolvers(args, named);
         String base = PRESETS + "." + preset + ".";
         Component title = messages.get(base + "title", resolvers);
         Component subtitle = messages.has(base + "subtitle") ? messages.get(base + "subtitle", resolvers) : Component.empty();
@@ -95,6 +107,9 @@ public final class Announcer {
             String filled = discordText.replace("{args}", DiscordAnnouncer.escape(String.join(" ", args)));
             for (int i = 1; i <= 9; i++) {
                 filled = filled.replace("{arg" + i + "}", i <= args.size() ? DiscordAnnouncer.escape(args.get(i - 1)) : "");
+            }
+            for (Map.Entry<String, String> value : named.entrySet()) {
+                filled = filled.replace("{" + value.getKey() + "}", DiscordAnnouncer.escape(value.getValue()));
             }
             plugin.discordAnnounce().announce(preset, PLAIN.serialize(title), filled);
         }
@@ -149,9 +164,128 @@ public final class Announcer {
         plugin.discord().log("announce", "admin", by, "text", text);
     }
 
-    /** {@code <args>} = all values, {@code <arg1>} ... {@code <arg9>} = single values (empty if not given). */
-    private static TagResolver[] argResolvers(List<String> args) {
+    // ------------------------------------------------------------------ parts (scripts)
+
+    /**
+     * An announcement put together from parts - for scripts, e.g. the countdown of a restart script. Every part is
+     * optional and only shown if given (MiniMessage):
+     * <ul>
+     *   <li>{@code title}, {@code subtitle} - on the screen ({@code stay}, {@code fade-in}, {@code fade-out} in
+     *       seconds, default from the config)</li>
+     *   <li>{@code chat}, {@code actionbar}</li>
+     *   <li>{@code discord} - posted to the community Discord (not with -q); {@code id} names it for the cooldown,
+     *       so a countdown that sends it every step still posts only once</li>
+     *   <li>{@code sound} (Bukkit name or key, "none" = silent; default from the config), {@code volume}, {@code pitch}</li>
+     *   <li>{@code to} - "all" (default) or a permission, e.g. {@code to=mradmin.staffchat}</li>
+     * </ul>
+     *
+     * @return null if it was shown, otherwise the name of the invalid part
+     */
+    public String announceParts(Map<String, String> parts, String by, boolean toDiscord) {
+        return plugin.messages().forPlayers(() -> buildParts(parts, by, toDiscord));
+    }
+
+    private String buildParts(Map<String, String> parts, String by, boolean toDiscord) {
+        Settings.AnnounceSettings s = plugin.settings().announce();
+        Component title = part(parts, "title");
+        Component subtitle = part(parts, "subtitle");
+        Component chat = part(parts, "chat");
+        Component actionbar = part(parts, "actionbar");
+
+        Duration fadeIn = seconds(parts.get("fade-in"), s.fadeIn());
+        Duration stay = seconds(parts.get("stay"), s.stay());
+        Duration fadeOut = seconds(parts.get("fade-out"), s.fadeOut());
+        if (fadeIn == null || stay == null || fadeOut == null) {
+            return fadeIn == null ? "fade-in" : stay == null ? "stay" : "fade-out";
+        }
+        Sound sound;
+        String soundName = parts.get("sound");
+        if (soundName == null) {
+            sound = s.sound() == null ? null : Sound.sound(s.sound(), Sound.Source.MASTER, s.volume(), s.pitch());
+        } else if (soundName.isBlank() || soundName.equalsIgnoreCase("none")) {
+            sound = null;
+        } else {
+            Key key = Settings.sound(soundName, "sound", plugin.getLogger());
+            Float volume = number(parts.get("volume"), s.volume());
+            Float pitch = number(parts.get("pitch"), s.pitch());
+            if (key == null || volume == null || pitch == null) {
+                return key == null ? "sound" : volume == null ? "volume" : "pitch";
+            }
+            sound = Sound.sound(key, Sound.Source.MASTER, volume, pitch);
+        }
+        String to = parts.getOrDefault("to", "all").trim();
+
+        Title shown = title == null && subtitle == null ? null : Title.title(
+                title == null ? Component.empty() : title, subtitle == null ? Component.empty() : subtitle,
+                Title.Times.times(fadeIn, stay, fadeOut));
+        int reached = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!to.equalsIgnoreCase("all") && !player.hasPermission(to)) {
+                continue;
+            }
+            reached++;
+            if (shown != null) {
+                player.showTitle(shown);
+            }
+            if (chat != null) {
+                player.sendMessage(chat);
+            }
+            if (actionbar != null) {
+                player.sendActionBar(actionbar);
+            }
+            if (sound != null) {
+                player.playSound(sound, Sound.Emitter.self());
+            }
+        }
+
+        String text = String.join(" - ", Stream.of(title, subtitle, chat, actionbar)
+                .filter(Objects::nonNull).map(PLAIN::serialize).filter(t -> !t.isBlank()).toList());
+        plugin.getLogger().info("Announcement by " + by + " (" + reached + " players): " + text);
+        plugin.discord().log("announce", "admin", by, "text", text);
+        String discord = parts.get("discord");
+        if (toDiscord && discord != null && !discord.isBlank()) {
+            plugin.discordAnnounce().announce(parts.get("id"), title == null ? "" : PLAIN.serialize(title), discord);
+        }
+        return null;
+    }
+
+    private Component part(Map<String, String> parts, String name) {
+        String raw = parts.get(name);
+        return raw == null ? null : plugin.messages().parse(raw);
+    }
+
+    /** Seconds ("2.5") as duration; {@code fallbackTicks} if not given, null if invalid. */
+    private static Duration seconds(String raw, int fallbackTicks) {
+        if (raw == null) {
+            return Duration.ofMillis(fallbackTicks * 50L);
+        }
+        try {
+            double value = Double.parseDouble(raw.trim().replace(',', '.'));
+            return value < 0 || value > 600 ? null : Duration.ofMillis(Math.round(value * 1000));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Float number(String raw, float fallback) {
+        if (raw == null) {
+            return fallback;
+        }
+        try {
+            float value = Float.parseFloat(raw.trim().replace(',', '.'));
+            return value < 0 || value > 10 ? null : value;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * {@code <args>} = all values, {@code <arg1>} ... {@code <arg9>} = single values (empty if not given), plus the
+     * named values ({@code <time>} ...).
+     */
+    private static TagResolver[] argResolvers(List<String> args, Map<String, String> named) {
         List<TagResolver> list = new ArrayList<>();
+        named.forEach((name, value) -> list.add(tag(name, value)));
         list.add(tag("args", String.join(" ", args)));
         for (int i = 1; i <= 9; i++) {
             list.add(tag("arg" + i, i <= args.size() ? args.get(i - 1) : ""));
