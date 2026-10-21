@@ -6,6 +6,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Texts;
 import at.marcelr.mradmin.UpdateChecker;
+import at.marcelr.mradmin.announce.AnnounceArgs;
 import at.marcelr.mradmin.announce.Announcer;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
 import at.marcelr.mradmin.gui.HubMenu;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import static at.marcelr.mradmin.Messages.tag;
 
@@ -260,11 +262,22 @@ public final class MRAdminCommand implements TabExecutor {
             return;
         }
         Announcer announcer = plugin.announcer();
-        var preset = announcer.preset(args[from]);
+        String raw = String.join(" ", Arrays.copyOfRange(args, from, args.length));
+        AnnounceArgs parsed = AnnounceArgs.parse(raw);
+        Optional<String> preset = parsed.words().isEmpty() ? Optional.empty() : announcer.preset(parsed.words().getFirst());
         if (preset.isPresent()) {
-            announcer.announcePreset(preset.get(), List.of(Arrays.copyOfRange(args, from + 1, args.length)), sender.getName(), !quiet);
+            // Preset with values by position (restart 5m) and/or by name (restart time="5 Minuten").
+            announcer.announcePreset(preset.get(), parsed.words().subList(1, parsed.words().size()),
+                    parsed.placeholders(), sender.getName(), !quiet);
+        } else if (parsed.hasParts() && parsed.words().isEmpty()) {
+            // Built from parts, mainly for scripts: title="..." subtitle="..." chat="..." discord="..." ...
+            String invalid = announcer.announceParts(parsed.values(), sender.getName(), !quiet);
+            if (invalid != null) {
+                messages().send(sender, "announce-invalid-part", tag("part", invalid), tag("value", parsed.values().get(invalid)));
+                return;
+            }
         } else {
-            announcer.announceText(String.join(" ", Arrays.copyOfRange(args, from, args.length)), sender.getName(), toDiscord && !quiet);
+            announcer.announceText(raw, sender.getName(), toDiscord && !quiet);
         }
         if (!(sender instanceof Player)) {
             messages().send(sender, "announce-sent");

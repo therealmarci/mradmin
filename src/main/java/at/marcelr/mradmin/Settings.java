@@ -527,7 +527,7 @@ public record Settings(
      * A sound from its Bukkit name ("BLOCK_NOTE_BLOCK_PLING") or key ("minecraft:block.note_block.pling",
      * also for sounds of resource packs). Empty = no sound (null).
      */
-    static Key sound(String raw, String path, Logger log) {
+    public static Key sound(String raw, String path, Logger log) {
         if (raw == null || raw.isBlank()) {
             return null;
         }

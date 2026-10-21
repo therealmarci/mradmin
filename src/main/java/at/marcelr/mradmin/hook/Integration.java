@@ -21,7 +21,9 @@ public record Integration(String id, String plugin, Material material, String co
             new Integration("mrsleep", "MRsleep", Material.RED_BED, "mrsleep gui", "mrsleep.admin.gui",
                     "at.marcelr.mrsleep.api.MRadminHook"),
             new Integration("mrchunks", "MRchunks", Material.EMERALD_BLOCK, "mrchunks gui", "mrchunks.admin.gui",
-                    "at.marcelr.mrchunks.api.MRadminHook"));
+                    "at.marcelr.mrchunks.api.MRadminHook"),
+            new Integration("mrtoolbar", "MRtoolbar", Material.IRON_PICKAXE, "mrtoolbar gui", "mrtoolbar.admin.gui",
+                    "at.marcelr.mrtoolbar.api.MRadminHook"));
 
     /** The integration for a plugin name (case-insensitive), or null. */
     public static Integration byPlugin(String plugin) {

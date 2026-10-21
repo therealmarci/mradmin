@@ -51,7 +51,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(10, Map.of(
+    private final Messages messages = new Messages(11, Map.of(
             2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
                     "maintenance-motd"),
             3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
@@ -66,7 +66,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
                     "gui-my-tickets-empty-lore", "gui-ticket-lore", "gui-ticket-lore-staff", "gui-tickets-filter-type",
                     "gui-tickets-filter-type-lore", "ticket-form-player-hint", "ticket-form-other-hint",
                     "ticket-chat-header-player", "ticket-chat-header-other", "gui-new-ticket-none"),
-            10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff")));
+            10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff"),
+            // 11: /mradmin announce for scripts (parts and named values).
+            11, Set.of("announce-usage")));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private final Announcer announcer = new Announcer(this);
