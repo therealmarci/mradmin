@@ -322,6 +322,11 @@ public final class TicketDialog {
         }
         ActionButton exit = ActionButton.create(messages.get(back == null ? "ticket-view-exit" : "ticket-view-back"), null, 150,
                 back == null ? null : backAction(plugin, viewer, back));
+        // A closed ticket offers its creator nothing to do (no reply, no reopen) - a dialog with several buttons needs
+        // at least one, so it is shown read-only with just "Back".
+        DialogType type = buttons.isEmpty()
+                ? DialogType.notice(exit)
+                : DialogType.multiAction(buttons).columns(2).exitAction(exit).build();
 
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(messages.get("ticket-chat-title", tag("id", ticket.id()),
@@ -330,7 +335,7 @@ public final class TicketDialog {
                         .body(body)
                         .inputs(inputs)
                         .build())
-                .type(DialogType.multiAction(buttons).columns(2).exitAction(exit).build()));
+                .type(type));
         show(viewer, dialog);
     }
 
