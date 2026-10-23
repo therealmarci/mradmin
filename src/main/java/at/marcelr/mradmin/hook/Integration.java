@@ -23,7 +23,9 @@ public record Integration(String id, String plugin, Material material, String co
             new Integration("mrchunks", "MRchunks", Material.EMERALD_BLOCK, "mrchunks gui", "mrchunks.admin.gui",
                     "at.marcelr.mrchunks.api.MRadminHook"),
             new Integration("mrtoolbar", "MRtoolbar", Material.IRON_PICKAXE, "mrtoolbar gui", "mrtoolbar.admin.gui",
-                    "at.marcelr.mrtoolbar.api.MRadminHook"));
+                    "at.marcelr.mrtoolbar.api.MRadminHook"),
+            new Integration("mrpvp", "MRpvp", Material.IRON_SWORD, "duel admin", "mrpvp.admin.gui",
+                    "at.marcelr.mrpvp.api.MRadminHook"));
 
     /** The integration for a plugin name (case-insensitive), or null. */
     public static Integration byPlugin(String plugin) {

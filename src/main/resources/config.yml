@@ -14,7 +14,7 @@
 # ==============================================================================
 
 # Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 17
+config-version: 18
 
 # Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
 # und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
@@ -58,6 +58,7 @@ integrations:
   mrsleep: true
   mrchunks: true
   mrtoolbar: true
+  mrpvp: true
   # LibertyBans: Banns, Mutes, Warns und Kicks auf der Spielerseite im Web. Es gelten die Permissions von LibertyBans
   # (z.B. libertybans.ban.do.target.uuid, libertybans.list.history), auch seine Dauer-Permissions, falls eingeschaltet.
   libertybans: true
@@ -341,6 +342,10 @@ discord:
     admin-mode-off:
       enabled: true
       color: "#1ABC9C"
+    # Meldungen anderer Plugins, z.B. auffällige Duelle von MRpvp.
+    plugin-alert:
+      enabled: true
+      color: "#E74C3C"
     admin-reload:
       enabled: true
       color: "#3498DB"

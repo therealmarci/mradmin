@@ -17,6 +17,8 @@
   import Chunks from './pages/Chunks.svelte';
   import ChunkView from './pages/ChunkView.svelte';
   import Sleep from './pages/Sleep.svelte';
+  import Pvp from './pages/Pvp.svelte';
+  import PvpGame from './pages/PvpGame.svelte';
   import Players from './pages/Players.svelte';
   import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
@@ -69,7 +71,8 @@
   const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
   const chunkId = $derived(route.path.match(/^\/chunks\/(\d+)$/)?.[1] ?? null);
   const playerId = $derived(route.path.match(/^\/players\/([0-9a-f-]{36})$/)?.[1] ?? null);
-  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : route.path);
+  const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
+  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId ? '/pvp' : route.path);
 
   const nav = $derived(
     me
@@ -80,6 +83,7 @@
           ...(me.may.health ? [{ path: '/health', label: t('nav.health'), icon: 'pulse' }] : []),
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
+          ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
           ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
@@ -103,6 +107,7 @@
     pulse: 'M3 12h4l2-6 4 12 2-6h6',
     grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
     moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z',
+    swords: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M9.5 17.5 21 6V3h-3L6.5 14.5M11 19l-6-6M8 16l-4 4M5 21l-2-2',
     users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9c0-3.3 3.1-6 7-6s7 2.7 7 6M16 3.5a4 4 0 0 1 0 7M18 14c2.4.6 4 2.6 4 5',
     logout: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4',
   };
@@ -173,6 +178,10 @@
       <Maintenance {me} />
     {:else if route.path === '/console' && me.may.console}
       <Console {me} />
+    {:else if pvpId && me.may.mrpvp}
+      {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
+    {:else if route.path === '/pvp' && me.may.mrpvp}
+      <Pvp {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
     {:else}

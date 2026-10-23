@@ -6,6 +6,7 @@
   import { go } from '../lib/router.svelte.js';
   import SleepPart from '../components/SleepPart.svelte';
   import ChunksPart from '../components/ChunksPart.svelte';
+  import PvpPart from '../components/PvpPart.svelte';
   import BansPart from '../components/BansPart.svelte';
 
   let { uuid, me } = $props();
@@ -136,6 +137,9 @@
     {/if}
     {#if player.parts.mrchunks}
       <ChunksPart {uuid} {me} name={player.name} onDone={done} />
+    {/if}
+    {#if player.parts.mrpvp}
+      <PvpPart {uuid} {me} name={player.name} onDone={done} />
     {/if}
     {#if player.parts.libertybans}
       <BansPart {uuid} {me} name={player.name} onDone={done} />

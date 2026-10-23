@@ -124,6 +124,7 @@ mode-off-other: "<prefix><green><white><player></white> is no longer in admin mo
 mode-save-failed: "<prefix><red>Your inventory could not be saved - admin mode was NOT started. See the console."
 mode-load-failed: "<prefix><red>Your saved admin mode state is damaged. Please contact an admin (the file was not deleted)."
 mode-no-drop: "<prefix><red>You can't drop items in admin mode."
+mode-no-clear: "<prefix><red>Clearing the inventory is not possible in admin mode - everything is back."
 mode-list-header: "<prefix><gray>In admin mode:"
 mode-list-entry: "<dark_gray>- <white><player></white> <gray>for <duration>"
 mode-list-empty: "<prefix><gray>Nobody is in admin mode."
@@ -272,6 +273,12 @@ gui-hub-buttons:
     name: "<gold><bold>MRtoolbar"
     lore:
       - "<gray>Tool slots and belts of the players"
+      - ""
+      - "<yellow>Click: open admin menu"
+  mrpvp:
+    name: "<red><bold>MRpvp"
+    lore:
+      - "<gray>Duels, arenas, kits and alerts"
       - ""
       - "<yellow>Click: open admin menu"
 gui-teleport-empty: "<gray>Nobody else is online."
@@ -656,6 +663,7 @@ discord:
   announce: "📢 **{admin}**: {text}"
   admin-mode-on: "🛡️ **{player}** entered admin mode ({world} {x}, {y}, {z})."
   admin-mode-off: "🛡️ **{player}** left admin mode (after {duration})."
+  plugin-alert: "⚠️ **{plugin}**: {text}"
   admin-reload: "🔄 **{admin}** reloaded the MRadmin configuration."
   ticket: "🎫 **Ticket #{id}** ({type}) by **{creator}**: {summary} - {text} ({world} {x}, {y}, {z})"
   ticket-message: "💬 Ticket #{id} ({summary}) - **{author}**: {text}"
