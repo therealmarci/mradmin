@@ -169,7 +169,11 @@ public final class PanelRoutes {
     }
 
     private void events(Http http) throws Exception {
-        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW));
+        java.util.Set<String> plugins = new java.util.HashSet<>();
+        if (PvpRoutes.hook(plugin) != null && may(http, PvpRoutes.PERM_VIEW)) {
+            plugins.add("mrpvp");
+        }
+        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW), plugins);
     }
 
     // ---------------------------------------------------------------- tickets

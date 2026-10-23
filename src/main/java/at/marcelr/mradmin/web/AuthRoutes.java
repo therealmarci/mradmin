@@ -303,6 +303,14 @@ public final class AuthRoutes {
         may.put("mrsleepClear", sleep && perms.has(account.id(), SleepRoutes.PERM_CLEAR));
         may.put("mrsleepBypass", sleep && perms.has(account.id(), SleepRoutes.PERM_BYPASS));
         may.put("mrsleepBan", sleep && perms.has(account.id(), SleepRoutes.PERM_BAN));
+        boolean pvp = PvpRoutes.hook(plugin) != null && perms.has(account.id(), PvpRoutes.PERM_VIEW);
+        may.put("mrpvp", pvp);
+        may.put("mrpvpGames", pvp && perms.has(account.id(), PvpRoutes.PERM_GAMES));
+        may.put("mrpvpStop", pvp && perms.has(account.id(), PvpRoutes.PERM_STOP));
+        may.put("mrpvpBan", pvp && perms.has(account.id(), PvpRoutes.PERM_BAN));
+        may.put("mrpvpReset", pvp && perms.has(account.id(), PvpRoutes.PERM_RESET));
+        may.put("mrpvpRestore", pvp && perms.has(account.id(), PvpRoutes.PERM_RESTORE));
+        may.put("mrpvpReview", pvp && perms.has(account.id(), PvpRoutes.PERM_REVIEW));
         may.put("players", perms.has(account.id(), Perms.PLAYER_VIEW));
         boolean console = ConsoleRoutes.enabled(plugin) && perms.has(account.id(), Perms.WEB_CONSOLE_VIEW);
         may.put("console", console);

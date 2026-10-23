@@ -13,6 +13,7 @@ import at.marcelr.mradmin.gui.MenuListener;
 import at.marcelr.mradmin.maintenance.MaintenanceListener;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.mode.AdminModeListener;
+import at.marcelr.mradmin.mode.CreativeClearGuard;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
 import at.marcelr.mradmin.hook.LockTickets;
@@ -101,6 +102,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.HealthRoutes.register(web);
         at.marcelr.mradmin.web.ChunkRoutes.register(web);
         at.marcelr.mradmin.web.SleepRoutes.register(web);
+        at.marcelr.mradmin.web.PvpRoutes.register(web);
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
@@ -128,6 +130,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new MaintenanceListener(this), this);
         pm.registerEvents(new AdminModeListener(this), this);
+        pm.registerEvents(new CreativeClearGuard(this), this);
         pm.registerEvents(menuListener, this);
         pm.registerEvents(this, this);
         pm.registerEvents(new FreezeListener(this), this);

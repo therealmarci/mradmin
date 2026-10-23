@@ -47,16 +47,17 @@ Sonderfälle: Wer beim Abschalten des Admin-Modus darin ist, bekommt sein Invent
 Join). Beim Abschalten von `freeze` sind alle eingefrorenen Spieler frei. Discord-Logs, Discord-Ankündigungen,
 Uptime Kuma und Update-Check haben ihren Schalter (`enabled`) im jeweiligen Abschnitt.
 
-### Zusammenarbeit mit MRsleep und MRchunks
-MRadmin, MRsleep und MRchunks laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin die
+### Zusammenarbeit mit MRsleep, MRchunks, MRtoolbar und MRpvp
+MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin die
 anderen automatisch, auch wenn sie später geladen oder entfernt werden, und passt die Menüs von selbst an:
 - **Dashboard:** ein Knopf je Plugin mit Live-Infos, der dessen Admin-Menü öffnet.
 - **Spieler-Menü:** die Infos des Spielers aus dem Plugin, ein Klick öffnet dessen Spieler-Menü.
 - **Serverzustand** (MRchunks): auffällige, gesperrte und pausierte Chunkloader statt der Chunks mit den meisten
-  Entities.
+  Entities. Mit MRpvp stehen dort auch Duell-Runden, die auf eine Prüfung warten.
+- **Web** (MRpvp): eigene Seite **Duelle** (siehe unten).
 
 Konfigurieren muss man dafür nichts. Wer eine Verbindung nicht möchte, schaltet sie unter `integrations` ab
-(`mrsleep: false` / `mrchunks: false`). Beim Start steht in der Konsole, welche Plugins verbunden sind.
+(`mrsleep: false`, `mrchunks: false`, `mrtoolbar: false`, `mrpvp: false`). Beim Start steht in der Konsole, welche Plugins verbunden sind.
 
 ### Speicher: YAML, SQLite oder MySQL
 Unter `storage.type` in der Config wählst du, wo MRadmin Tickets, Wartungen, eingefrorene Spieler und den Status der
@@ -174,6 +175,14 @@ Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, üb
 **Schlaf** (mit MRsleep; `mrsleep.admin.gui`, Blockaden aufheben mit `mrsleep.admin.clear`)
 - Jede Welt mit Tag/Nacht, wie viele schlafen und wie viele nötig sind, dazu wer gerade mit /nosleep blockiert -
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
+
+**Duelle** (mit MRpvp; Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.ban`,
+`.reset`, `.restore`, `.review` handeln)
+- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena, abbrechen. Pro Runde eine Seite mit Mini-Karte (der
+  Punkt leuchtet beim Treffen und Getroffenwerden), Inventaren und Kampf-Log; beendete Runden mit den gesicherten
+  Inventaren (beim Betreten und am Ende, Enderchest, MRtoolbar-Gürtel) und einer Wiedergabe der Positionen.
+- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Arenen mit ihren Kopien,
+  Auffälligkeiten der letzten 24 Stunden. Auf der Spielerseite: Duell-Statistik, Sperre, Statistik zurücksetzen.
 
 **Wartung & Ankündigungen** (`mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen)
 - **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - Liste der

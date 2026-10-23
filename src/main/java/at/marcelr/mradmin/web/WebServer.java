@@ -320,10 +320,30 @@ public final class WebServer {
         }
         if (!s.publicUrl().isEmpty()) {
             URI url = URI.create(s.publicUrl());
-            return origin.equalsIgnoreCase(url.getScheme() + "://" + url.getRawAuthority());
+            if (origin.equalsIgnoreCase(url.getScheme() + "://" + url.getRawAuthority())) {
+                return true;
+            }
+            // localhost, 127.0.0.1 and [::1] are the same machine: a public-url on one of them also allows the
+            // others (same scheme and port). A foreign page (also with DNS rebinding) never has such an origin.
+            try {
+                URI from = URI.create(origin);
+                return loopback(url.getHost()) && loopback(from.getHost())
+                        && url.getScheme().equalsIgnoreCase(from.getScheme()) && port(url) == port(from);
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
         }
         String host = http.header("Host");
         return host != null && (origin.equalsIgnoreCase("http://" + host) || origin.equalsIgnoreCase("https://" + host));
+    }
+
+    private static boolean loopback(String host) {
+        return host != null && (host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1")
+                || host.equals("[::1]") || host.equals("::1"));
+    }
+
+    private static int port(URI uri) {
+        return uri.getPort() >= 0 ? uri.getPort() : "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 
     private static void securityHeaders(HttpExchange exchange) {

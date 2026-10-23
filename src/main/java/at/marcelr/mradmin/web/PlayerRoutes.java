@@ -37,6 +37,7 @@ import static at.marcelr.mradmin.Messages.tag;
  *  POST /api/players/{uuid}/freeze | unfreeze
  *  POST /api/players/{uuid}/kick   {reason?}
  *  GET  /api/players/{uuid}/mrsleep                        MRsleep's part (its actions: POST /api/mrsleep/action)
+ *  GET  /api/players/{uuid}/mrpvp                          MRpvp's part (its actions: POST /api/mrpvp/action)
  *  GET  /api/players/{uuid}/mrchunks                       MRchunks' part
  *  POST /api/players/{uuid}/mrchunks   {action, kind?, value?, reason?}   limit | ban | unban | deleteAll
  *  GET  /api/players/{uuid}/libertybans                LibertyBans: punishments and what the member may do
@@ -85,6 +86,7 @@ public final class PlayerRoutes {
         server.route("POST", "/api/players/{uuid}/unfreeze", http -> r.freeze(http, false));
         server.route("POST", "/api/players/{uuid}/kick", r::kick);
         server.route("GET", "/api/players/{uuid}/mrsleep", http -> r.part(http, SleepRoutes.hook(r.plugin), SleepRoutes.PERM_VIEW));
+        server.route("GET", "/api/players/{uuid}/mrpvp", http -> r.part(http, PvpRoutes.hook(r.plugin), PvpRoutes.PERM_VIEW));
         server.route("GET", "/api/players/{uuid}/mrchunks", http -> r.part(http, ChunkRoutes.hook(r.plugin), ChunkRoutes.PERM_VIEW));
         server.route("POST", "/api/players/{uuid}/mrchunks", r::chunksAction);
         server.route("GET", "/api/players/{uuid}/libertybans", r::punishments);
@@ -123,10 +125,11 @@ public final class PlayerRoutes {
         boolean tickets = may(http, Perms.TICKETS_VIEW);
         boolean sleep = may(http, SleepRoutes.PERM_VIEW);
         boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
+        boolean pvp = may(http, PvpRoutes.PERM_VIEW);
         // LibertyBans answers asynchronously - its marks are fetched here, never on the server thread.
         Map<UUID, Set<String>> punished = punishedMarks(http);
         Map<String, Object> result = server.sync(() -> {
-            Map<String, List<String>> flags = flags(tickets, sleep, chunks);
+            Map<String, List<String>> flags = flags(tickets, sleep, chunks, pvp);
             punished.forEach((id, types) -> {
                 List<String> f = flags.computeIfAbsent(id.toString(), k -> new ArrayList<>());
                 types.forEach(type -> f.add("lb-" + type));
@@ -183,7 +186,7 @@ public final class PlayerRoutes {
      * Marks per player (uuid -> keys) - only from the parts the member may see: frozen, reported (open tickets about
      * them), and what MRsleep / MRchunks report through their hook ("flags").
      */
-    private Map<String, List<String>> flags(boolean tickets, boolean sleep, boolean chunks) {
+    private Map<String, List<String>> flags(boolean tickets, boolean sleep, boolean chunks, boolean pvp) {
         Map<String, List<String>> flags = new HashMap<>();
         if (plugin.feature(Feature.FREEZE)) {
             for (Player p : Bukkit.getOnlinePlayers()) {
@@ -204,6 +207,7 @@ public final class PlayerRoutes {
         }
         addFlags(flags, SleepRoutes.hook(plugin), sleep);
         addFlags(flags, ChunkRoutes.hook(plugin), chunks);
+        addFlags(flags, PvpRoutes.hook(plugin), pvp);
         return flags;
     }
 
@@ -268,6 +272,7 @@ public final class PlayerRoutes {
         boolean kick = may(http, Perms.PLAYER_KICK);
         boolean sleep = may(http, SleepRoutes.PERM_VIEW);
         boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
+        boolean pvp = may(http, PvpRoutes.PERM_VIEW);
         boolean punishments = Bans.get(plugin) != null && may(http, LB_COMMANDS) && may(http, LB_HISTORY);
         Map<String, Object> result = server.sync(() -> {
             OfflinePlayer p = Bukkit.getOfflinePlayer(id);
@@ -320,6 +325,7 @@ public final class PlayerRoutes {
             Map<String, Object> parts = new LinkedHashMap<>();
             parts.put("mrsleep", SleepRoutes.hook(plugin) != null && sleep);
             parts.put("mrchunks", ChunkRoutes.hook(plugin) != null && chunks);
+            parts.put("mrpvp", PvpRoutes.hook(plugin) != null && pvp);
             parts.put("libertybans", punishments);
             r.put("parts", parts);
             return r;
