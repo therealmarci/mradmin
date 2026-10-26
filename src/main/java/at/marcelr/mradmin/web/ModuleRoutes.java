@@ -115,8 +115,8 @@ public final class ModuleRoutes {
         WebModule checked = require(http, id, web == null ? "view" : web.actions().get(action));
         // Viewing is needed too - an action never works on a page the member cannot see.
         Map<String, Object> args = limit(http.bodyValues());
-        Object error = server.sync(() -> plugin.modules().call(plugin.modules().module(id),
-                () -> checked.action(action, args, user(http)), "error"));
+        Object error = server.sync(() -> plugin.modules().attempt(plugin.modules().module(id),
+                () -> checked.action(action, args, user(http))));
         fail(error);
         audit(http, id + "-" + action, describe(args));
     }
@@ -141,8 +141,8 @@ public final class ModuleRoutes {
         WebModule web = plugin.modules().web(id);
         WebModule checked = require(http, id, web == null ? "view" : web.playerActions().get(action));
         Map<String, Object> args = limit(http.bodyValues());
-        Object error = server.sync(() -> plugin.modules().call(plugin.modules().module(id),
-                () -> checked.playerAction(player, action, args, user(http)), "error"));
+        Object error = server.sync(() -> plugin.modules().attempt(plugin.modules().module(id),
+                () -> checked.playerAction(player, action, args, user(http))));
         fail(error);
         String detail = describe(args);
         audit(http, id + "-" + action, name(player) + (detail.isEmpty() ? "" : " " + detail));

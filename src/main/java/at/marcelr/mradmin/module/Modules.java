@@ -268,7 +268,20 @@ public final class Modules implements MRadminService {
         return result;
     }
 
-    /** Runs a call into another plugin; on any error it is logged and {@code fallback} returned. */
+    /**
+     * Runs an action of a module ({@link WebModule#action} and the like): its answer as it is - null means done, a
+     * text is an error key. Only if the module throws, it is logged and "error" returned.
+     */
+    public @Nullable String attempt(AdminModule module, Supplier<@Nullable String> action) {
+        try {
+            return action.get();
+        } catch (Throwable t) {
+            plugin.getLogger().warning("Module '" + module.id() + "' (" + module.plugin().getName() + ") failed: " + t);
+            return "error";
+        }
+    }
+
+    /** Runs a call into another plugin that answers with a value; if it throws or answers null, {@code fallback}. */
     public <T> T call(AdminModule module, Supplier<T> call, T fallback) {
         try {
             T result = call.get();
