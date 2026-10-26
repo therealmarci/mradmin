@@ -222,49 +222,53 @@ public final class TicketManager {
     }
 
     /**
-     * A chunk loader was locked or unlocked in MRchunks (values of its LoaderLockEvent). Lock: a ticket for the owner
-     * with all details, in which they can explain what happened and which only the team can close - or, if one is
-     * still open, a note in it. Unlock: a note in the open ticket. The owner is told in chat with a link.
+     * A module reports a problem of a player (see {@link at.marcelr.mradmin.api.MRadminService#report}): a ticket for
+     * the player with all details, in which they can explain what happened and which only the team can close - or,
+     * if one is still open for the same key, the text as a note in it. The player is told in chat with a link.
      */
-    public void loaderLock(String source, Map<?, ?> data) {
-        String type = string(data, "type");
-        String id = string(data, "loader");
-        String name = string(data, "name");
-        Ticket open = bySource(source, id);
-        if (type.equals("unlock")) {
-            if (open != null) {
-                note(open, source, messages().plain("ticket-lock-unlocked", "admin", string(data, "by")), false);
-            }
+    public void report(String source, at.marcelr.mradmin.api.Report report) {
+        if (report.kind().equals(LOCK_CATEGORY) && !settings().chunkloaderLocks()) {
             return;
         }
-        if (!type.equals("lock") || !(data.get("owner") instanceof UUID owner)) {
-            return;
+        Ticket open = bySource(source, report.key());
+        String subject = TicketText.limit(report.subject(), 100);
+        if (report.push() != null) {
+            plugin.push(report.push(), "report", "/tickets/" + (open != null ? open.id() : nextId), null,
+                    "subject", subject, "player", report.playerName(), "plugin", source);
         }
-        plugin.push("chunks-locked", "lock", "/chunks/" + id, null, "name", name, "owner", string(data, "owner-name"));
-        String details = string(data, "details");
         if (open != null) {
-            note(open, source, messages().plain("ticket-lock-again") + "\n" + details, true);
-            notifyLock(open, owner, name);
+            note(open, source, messages().plain("ticket-report-again") + "\n" + report.text(), true);
+            notifyReport(open, report.player(), subject);
             notifyStaff(open, null, "ticket-notify-message", tag("id", open.id()), tag("player", source),
-                    tag("text", TicketText.preview(details, PREVIEW)), tag("open", openButton(open)));
+                    tag("text", TicketText.preview(report.text(), PREVIEW)), tag("open", openButton(open)));
             return;
         }
-        String subject = TicketText.limit(messages().plain("ticket-lock-subject", "name", name), 100);
-        Ticket ticket = new Ticket(nextId++, owner, string(data, "owner-name"), null, null, LOCK_CATEGORY, subject,
-                Instant.now(), string(data, "world"), number(data, "x") + 0.5, number(data, "y"), number(data, "z") + 0.5);
-        ticket.source(source, id);
-        ticket.add(new Ticket.Message(SYSTEM, source, true, details, Instant.now()));
+        var location = report.location();
+        Ticket ticket = new Ticket(nextId++, report.player(), report.playerName(), null, null, report.kind(), subject,
+                Instant.now(), location == null || location.getWorld() == null ? "" : location.getWorld().getName(),
+                location == null ? 0 : location.getX(), location == null ? 0 : location.getY(),
+                location == null ? 0 : location.getZ());
+        ticket.source(source, report.key());
+        ticket.add(new Ticket.Message(SYSTEM, source, true, report.text(), Instant.now()));
         ticket.staffUnread(true);
         tickets.put(ticket.id(), ticket);
         save(ticket);
 
-        notifyLock(ticket, owner, name);
+        notifyReport(ticket, report.player(), subject);
         notifyNew(ticket);
-        plugin.getLogger().info("Ticket #" + ticket.id() + " (" + LOCK_CATEGORY + ") for " + ticket.creatorName()
+        plugin.getLogger().info("Ticket #" + ticket.id() + " (" + report.kind() + ") for " + ticket.creatorName()
                 + ": " + subject + " (opened by " + source + ").");
-        plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(LOCK_CATEGORY), "creator", ticket.creatorName(),
-                "summary", subject, "text", TicketText.preview(details, 300),
+        plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(report.kind()), "creator", ticket.creatorName(),
+                "summary", subject, "text", TicketText.preview(report.text(), 300),
                 "world", ticket.world(), "x", ticket.blockX(), "y", ticket.blockY(), "z", ticket.blockZ());
+    }
+
+    /** The problem behind {@code key} is solved: the note goes into the open ticket (if there is one). */
+    public void resolve(String source, String key, String note) {
+        Ticket open = bySource(source, key);
+        if (open != null) {
+            note(open, source, note, false);
+        }
     }
 
     // ------------------------------------------------------ public web forms
@@ -401,23 +405,14 @@ public final class TicketManager {
         save(ticket);
     }
 
-    /** Tells the owner (if online) that the ticket is there and that they can explain themselves in it. */
-    private void notifyLock(Ticket ticket, UUID owner, String name) {
-        Player player = Bukkit.getPlayer(owner);
-        if (player != null) {
-            messages().send(player, "ticket-lock-notify", tag("id", ticket.id()), tag("name", name),
+    /** Tells the player (if online) that the ticket is there and that they can explain themselves in it. */
+    private void notifyReport(Ticket ticket, UUID player, String subject) {
+        Player online = Bukkit.getPlayer(player);
+        if (online != null) {
+            messages().send(online, "ticket-report-notify", tag("id", ticket.id()), tag("subject", subject),
                     tag("open", openButton(ticket)));
-            sound(player);
+            sound(online);
         }
-    }
-
-    private static String string(Map<?, ?> data, String key) {
-        Object value = data.get(key);
-        return value == null ? "" : String.valueOf(value);
-    }
-
-    private static double number(Map<?, ?> data, String key) {
-        return data.get(key) instanceof Number n ? n.doubleValue() : 0;
     }
 
     // ---------------------------------------------------------------- handling

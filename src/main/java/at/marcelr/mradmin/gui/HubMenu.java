@@ -8,6 +8,7 @@ import at.marcelr.mradmin.command.MRAdminCommand;
 import at.marcelr.mradmin.command.StaffChat;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.mode.AdminModeManager;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -130,8 +131,8 @@ public final class HubMenu extends Menu {
         List<Tile> tiles = new ArrayList<>();
 
         if (viewer.hasPermission(at.marcelr.mradmin.Perms.PLAYER_VIEW)) {
-            int online = Math.max(0, Bukkit.getOnlinePlayers().size() - 1);
-            long frozen = Bukkit.getOnlinePlayers().stream().filter(p -> plugin.freeze().frozen(p.getUniqueId())).count();
+            int online = Math.max(0, Npcs.online().size() - 1);
+            long frozen = Npcs.online().stream().filter(p -> plugin.freeze().frozen(p.getUniqueId())).count();
             State state = frozen > 0 ? State.WARN : State.GOOD;
             Component text = messages.item(frozen > 0 ? "gui-tile-players-frozen" : "gui-tile-players-ok", tag("frozen", frozen));
             tiles.add(new Tile(Items.of(Material.PLAYER_HEAD)
@@ -221,19 +222,23 @@ public final class HubMenu extends Menu {
         for (Settings.HubButton button : visibleButtons()) {
             String base = "gui-hub-buttons." + button.id();
             Component name = messages.has(base + ".name") ? messages.item(base + ".name")
-                    : messages.item("gui-hub-button-fallback-name", tag("name", button.id()));
+                    : messages.item("gui-hub-button-fallback-name",
+                            tag("name", button.plugin().isEmpty() ? button.id() : button.plugin()));
             List<Component> lore = messages.has(base + ".lore") ? messages.lore(base + ".lore") : List.of();
             // Live information from the plugin itself (if it offers a hook), above its own description.
-            List<Component> live = plugin.hooks().summary(button, viewer);
+            List<Component> live = plugin.modules().summary(button, viewer);
             Items item = Items.of(button.material()).name(name).lore(live);
             if (!live.isEmpty() && !lore.isEmpty()) {
                 item.lore(Component.empty());
             }
             tools.add(new Button(item.lore(lore).build(), click -> {
                 clickSound();
-                viewer.closeInventory();
-                // The other plugin checks its own permissions; we only run its command as the player.
-                viewer.performCommand(button.command());
+                // The module's own menu if it has one, otherwise the configured command (run as the player - the
+                // other plugin checks its own permissions).
+                if (!plugin.modules().openMenu(button, viewer, this::reopen) && !button.command().isEmpty()) {
+                    viewer.closeInventory();
+                    viewer.performCommand(button.command());
+                }
             }));
         }
         return tools;
@@ -241,7 +246,7 @@ public final class HubMenu extends Menu {
 
     /** Buttons whose plugin is installed and enabled and whose permission the viewer has. */
     private List<Settings.HubButton> visibleButtons() {
-        return plugin.settings().adminMode().buttons().stream()
+        return plugin.modules().buttons().stream()
                 .filter(b -> {
                     if (b.plugin().isEmpty()) {
                         return true;

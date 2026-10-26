@@ -316,9 +316,9 @@ public final class TicketDialog {
                     action(plugin, viewer, response -> tickets.teleport(viewer, ticket))));
         }
         Settings.HubButton source = staff ? sourcePlugin(plugin, ticket) : null;
-        if (source != null && plugin.hooks().hasActivity(source)) {
+        if (source != null && plugin.modules().hasHealth(source)) {
             buttons.add(ActionButton.create(messages.get("ticket-view-object"), messages.get("ticket-view-object-hover"), 150,
-                    action(plugin, viewer, response -> plugin.hooks().openActivity(source, viewer, ticket.sourceId(), again))));
+                    action(plugin, viewer, response -> plugin.modules().openHealth(source, viewer, ticket.sourceId(), again))));
         }
         ActionButton exit = ActionButton.create(messages.get(back == null ? "ticket-view-exit" : "ticket-view-back"), null, 150,
                 back == null ? null : backAction(plugin, viewer, back));
@@ -417,8 +417,8 @@ public final class TicketDialog {
         if (ticket.source() == null) {
             return null;
         }
-        return plugin.settings().adminMode().buttons().stream()
-                .filter(b -> b.plugin().equalsIgnoreCase(ticket.source()) && plugin.hooks().available(b))
+        return plugin.modules().buttons().stream()
+                .filter(b -> b.plugin().equalsIgnoreCase(ticket.source()) && (plugin.modules().module(b) != null))
                 .findFirst().orElse(null);
     }
 

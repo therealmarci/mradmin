@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.web.AuthRoutes;
 import at.marcelr.mradmin.web.auth.WebAuth;
@@ -68,7 +69,7 @@ final class WebCommand {
                     ? List.of("setup", "invite", "sessions", "logout", "remove") : List.of("setup", "sessions", "logout");
         }
         if (args.length == 3 && sender.hasPermission(AuthRoutes.PERM_MANAGE)) {
-            return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+            return Npcs.online().stream().map(Player::getName).toList();
         }
         return List.of();
     }

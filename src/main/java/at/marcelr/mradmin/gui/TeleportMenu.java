@@ -3,7 +3,7 @@ package at.marcelr.mradmin.gui;
 import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
-import org.bukkit.Bukkit;
+import at.marcelr.mradmin.player.Npcs;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -28,7 +28,7 @@ public final class TeleportMenu extends Menu {
     @Override
     protected void draw() {
         Messages messages = plugin.messages();
-        List<Player> players = Bukkit.getOnlinePlayers().stream()
+        List<Player> players = Npcs.online().stream()
                 .filter(p -> !p.equals(viewer))
                 .filter(viewer::canSee)
                 .sorted(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER))

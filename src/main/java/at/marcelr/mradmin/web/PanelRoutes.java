@@ -98,23 +98,28 @@ public final class PanelRoutes {
                 alerts.add(alert("info", "ticketsMine", "tickets-mine", Map.of("n", mine)));
             }
         }
-        if (snapshot.get("mrchunks") instanceof Map<?, ?> c && may(http, ChunkRoutes.PERM_VIEW)) {
+        if (snapshot.get("mrchunks") instanceof Map<?, ?> c && ModuleRoutes.may(server, http.account().id(), "mrchunks", "view")) {
             result.put("mrchunks", c);
-            if (Boolean.TRUE.equals(c.get("paused"))) {
-                alerts.add(alert("bad", "chunksPaused", "chunks", Map.of("tps", c.get("tps"))));
-            }
-            if (((Number) c.get("locked")).intValue() > 0) {
-                alerts.add(alert("warn", "chunksLocked", "chunks", Map.of("n", c.get("locked"))));
-            }
-            if (((Number) c.get("warn")).intValue() > 0) {
-                alerts.add(alert("info", "chunksWarn", "chunks", Map.of("n", c.get("warn"))));
-            }
         }
-        if (snapshot.get("mrsleep") instanceof Map<?, ?> s && may(http, SleepRoutes.PERM_VIEW)) {
+        if (snapshot.get("mrsleep") instanceof Map<?, ?> s && ModuleRoutes.may(server, http.account().id(), "mrsleep", "view")) {
             result.put("mrsleep", s);
-            int blocked = ((Number) s.get("blocked")).intValue();
-            if (blocked > 0) {
-                alerts.add(alert("info", "sleepBlocked", "sleep", Map.of("n", blocked)));
+        }
+        // Hints of the modules (texts from the module itself), for those who may see the module.
+        if (snapshot.get("moduleAlerts") instanceof Map<?, ?> moduleAlerts) {
+            for (Map.Entry<?, ?> entry : moduleAlerts.entrySet()) {
+                String id = String.valueOf(entry.getKey());
+                if (!(entry.getValue() instanceof List<?> list) || !ModuleRoutes.may(server, http.account().id(), id, "view")) {
+                    continue;
+                }
+                int index = 0;
+                for (Object item : list) {
+                    Map<?, ?> a = (Map<?, ?>) item;
+                    Map<String, Object> alert = alert(String.valueOf(a.get("tone")), id + "-" + index++,
+                            a.get("page") == null ? null : String.valueOf(a.get("page")), Map.of());
+                    alert.put("module", id);
+                    alert.put("text", a.get("text"));
+                    alerts.add(alert);
+                }
             }
         }
         if (snapshot.get("maintenance") instanceof Map<?, ?> m && may(http, Perms.MAINTENANCE_VIEW)) {
@@ -169,9 +174,12 @@ public final class PanelRoutes {
     }
 
     private void events(Http http) throws Exception {
+        // Live updates of the modules the member may see (MRadminService.webChanged).
         java.util.Set<String> plugins = new java.util.HashSet<>();
-        if (PvpRoutes.hook(plugin) != null && may(http, PvpRoutes.PERM_VIEW)) {
-            plugins.add("mrpvp");
+        for (String id : plugin.modules().webModules().keySet()) {
+            if (ModuleRoutes.may(server, http.account().id(), id, "view")) {
+                plugins.add(id);
+            }
         }
         server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW), plugins);
     }

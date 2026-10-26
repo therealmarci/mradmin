@@ -2,7 +2,7 @@
   // MRpvp: running duels live (health of both, time), finished rounds, arenas with their copies, the alerts of the
   // last 24 hours and conspicuous rounds waiting for a decision. Everything about one round is on /pvp/<id>.
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { head, dateTime, ago } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -25,7 +25,7 @@
 
   async function load() {
     try {
-      overview = await api('GET', '/mrpvp/overview');
+      overview = await moduleData('mrpvp', 'overview');
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -35,7 +35,7 @@
   async function loadGames() {
     if (!me.may.mrpvpGames) return;
     try {
-      games = await api('GET', `/mrpvp/games/${filter}/${offset}`);
+      games = await moduleData('mrpvp', 'games', { filter, offset });
     } catch (e) {
       error = errorText(e);
     }
@@ -45,7 +45,7 @@
   async function loadReviews() {
     if (!me.may.mrpvpReview) return;
     try {
-      reviews = await api('GET', '/mrpvp/reviews');
+      reviews = await moduleData('mrpvp', 'reviews');
     } catch (e) {
       reviews = [];
       if (e.status !== 404) error = errorText(e);
@@ -58,7 +58,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', '/mrpvp/action', { action, id: String(r.game) });
+      await moduleAction('mrpvp', { action, id: String(r.game) });
       message = t('pvp.review.done.' + action, { id: r.game });
       await Promise.all([load(), loadReviews()]);
     } catch (e) {
@@ -97,7 +97,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', '/mrpvp/action', { action: 'stop', id: String(game.id) });
+      await moduleAction('mrpvp', { action: 'stop', id: String(game.id) });
       message = t('pvp.done.stop', { id: game.id });
       await load();
     } catch (e) {

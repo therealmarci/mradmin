@@ -1,0 +1,6 @@
+# JitPack baut nur die MRadmin-API (api/) - Plugins binden sie als com.github.therealmarci.mradmin:api:<tag> ein.
+before_install:
+  - sdk install java 25-open
+  - sdk use java 25-open
+install:
+  - ./gradlew :api:publishToMavenLocal

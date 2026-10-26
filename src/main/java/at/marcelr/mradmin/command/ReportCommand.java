@@ -3,6 +3,7 @@ package at.marcelr.mradmin.command;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.gui.TicketDialog;
 import at.marcelr.mradmin.gui.TicketMenu;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.ticket.Ticket;
 import at.marcelr.mradmin.ticket.TicketManager;
 import org.bukkit.Bukkit;
@@ -90,7 +91,7 @@ public final class ReportCommand implements TabExecutor {
             return List.of();
         }
         String prefix = args[0].toLowerCase(Locale.ROOT);
-        return Bukkit.getOnlinePlayers().stream()
+        return Npcs.online().stream()
                 .filter(p -> !p.equals(sender) && (!(sender instanceof Player viewer) || viewer.canSee(p)))
                 .map(Player::getName)
                 .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(prefix))

@@ -3,6 +3,7 @@ package at.marcelr.mradmin.gui;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
+import at.marcelr.mradmin.api.HealthEntry;
 import at.marcelr.mradmin.health.HotChunks;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.util.Layout;
@@ -103,10 +104,10 @@ public final class ServerStatusMenu extends Menu {
 
     /** The first plugin button whose plugin is installed, the viewer may use, and that reports activity. */
     private Settings.HubButton activityProvider() {
-        for (Settings.HubButton button : plugin.settings().adminMode().buttons()) {
+        for (Settings.HubButton button : plugin.modules().buttons()) {
             Plugin other = button.plugin().isEmpty() ? null : Bukkit.getPluginManager().getPlugin(button.plugin());
             if (other != null && other.isEnabled() && (button.permission().isEmpty() || viewer.hasPermission(button.permission()))
-                    && plugin.hooks().hasActivity(button)) {
+                    && plugin.modules().hasHealth(button)) {
                 return button;
             }
         }
@@ -115,17 +116,19 @@ public final class ServerStatusMenu extends Menu {
 
     /** Rows 2-4: the plugin's entries (already built in its language), a click opens them there. */
     private void drawActivity(Settings.HubButton provider) {
-        List<Map<String, Object>> entries = plugin.hooks().activity(provider, viewer);
+        List<HealthEntry> entries = plugin.modules().health(provider, viewer);
         int index = 0;
-        for (Map<String, Object> entry : entries) {
-            if (index == TOP || !(entry.get("icon") instanceof ItemStack icon) || !(entry.get("id") instanceof String id)) {
-                continue;
+        for (HealthEntry entry : entries) {
+            if (index == TOP) {
+                break;
             }
+            ItemStack icon = entry.icon();
+            String id = entry.id();
             int slot = 18 + (index / 7) * 9 + 1 + index % 7;
             index++;
             set(slot, icon, click -> {
                 clickSound();
-                if (!plugin.hooks().openActivity(provider, viewer, id, () -> new ServerStatusMenu(plugin, viewer, back).open())) {
+                if (!plugin.modules().openHealth(provider, viewer, id, () -> new ServerStatusMenu(plugin, viewer, back).open())) {
                     sound(org.bukkit.Sound.ENTITY_VILLAGER_NO);
                 }
             });

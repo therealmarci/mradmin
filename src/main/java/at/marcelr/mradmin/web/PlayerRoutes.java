@@ -6,6 +6,7 @@ import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.hook.Bans;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.ticket.Ticket;
 import org.bukkit.Bukkit;
@@ -29,17 +30,14 @@ import static at.marcelr.mradmin.Messages.tag;
 /**
  * Player management: everyone who has been on the server, and per player what MRadmin and the connected plugins know
  * and can do. The list and the profile need mradmin.player.view; every part has its own permission on top (tickets:
- * mradmin.tickets.view, freezing: mradmin.player.freeze, kicking: mradmin.player.kick, MRsleep and MRchunks: their
- * own). The plugins answer through their hook (version 4) - without them their part is simply missing.
+ * mradmin.tickets.view, freezing: mradmin.player.freeze, kicking: mradmin.player.kick, modules: their own). The
+ * modules' parts (MRsleep, MRchunks, MRpvp ...) come from ModuleRoutes - without a module its part is simply missing.
  * <pre>
  *  GET  /api/players?q=&amp;filter=all|online|flagged&amp;page=0   50 per page, online first, then by last visit
  *  GET  /api/players/{uuid}                                profile, tickets, which plugin parts there are
  *  POST /api/players/{uuid}/freeze | unfreeze
  *  POST /api/players/{uuid}/kick   {reason?}
- *  GET  /api/players/{uuid}/mrsleep                        MRsleep's part (its actions: POST /api/mrsleep/action)
- *  GET  /api/players/{uuid}/mrpvp                          MRpvp's part (its actions: POST /api/mrpvp/action)
- *  GET  /api/players/{uuid}/mrchunks                       MRchunks' part
- *  POST /api/players/{uuid}/mrchunks   {action, kind?, value?, reason?}   limit | ban | unban | deleteAll
+ *  GET  /api/players/{uuid}/modules/{id}               a module's part (and its actions, see ModuleRoutes)
  *  GET  /api/players/{uuid}/libertybans                LibertyBans: punishments and what the member may do
  *  POST /api/players/{uuid}/libertybans   {action: punish|undo, type, duration?, reason?, id?}
  * </pre>
@@ -51,10 +49,6 @@ public final class PlayerRoutes {
     /** The list of all players reads the player files - at most once a minute. */
     private static final long LIST_CACHE_MILLIS = 60_000L;
     private static final int MAX_REASON = 200;
-    /** MRchunks' player actions -> MRchunks' permission for them. */
-    private static final Map<String, String> CHUNK_ACTIONS = Map.of(
-            "limit", ChunkRoutes.PERM_LIMIT, "ban", ChunkRoutes.PERM_BAN, "unban", ChunkRoutes.PERM_BAN,
-            "deleteAll", ChunkRoutes.PERM_MANAGE);
 
     /** LibertyBans: prerequisite for all its commands, and for its part of the player page. */
     private static final String LB_COMMANDS = "libertybans.commands";
@@ -85,10 +79,6 @@ public final class PlayerRoutes {
         server.route("POST", "/api/players/{uuid}/freeze", http -> r.freeze(http, true));
         server.route("POST", "/api/players/{uuid}/unfreeze", http -> r.freeze(http, false));
         server.route("POST", "/api/players/{uuid}/kick", r::kick);
-        server.route("GET", "/api/players/{uuid}/mrsleep", http -> r.part(http, SleepRoutes.hook(r.plugin), SleepRoutes.PERM_VIEW));
-        server.route("GET", "/api/players/{uuid}/mrpvp", http -> r.part(http, PvpRoutes.hook(r.plugin), PvpRoutes.PERM_VIEW));
-        server.route("GET", "/api/players/{uuid}/mrchunks", http -> r.part(http, ChunkRoutes.hook(r.plugin), ChunkRoutes.PERM_VIEW));
-        server.route("POST", "/api/players/{uuid}/mrchunks", r::chunksAction);
         server.route("GET", "/api/players/{uuid}/libertybans", r::punishments);
         server.route("POST", "/api/players/{uuid}/libertybans", r::punishAction);
     }
@@ -123,13 +113,11 @@ public final class PlayerRoutes {
         List<Known> all = known();
         // Permissions first - asking LuckPerms must not happen on the server thread.
         boolean tickets = may(http, Perms.TICKETS_VIEW);
-        boolean sleep = may(http, SleepRoutes.PERM_VIEW);
-        boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
-        boolean pvp = may(http, PvpRoutes.PERM_VIEW);
+        List<String> modules = visibleModules(http);
         // LibertyBans answers asynchronously - its marks are fetched here, never on the server thread.
         Map<UUID, Set<String>> punished = punishedMarks(http);
         Map<String, Object> result = server.sync(() -> {
-            Map<String, List<String>> flags = flags(tickets, sleep, chunks, pvp);
+            Map<String, List<String>> flags = flags(tickets, modules);
             punished.forEach((id, types) -> {
                 List<String> f = flags.computeIfAbsent(id.toString(), k -> new ArrayList<>());
                 types.forEach(type -> f.add("lb-" + type));
@@ -168,11 +156,12 @@ public final class PlayerRoutes {
             known = server.sync(() -> {
                 Map<UUID, Known> map = new LinkedHashMap<>();
                 for (OfflinePlayer p : Bukkit.getOfflinePlayers()) {
-                    if (p.getName() != null) {
+                    Player online = p.getPlayer();
+                    if (p.getName() != null && (online == null || !Npcs.is(online))) {
                         map.put(p.getUniqueId(), new Known(p.getUniqueId(), p.getName(), p.getFirstPlayed(), p.getLastSeen()));
                     }
                 }
-                for (Player p : Bukkit.getOnlinePlayers()) {
+                for (Player p : Npcs.online()) {
                     map.putIfAbsent(p.getUniqueId(), new Known(p.getUniqueId(), p.getName(), p.getFirstPlayed(), System.currentTimeMillis()));
                 }
                 return List.copyOf(map.values());
@@ -184,12 +173,12 @@ public final class PlayerRoutes {
 
     /**
      * Marks per player (uuid -> keys) - only from the parts the member may see: frozen, reported (open tickets about
-     * them), and what MRsleep / MRchunks report through their hook ("flags").
+     * them), and what the modules the member may see report (e.g. MRchunks: chunks-locked).
      */
-    private Map<String, List<String>> flags(boolean tickets, boolean sleep, boolean chunks, boolean pvp) {
+    private Map<String, List<String>> flags(boolean tickets, List<String> modules) {
         Map<String, List<String>> flags = new HashMap<>();
         if (plugin.feature(Feature.FREEZE)) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
+            for (Player p : Npcs.online()) {
                 if (plugin.freeze().frozen(p.getUniqueId())) {
                     flags.computeIfAbsent(p.getUniqueId().toString(), k -> new ArrayList<>()).add("frozen");
                 }
@@ -205,9 +194,13 @@ public final class PlayerRoutes {
                 }
             }
         }
-        addFlags(flags, SleepRoutes.hook(plugin), sleep);
-        addFlags(flags, ChunkRoutes.hook(plugin), chunks);
-        addFlags(flags, PvpRoutes.hook(plugin), pvp);
+        for (String id : modules) {
+            var web = plugin.modules().web(id);
+            if (web != null) {
+                plugin.modules().call(plugin.modules().module(id), web::flags, Map.<UUID, List<String>>of())
+                        .forEach((uuid, keys) -> flags.computeIfAbsent(uuid.toString(), k -> new ArrayList<>()).addAll(keys));
+            }
+        }
         return flags;
     }
 
@@ -250,18 +243,6 @@ public final class PlayerRoutes {
         return result;
     }
 
-    private void addFlags(Map<String, List<String>> flags, Settings.HubButton hook, boolean allowed) {
-        if (hook == null || !allowed || !(plugin.hooks().web(hook, "flags", Map.of()) instanceof Map<?, ?> answer)) {
-            return;
-        }
-        answer.forEach((uuid, list) -> {
-            if (list instanceof List<?> l) {
-                List<String> f = flags.computeIfAbsent(String.valueOf(uuid), k -> new ArrayList<>());
-                l.forEach(v -> f.add(String.valueOf(v)));
-            }
-        });
-    }
-
     // ---------------------------------------------------------------- profile
 
     private void profile(Http http) throws Exception {
@@ -270,9 +251,7 @@ public final class PlayerRoutes {
         boolean tickets = may(http, Perms.TICKETS_VIEW);
         boolean freeze = plugin.feature(Feature.FREEZE) && may(http, Perms.PLAYER_FREEZE);
         boolean kick = may(http, Perms.PLAYER_KICK);
-        boolean sleep = may(http, SleepRoutes.PERM_VIEW);
-        boolean chunks = may(http, ChunkRoutes.PERM_VIEW);
-        boolean pvp = may(http, PvpRoutes.PERM_VIEW);
+        List<String> modules = visibleModules(http);
         boolean punishments = Bans.get(plugin) != null && may(http, LB_COMMANDS) && may(http, LB_HISTORY);
         Map<String, Object> result = server.sync(() -> {
             OfflinePlayer p = Bukkit.getOfflinePlayer(id);
@@ -323,9 +302,8 @@ public final class PlayerRoutes {
             may.put("kick", kick);
             r.put("may", may);
             Map<String, Object> parts = new LinkedHashMap<>();
-            parts.put("mrsleep", SleepRoutes.hook(plugin) != null && sleep);
-            parts.put("mrchunks", ChunkRoutes.hook(plugin) != null && chunks);
-            parts.put("mrpvp", PvpRoutes.hook(plugin) != null && pvp);
+            // Modules (GET /api/players/{uuid}/modules/<id>, see ModuleRoutes).
+            modules.forEach(module -> parts.put(module, true));
             parts.put("libertybans", punishments);
             r.put("parts", parts);
             return r;
@@ -405,57 +383,15 @@ public final class PlayerRoutes {
 
     // ---------------------------------------------------------- plugin parts
 
-    /** A plugin's part of the profile (its "player" answer), with its own view permission. */
-    private void part(Http http, Settings.HubButton hook, String permission) throws Exception {
-        require(http, Perms.PLAYER_VIEW);
-        if (hook == null) {
-            throw new Http.WebException(404, "plugin-missing");
+    /** Ids of the connected modules the member may see (their parts and marks; checked off the server thread). */
+    private List<String> visibleModules(Http http) {
+        List<String> ids = new ArrayList<>();
+        for (String id : plugin.modules().webModules().keySet()) {
+            if (ModuleRoutes.may(server, http.account().id(), id, "view")) {
+                ids.add(id);
+            }
         }
-        require(http, permission);
-        UUID id = uuid(http);
-        Object answer = server.sync(() -> plugin.hooks().web(hook, "player", Map.of("uuid", id.toString())));
-        if (answer == null) {
-            throw new Http.WebException(404, "not-found");
-        }
-        http.json(200, answer);
-    }
-
-    /** MRchunks' player actions, each with MRchunks' own permission (and mrchunks.admin.gui to see the part at all). */
-    private void chunksAction(Http http) throws Exception {
-        require(http, Perms.PLAYER_VIEW);
-        Settings.HubButton hook = ChunkRoutes.hook(plugin);
-        if (hook == null) {
-            throw new Http.WebException(404, "plugin-missing");
-        }
-        String action = http.string("action");
-        String permission = action == null ? null : CHUNK_ACTIONS.get(action);
-        if (permission == null) {
-            throw new Http.WebException(400, "unknown-action");
-        }
-        require(http, ChunkRoutes.PERM_VIEW);
-        require(http, permission);
-        UUID id = uuid(http);
-        String kind = http.string("kind");
-        String value = http.string("value");
-        String reason = http.string("reason");
-        Map<String, Object> args = new HashMap<>();
-        if (reason != null) {
-            args.put("reason", reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason);
-        }
-        args.put("action", action);
-        args.put("uuid", id.toString());
-        args.put("admin", http.account().name());
-        if (kind != null) {
-            args.put("kind", kind);
-        }
-        if (value != null) {
-            args.put("value", value);
-        }
-        Object error = server.sync(() -> plugin.hooks().web(hook, "playerAction", args));
-        if (error != null) {
-            throw new Http.WebException(400, String.valueOf(error));
-        }
-        audit(http, "chunkloader-" + action, name(id) + (kind == null ? "" : " " + kind) + (value == null ? "" : " " + value));
+        return ids;
     }
 
     // ------------------------------------------------------------ LibertyBans

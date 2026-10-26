@@ -39,6 +39,8 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApi")
+    // Die Modul-API (api/) steckt mit in der JAR - andere Plugins nutzen sie zur Laufzeit von hier.
+    implementation(project(":api"))
     // Optional: Rechte schon vor dem Join prüfen (Wartungsmodus). Ohne LuckPerms wird erst beim Join gekickt.
     compileOnly("net.luckperms:api:5.5")
     // Optional: Banns, Mutes, Warns und Kicks über LibertyBans auf der Spielerseite im Web. Ohne LibertyBans fehlt der Teil.

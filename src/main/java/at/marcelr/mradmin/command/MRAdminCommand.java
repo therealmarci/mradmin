@@ -14,6 +14,7 @@ import at.marcelr.mradmin.gui.PlayerActionMenu;
 import at.marcelr.mradmin.gui.TicketDialog;
 import at.marcelr.mradmin.gui.TicketsMenu;
 import at.marcelr.mradmin.gui.ServerStatusMenu;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.ticket.Ticket;
 import at.marcelr.mradmin.maintenance.KumaClient;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
@@ -602,7 +603,7 @@ public final class MRAdminCommand implements TabExecutor {
                     if (args.length == 2) {
                         options.addAll(List.of("on", "off", "list"));
                     } else if (args.length == 3 && sender.hasPermission(PERM_MODE_OTHERS)) {
-                        Bukkit.getOnlinePlayers().forEach(p -> options.add(p.getName()));
+                        Npcs.online().forEach(p -> options.add(p.getName()));
                     }
                 }
                 case "maintenance", "wartung", "maint" -> {
@@ -625,7 +626,7 @@ public final class MRAdminCommand implements TabExecutor {
                 }
                 case "player", "spieler", "p", "tp", "teleport" -> {
                     if (args.length == 2) {
-                        Bukkit.getOnlinePlayers().forEach(p -> options.add(p.getName()));
+                        Npcs.online().forEach(p -> options.add(p.getName()));
                     }
                 }
                 case "web" -> options.addAll(WebCommand.complete(sender, args));

@@ -1,6 +1,7 @@
 package at.marcelr.mradmin.maintenance;
 
 import at.marcelr.mradmin.MRAdmin;
+import at.marcelr.mradmin.player.Npcs;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
@@ -59,6 +60,9 @@ public final class MaintenanceListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onJoin(PlayerJoinEvent event) {
+        if (Npcs.is(event.getPlayer())) {
+            return; // e.g. MRchunks' dummies - no players, they stay during maintenance
+        }
         if (manager().active() && !manager().canJoin(event.getPlayer())) {
             event.joinMessage(null);
             event.getPlayer().kick(manager().kickScreen());

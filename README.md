@@ -54,10 +54,24 @@ anderen automatisch, auch wenn sie später geladen oder entfernt werden, und pas
 - **Spieler-Menü:** die Infos des Spielers aus dem Plugin, ein Klick öffnet dessen Spieler-Menü.
 - **Serverzustand** (MRchunks): auffällige, gesperrte und pausierte Chunkloader statt der Chunks mit den meisten
   Entities. Mit MRpvp stehen dort auch Duell-Runden, die auf eine Prüfung warten.
-- **Web** (MRpvp): eigene Seite **Duelle** (siehe unten).
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle**, die Teile der Plugins auf der Spielerseite und
+  ihre Hinweise auf der Startseite (z.B. gesperrte Chunkloader, `/nosleep`-Blockaden, wartende Prüfungen).
+- **Tickets** aus Plugins (MRchunks: Ticket für den Owner bei einer Lag-Sperre).
+
+**MRadmin ist auch die Verbindung zwischen den anderen MR-Plugins.** Sie kennen sich nicht gegenseitig, sondern
+sprechen über MRadmin miteinander. Ohne MRadmin laufen sie weiter, bekommen aber voneinander nichts mit:
+
+| Mit MRadmin | Braucht außerdem |
+|---|---|
+| Spieler im Duell zählen nicht zur Schlafquote, die Arena-Welt wird nie verwaltet | MRsleep + MRpvp |
+| Die Werkzeugleiste pausiert im Duell, MRpvp sichert die Gürtel mit | MRtoolbar + MRpvp |
+| In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Spieler im Admin-Modus zählen nicht zur Schlafquote, haben ihre Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
 
 Konfigurieren muss man dafür nichts. Wer eine Verbindung nicht möchte, schaltet sie unter `integrations` ab
-(`mrsleep: false`, `mrchunks: false`, `mrtoolbar: false`, `mrpvp: false`). Beim Start steht in der Konsole, welche Plugins verbunden sind.
+(`mrsleep: false`, `mrchunks: false`, `mrtoolbar: false`, `mrpvp: false`). Beim Start steht in der Konsole, welche
+Plugins verbunden sind - und eine Warnung, wenn eins zu alt für die Modul-Schnittstelle ist (dann alle zusammen
+aktualisieren). Wie ein Plugin sich verbindet: [docs/MODULE-API.md](docs/MODULE-API.md).
 
 ### Speicher: YAML, SQLite oder MySQL
 Unter `storage.type` in der Config wählst du, wo MRadmin Tickets, Wartungen, eingefrorene Spieler und den Status der

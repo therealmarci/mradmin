@@ -4,9 +4,10 @@ import at.marcelr.mradmin.announce.Announcer;
 import at.marcelr.mradmin.command.MRAdminCommand;
 import at.marcelr.mradmin.command.ReportCommand;
 import at.marcelr.mradmin.command.StaffChat;
-import at.marcelr.mradmin.hook.PluginHooks;
+import at.marcelr.mradmin.module.Modules;
 import at.marcelr.mradmin.player.FreezeListener;
 import at.marcelr.mradmin.player.FreezeManager;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
 import at.marcelr.mradmin.gui.MenuListener;
@@ -16,7 +17,6 @@ import at.marcelr.mradmin.mode.AdminModeListener;
 import at.marcelr.mradmin.mode.CreativeClearGuard;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
-import at.marcelr.mradmin.hook.LockTickets;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.health.HealthMonitor;
 import at.marcelr.mradmin.web.AuthRoutes;
@@ -32,7 +32,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -78,8 +77,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private UpdateChecker updateChecker;
     private FreezeManager freeze;
     private TicketManager tickets;
-    private PluginHooks hooks;
-    private LockTickets lockTickets;
+    private Modules modules;
     private Storage storage;
     private WebServer web;
     private HealthMonitor health;
@@ -100,9 +98,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PanelRoutes.register(web);
         at.marcelr.mradmin.web.SiteRoutes.register(web);
         at.marcelr.mradmin.web.HealthRoutes.register(web);
-        at.marcelr.mradmin.web.ChunkRoutes.register(web);
-        at.marcelr.mradmin.web.SleepRoutes.register(web);
-        at.marcelr.mradmin.web.PvpRoutes.register(web);
+        at.marcelr.mradmin.web.ModuleRoutes.register(web);
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
@@ -117,8 +113,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         freeze.load();
         tickets = new TicketManager(this);
         tickets.load();
-        hooks = new PluginHooks(this);
-        lockTickets = new LockTickets(this);
+        modules = new Modules(this);
+        // Before the other plugins enable (they softdepend on MRadmin) - they register their modules then.
+        modules.offer();
         staffChat = new StaffChat(this);
         maintenance = new MaintenanceManager(this);
         discordAnnounce.loadState();
@@ -211,7 +208,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     }
 
     private void startServices() {
-        hooks.clear();
         web.permissions().clear();
         web.start();
         if (feature(Feature.SERVER_STATUS)) {
@@ -236,6 +232,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
+        if (Npcs.is(event.getPlayer())) {
+            return;
+        }
         updateChecker.notifyIfOutdated(event.getPlayer());
         if (feature(Feature.TICKETS)) {
             tickets.notifyOnJoin(event.getPlayer());
@@ -260,14 +259,21 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     // ------------------------------------------------------ integrations
 
-    /** Integrations whose plugin is installed and enabled and that are not switched off. */
+    /**
+     * After all plugins are enabled: built-in integrations whose plugin runs but registered no module are an older
+     * version from before the module API (connected modules log themselves when they register, see Modules).
+     */
     private void logIntegrations() {
         for (Integration integration : Integration.ALL) {
             Plugin other = getServer().getPluginManager().getPlugin(integration.plugin());
-            if (other != null && other.isEnabled()) {
-                listen(integration, other);
-                getLogger().info(integration.plugin() + " found - " + (integrationOn(integration)
-                        ? "connected (dashboard button, player menu)." : "not connected (integrations." + integration.id() + ": false)."));
+            if (other == null || !other.isEnabled()) {
+                continue;
+            }
+            if (!modules.enabled(integration.id())) {
+                getLogger().info(integration.plugin() + " found - not connected (integrations." + integration.id() + ": false).");
+            } else if (modules.module(integration.id()) == null) {
+                getLogger().warning(integration.plugin() + " " + other.getPluginMeta().getVersion()
+                        + " is too old for MRadmin's module API - update it to connect it.");
             }
         }
         // LibertyBans: only through its API, for the player page of the web interface.
@@ -280,42 +286,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
     }
 
-    private boolean integrationOn(Integration integration) {
-        return settings.adminMode().buttons().stream().anyMatch(b -> b.id().equals(integration.id()));
-    }
-
-    /** Events of the plugin (MRchunks: chunk loader locks open tickets). */
-    private void listen(Integration integration, Plugin other) {
-        if (integration.id().equals("mrchunks")) {
-            lockTickets.register(other);
-        }
-    }
-
-    /** MRsleep/MRchunks loaded later (e.g. plugin manager): connect right away; menus adapt with their next refresh. */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onPluginEnable(PluginEnableEvent event) {
-        Integration integration = Integration.byPlugin(event.getPlugin().getName());
-        if (integration != null && event.getPlugin() != this) {
-            hooks.clear();
-            listen(integration, event.getPlugin());
-            if (integrationOn(integration)) {
-                getLogger().info(integration.plugin() + " was enabled - connected.");
-            }
-        }
-    }
-
-    /** MRsleep/MRchunks disabled or removed: disconnect, its buttons disappear from the menus. */
+    /** A plugin was disabled or removed: its module goes, its button disappears from the menus. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPluginDisable(PluginDisableEvent event) {
-        Integration integration = Integration.byPlugin(event.getPlugin().getName());
-        if (integration != null && event.getPlugin() != this) {
-            hooks.clear();
-            if (lockTickets.registeredFor(event.getPlugin())) {
-                lockTickets.unregister();
-            }
-            if (integrationOn(integration)) {
-                getLogger().info(integration.plugin() + " was disabled - disconnected.");
-            }
+        if (event.getPlugin() != this && modules.pluginDisabled(event.getPlugin())) {
+            getLogger().info(event.getPlugin().getName() + " was disabled - disconnected.");
         }
     }
 
@@ -393,8 +368,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         return health;
     }
 
-    public PluginHooks hooks() {
-        return hooks;
+    /** The plugins MRadmin works with (module API and old hooks). */
+    public Modules modules() {
+        return modules;
     }
 
     public StaffChat staffChat() {

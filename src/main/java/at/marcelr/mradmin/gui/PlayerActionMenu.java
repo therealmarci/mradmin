@@ -167,19 +167,19 @@ public final class PlayerActionMenu extends Menu {
     private List<Button> plugins() {
         Messages messages = plugin.messages();
         List<Button> buttons = new ArrayList<>();
-        for (Settings.HubButton button : plugin.settings().adminMode().buttons()) {
-            if (!plugin.hooks().available(button) || !permitted(button)) {
+        for (Settings.HubButton button : plugin.modules().buttons()) {
+            if (plugin.modules().module(button) == null || !permitted(button)) {
                 continue;
             }
             String base = "gui-hub-buttons." + button.id();
             Component name = messages.has(base + ".name") ? messages.item(base + ".name")
                     : messages.item("gui-hub-button-fallback-name", tag("name", button.id()));
             Items item = Items.of(button.material()).name(name)
-                    .lore(plugin.hooks().playerSummary(button, viewer, targetId))
+                    .lore(plugin.modules().playerSummary(button, viewer, targetId))
                     .lore(Component.empty()).lore(messages.item("gui-player-plugin-click"));
             buttons.add(new Button(item.build(), click -> {
                 clickSound();
-                if (!plugin.hooks().openPlayerMenu(button, viewer, targetId, this::reopen)) {
+                if (!plugin.modules().openPlayerMenu(button, viewer, targetId, this::reopen)) {
                     sound(Sound.ENTITY_VILLAGER_NO);
                 }
             }));

@@ -1,7 +1,7 @@
 <script>
   // MRsleep's part of a player's page: /nosleep blocks, cooldown, bypass and ban - with MRsleep's permissions.
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { moduleAction, playerPart } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration } from '../lib/format.js';
 
@@ -14,7 +14,7 @@
 
   async function load() {
     try {
-      p = await api('GET', `/players/${uuid}/mrsleep`);
+      p = await playerPart(uuid, 'mrsleep');
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -33,7 +33,7 @@
     busy = true;
     error = '';
     try {
-      await api('POST', '/mrsleep/action', { uuid, ...body });
+      await moduleAction('mrsleep', { uuid, ...body });
       onDone(t('sleep.done.' + body.action));
       if (body.action === 'ban') reason = '';
       await load();
