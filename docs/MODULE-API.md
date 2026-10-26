@@ -38,13 +38,13 @@ mradminApi=api-1.0.0
 ```kotlin
 repositories {
     // Lokal gebaute API (in MRadmin: gradlew :api:publishToMavenLocal) hat Vorrang vor JitPack.
-    mavenLocal { content { includeGroup("com.github.therealmarci.mradmin") } }
+    mavenLocal { content { includeGroup("com.github.therealmarci") } }
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://jitpack.io") { content { includeGroupByRegex("com\\.github\\.therealmarci.*") } }
 }
 dependencies {
-    compileOnly("com.github.therealmarci.mradmin:api:${providers.gradleProperty("mradminApi").get()}")
+    compileOnly("com.github.therealmarci:mradmin:${providers.gradleProperty("mradminApi").get()}")
 }
 ```
 

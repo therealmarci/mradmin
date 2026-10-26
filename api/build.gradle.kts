@@ -9,8 +9,8 @@ plugins {
 val paperApi = providers.gradleProperty("paperApi").get()
 val apiVersion = providers.gradleProperty("apiVersion").get()
 
-// JitPack setzt GROUP/VERSION selbst (com.github.therealmarci + Tag); lokal dieselben Koordinaten.
-group = (System.getenv("GROUP") ?: "com.github.therealmarci") + ".mradmin"
+// Koordinaten wie bei JitPack: com.github.therealmarci:mradmin:<tag> (JitPack setzt GROUP/VERSION selbst).
+group = System.getenv("GROUP") ?: "com.github.therealmarci"
 version = System.getenv("VERSION") ?: "api-$apiVersion"
 
 repositories {
@@ -43,7 +43,7 @@ tasks.withType<Javadoc>().configureEach {
 publishing {
     publications {
         create<MavenPublication>("api") {
-            artifactId = "api"
+            artifactId = "mradmin"
             from(components["java"])
         }
     }
