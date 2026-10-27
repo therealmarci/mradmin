@@ -18,6 +18,8 @@ version = "mc$mcVersion-v$pluginVersion"
 
 val modrinthProjectId = providers.gradleProperty("modrinthProjectId").get()
 val githubRepository = providers.gradleProperty("githubRepository").get()
+val website = providers.gradleProperty("website").get()
+val websiteSlug = providers.gradleProperty("websiteSlug").get()
 val socketIoVersion = providers.gradleProperty("socketIoVersion").get()
 val hikariVersion = providers.gradleProperty("hikariVersion").get()
 val sqliteVersion = providers.gradleProperty("sqliteVersion").get()
@@ -95,6 +97,8 @@ tasks.processResources {
         "mcVersion" to mcVersion,
         "modrinthProjectId" to modrinthProjectId,
         "githubRepository" to githubRepository,
+        "website" to website,
+        "websiteSlug" to websiteSlug,
         "hikariVersion" to hikariVersion,
         "sqliteVersion" to sqliteVersion,
         "mariadbVersion" to mariadbVersion,

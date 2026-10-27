@@ -51,24 +51,26 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(11, Map.of(
-            2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
-                    "maintenance-motd"),
-            3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
-                    "announce-presets.update.chat"),
-            4, Set.of("maintenance-motd", "maintenance-motd-open"),
-            5, Set.of("mode-on", "mode-compass-name", "mode-compass-lore"),
-            6, Set.of("gui-teleport-player-lore"),
-            7, Set.of("help-mode"),
-            8, Set.of("help-menu", "gui-title-hub"),
-            9, Set.of("ticket-categories.cheating", "ticket-categories.chat", "ticket-categories.griefing",
+    private final Messages messages = new Messages(12, Map.ofEntries(
+            Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
+                    "maintenance-motd")),
+            Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
+                    "announce-presets.update.chat")),
+            Map.entry(4, Set.of("maintenance-motd", "maintenance-motd-open")),
+            Map.entry(5, Set.of("mode-on", "mode-compass-name", "mode-compass-lore")),
+            Map.entry(6, Set.of("gui-teleport-player-lore")),
+            Map.entry(7, Set.of("help-mode")),
+            Map.entry(8, Set.of("help-menu", "gui-title-hub")),
+            Map.entry(9, Set.of("ticket-categories.cheating", "ticket-categories.chat", "ticket-categories.griefing",
                     "ticket-categories.scam", "ticket-categories.other", "gui-my-tickets-head-lore", "gui-my-tickets-empty",
                     "gui-my-tickets-empty-lore", "gui-ticket-lore", "gui-ticket-lore-staff", "gui-tickets-filter-type",
                     "gui-tickets-filter-type-lore", "ticket-form-player-hint", "ticket-form-other-hint",
-                    "ticket-chat-header-player", "ticket-chat-header-other", "gui-new-ticket-none"),
-            10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff"),
+                    "ticket-chat-header-player", "ticket-chat-header-other", "gui-new-ticket-none")),
+            Map.entry(10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff")),
             // 11: /mradmin announce for scripts (parts and named values).
-            11, Set.of("announce-usage")));
+            Map.entry(11, Set.of("announce-usage")),
+            // 12: "Website | GitHub" in /mradmin version.
+            Map.entry(12, Set.of("version-links"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private final Announcer announcer = new Announcer(this);

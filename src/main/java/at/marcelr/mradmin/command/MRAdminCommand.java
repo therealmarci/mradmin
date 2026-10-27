@@ -543,7 +543,8 @@ public final class MRAdminCommand implements TabExecutor {
                 tag("author", String.join(", ", plugin.getPluginMeta().getAuthors())));
         Runnable links = () -> messages().as(sender, () -> {
             messages().send(sender, "version-links",
-                    tag("modrinth", link("Modrinth", updates.modrinthPage())),
+                    tag("website", link("Website", updates.websitePage())),
+                    tag("modrinth", link("Website", updates.websitePage())),
                     tag("github", link("GitHub", updates.githubPage())));
             return null;
         });
