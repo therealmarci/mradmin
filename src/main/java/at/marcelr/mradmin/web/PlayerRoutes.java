@@ -4,7 +4,6 @@ import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Perms;
-import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.hook.Bans;
 import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.storage.Storage;
