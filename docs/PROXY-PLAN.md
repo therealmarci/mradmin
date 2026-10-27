@@ -32,7 +32,7 @@ Spieler ──► VPS 2: Velocity (öffentlicher Port, bisherige Adresse)
 | Join, während main aus ist | Velocity kann main nicht erreichen → Lobby, auch für Admins im Admin-Modus. |
 | Wartung endet | Lobby holt die Spieler gestaffelt zurück (z.B. 5 pro Sekunde). |
 | Absturz / VPS 1 weg | Velocity leitet nicht von selbst um (Standard: trennen bzw. nur Meldung). Dafür ein fertiges Fallback-Plugin auf dem Proxy (Musterkonfiguration). Lobby holt zurück, sobald main wieder antwortet. |
-| Admin in der Lobby will während der Wartung auf main | Knopf/Befehl in der Lobby „Zum Hauptserver im Admin-Modus“ (`mradmin.proxy.switch`): main lässt ihn einmalig durch und schaltet sofort den Admin-Modus ein. Dafür braucht main ein Signal von der Lobby - geplant über den gemeinsamen MRadmin-Speicher (`storage.type: mysql`, kurzlebiges Ticket). Ohne gemeinsamen Speicher gibt es den Knopf nicht; dann vor der Wartung in den Admin-Modus gehen. |
+| Admin in der Lobby will auf main | MRadmin läuft auch in der Lobby, `/mra` funktioniert dort wie gewohnt. `/mra mode` in der Lobby schickt den Admin auf main und schaltet dort sofort den Admin-Modus ein (auch während einer Wartung). Ist main nicht erreichbar, gibt es eine Meldung. Signal an main: signiertes Cookie (siehe Teil 1). |
 
 ## Teil 1: MRadmin (optional, `proxy.enabled: false`)
 Neuer Config-Abschnitt `proxy:`:
@@ -43,7 +43,8 @@ Neuer Config-Abschnitt `proxy:`:
 Rolle **main**:
 - Neustart/Stopp über MRadmin: Spieler per BungeeCord-Kanal (`Connect`, versteht Velocity) in die Lobby, dann stoppen.
 - Wartungsbeginn: Lobby statt Kick für alle außerhalb des Admin-Modus (bisherige `kick-on-start`-Logik bleibt ohne Proxy).
-- Join während Wartung: zulassen nur mit Bypass **und** gespeichertem Admin-Modus (oder gültigem Ticket aus der Lobby), sonst ablehnen → Velocity schickt in die Lobby.
+- Join während Wartung: zulassen nur mit Bypass **und** gespeichertem Admin-Modus oder mit gültigem Wechsel-Cookie aus der Lobby, sonst ablehnen → Velocity schickt in die Lobby.
+- **Wechsel-Cookie:** Die Lobby legt beim Client ein Cookie ab (Minecraft-Cookies, seit 1.20.5, Paper-API `storeCookie`/`retrieveCookie`), signiert per HMAC mit einem gemeinsamen Schlüssel `proxy.secret`, gültig 30 s, nur für diesen Spieler. main liest es beim Verbinden, lässt durch und schaltet den Admin-Modus ein. Kein gemeinsamer Speicher nötig. Im Testaufbau prüfen, ob Velocity Cookies beim Serverwechsel durchreicht; sonst Ersatz über den gemeinsamen MRadmin-Speicher (MySQL).
 - Prüfungen (Web + `/mradmin status`): Velocity-Forwarding in `paper-global.yml` an, Spieler kommen über den Proxy, Lobby-Name gesetzt.
 
 Rolle **lobby**:
@@ -52,7 +53,7 @@ Rolle **lobby**:
 - Holt Spieler zurück, sobald main antwortet und keine Wartung läuft.
 - Rest von MRadmin (Tickets, Staff-Chat, Web) läuft normal; mit MySQL teilen sich beide Server die Daten (Server-Spalte gibt es).
 
-Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während Wartung), Dashboard-Kachel „Proxy“, Texte DE/EN, README, CHANGELOG, `config-version`.
+Dazu: Dashboard-Kachel „Proxy“, Texte DE/EN, README, CHANGELOG, `config-version`.
 
 ## Teil 2: Wartelobby
 - Kleiner Paper-Server auf VPS 2 (ca. 1 GB, kleine Sichtweite), Abenteuermodus, eigene Spielerdaten (Inventar vom Hauptserver unberührt).
@@ -84,6 +85,7 @@ Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während 
 - Neustart: Admins im Admin-Modus werden getrennt, nicht in die Lobby geschickt.
 - Join während Wartung: Admin mit Admin-Modus → main, ohne Admin-Modus → Lobby. Ist main aus → Lobby, auch im Admin-Modus.
 - Die Domain stellt der User selbst auf VPS 2 um.
+- Admins nutzen `/mra` auch in der Lobby; `/mra mode` dort = auf main in den Admin-Modus (kein eigener Knopf, keine eigene Permission).
 
 ## Offene Fragen an den User
-1. Knopf „Zum Hauptserver im Admin-Modus“ aus der Lobby über den gemeinsamen MRadmin-Speicher (MySQL) - passt das so?
+- keine (Plan wartet auf Abnahme)
