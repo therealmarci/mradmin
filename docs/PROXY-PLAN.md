@@ -1,6 +1,6 @@
 # Plan: Proxy-Betrieb mit Wartelobby
 
-Stand: 2026-10-27, **zur Abnahme durch den User**. Die Umstellung eines konkreten Servers steht nicht hier, sondern in einer privaten Datei des Users.
+Stand: 2026-10-27, **vom User freigegeben**. Die Umstellung eines konkreten Servers steht nicht hier, sondern in einer privaten Datei des Users.
 
 ## Ziel
 Spieler bleiben bei Neustart, Absturz und Wartung verbunden. Statt eines Kicks warten sie in einer kleinen Lobby, auf Wunsch mit Minigames (z.B. MRpvp-Duelle), und kommen automatisch zurück, sobald der Hauptserver wieder offen ist. Der Hauptserver darf dabei sogar komplett abgeschaltet sein.
