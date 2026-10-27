@@ -19,6 +19,8 @@
   import Sleep from './pages/Sleep.svelte';
   import Pvp from './pages/Pvp.svelte';
   import PvpGame from './pages/PvpGame.svelte';
+  import PvpKits from './pages/PvpKits.svelte';
+  import PvpKit from './pages/PvpKit.svelte';
   import Players from './pages/Players.svelte';
   import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
@@ -76,7 +78,9 @@
   const playerId = $derived(playerMatch?.[1] ?? null);
   const playerSection = $derived(playerMatch?.[2] ?? null);
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
-  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId ? '/pvp' : route.path);
+  // /pvp/kits = list, /pvp/kits/<id> = one kit, /pvp/new-kit[/<copy of>] = new kit
+  const kitMatch = $derived(route.path.match(/^\/pvp\/(kits|new-kit)(?:\/([a-z0-9_-]+))?$/));
+  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp' : route.path);
 
   const nav = $derived(
     me
@@ -188,6 +192,12 @@
       <Console {me} />
     {:else if pvpId && me.may.mrpvp}
       {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
+    {:else if kitMatch && me.may.mrpvpKits}
+      {#if kitMatch[1] === 'kits' && !kitMatch[2]}
+        <PvpKits />
+      {:else}
+        {#key route.path}<PvpKit id={kitMatch[1] === 'kits' ? kitMatch[2] : null} copyFrom={kitMatch[1] === 'new-kit' ? (kitMatch[2] ?? null) : null} />{/key}
+      {/if}
     {:else if route.path === '/pvp' && me.may.mrpvp}
       <Pvp {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}

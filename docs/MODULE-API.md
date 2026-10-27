@@ -94,6 +94,8 @@ final class MRadminModule implements AdminModule, WebModule {
   Server-Thread gefragt werden).
 - `data` liefert nur einfache Werte (Map, List, String, Zahl, Boolean) oder `null` (→ 404). `action` liefert `null`
   (erledigt) oder einen Fehler-Schlüssel, den die Weboberfläche übersetzt (`error.<schlüssel>` in `web/src/lib/i18n.js`).
+- Aktionen bekommen den JSON-Body als einfache Java-Werte, auch verschachtelt (Map, List; ganze Zahlen als Long). Texte
+  auf oberster Ebene kürzt MRadmin auf 200 Zeichen, verschachtelte prüft das Modul selbst. Body höchstens 64 KB.
 - Jede Aktion landet im Web-Protokoll als `<id>-<action>`.
 - Im Browser: `web/src/lib/modules.js` (`moduleData`, `moduleAction`, `playerPart`, `playerAction`).
 - Eigene Seiten im Web (z.B. Chunkloader, Duelle) bleiben handgemacht; sie nutzen nur noch diese vier Aufrufe.
