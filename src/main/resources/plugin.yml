@@ -15,7 +15,7 @@ description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcem
 commands:
   mradmin:
     description: Management of MRadmin (announcements, admin mode, maintenance).
-    usage: /mradmin <announce|mode|menu|player|tp|status|tickets|maintenance|discord|proxy|reload|version>
+    usage: /mradmin <announce|mode|menu|player|tp|status|tickets|maintenance|discord|reload|version>
     aliases: [mra]
   report:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
@@ -61,7 +61,6 @@ permissions:
       mradmin.player.kick: true
       mradmin.status: true
       mradmin.status.health: true
-      mradmin.proxy.view: true
   mradmin.admin:
     description: "All permissions of MRadmin - except the web console (mradmin.web.console.*), which is granted individually on purpose."
     default: op
@@ -78,7 +77,6 @@ permissions:
       mradmin.admin.update: true
       mradmin.versions.install: true
       mradmin.server.restart: true
-      mradmin.proxy.send: true
 
   # ------------------------------------------------------------ Dashboard
   mradmin.dashboard:
@@ -90,17 +88,6 @@ permissions:
   mradmin.status.health:
     description: Health dashboard - history of TPS, MSPT, CPU, RAM, lag sources.
     default: op
-
-  # ---------------------------------------------------------------- Proxy
-  mradmin.proxy.view:
-    description: "Proxy operation: /mradmin proxy shows the role, the state of the main server and setup problems."
-    default: op
-  mradmin.proxy.send:
-    description: "Proxy operation: /mradmin proxy send - send players to the main server or the waiting lobby."
-    default: op
-  mradmin.proxy.stay:
-    description: "Waiting lobby: stay there instead of being sent back to the main server (e.g. to build the lobby). Not in any package."
-    default: false
 
   # -------------------------------------------------------------- Tickets
   mradmin.tickets.create:

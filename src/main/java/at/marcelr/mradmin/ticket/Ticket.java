@@ -49,10 +49,8 @@ public final class Ticket {
     private String sourceId;
     /** Unban or contact request from the public web forms, otherwise null. */
     private WebRequest request;
-    /** Messages written here that are not in the storage yet (written with the next save). */
-    private final List<Message> unsaved = new ArrayList<>();
-    /** When this server last changed the ticket (epoch ms) - changes of other servers do not overwrite it meanwhile. */
-    private long changedHere;
+    /** How many messages are already in the storage (the rest is written with the next save). */
+    private int saved;
 
     Ticket(int id, UUID creator, String creatorName, UUID target, String targetName, String category,
            String subject, Instant created, String world, double x, double y, double z) {
@@ -219,7 +217,6 @@ public final class Ticket {
 
     void add(Message message) {
         messages.add(message);
-        unsaved.add(message);
         if (message.staff()) {
             creatorUnread = true;
         } else {
@@ -253,41 +250,12 @@ public final class Ticket {
         staffUnread = unread;
     }
 
-    /** The messages not written yet, and from now on they count as written. */
-    List<Message> takeUnsaved() {
-        List<Message> result = List.copyOf(unsaved);
-        unsaved.clear();
-        return result;
+    int saved() {
+        return saved;
     }
 
-    /** Position of a message in the conversation (its place in the storage without a shared database). */
-    int indexOf(Message message) {
-        return messages.indexOf(message);
-    }
-
-    long changedHere() {
-        return changedHere;
-    }
-
-    void changedHere(long time) {
-        changedHere = time;
-    }
-
-    /**
-     * A message another server wrote (shared database): goes into the conversation by its time and is not written
-     * again. Unread markers come with the ticket row.
-     */
-    void addFromStorage(Message message) {
-        int at = messages.size();
-        while (at > 0 && messages.get(at - 1).time().isAfter(message.time())) {
-            at--;
-        }
-        messages.add(at, message);
-    }
-
-    /** Messages that are in the storage already (loading): not written again. */
-    void markSaved() {
-        unsaved.clear();
+    void saved(int count) {
+        saved = count;
     }
 
     void request(WebRequest request) {

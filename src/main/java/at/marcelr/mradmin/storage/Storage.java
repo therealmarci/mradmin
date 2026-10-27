@@ -14,9 +14,6 @@ import java.util.UUID;
  * background on one storage thread (never on the server thread), and {@link #close()} waits until everything is
  * written. Small documents (maintenance state, frozen players, Discord announcement state) are stored as YAML text
  * under a name; tickets get their own rows, so a new message writes only that message.
- * <p>
- * With MySQL/MariaDB several servers (e.g. main server and waiting lobby behind a proxy) can share one database:
- * documents, logs and health stay per server ({@code storage.server-id}), tickets are shared by all of them.
  */
 public interface Storage {
 
@@ -47,50 +44,6 @@ public interface Storage {
 
     /** Removes tickets with all their messages in the background. */
     void deleteTickets(Collection<Integer> ids);
-
-    /**
-     * Whether several servers may use this storage at the same time (MySQL/MariaDB). Then ticket numbers come from
-     * the database ({@link #nextTicketId()}) and changes of the other servers arrive through {@link #pollTickets}.
-     */
-    default boolean shared() {
-        return false;
-    }
-
-    /** The next free ticket number of all servers - only with {@link #shared()}. Usually without waiting. */
-    default int nextTicketId() {
-        throw new UnsupportedOperationException("ticket numbers come from the database only with mysql");
-    }
-
-    /**
-     * Looks for tickets changed in the last seconds (by any server) - only with {@link #shared()}. Runs on the storage
-     * thread; {@code changed} gets the tickets with all their messages there (it may contain unchanged ones too).
-     */
-    default void pollTickets(java.util.function.Consumer<List<LoadedTicket>> changed) {
-    }
-
-    // ------------------------------------------------------ proxy operation (shared only)
-
-    /** What this server reports about itself (YAML text), written in the background - only with {@link #shared()}. */
-    default void putServerState(String data) {
-    }
-
-    /** What all servers last reported, with its age (by the database clock). Blocking - not on the server thread. */
-    default List<ServerState> serverStates() {
-        return List.of();
-    }
-
-    /** A player may switch to {@code target} into admin mode within {@code ttlMillis}; {@code done} runs afterwards. */
-    default void putSwitch(UUID player, String target, long ttlMillis, Runnable done) {
-    }
-
-    /** Takes (and deletes) a valid switch of the player to {@code target}. Blocking - not on the server thread. */
-    default boolean takeSwitch(UUID player, String target) {
-        return false;
-    }
-
-    /** Report of a server: {@code data} as written, {@code ageMillis} since it was written. */
-    record ServerState(String server, String data, long ageMillis) {
-    }
 
     // ------------------------------------------------------------- audit log
 

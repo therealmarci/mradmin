@@ -9,17 +9,6 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
-### Neu
-- **Gemeinsame Tickets für mehrere Server (MySQL/MariaDB):** Nutzen mehrere Server dieselbe Datenbank (jeder mit eigener `storage.server-id`), teilen sie sich die Tickets. Ticketnummern vergibt die Datenbank, Änderungen der anderen Server kommen nach wenigen Sekunden an - mit denselben Hinweisen an Team und Spieler, als wäre es auf diesem Server passiert. Wartung, Freeze, Protokolle und Web-Konten bleiben pro Server.
-- **Proxy-Betrieb mit Wartelobby (optional):** Hinter einem Velocity-Proxy bleiben Spieler bei Neustart, Absturz und Wartung verbunden. Neuer Config-Abschnitt `proxy` (Standard aus, braucht `storage.type: mysql`; config-version 22) mit den Rollen `main` (Hauptserver) und `lobby` (Wartelobby).
-  - **Hauptserver:** Neustart oder Stopp (Konsole, `/stop`, Neustart-Knopf, Start-Skripte) schickt die Spieler zuerst in die Lobby - Admins im Admin-Modus werden getrennt, ihr Admin-Modus bleibt gespeichert. Bei Wartungsbeginn gehen alle außerhalb des Admin-Modus in die Lobby statt gekickt zu werden. Während einer Wartung kommt nur auf den Server, wer `mradmin.maintenance.bypass` hat **und** im Admin-Modus ist - alle anderen schickt der Proxy in die Lobby.
-  - **Lobby:** zeigt per Bossbar, warum man wartet (Neustart, Wartung bis …, nicht erreichbar), und schickt die Spieler gestaffelt zurück, sobald der Hauptserver offen ist (`proxy.lobby.return-per-second`). Wer gerade ein Duell spielt, kommt nach der Runde. `/mradmin mode` in der Lobby bringt Admins direkt in den Admin-Modus auf dem Hauptserver - auch während einer Wartung.
-  - **Befehle und Permissions:** `/mradmin proxy` zeigt Rolle, Zustand und Einrichtungsfehler (`mradmin.proxy.view`), `/mradmin proxy send <spieler|all> <main|lobby>` verschiebt von Hand (`mradmin.proxy.send`). `mradmin.proxy.stay` lässt jemanden in der Lobby bleiben (z.B. zum Bauen, in keinem Paket).
-- **Umzug von SQLite nach MySQL:** Beim ersten Start mit `storage.type: mysql` wird eine vorhandene `mradmin.db` übernommen (die Datei bleibt als `mradmin.migrated.db` liegen).
-
-### Behoben & geändert
-- **Speicher umstellen: Web-Konten gingen verloren:** Beim Wechsel von `yaml` auf `sqlite` oder `mysql` wurden Web-Konten (mit 2FA und Passkeys), Sitzungen, Entbannungsanträge und Push-Abos nicht übernommen. Jetzt kommen sie mit.
-
 ## [0.7.0] - 2026-10-27
 
 ### Neu

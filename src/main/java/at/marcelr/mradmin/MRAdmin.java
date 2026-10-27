@@ -83,7 +83,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private at.marcelr.mradmin.versions.RestartManager restarts;
     private FreezeManager freeze;
     private TicketManager tickets;
-    private at.marcelr.mradmin.proxy.ProxyManager proxy;
     private Modules modules;
     private Storage storage;
     private WebServer web;
@@ -125,7 +124,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         // Before the other plugins enable (they softdepend on MRadmin) - they register their modules then.
         modules.offer();
         staffChat = new StaffChat(this);
-        proxy = new at.marcelr.mradmin.proxy.ProxyManager(this);
         maintenance = new MaintenanceManager(this);
         discordAnnounce.loadState();
         maintenance.load();
@@ -144,7 +142,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(new FreezeListener(this), this);
         pm.registerEvents(staffChat, this);
         pm.registerEvents(web.requests(), this);
-        pm.registerEvents(proxy, this);
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);
@@ -193,10 +190,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (health != null) {
             health.stop();
         }
-        if (proxy != null) {
-            // Main server: "stopping" for the lobby.
-            proxy.stop();
-        }
         // Last: everything above may still save something.
         if (storage != null) {
             storage.close();
@@ -235,8 +228,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             health.stop();
         }
         freeze.start();
-        // Before the maintenance: on the waiting lobby the maintenance follows the main server.
-        proxy.start();
         maintenance.start();
         adminMode.start();
         updateChecker.start();
@@ -360,10 +351,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public FreezeManager freeze() {
         return freeze;
-    }
-
-    public at.marcelr.mradmin.proxy.ProxyManager proxy() {
-        return proxy;
     }
 
     public TicketManager tickets() {

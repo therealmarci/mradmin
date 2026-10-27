@@ -70,7 +70,6 @@ help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>Admin-Dashboard, <gold>/mra
 help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>Serverzustand: TPS, RAM, Chunks mit den meisten Entities"
 help-tickets: "<gold>/mradmin tickets</gold> <dark_gray>- <gray>alle Tickets (Reports, Bugs, Anfragen)"
 help-staffchat: "<gold>/sc [text]</gold> <dark_gray>- <gray>Staff-Chat (ohne Text: umschalten)"
-help-proxy: "<gold>/mradmin proxy [send spieler|all main|lobby]</gold> <dark_gray>- <gray>Proxy und Wartelobby"
 
 # --- Ankündigungen -------------------------------------------------------------
 announce-usage: |-
@@ -831,35 +830,3 @@ mail-contact-closed-body: |-
   <answer>
 
   Der ganze Verlauf: <link>
-
-# ------------------------------------------------------------------------------
-#   Proxy und Wartelobby (proxy in der config.yml)
-# ------------------------------------------------------------------------------
-proxy-off: "<prefix><gray>Der Proxy-Betrieb ist aus <dark_gray>(proxy.enabled in der config.yml)."
-proxy-send-usage: "<prefix><gray>Verwendung: <gold>/mradmin proxy send [spieler|all] [main|lobby]"
-proxy-sent: "<prefix><green><white><count></white> Spieler zu <white><server></white> geschickt."
-proxy-status-header: "<prefix><gray>Proxy-Betrieb: dieser Server ist <white><role></white> <dark_gray>(Hauptserver <main>, Lobby <lobby>)"
-proxy-status-main: "<gray>Hauptserver: <state> <dark_gray>· <gray>wartend: <white><waiting></white> <dark_gray>· <gray>werden zurückgeschickt: <white><returning>"
-proxy-status-ok: "<green>✔ <gray>Einrichtung in Ordnung."
-proxy-problem-storage: "<red>✖ <gray>storage.type ist nicht <white>mysql</white> - der Proxy-Betrieb bleibt aus."
-proxy-problem-online-mode: "<red>✖ <gray>online-mode ist in der server.properties an - hinter Velocity muss er <white>false</white> sein."
-proxy-problem-velocity: "<red>✖ <gray>Velocity-Forwarding ist in config/paper-global.yml nicht an (proxies.velocity.enabled)."
-proxy-problem-names: "<red>✖ <gray>proxy.servers.main und proxy.servers.lobby fehlen (Namen aus der velocity.toml)."
-proxy-state-ready: "<green>offen"
-proxy-state-maintenance: "<light_purple>Wartung"
-proxy-state-restarting: "<yellow>startet neu"
-proxy-state-offline: "<red>nicht erreichbar"
-# Hauptserver: beim Neustart und zu Wartungsbeginn
-proxy-restart-admin: "<yellow>Der Server startet neu.\n<gray>Dein Admin-Modus bleibt gespeichert und geht nach dem Neustart weiter."
-proxy-moving-restart: "<prefix><yellow>Der Server startet neu - du wartest kurz in der Lobby und kommst von selbst zurück."
-proxy-moving-maintenance: "<prefix><light_purple>Die Wartung beginnt - du wartest in der Lobby und kommst von selbst zurück, sobald sie vorbei ist."
-# Lobby: warum man wartet (Bossbar oder Actionbar). Platzhalter wie bei der Wartung: <title>, <end>, <remaining>
-proxy-wait-ready: "<green>Der Server ist wieder da - du wirst gleich zurückgeschickt"
-proxy-wait-stay: "<green>Der Server ist offen <gray>- du bleibst in der Lobby"
-proxy-wait-maintenance: "<light_purple>Wartung<gray> bis <white><end></white> <dark_gray>(noch <remaining>)"
-proxy-wait-maintenance-open: "<light_purple>Wartung<gray> - du kommst von selbst zurück, sobald sie vorbei ist"
-proxy-wait-restart: "<yellow>Der Server startet neu<gray> - du kommst gleich von selbst zurück"
-proxy-wait-offline: "<red>Der Server ist gerade nicht erreichbar<gray> - du kommst von selbst zurück"
-proxy-returning: "<prefix><green>Der Server ist wieder da - zurück geht's!"
-proxy-main-offline: "<prefix><red>Der Hauptserver ist gerade nicht erreichbar."
-proxy-switching: "<prefix><gray>Du wechselst auf den Hauptserver in den Admin-Modus ..."

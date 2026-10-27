@@ -78,9 +78,8 @@ public final class MaintenanceManager {
 
     public void start() {
         stop();
-        if (!plugin.feature(at.marcelr.mradmin.Feature.MAINTENANCE) || plugin.proxy().lobby()) {
+        if (!plugin.feature(at.marcelr.mradmin.Feature.MAINTENANCE)) {
             // Switched off: nobody is kept out, no countdown, no Kuma connection. Plans stay in maintenance.yml.
-            // The waiting lobby behind a proxy has no maintenance of its own: it shows the one of the main server.
             phase = Phase.NONE;
             tracked = null;
             active = false;
@@ -360,11 +359,6 @@ public final class MaintenanceManager {
                 if (!active) {
                     return;
                 }
-                if (plugin.proxy().main()) {
-                    // Behind a proxy: to the waiting lobby instead of a kick (only the admin mode stays).
-                    plugin.proxy().maintenanceStarted();
-                    return;
-                }
                 for (Player player : List.copyOf(Npcs.online())) {
                     if (!canJoin(player)) {
                         player.kick(messages().as(player, this::kickScreen));
@@ -497,9 +491,6 @@ public final class MaintenanceManager {
     }
 
     public boolean canJoin(Player player) {
-        if (plugin.proxy().main()) {
-            return plugin.proxy().mayStay(player);
-        }
         return player.hasPermission(PERM_BYPASS);
     }
 

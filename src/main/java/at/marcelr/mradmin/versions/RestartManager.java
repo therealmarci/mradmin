@@ -105,8 +105,11 @@ public final class RestartManager {
         // A moment to read it, then down.
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             plugin.getLogger().info("Restarting the server (requested by " + by + ").");
-            // Behind a proxy the players go to the waiting lobby first.
-            plugin.proxy().shutdown(plugin.settings().versions().restartMethod().equals("script"));
+            if (plugin.settings().versions().restartMethod().equals("script")) {
+                Bukkit.restart();
+            } else {
+                Bukkit.shutdown();
+            }
         }, 60L);
     }
 }

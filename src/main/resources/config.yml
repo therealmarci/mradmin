@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 22
+config-version: 21
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -538,9 +538,7 @@ gui:
 # Where MRadmin stores tickets, maintenance, frozen players and the web accounts.
 #   yaml   = files in the plugin folder (default)
 #   sqlite = one file plugins/MRadmin/mradmin.db - recommended with many tickets and for the web interface
-#   mysql  = MySQL or MariaDB - several servers can share it (each with its own server-id): tickets are shared,
-#            everything else stays per server. Needed for the proxy operation (see "proxy" at the end).
-#            Switching from sqlite to mysql takes over mradmin.db once.
+#   mysql  = MySQL or MariaDB (e.g. for several servers sharing tickets)
 # Saving always happens in the background, the server does not lag. Changes here only take effect after a
 # restart. On the first start with sqlite/mysql, the previous YAML data is taken over automatically (the files
 # stay as *.migrated.yml). If the database cannot be reached, MRadmin uses the YAML files for the time being.
@@ -555,7 +553,7 @@ storage:
     password: ""
     # Simultaneous connections to the database.
     pool-size: 4
-  # Name of this server in the database - every server sharing the database needs its own (e.g. "main", "lobby").
+  # Name of this server in the database - only relevant if several servers share one database later.
   server-id: "main"
   # Put before every table name (e.g. mradmin_tickets), in case the database is also used for other things.
   table-prefix: "mradmin_"
@@ -694,41 +692,3 @@ mail:
   # Where replies to the mails should go (empty = to the sender). Note: what arrives there does NOT end up in the
   # ticket - the mails point out to reply via the status link.
   reply-to: ""
-
-# ------------------------------------------------------------------------------
-#   12) PROXY AND WAITING LOBBY (optional)
-# ------------------------------------------------------------------------------
-# Only for networks behind a Velocity proxy with a small waiting lobby: players stay connected during restarts,
-# crashes and maintenance - they wait in the lobby and come back on their own. Without a proxy, leave this off.
-# Needs storage.type: mysql (the same database on every server, each with its own storage.server-id) and MRadmin on
-# the main server AND the lobby. Setup: see the guide "Proxy" on the website.
-#
-# Main server (role: main):
-#   - Restart / stop (console, /stop, restart button, start scripts): players go to the lobby first, admins in admin
-#     mode are disconnected (their admin mode stays saved). Then the server stops.
-#   - Maintenance: everyone outside the admin mode goes to the lobby instead of being kicked. Joining during a
-#     maintenance needs mradmin.maintenance.bypass AND admin mode - everyone else is turned away and the proxy
-#     sends them to the lobby.
-# Lobby (role: lobby):
-#   - Shows why players wait (restart, maintenance until ..., not reachable) and sends them back as soon as the
-#     main server is ready and no maintenance runs.
-#   - /mradmin mode there takes an admin to the main server straight into admin mode (also during maintenance).
-#   - The maintenance of the lobby itself is off (it follows the main server).
-proxy:
-  enabled: false
-  # main = the main server, lobby = the waiting lobby
-  role: main
-  # Names of the two servers in the velocity.toml ([servers]).
-  servers:
-    main: "main"
-    lobby: "lobby"
-  # Only for the role lobby:
-  lobby:
-    # Address of the main server as seen from the lobby (internal network), to check that it is reachable.
-    main-address: "127.0.0.1:25565"
-    # How many players are sent back per second when the main server is open again.
-    return-per-second: 5
-    # How the lobby shows why players wait: BOSSBAR, ACTIONBAR or NONE.
-    display: BOSSBAR
-    # Put players at the spawn of the lobby when they arrive.
-    teleport-to-spawn: true
