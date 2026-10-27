@@ -253,6 +253,8 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 > [!WARNING]
 > `mradmin.groups.admin` enthält das Ausführen von Befehlen in der Web-Konsole - so mächtig wie die Server-Konsole. Gib die Gruppe nur Leuten, denen du den Server anvertraust. Vor dem Öffnen fragt das Web zusätzlich den 2FA-Code ab.
 
+**Alle MRtechnology-Plugins auf einmal einrichten:** [Permission-Übersicht mit fertigen LuckPerms-Gruppen](docs/PERMISSIONS.md) - was Support, Staff und Admin in jedem Plugin dürfen, zum Kopieren.
+
 <details>
 <summary>Alle einzelnen Permissions</summary>
 
