@@ -297,7 +297,18 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `sqlite` | `plugins/MRadmin/mradmin.db` | viele Tickets, die Weboberfläche |
 | `mysql` | MySQL oder MariaDB | mehrere Server mit gemeinsamen Tickets |
 
-Umstellen: `type` ändern und den Server neu starten - die bisherigen Daten werden übernommen. Die Datenbank-Treiber lädt Paper beim ersten Start selbst herunter.
+Umstellen: `type` ändern und den Server neu starten - die bisherigen Daten werden übernommen (von YAML nach SQLite oder MySQL, und von SQLite nach MySQL). Die Datenbank-Treiber lädt Paper beim ersten Start selbst herunter.
+
+<details>
+<summary>Mehrere Server mit einer MySQL-Datenbank</summary>
+
+Jeder Server bekommt eine eigene `storage.server-id` (z.B. `main` und `lobby`) und dieselben Zugangsdaten.
+
+- **Gemeinsam:** Tickets - egal auf welchem Server ein Ticket geöffnet oder beantwortet wird, alle sehen es nach wenigen Sekunden, mit Hinweis an das Team und den Spieler.
+- **Pro Server:** Wartungsstand, gefrorene Spieler, Discord-Stand, Web-Protokoll, Leistungsdaten und die Web-Konten.
+- Die **Weboberfläche nur auf einem Server** einschalten (Push-Nachrichten und Mails zu Entbannungsanträgen verschickt der Server mit Weboberfläche).
+- Zuerst den Server mit den bisherigen Daten umstellen, dann die anderen.
+</details>
 
 ### Discord
 Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integrationen → Webhooks*), unter `discord` aktivieren und die URL eintragen. Welche Ereignisse gesendet werden (Tickets, Wartung, Admin-Modus, Web-Anmeldungen …), stellst du unter `discord.events` ein. Test: `/mradmin discord test`.

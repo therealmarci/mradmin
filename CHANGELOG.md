@@ -9,6 +9,13 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Gemeinsame Tickets für mehrere Server (MySQL/MariaDB):** Nutzen mehrere Server dieselbe Datenbank (jeder mit eigener `storage.server-id`), teilen sie sich die Tickets. Ticketnummern vergibt die Datenbank, Änderungen der anderen Server kommen nach wenigen Sekunden an - mit denselben Hinweisen an Team und Spieler, als wäre es auf diesem Server passiert. Wartung, Freeze, Protokolle und Web-Konten bleiben pro Server.
+- **Umzug von SQLite nach MySQL:** Beim ersten Start mit `storage.type: mysql` wird eine vorhandene `mradmin.db` übernommen (die Datei bleibt als `mradmin.migrated.db` liegen).
+
+### Behoben & geändert
+- **Speicher umstellen: Web-Konten gingen verloren:** Beim Wechsel von `yaml` auf `sqlite` oder `mysql` wurden Web-Konten (mit 2FA und Passkeys), Sitzungen, Entbannungsanträge und Push-Abos nicht übernommen. Jetzt kommen sie mit.
+
 ## [0.7.0] - 2026-10-27
 
 ### Neu

@@ -52,6 +52,9 @@ public final class TicketManager {
     private final Map<UUID, Instant> lastTicket = new HashMap<>();
     private final Map<UUID, Instant> lastReply = new HashMap<>();
     private int nextId = 1;
+    /** With a shared database: looks for changes of the other servers every few seconds. */
+    private org.bukkit.scheduler.BukkitTask sync;
+    private static final long SYNC_TICKS = 60;
 
     public TicketManager(MRAdmin plugin) {
         this.plugin = plugin;
@@ -193,7 +196,7 @@ public final class TicketManager {
         Player online = target == null ? null : target.getPlayer();
         Location where = online != null ? online.getLocation() : creator.getLocation();
         String targetName = target == null ? null : target.getName() == null ? target.getUniqueId().toString() : target.getName();
-        Ticket ticket = new Ticket(nextId++, creator.getUniqueId(), creator.getName(),
+        Ticket ticket = new Ticket(newId(), creator.getUniqueId(), creator.getName(),
                 target == null ? null : target.getUniqueId(), targetName, category.id(),
                 cleanSubject, Instant.now(), where.getWorld().getName(), where.getX(), where.getY(), where.getZ());
         ticket.add(new Ticket.Message(creator.getUniqueId(), creator.getName(), false, cleanText, Instant.now()));
@@ -232,8 +235,9 @@ public final class TicketManager {
         }
         Ticket open = bySource(source, report.key());
         String subject = TicketText.limit(report.subject(), 100);
+        int id = open != null ? open.id() : newId();
         if (report.push() != null) {
-            plugin.push(report.push(), "report", "/tickets/" + (open != null ? open.id() : nextId), null,
+            plugin.push(report.push(), "report", "/tickets/" + id, null,
                     "subject", subject, "player", report.playerName(), "plugin", source);
         }
         if (open != null) {
@@ -244,7 +248,7 @@ public final class TicketManager {
             return;
         }
         var location = report.location();
-        Ticket ticket = new Ticket(nextId++, report.player(), report.playerName(), null, null, report.kind(), subject,
+        Ticket ticket = new Ticket(id, report.player(), report.playerName(), null, null, report.kind(), subject,
                 Instant.now(), location == null || location.getWorld() == null ? "" : location.getWorld().getName(),
                 location == null ? 0 : location.getX(), location == null ? 0 : location.getY(),
                 location == null ? 0 : location.getZ());
@@ -283,7 +287,7 @@ public final class TicketManager {
      */
     public Ticket createRequest(WebRequest request, UUID creator, String creatorName, String subject, String text,
                                 String note) {
-        Ticket ticket = new Ticket(nextId++, creator, creatorName, null, null, request.kind(), subject, Instant.now(),
+        Ticket ticket = new Ticket(newId(), creator, creatorName, null, null, request.kind(), subject, Instant.now(),
                 "", 0, 0, 0);
         ticket.request(request);
         ticket.add(new Ticket.Message(creator, creatorName, false, text, Instant.now()));
@@ -887,6 +891,10 @@ public final class TicketManager {
 
     /** Loads all tickets from the storage (YAML, SQLite or MySQL); takes over reports.yml of version 0.1.0. */
     public void load() {
+        if (sync != null) {
+            sync.cancel();
+            sync = null;
+        }
         tickets.clear();
         Storage.Tickets loaded = plugin.storage().loadTickets();
         nextId = loaded.nextId();
@@ -899,6 +907,138 @@ public final class TicketManager {
             migrate(old);
         }
         cleanup();
+        if (plugin.storage().shared()) {
+            // Tickets of the other servers using the same database (e.g. the waiting lobby behind a proxy).
+            sync = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+                long asked = System.currentTimeMillis();
+                plugin.storage().pollTickets(changed -> {
+                    if (plugin.isEnabled() && !changed.isEmpty()) {
+                        Bukkit.getScheduler().runTask(plugin, () -> merge(changed, asked));
+                    }
+                });
+            }, SYNC_TICKS, SYNC_TICKS);
+        }
+    }
+
+    /** The next ticket number - from the database if several servers share it. */
+    private int newId() {
+        return plugin.storage().shared() ? plugin.storage().nextTicketId() : nextId++;
+    }
+
+    /**
+     * Takes over what other servers changed in the shared database: new tickets, new messages, claim, close/reopen,
+     * read markers. Players and the team on this server get the same notices as if it had happened here (Discord and
+     * the log are done by the server where it happened; push and request mails by the server with the web interface).
+     * A ticket this server changed after the poll started is left alone - it comes again with the next poll.
+     */
+    private void merge(List<Storage.LoadedTicket> changed, long asked) {
+        for (Storage.LoadedTicket loaded : changed) {
+            Storage.TicketRow row = loaded.ticket();
+            Ticket ticket = tickets.get(row.id());
+            if (ticket == null) {
+                ticket = fromRow(row, loaded.messages());
+                if (!ticket.open() && ticket.closedAt() != null
+                        && ticket.closedAt().isBefore(Instant.now().minusMillis(settings().keepClosed()))) {
+                    continue;
+                }
+                tickets.put(ticket.id(), ticket);
+                webChanged(ticket);
+                if (ticket.open()) {
+                    plugin.getLogger().info("Ticket #" + ticket.id() + " (" + ticket.category() + ") by "
+                            + ticket.creatorName() + " was opened on another server: " + summary(ticket));
+                    notifyNew(ticket);
+                }
+                continue;
+            }
+            if (ticket.changedHere() >= asked) {
+                continue;
+            }
+            boolean wasOpen = ticket.open();
+            UUID claimedBefore = ticket.claimedBy();
+            java.util.Set<String> have = new java.util.HashSet<>();
+            for (Ticket.Message m : ticket.messages()) {
+                have.add(key(m.author(), m.time().toEpochMilli(), m.text()));
+            }
+            List<Ticket.Message> added = new java.util.ArrayList<>();
+            for (Storage.MessageRow m : loaded.messages()) {
+                if (have.add(key(m.author(), m.time(), m.text()))) {
+                    Ticket.Message message = new Ticket.Message(m.author(), m.authorName(), m.staff(), m.text(),
+                            Instant.ofEpochMilli(m.time()));
+                    ticket.addFromStorage(message);
+                    added.add(message);
+                }
+            }
+            boolean fields = !java.util.Objects.equals(row.claimedBy(), ticket.claimedBy())
+                    || !java.util.Objects.equals(row.closedBy(), ticket.closedBy())
+                    || row.creatorUnread() != ticket.creatorUnread() || row.staffUnread() != ticket.staffUnread()
+                    || !java.util.Objects.equals(row.extra(), ticket.request() == null ? null : ticket.request().json());
+            if (!fields && added.isEmpty()) {
+                continue;
+            }
+            ticket.claim(row.claimedBy(), row.claimedByName());
+            if (row.closedBy() == null) {
+                if (!ticket.open()) {
+                    ticket.reopen();
+                }
+            } else {
+                ticket.close(row.closedBy(), Instant.ofEpochMilli(row.closedAt()));
+            }
+            ticket.creatorUnread(row.creatorUnread());
+            ticket.staffUnread(row.staffUnread());
+            ticket.request(WebRequest.parse(row.extra()));
+            if (row.source() != null) {
+                ticket.source(row.source(), row.sourceId());
+            }
+            webChanged(ticket);
+            notifyRemote(ticket, added, wasOpen, claimedBefore);
+        }
+    }
+
+    private static String key(UUID author, long time, String text) {
+        return author + "|" + time + "|" + text;
+    }
+
+    /** Notices for what happened on another server - like {@link #reply}, {@link #close} and {@link #reopen} do. */
+    private void notifyRemote(Ticket ticket, List<Ticket.Message> added, boolean wasOpen, UUID claimedBefore) {
+        Player creator = Bukkit.getPlayer(ticket.creator());
+        for (Ticket.Message m : added) {
+            if (m.staff()) {
+                if (creator != null && !creator.getUniqueId().equals(m.author())) {
+                    Ticket t = ticket;
+                    messages().send(creator, "ticket-answer", tag("id", t.id()), Messages.lazy("open", () -> openButton(t)),
+                            tag("text", TicketText.preview(m.text(), PREVIEW)));
+                    sound(creator);
+                }
+            } else {
+                Ticket t = ticket;
+                notifyStaff(ticket, Bukkit.getPlayer(m.author()), "ticket-notify-message", tag("id", t.id()),
+                        tag("player", m.authorName()), tag("text", TicketText.preview(m.text(), PREVIEW)),
+                        Messages.lazy("open", () -> openButton(t)));
+                pushMessage(ticket, m.authorName(), m.text(), m.author());
+            }
+            if (m.staff() && plugin.web() != null && ticket.request() != null) {
+                plugin.web().requests().changed(ticket, m.text());
+            }
+        }
+        Ticket t = ticket;
+        if (wasOpen && !ticket.open()) {
+            if (creator != null && settings().notifyCreator() && !ticket.creatorName().equals(ticket.closedBy())) {
+                messages().send(creator, "ticket-closed-creator", tag("id", t.id()),
+                        Messages.lazy("summary", () -> summary(t)), Messages.lazy("open", () -> openButton(t)));
+                sound(creator);
+            }
+            if (plugin.web() != null && ticket.request() != null) {
+                plugin.web().requests().changed(ticket, null);
+            }
+        } else if (!wasOpen && ticket.open() && creator != null) {
+            messages().send(creator, "ticket-reopened-creator", tag("id", t.id()), Messages.lazy("open", () -> openButton(t)));
+        }
+    }
+
+    private void webChanged(Ticket ticket) {
+        if (plugin.web() != null) {
+            plugin.web().events().ticket(ticket.id());
+        }
     }
 
     private static Ticket fromRow(Storage.TicketRow r, List<Storage.MessageRow> messages) {
@@ -919,7 +1059,7 @@ public final class TicketManager {
             ticket.source(r.source(), r.sourceId());
         }
         ticket.request(WebRequest.parse(r.extra()));
-        ticket.saved(messages.size());
+        ticket.markSaved();
         return ticket;
     }
 
@@ -989,17 +1129,13 @@ public final class TicketManager {
      */
     private void save(Ticket ticket) {
         Storage storage = plugin.storage();
-        if (plugin.web() != null) {
-            // Open pages in the web interface show the change right away.
-            plugin.web().events().ticket(ticket.id());
-        }
+        // Open pages in the web interface show the change right away.
+        webChanged(ticket);
+        ticket.changedHere(System.currentTimeMillis());
         storage.saveTicket(row(ticket), nextId);
-        List<Ticket.Message> all = ticket.messages();
-        for (int i = ticket.saved(); i < all.size(); i++) {
-            Ticket.Message m = all.get(i);
-            storage.addMessage(ticket.id(), i, new Storage.MessageRow(m.author(), m.authorName(), m.staff(), m.text(),
-                    m.time().toEpochMilli()));
+        for (Ticket.Message m : ticket.takeUnsaved()) {
+            storage.addMessage(ticket.id(), ticket.indexOf(m), new Storage.MessageRow(m.author(), m.authorName(), m.staff(),
+                    m.text(), m.time().toEpochMilli()));
         }
-        ticket.saved(all.size());
     }
 }

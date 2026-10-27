@@ -51,13 +51,13 @@ Grund: Heute laden Tickets beim Start in den Speicher, jeder Server zählt Ticke
 | Daten | Künftig mit MySQL |
 |---|---|
 | Tickets | gemeinsam: Nummer vergibt die Datenbank, Änderungen werden je Ticket geschrieben, andere Server laden Änderungen nach (Spalte „geändert“, Abfrage alle paar Sekunden) |
-| Wartung (manuell, Kuma-Ausnahmen, angekündigter Stand) | gemeinsam - main führt, die Lobby liest nur |
-| Web-Konten, Sitzungen, Entbannungsanträge, Push-Abos | gemeinsam |
+| Wartung | pro Server - die Lobby erfährt den Stand von main über dessen Statusmeldung (Tabelle `server_state`, siehe A2) |
+| Web-Konten, Sitzungen, Entbannungsanträge, Push-Abos | pro Server - die Weboberfläche läuft nur auf einem Server (main); Push und Mails zu Entbannungsanträgen verschickt der Server mit Weboberfläche, auch für Änderungen der anderen |
 | Proxy-Zustand (main bereit / stoppt, Wechsel-Einträge) | neue Tabelle, gemeinsam |
 | Protokoll, Leistungsdaten | pro Server (Server-Spalte gibt es), Web zeigt sie je Server |
 | Freeze, Admin-Modus-Zustand, Discord-Ankündigungsstand | pro Server |
 
-- Tabellenversion 3 mit Migration. yaml/sqlite ohne Proxy unverändert.
+- Tabellenversion 3 mit Migration. **Umgesetzt 2026-10-27** (Abweichung zum ersten Entwurf: Web-Konten und Wartung bleiben pro Server, siehe Tabelle). Dabei behoben: beim Wechsel von yaml auf sqlite/mysql gingen Web-Konten, Sitzungen, Entbannungsanträge und Push-Abos verloren. yaml/sqlite ohne Proxy unverändert.
 - **Umzug sqlite → MySQL:** Heute übernimmt MRadmin beim ersten Start nur YAML-Dateien. Neu: Sind die MySQL-Tabellen leer und liegt eine `mradmin.db`, wird sie einmalig übernommen (wie bei YAML, Datei bleibt liegen). Wichtig: zuerst main umstellen, dann die Lobby.
 
 ### A2. MRadmin: Proxy-Betrieb
