@@ -149,7 +149,8 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
-  JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. `versions.auto-download`
+  JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
+  der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
 - **Server neu starten** (`mradmin.server.restart`): Countdown aus `versions.restart-delays`, angekündigt mit den
   Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`restart-method: stop` - ein Start-Skript
