@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [0.7.0] - 2026-10-27
+
 ### Neu
 - **Duelle steuern und nachträglich aus der Wertung nehmen (mit MRpvp):** Die Seite einer laufenden Runde hat jetzt Pausieren/Fortsetzen (`mrpvp.admin.pause`), „<Spieler> gewinnt“ und Abbrechen (`mrpvp.admin.stop`). Beendete Runden lassen sich aus der Wertung nehmen (mit optionalem Grund) und wieder werten (`mrpvp.admin.review`).
 - **Chunkloader: Accounts verknüpfen im Web:** Auf der Spielerseite unter „Verknüpfte Accounts“ lassen sich Accounts per Spielername als Zweit- oder Haupt-Account verknüpfen (mit MRchunks, `mrchunks.admin.manage`). Lösen ging schon vorher.
