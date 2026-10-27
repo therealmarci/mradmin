@@ -26,12 +26,13 @@ Spieler ──► VPS 2: Velocity (öffentlicher Port, bisherige Adresse)
 
 | Fall | Was passiert |
 |---|---|
-| Neustart (Knopf, `announce restart`, `mc.sh`) | Countdown wie heute, dann schickt MRadmin auf main alle in die Lobby und stoppt erst, wenn der Server leer ist. Lobby zeigt „Server startet neu“ und holt alle zurück, sobald main antwortet. |
+| Neustart (Knopf, `announce restart`, `mc.sh`) | Countdown wie heute, dann schickt MRadmin auf main alle **im normalen Spiel** in die Lobby. Wer im **Admin-Modus** ist, wird getrennt (der Admin-Modus bleibt gespeichert, `admin-mode.end-on-quit: false`). Erst dann stoppt der Server. Lobby zeigt „Server startet neu“ und holt alle zurück, sobald main antwortet. |
 | Wartung beginnt | Statt Kick: alle **im normalen Spiel** gehen in die Lobby - auch Teammitglieder. Wer im **MRadmin-Admin-Modus** ist, bleibt auf main. Lobby zeigt Thema und Ende aus Uptime Kuma (Bossbar, pro Spieler in seiner Sprache). |
-| Join während Wartung | main lehnt wie heute ab, Velocity versucht den nächsten Server der `try`-Liste → Lobby. |
+| Join während Wartung | Nur wer `mradmin.maintenance.bypass` hat **und** im Admin-Modus ist (gespeicherter Zustand), kommt auf main. Alle anderen - auch Team ohne Admin-Modus - lehnt main ab, Velocity versucht den nächsten Server der `try`-Liste → Lobby. |
+| Join, während main aus ist | Velocity kann main nicht erreichen → Lobby, auch für Admins im Admin-Modus. |
 | Wartung endet | Lobby holt die Spieler gestaffelt zurück (z.B. 5 pro Sekunde). |
 | Absturz / VPS 1 weg | Velocity leitet nicht von selbst um (Standard: trennen bzw. nur Meldung). Dafür ein fertiges Fallback-Plugin auf dem Proxy (Musterkonfiguration). Lobby holt zurück, sobald main wieder antwortet. |
-| Admin will vorher rüber | Gegenstand/Befehl in der Lobby „Zum Hauptserver“ (nur mit Bypass). |
+| Admin in der Lobby will während der Wartung auf main | Knopf/Befehl in der Lobby „Zum Hauptserver im Admin-Modus“ (`mradmin.proxy.switch`): main lässt ihn einmalig durch und schaltet sofort den Admin-Modus ein. Dafür braucht main ein Signal von der Lobby - geplant über den gemeinsamen MRadmin-Speicher (`storage.type: mysql`, kurzlebiges Ticket). Ohne gemeinsamen Speicher gibt es den Knopf nicht; dann vor der Wartung in den Admin-Modus gehen. |
 
 ## Teil 1: MRadmin (optional, `proxy.enabled: false`)
 Neuer Config-Abschnitt `proxy:`:
@@ -42,6 +43,7 @@ Neuer Config-Abschnitt `proxy:`:
 Rolle **main**:
 - Neustart/Stopp über MRadmin: Spieler per BungeeCord-Kanal (`Connect`, versteht Velocity) in die Lobby, dann stoppen.
 - Wartungsbeginn: Lobby statt Kick für alle außerhalb des Admin-Modus (bisherige `kick-on-start`-Logik bleibt ohne Proxy).
+- Join während Wartung: zulassen nur mit Bypass **und** gespeichertem Admin-Modus (oder gültigem Ticket aus der Lobby), sonst ablehnen → Velocity schickt in die Lobby.
 - Prüfungen (Web + `/mradmin status`): Velocity-Forwarding in `paper-global.yml` an, Spieler kommen über den Proxy, Lobby-Name gesetzt.
 
 Rolle **lobby**:
@@ -55,7 +57,7 @@ Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während 
 ## Teil 2: Wartelobby
 - Kleiner Paper-Server auf VPS 2 (ca. 1 GB, kleine Sichtweite), Abenteuermodus, eigene Spielerdaten (Inventar vom Hauptserver unberührt).
 - **Xaero:** Lobby-Welt mit eigenem Dimensionsschlüssel (z.B. `minecraft:lobby`), damit Xaero sie getrennt speichert. Proxy-Plugins für Xaero-Welt-IDs nur nach Test - sie könnten vorhandene Karten einer neuen ID zuordnen (Karte wäre „weg“).
-- **Minigames:** MRpvp für Duelle (eigene Statistik in der Lobby), dazu fertige Plugins (z.B. Parkour) mit Musterkonfiguration. Eigenes Plugin („MRgames“) erst, wenn etwas fehlt.
+- **Minigames sind optional:** Die Lobby funktioniert auch ohne (nicht jeder mit MRadmin hat MRpvp). Wer will, installiert MRpvp für Duelle (eigene Statistik in der Lobby). Weitere Minigames kommen später.
 
 ## Teil 3: Musterkonfiguration (`docs/proxy/` + Anleitung als Website-Tab)
 - `velocity.toml`-Auszug (Ports, Forwarding, `try`-Liste, Server)
@@ -77,11 +79,11 @@ Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während 
 - Alles rund um den Proxy ist **komplett optional**.
 - Proxy + Lobby auf VPS 2, Hauptserver auf VPS 1, beide bei Hetzner über das interne Netz.
 - LuckPerms und LibertyBans werden auf MySQL umgestellt (gemeinsam für alle Server).
-- Lobby ist **nur Warteraum** (Neustart, Absturz, Wartung), mit MRpvp-Duellen zum Zeitvertreib.
+- Lobby ist **nur Warteraum** (Neustart, Absturz, Wartung). Minigames sind optional (z.B. MRpvp), weitere kommen später.
 - Bei Wartung bleibt nur, wer im MRadmin-Admin-Modus ist; alle anderen (auch Team im normalen Spiel) gehen in die Lobby.
+- Neustart: Admins im Admin-Modus werden getrennt, nicht in die Lobby geschickt.
+- Join während Wartung: Admin mit Admin-Modus → main, ohne Admin-Modus → Lobby. Ist main aus → Lobby, auch im Admin-Modus.
+- Die Domain stellt der User selbst auf VPS 2 um.
 
 ## Offene Fragen an den User
-1. Neustart: auch Admins im Admin-Modus in die Lobby schicken? (Vorschlag: ja - der Server geht ja aus, sonst würden sie getrennt.)
-2. Join während Wartung: darf Team mit `mradmin.maintenance.bypass` weiter auf main joinen (um dort in den Admin-Modus zu gehen)? (Vorschlag: ja, Lobby-Rückweg über `mradmin.proxy.switch`.)
-3. Weitere Minigames außer Duellen - jetzt oder später?
-4. Verbinden sich die Spieler über eine Domain (für Xaero und die Umstellung wichtig)?
+1. Knopf „Zum Hauptserver im Admin-Modus“ aus der Lobby über den gemeinsamen MRadmin-Speicher (MySQL) - passt das so?
