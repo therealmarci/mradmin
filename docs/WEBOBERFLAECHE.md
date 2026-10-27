@@ -67,22 +67,35 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   gemessen), Größe der MRadmin-Datenbank und die 5 Chunks mit den meisten Entities.
 - Gemessen wird jede Sekunde aus Werten, die Java und Paper ohnehin führen (kein Lag), die Seite aktualisiert sich
   live. Die letzte Stunde ist sekündlich da (ab 1 Minute wählbar), 24 Stunden im 10-Sekunden-Takt, ältere als
-  5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten). Aufbewahrung
-  `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über Neustarts hinweg.
+  5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten, bei der Garbage Collection als eigene Linie
+  „Spitze“). Aufbewahrung `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über
+  Neustarts hinweg. Nach einem Neustart füllen die gespeicherten 5-Minuten-Werte die Zeit davor auf.
+- Die Zeitachse zeigt immer genau den gewählten Zeitraum; wo keine Werte sind (Server aus), bleibt sie leer.
+- Jedes Diagramm lässt sich mit **⤢** im Vollbild öffnen (schließen mit Esc, Klick daneben oder „Schließen“) und
+  als Tabelle anzeigen.
 - `health.alert`: Warnung an das Team (ingame) und ins Discord-Log, wenn die TPS länger unter einer Grenze liegt,
   und Entwarnung, sobald sie sich erholt hat.
 
 ## Spieler (`mradmin.player.view`)
 - Alle, die schon auf dem Server waren: online zuerst, dann nach letztem Besuch, mit Suche, Filter (online,
   auffällig) und Markierungen (eingefroren, gemeldet, blockiert /nosleep, Chunkloader gesperrt ...). Keine IP-Adressen.
-- Pro Spieler eine Seite: Ort, Spielmodus, Ping, Leben, erster Besuch, Spielzeit; Einfrieren
-  (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`); seine Tickets
-  (`mradmin.tickets.view`).
-- Darunter ein Teil pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt der Teil:
+- Pro Spieler eine Seite: oben eine kurze Vorschau mit Ort, Spielmodus, Ping, Leben, erstem Besuch und Spielzeit;
+  Einfrieren (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`).
+- Darunter eine **Kachel pro Bereich** mit seinem Status auf einen Blick (z.B. „2 offen“, „3 / 5 Loader“, „im Duell
+  #12“, „gesperrt bis …“). Ein Klick öffnet den Bereich mit allen Einzelheiten und Aktionen (Adresse
+  `/players/<uuid>/<bereich>`, lässt sich also auch als Lesezeichen speichern). Bereiche: seine Tickets
+  (`mradmin.tickets.view`) und ein Bereich pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt
+  die Kachel:
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
   - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
-    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
+    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`). Verknüpfte Accounts
+    ansehen, lösen und neu verknüpfen - per Spielername als Zweit- oder Haupt-Account, ohne Zustimmung der Spieler
+    (`mrchunks.admin.manage`, wie `/mrchunks link`).
+  - **MRpvp:** Duell-Statistik, die laufende Runde (Klick → Duellsteuerung) und die letzten Runden als Kacheln
+    (`mrpvp.admin.games`), von Duellen sperren mit Grund und Schnellauswahl der Dauer (`mrpvp.admin.ban`, Dauern aus
+    `gui.ban-durations` in der MRpvp-Config), gesicherte Stände zurückgeben (`mrpvp.admin.restore`), Statistik
+    zurücksetzen (`mrpvp.admin.reset`).
   - **LibertyBans:** aktive Strafen und Verlauf (`libertybans.commands` + `libertybans.list.history`), bannen, muten,
     verwarnen und kicken (`libertybans.<typ>.do.target.uuid`), aufheben (`libertybans.<typ>.undo.target.uuid`). Die
     Dauer kommt aus der Schnellauswahl `libertybans.durations` in der MRadmin-Config; hat LibertyBans seine
@@ -107,13 +120,16 @@ Permissions: `mrsleep.admin.gui` ansehen, Blockaden aufheben mit `mrsleep.admin.
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
 ## Duelle (mit MRpvp)
-Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.ban`, `.reset`, `.restore`, `.review` handeln.
+Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.pause`, `.ban`, `.reset`, `.restore`, `.review` handeln.
 
-- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena, abbrechen. Pro Runde eine Seite mit Mini-Karte (der
+- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena. Steuern: pausieren und fortsetzen (`.pause`),
+  einen Sieger bestimmen oder abbrechen (`.stop`). Pro Runde eine Seite mit Mini-Karte (der
   Punkt leuchtet beim Treffen und Getroffenwerden), Inventaren und Kampf-Log; beendete Runden mit den gesicherten
   Inventaren (beim Betreten und am Ende, Enderchest, MRtoolbar-Gürtel) und einer Wiedergabe der Positionen.
-- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Arenen mit ihren Kopien,
-  Auffälligkeiten der letzten 24 Stunden. Auf der Spielerseite: Duell-Statistik, Sperre, Statistik zurücksetzen.
+- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Gewertete Runden lassen sich auf
+  ihrer Seite nachträglich aus der Wertung nehmen (mit optionalem Grund) und wieder werten (`.review`). Arenen mit ihren Kopien,
+  Auffälligkeiten der letzten 24 Stunden. Alles zu einem einzelnen Spieler (Statistik, Runden, Sperre) steht auf
+  seiner Seite unter **Spieler**.
 
 ## Wartung & Ankündigungen
 `mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
@@ -127,6 +143,25 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+
+## Versionen (`mradmin.versions.view`)
+- Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
+  (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
+  auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
+- Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
+  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (höchstens einmal pro
+  Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+- **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
+  SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
+  JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
+  der Inhalt ist neu. `versions.auto-download`
+  (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn `versions.restart-method` eingestellt ist (Standard
+  `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
+  den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
+  Schleife, ein Wächter oder das Panel startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu
+  (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: README.
+- Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
 
 ## Push-Benachrichtigungen
 Unter **Konto → Benachrichtigungen**.

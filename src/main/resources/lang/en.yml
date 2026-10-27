@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 12
+lang-version: 13
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -677,8 +677,11 @@ discord:
   web-console: "⌨️ **{player}** ran in the web console: `{command}`"
   health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
   health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
+  plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
+  server-restart: "🔄 **{admin}** restarts the server (countdown: {time})."
+  server-restart-cancelled: "❎ **{admin}** cancelled the restart."
 # Texts for the community Discord (discord-announce in config.yml). Markdown like in Discord.
-# Placeholders: {title} (topic) {start} {end} (Discord timestamps, everyone sees their own timezone) {start-relative} {end-relative} ("in 2 hours").
+# Placeholders: {title} (topic) {start} {end} (Discord timestamps, everyone sees their own timezone) {start-relative} {end-relative} ("in 2 hours"), {started} {ended} (actual begin and end).
 discord-announce:
   test-message: "🔧 Test message from MRadmin - the announcement webhook works!"
   open-end: "open"
@@ -686,9 +689,10 @@ discord-announce:
   maintenance-scheduled-title: "🛠️ Maintenance scheduled"
   maintenance-scheduled: "The server will be unavailable for maintenance from **{start}** ({start-relative}).\n**Estimated end:** {end}"
   maintenance-started-title: "🔧 Maintenance in progress"
-  maintenance-started: "The server is in maintenance mode right now.\n**Estimated end:** {end} {end-relative}"
+  maintenance-started: "The server has been in maintenance mode since **{started}**.\n**Estimated end:** {end} {end-relative}"
   maintenance-ended-title: "✅ Server back online"
-  maintenance-ended: "Maintenance is complete - have fun playing!"
+  maintenance-ended: "Maintenance is complete - have fun playing!\n**Maintenance:** {started} to {ended}"
+  maintenance-ended-early: "*Finished earlier than planned (estimated: {end}).*"
   maintenance-cancelled-title: "❎ Maintenance cancelled"
   maintenance-cancelled: "~~Planned from {start}~~ - the maintenance will not take place."
   maintenance-changed-note: "✏️ *The times have been updated.*"
@@ -723,6 +727,8 @@ version-outdated: "<prefix><gold>New version available: <white><latest></white> 
 version-unknown: "<prefix><gray>Update status unknown: <reason>"
 version-checking: "<prefix><gray>Checking for updates ..."
 version-links: "<prefix><website> <dark_gray>| <github>"
+restart-cancelled: "<prefix><green>The planned restart has been cancelled."
+versions-auto: "automatically"
 update-download-label: "<aqua><u>[Download]</u></aqua>"
 update-join-notify: "<prefix><gold>An update for MRadmin is available: <white><latest></white> <gray>(installed: <current>) <download>"
 update-reason-disabled: "update check is disabled"

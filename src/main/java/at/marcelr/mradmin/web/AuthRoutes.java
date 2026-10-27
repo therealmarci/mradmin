@@ -307,6 +307,10 @@ public final class AuthRoutes {
         may.put("console", console);
         may.put("consoleExecute", console && perms.has(account.id(), Perms.WEB_CONSOLE_EXECUTE));
         may.put("audit", perms.has(account.id(), Perms.WEB_AUDIT));
+        boolean versions = plugin.versions().enabled();
+        may.put("versions", versions && VersionRoutes.mayView(server, account.id()));
+        may.put("versionsInstall", versions && perms.has(account.id(), Perms.VERSIONS_INSTALL));
+        may.put("serverRestart", versions && plugin.restarts().enabled() && perms.has(account.id(), Perms.SERVER_RESTART));
         Map<String, Object> me = new LinkedHashMap<>();
         me.put("uuid", account.id().toString());
         me.put("name", account.name());

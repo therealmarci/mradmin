@@ -98,7 +98,11 @@
     }
   }
 
-  const points = $derived(history?.points ?? []);
+  // gcMax: the highest second of a combined point (points stored by older versions only have the average).
+  const points = $derived((history?.points ?? []).map((p) => ({ ...p, gcMax: Math.max(p.gcMax ?? 0, p.gc ?? 0) })));
+  // The chosen range in server time - the time axis covers it even where there are no points.
+  const from = $derived(history?.from ?? null);
+  const to = $derived(history?.to ?? null);
   const long = $derived(range === '7d' || range === '30d');
   const latest = $derived((perSecond ? points.at(-1) : live) ?? system?.latest);
 
@@ -107,6 +111,8 @@
   const mb = (v) => (v >= 1024 ? (v / 1024).toFixed(1) + ' GB' : Math.round(v ?? 0) + ' MB');
   const num = (v) => (v >= 10000 ? (v / 1000).toFixed(1) + 'K' : String(Math.round(v ?? 0)));
   const tps = (v) => (v ?? 0).toFixed(1);
+  // GC: small values with a decimal - averaged over minutes they are often below 1 ms per second.
+  const gcMs = (v) => ((v ?? 0) < 10 ? (v ?? 0).toFixed(1) : String(Math.round(v))) + ' ms';
   // Small sizes (the database) in KB, otherwise like mb().
   const size = (v) => (v < 1 ? Math.max(1, Math.round(v * 1024)) + ' KB' : v < 10 ? v.toFixed(1) + ' MB' : mb(v));
 
@@ -194,35 +200,38 @@
   {/if}
 
   <div class="charts" class:refreshing={loading && history}>
-    <LineChart title={t('health.chart.tps')} {points} {long} seconds={range === '1m'} yMax={20} format={tps}
+    <LineChart title={t('health.chart.tps')} {points} {from} {to} {long} seconds={range === '1m'} yMax={20} format={tps}
       series={[{ key: 'tps', label: 'TPS', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.mspt')} {points} {long} seconds={range === '1m'} format={ms}
+    <LineChart title={t('health.chart.mspt')} {points} {from} {to} {long} seconds={range === '1m'} format={ms}
       refs={[{ value: 50, label: t('health.budget') }]}
       series={[
         { key: 'mspt', label: t('health.avg'), color: 'var(--series-1)' },
         { key: 'msptP95', label: '95 %', color: 'var(--series-2)' },
         { key: 'msptMax', label: t('health.max'), color: 'var(--series-3)' },
       ]} />
-    <LineChart title={t('health.chart.cpu')} {points} {long} seconds={range === '1m'} yMax={100} format={pct}
+    <LineChart title={t('health.chart.cpu')} {points} {from} {to} {long} seconds={range === '1m'} yMax={100} format={pct}
       series={[
         { key: 'cpu', label: t('health.server'), color: 'var(--series-1)' },
         { key: 'cpuSystem', label: t('health.system'), color: 'var(--series-2)' },
       ]} />
-    <LineChart title={t('health.chart.ram')} {points} {long} seconds={range === '1m'} format={mb}
+    <LineChart title={t('health.chart.ram')} {points} {from} {to} {long} seconds={range === '1m'} format={mb}
       refs={latest ? [{ value: latest.heapMax, label: t('health.max') }] : []}
       series={[{ key: 'heapUsed', label: t('health.used'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.players')} {points} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.players')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'players', label: t('health.players'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.gc')} {points} {long} seconds={range === '1m'} format={(v) => Math.round(v ?? 0) + ' ms'}
-      series={[{ key: 'gc', label: 'GC', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.chunks')} {points} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.gc')} {points} {from} {to} {long} seconds={range === '1m'} format={gcMs}
+      series={[
+        { key: 'gc', label: t('health.avg'), color: 'var(--series-1)' },
+        { key: 'gcMax', label: t('health.peak'), color: 'var(--series-3)' },
+      ]} />
+    <LineChart title={t('health.chart.chunks')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
       series={[
         { key: 'chunks', label: t('health.loaded'), color: 'var(--series-1)' },
         ...(loaders ? [{ key: 'loaderChunks', label: t('health.ofLoaders'), color: 'var(--series-3)' }] : []),
       ]} />
-    <LineChart title={t('health.chart.ping')} {points} {long} seconds={range === '1m'} format={(v) => (v == null || v < 0 ? '–' : Math.round(v) + ' ms')}
+    <LineChart title={t('health.chart.ping')} {points} {from} {to} {long} seconds={range === '1m'} format={(v) => (v == null || v < 0 ? '–' : Math.round(v) + ' ms')}
       series={[{ key: 'ping', label: t('health.ping'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.entities')} {points} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.entities')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'entities', label: 'Entities', color: 'var(--series-1)' }]} />
   </div>
 

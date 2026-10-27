@@ -52,7 +52,7 @@ public final class AdminModeListener implements Listener {
             plugin.messages().send(player, "no-permission");
             return;
         }
-        new HubMenu(plugin, player).open();
+        plugin.messages().run(player, () -> new HubMenu(plugin, player).open());
     }
 
     @EventHandler(ignoreCancelled = true)

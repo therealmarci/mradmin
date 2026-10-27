@@ -1,14 +1,16 @@
 <script>
   // MRchunks' part of a player's page: their loaders, limits, chunk loader ban, invites, loaders shared with them,
   // linked accounts and dummies - with MRchunks' permissions (limit, ban, manage).
+  // view "tile": only the status as a tile on the player's overview.
   import { untrack } from 'svelte';
   import { playerAction, playerPart } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { STATUS } from '../lib/chunks.js';
+  import PartTile from './PartTile.svelte';
 
-  let { uuid, me, name, onDone } = $props();
+  let { uuid, me, name, onDone, view = 'full', onOpen } = $props();
 
   let c = $state(null);
   let error = $state('');
@@ -17,6 +19,8 @@
   // The limit being edited ("place" / "active" / "dummy") and the value typed.
   let editing = $state(null);
   let value = $state('');
+  // Name typed for linking another account.
+  let other = $state('');
 
   async function load() {
     try {
@@ -42,6 +46,7 @@
       await playerAction(uuid, 'mrchunks', body);
       onDone(t('chunks.done.' + body.action));
       if (body.action === 'ban') reason = '';
+      if (body.action === 'link') other = '';
       editing = null;
       await load();
     } catch (e) {
@@ -63,15 +68,26 @@
     { kind: 'active', label: t('chunks.limitActive'), used: c.active, limit: c.activeLimit },
     ...(c.dummiesEnabled ? [{ kind: 'dummy', label: t('chunks.limitDummy'), used: c.dummies, limit: c.dummyLimit }] : []),
   ] : []);
+  const chips = $derived(c ? [
+    ...(c.exempt ? [{ text: t('chunks.exempt'), tone: '' }] : []),
+    ...(c.ban ? [{ text: '✕ ' + (c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })), tone: 'bad' }] : []),  ] : []);
 </script>
 
+{#if view === 'tile'}
+  <PartTile label={t('nav.chunks')} loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
+    value={c ? String(c.loaders.length) : ''} unit={c ? t('chunks.tileUnit', { max: limitText(c.limit) }) : ''}
+    facts={c ? [
+      { label: t('chunks.tileActive'), value: c.active + ' / ' + limitText(c.activeLimit) },
+      { label: t('chunks.tileInvited'), value: String(c.shared.length) },
+      { label: t('player.banFact'), value: !c.ban ? (c.exempt ? t('chunks.exempt') : '–') : c.ban.permanent ? t('sleep.permanent') : dateTime(c.ban.until), tone: c.ban ? 'bad' : '' },
+    ] : []} />
+{:else}
 <section class="card part">
   <div class="phead">
     <h2>🧱 {t('nav.chunks')}</h2>
     {#if c}
       <div class="chips">
-        {#if c.exempt}<span class="tag">{t('chunks.exempt')}</span>{/if}
-        {#if c.ban}<span class="tag bad">✕ {c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })}</span>{/if}
+        {#each chips as ch}<span class="tag {ch.tone}">{ch.text}</span>{/each}
       </div>
     {/if}
   </div>
@@ -107,7 +123,8 @@
       <p class="muted tiny">{t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
     {/if}
 
-    {#if c.main || c.secondAccounts?.length}
+    {@const canLink = me.may.mrchunksManage && c.linksEnabled && !c.main && c.secondAccounts.length < c.maxLinks}
+    {#if c.main || c.secondAccounts?.length || canLink}
       <h3>{t('chunks.linkedSection')}</h3>
       {#if c.main}
         <p class="small">
@@ -126,9 +143,23 @@
           {/each}
         </ul>
       {/if}
-      {#if me.may.mrchunksManage}
+      {#if me.may.mrchunksManage && (c.main || c.secondAccounts.length)}
         <button class="secondary" disabled={busy}
           onclick={() => act({ action: 'unlink' }, t('chunks.unlinkConfirm', { name }))}>{t('chunks.unlink')}</button>
+      {/if}
+      {#if canLink}
+        <div class="link-form">
+          <p class="muted tiny">{t('chunks.linkHint')}</p>
+          <input type="text" bind:value={other} maxlength="16" placeholder={t('chunks.linkPlaceholder')} aria-label={t('chunks.linkPlaceholder')} />
+          <div class="buttons">
+            <button class="secondary" disabled={busy || !other.trim()}
+              onclick={() => act({ action: 'link', other: other.trim(), role: 'second' }, t('chunks.linkSecondConfirm', { name, other: other.trim() }))}>{t('chunks.linkSecond')}</button>
+            {#if !c.secondAccounts.length}
+              <button class="secondary" disabled={busy || !other.trim()}
+                onclick={() => act({ action: 'link', other: other.trim(), role: 'main' }, t('chunks.linkMainConfirm', { name, other: other.trim() }))}>{t('chunks.linkMain')}</button>
+            {/if}
+          </div>
+        </div>
       {/if}
     {/if}
 
@@ -211,6 +242,7 @@
     <p class="muted small">{t('common.loading')}</p>
   {/if}
 </section>
+{/if}
 
 <style>
   .phead {
@@ -250,7 +282,6 @@
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 14%, transparent);
   }
-
   .limits {
     display: grid;
     gap: 10px;
@@ -298,6 +329,13 @@
   .edit-links {
     display: flex;
     gap: 12px;
+  }
+
+  .link-form {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    max-width: 420px;
   }
 
   .linkish {

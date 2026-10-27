@@ -40,11 +40,12 @@ import static at.marcelr.mradmin.Messages.tag;
 public final class HealthMonitor {
 
     /**
-     * One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second, ping = average
+     * One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second (gcMax = the
+     * highest second of a combined point - an average hides short GC pauses), ping = average
      * of the online players in ms (-1 = nobody online), loaderChunks = chunks MRchunks keeps loaded (-1 = no MRchunks).
      */
     public record Point(long time, double tps, double mspt, double msptP95, double msptMax, double cpu, double cpuSystem,
-                        long heapUsed, long heapMax, double gc, int players, int chunks, int entities, int tiles,
+                        long heapUsed, long heapMax, double gc, double gcMax, int players, int chunks, int entities, int tiles,
                         double ping, int loaderChunks) {
     }
 
@@ -168,7 +169,7 @@ public final class HealthMonitor {
 
         add(new Point(now, round(tps), round(Bukkit.getAverageTickTime()), round(p95), round(max), cpu, cpuSystem,
                 heap.getUsed() / 1_048_576, (heap.getMax() > 0 ? heap.getMax() : heap.getCommitted()) / 1_048_576,
-                round(gc), Npcs.online().size(), chunks, entities, tiles, ping < 0 ? -1 : round(ping),
+                round(gc), round(gc), Npcs.online().size(), chunks, entities, tiles, ping < 0 ? -1 : round(ping),
                 loaderChunks()));
         alert(Math.min(20, Bukkit.getTPS()[0]), now);
     }
@@ -215,6 +216,8 @@ public final class HealthMonitor {
         return new Point(last.time(), avg(points, Point::tps), avg(points, Point::mspt),
                 maxOf(points, Point::msptP95), maxOf(points, Point::msptMax), avg(points, Point::cpu),
                 avg(points, Point::cpuSystem), (long) avg(points, Point::heapUsed), last.heapMax(), avg(points, Point::gc),
+                // Points stored before gcMax existed have 0 there - their average is the best known peak.
+                maxOf(points, p -> Math.max(p.gcMax(), p.gc())),
                 (int) Math.round(maxOf(points, Point::players)), (int) Math.round(avg(points, Point::chunks)),
                 (int) Math.round(avg(points, Point::entities)), (int) Math.round(avg(points, Point::tiles)),
                 known(points, Point::ping), (int) Math.round(known(points, Point::loaderChunks)));
@@ -228,17 +231,15 @@ public final class HealthMonitor {
      */
     public synchronized List<Point> range(long millis, int max) {
         long since = System.currentTimeMillis() - millis;
-        List<Point> points = new ArrayList<>();
-        if (millis <= HOUR) {
-            collect(seconds, since, points);
-        } else if (millis <= DAY) {
-            collect(tens, since, points);
-            points.addAll(tenBucket.isEmpty() ? List.of() : List.of(combine(tenBucket)));
-        } else {
-            collect(coarse, since, points);
-            if (!coarseBucket.isEmpty()) {
-                points.add(combine(coarseBucket));
-            }
+        // The finest points that fit the range; where they do not reach back (only kept in memory, so they start
+        // with the last restart), the coarser ones fill in - the chart then really covers the chosen range.
+        List<Point> points = HistoryFill.fill(millis <= HOUR ? List.of(seconds, tens, coarse)
+                : millis <= DAY ? List.of(tens, coarse) : List.of(coarse), since, Point::time);
+        // The bucket being filled right now belongs after the newest point.
+        if (millis > HOUR && millis <= DAY && !tenBucket.isEmpty()) {
+            points.add(combine(tenBucket));
+        } else if (millis > DAY && !coarseBucket.isEmpty()) {
+            points.add(combine(coarseBucket));
         }
         if (points.size() <= max) {
             return points;
@@ -253,14 +254,6 @@ public final class HealthMonitor {
             }
         }
         return result;
-    }
-
-    private static void collect(Deque<Point> source, long since, List<Point> into) {
-        for (Point p : source) {
-            if (p.time() >= since) {
-                into.add(p);
-            }
-        }
     }
 
     public synchronized Point latest() {

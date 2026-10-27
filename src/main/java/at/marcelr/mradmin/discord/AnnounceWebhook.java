@@ -54,35 +54,47 @@ final class AnnounceWebhook {
     Post post(URI webhook, JsonObject payload) {
         Post post = new Post(null);
         String body = payload.toString();
-        executor.execute(() -> {
-            URI url = URI.create(webhook + (webhook.getQuery() == null ? "?" : "&") + "wait=true");
-            String answer = send(HttpRequest.newBuilder(url).POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)));
-            if (answer != null) {
-                try {
-                    post.id = JsonParser.parseString(answer).getAsJsonObject().get("id").getAsString();
-                    onPosted.run();
-                } catch (RuntimeException e) {
-                    onError.accept("unexpected answer from Discord: " + answer);
-                }
-            }
-        });
+        executor.execute(() -> create(webhook, post, body));
         return post;
     }
 
-    /** Edits a posted message. Does nothing if the post failed (no id). */
+    /**
+     * Edits a posted message. If it has no id (the post failed or was never saved) or was deleted in Discord, it is
+     * posted anew instead - the announcement must never get stuck on an old state.
+     */
     void edit(URI webhook, Post post, JsonObject payload) {
         String body = payload.toString();
         executor.execute(() -> {
-            if (post == null || post.id == null) {
-                onError.accept("cannot update the announcement, its message id is unknown (the post failed or was not saved)");
+            if (post.id == null) {
+                create(webhook, post, body);
                 return;
             }
             String base = webhook.toString();
             int query = base.indexOf('?');
             String url = (query < 0 ? base : base.substring(0, query)) + "/messages/" + post.id
                     + (query < 0 ? "" : base.substring(query));
-            send(HttpRequest.newBuilder(URI.create(url)).method("PATCH", HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)));
+            int[] status = new int[1];
+            send(HttpRequest.newBuilder(URI.create(url)).method("PATCH", HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)),
+                    status, onError);
+            if (status[0] == 404) {
+                post.id = null;
+                create(webhook, post, body);
+            }
         });
+    }
+
+    /** Runs on the background thread: posts and stores the new message id in {@code post}. */
+    private void create(URI webhook, Post post, String body) {
+        URI url = URI.create(webhook + (webhook.getQuery() == null ? "?" : "&") + "wait=true");
+        String answer = send(HttpRequest.newBuilder(url).POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)));
+        if (answer != null) {
+            try {
+                post.id = JsonParser.parseString(answer).getAsJsonObject().get("id").getAsString();
+                onPosted.run();
+            } catch (RuntimeException e) {
+                onError.accept("unexpected answer from Discord: " + answer);
+            }
+        }
     }
 
     /** Sends a test message and waits for the answer. @return null on success, otherwise the error */
@@ -92,17 +104,21 @@ final class AnnounceWebhook {
             URI url = URI.create(webhook + (webhook.getQuery() == null ? "?" : "&") + "wait=true");
             String[] error = new String[1];
             String answer = send(HttpRequest.newBuilder(url).POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)),
-                    e -> error[0] = e);
+                    new int[1], e -> error[0] = e);
             return answer != null ? null : error[0];
         }, executor);
     }
 
     private String send(HttpRequest.Builder builder) {
-        return send(builder, onError);
+        return send(builder, new int[1], onError);
     }
 
-    /** @return the response body on success, otherwise null (the error goes to {@code errors}) */
-    private String send(HttpRequest.Builder builder, Consumer<String> errors) {
+    /**
+     * @param status receives the last HTTP status (0 if there was no answer)
+     * @return the response body on success, otherwise null (the error goes to {@code errors}; a missing message,
+     * HTTP 404, is left to the caller)
+     */
+    private String send(HttpRequest.Builder builder, int[] status, Consumer<String> errors) {
         HttpRequest request = builder.timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
                 .header("User-Agent", userAgent)
@@ -110,13 +126,17 @@ final class AnnounceWebhook {
         try {
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                int status = response.statusCode();
-                if (status / 100 == 2) {
+                int code = response.statusCode();
+                status[0] = code;
+                if (code / 100 == 2) {
                     return response.body();
                 }
-                if (status != 429) {
+                if (code == 404 && request.method().equals("PATCH")) {
+                    return null;
+                }
+                if (code != 429) {
                     String text = response.body() == null ? "" : response.body().replaceAll("\\s+", " ").trim();
-                    errors.accept("HTTP " + status + (text.isEmpty() ? "" : " " + (text.length() > 200 ? text.substring(0, 200) + "…" : text)));
+                    errors.accept("HTTP " + code + (text.isEmpty() ? "" : " " + (text.length() > 200 ? text.substring(0, 200) + "…" : text)));
                     return null;
                 }
                 Thread.sleep(retryAfter(response));

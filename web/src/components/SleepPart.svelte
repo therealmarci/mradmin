@@ -1,11 +1,13 @@
 <script>
   // MRsleep's part of a player's page: /nosleep blocks, cooldown, bypass and ban - with MRsleep's permissions.
+  // view "tile": only the status as a tile on the player's overview.
   import { untrack } from 'svelte';
   import { moduleAction, playerPart } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration } from '../lib/format.js';
+  import PartTile from './PartTile.svelte';
 
-  let { uuid, me, name, onDone } = $props();
+  let { uuid, me, name, onDone, view = 'full', onOpen } = $props();
 
   let p = $state(null);
   let error = $state('');
@@ -46,20 +48,33 @@
 
   const time = (ms) => (ms === -1 ? t('sleep.permanent') : duration(ms));
   const nothing = $derived(p && !p.blocking.length && !p.cooldown && !p.bypass && !p.ban);
+  const chips = $derived(p ? [
+    ...(p.sleeping ? [{ text: '☾ ' + t('sleep.isSleeping'), tone: 'good' }] : []),
+    ...(p.excluded ? [{ text: t('sleep.excluded.' + p.excluded), tone: '' }] : []),
+    ...p.blocking.map((b) => ({ text: '⛔ ' + t('sleep.blocks', { world: b.world }), tone: 'warn' })),
+    ...(p.cooldown ? [{ text: '⏱ ' + t('sleep.cooldownLeft', { time: duration(p.cooldown) }), tone: '' }] : []),
+    ...(p.bypass ? [{ text: '✓ ' + t('sleep.bypassLeft', { time: duration(p.bypass) }), tone: 'info' }] : []),
+    ...(p.ban ? [{ text: '✕ ' + (p.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(p.ban.until) })), tone: 'bad' }] : []),
+    ...(nothing ? [{ text: '✓ ' + t('sleep.nothing'), tone: 'good' }] : []),
+  ] : []);
 </script>
 
+{#if view === 'tile'}
+  {@const state = !p ? null : p.ban ? ['banned', 'bad'] : p.blocking.length ? ['blocked', 'warn'] : p.sleeping ? ['sleeping', 'good'] : ['ok', 'good']}
+  <PartTile label={t('nav.sleep')} loading={!p} {error} {onOpen} small
+    value={state ? t('sleep.tile.' + state[0]) : ''} tone={state?.[1]}
+    facts={p ? [
+      { label: t('sleep.section.cooldown'), value: p.cooldown ? duration(p.cooldown) : '–' },
+      { label: t('sleep.tile.bypass'), value: p.bypass ? duration(p.bypass) : '–', tone: p.bypass ? 'info' : '' },
+      { label: t('player.banFact'), value: !p.ban ? '–' : p.ban.permanent ? t('sleep.permanent') : dateTime(p.ban.until), tone: p.ban ? 'bad' : '' },
+    ] : []} />
+{:else}
 <section class="card part">
   <div class="phead">
     <h2>🛏 {t('sleep.title')}</h2>
     {#if p}
       <div class="chips">
-        {#if p.sleeping}<span class="tag good">☾ {t('sleep.isSleeping')}</span>{/if}
-        {#if p.excluded}<span class="tag">{t('sleep.excluded.' + p.excluded)}</span>{/if}
-        {#each p.blocking as b}<span class="tag warn">⛔ {t('sleep.blocks', { world: b.world })}</span>{/each}
-        {#if p.cooldown}<span class="tag">⏱ {t('sleep.cooldownLeft', { time: duration(p.cooldown) })}</span>{/if}
-        {#if p.bypass}<span class="tag info">✓ {t('sleep.bypassLeft', { time: duration(p.bypass) })}</span>{/if}
-        {#if p.ban}<span class="tag bad">✕ {p.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(p.ban.until) })}</span>{/if}
-        {#if nothing}<span class="tag good">✓ {t('sleep.nothing')}</span>{/if}
+        {#each chips as c}<span class="tag {c.tone}">{c.text}</span>{/each}
       </div>
     {/if}
   </div>
@@ -116,6 +131,7 @@
     <p class="muted small">{t('common.loading')}</p>
   {/if}
 </section>
+{/if}
 
 <style>
   .phead {

@@ -1,8 +1,9 @@
 <script>
   // A slim line chart for the health dashboard (one measure per chart - never two y-axes).
   // 2px lines, hairline gridlines, end labels when they do not collide, a crosshair that snaps to the nearest
-  // point in time with one tooltip for every series, arrow keys for keyboard users, and a table view.
+  // point in time with one tooltip for every series, arrow keys for keyboard users, a table view and a full-screen view (expand button).
   import { t } from '../lib/i18n.js';
+  import LineChart from './LineChart.svelte';
 
   let {
     title,
@@ -14,7 +15,18 @@
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
+    from = null, // start and end of the chosen range (ms) - the time axis covers exactly this, otherwise the points
+    to = null,
+    onClose = null, // set in the full-screen view: a close button instead of the expand button
   } = $props();
+
+  let expanded = $state(false);
+  let bigHeight = $state(400);
+
+  function expand() {
+    bigHeight = Math.max(260, Math.round(window.innerHeight * 0.62));
+    expanded = true;
+  }
 
   const pad = { top: 12, right: 52, bottom: 24, left: 48 };
   let width = $state(600);
@@ -27,8 +39,8 @@
   const axisTime = (ms) =>
     new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit' } : seconds ? { ...clock, second: '2-digit' } : clock);
 
-  const t0 = $derived(points.length ? points[0].time : 0);
-  const t1 = $derived(points.length ? points.at(-1).time : 1);
+  const t0 = $derived(from ?? (points.length ? points[0].time : 0));
+  const t1 = $derived(Math.max(to ?? 0, points.length ? points.at(-1).time : 1));
   const innerW = $derived(Math.max(10, width - pad.left - pad.right));
   const innerH = $derived(height - pad.top - pad.bottom);
 
@@ -51,14 +63,17 @@
   const x = (ms) => pad.left + (t1 === t0 ? innerW : ((ms - t0) / (t1 - t0)) * innerW);
   const y = (v) => pad.top + innerH - (Math.max(0, Math.min(v, top)) / top) * innerH;
 
-  // A gap of more than 3 steps (server offline) breaks the line instead of drawing across it.
+  // A gap of more than 3 steps (server offline) breaks the line instead of drawing across it. The step is the
+  // larger neighbouring gap: a range mixes resolutions (5-minute points from before the last restart, then
+  // 10-second or per-second ones), and the change between them must not count as a gap.
   const segments = $derived.by(() => {
     if (points.length < 2) return [points];
-    const gaps = points.slice(1).map((p, i) => p.time - points[i].time).sort((a, b) => a - b);
-    const step = gaps[Math.floor(gaps.length / 2)] || 1;
+    const gaps = points.slice(1).map((p, i) => p.time - points[i].time);
     const result = [[points[0]]];
     for (let i = 1; i < points.length; i++) {
-      if (points[i].time - points[i - 1].time > step * 3) result.push([]);
+      const gap = gaps[i - 1];
+      const step = Math.max(gaps[i - 2] ?? 0, gaps[i] ?? 0) || gap;
+      if (gap > step * 3) result.push([]);
       result.at(-1).push(points[i]);
     }
     return result;
@@ -94,7 +109,8 @@
   });
 
   function nearest(px) {
-    if (!points.length) return -1;
+    // Left of the first point (no data yet in that part of the range) there is nothing to show.
+    if (!points.length || px < x(points[0].time) - 8) return -1;
     const target = t0 + ((px - pad.left) / innerW) * (t1 - t0);
     let lo = 0;
     let hi = points.length - 1;
@@ -128,9 +144,16 @@
 <section class="card chart">
   <div class="head">
     <h3>{title}</h3>
-    <button class="secondary mini" onclick={() => (table = !table)} aria-pressed={table}>
-      {table ? t('health.chart') : t('health.table')}
-    </button>
+    <div class="tools">
+      <button class="secondary mini" onclick={() => (table = !table)} aria-pressed={table}>
+        {table ? t('health.chart') : t('health.table')}
+      </button>
+      {#if onClose}
+        <button class="secondary mini" onclick={onClose}>✕ {t('common.close')}</button>
+      {:else}
+        <button class="secondary mini" onclick={expand} title={t('health.expand')} aria-label={t('health.expand')}>⤢</button>
+      {/if}
+    </div>
   </div>
   {#if series.length > 1}
     <div class="legend">
@@ -206,6 +229,19 @@
   {/if}
 </section>
 
+<svelte:window onkeydown={(e) => expanded && e.key === 'Escape' && (expanded = false)} />
+
+{#if expanded}
+  <!-- Full screen: the same chart, larger. Esc or a click beside it closes it. -->
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
+    <div class="big" role="dialog" aria-modal="true" aria-label={title}>
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {long} {seconds} {from} {to} height={bigHeight}
+        onClose={() => (expanded = false)} />
+    </div>
+  </div>
+{/if}
+
 <style>
   .chart {
     padding: 16px 16px 10px;
@@ -222,6 +258,25 @@
   h3 {
     font-size: 0.95rem;
     margin: 0;
+  }
+
+  .tools {
+    display: flex;
+    gap: 6px;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 45%);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+  }
+
+  .big {
+    width: min(1400px, 100%);
   }
 
   .mini {

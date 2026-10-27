@@ -71,8 +71,11 @@ public final class HealthRoutes {
         long millis = RANGES.getOrDefault(range, RANGES.get("1h"));
         // Never more than is kept (health.history).
         millis = Math.min(millis, Math.max(24 * 3_600_000L, plugin.settings().health().history()));
+        // from / to: the chosen range in server time - the chart's time axis covers exactly this, also where there
+        // are no points (server offline, history not reaching back that far).
+        long now = System.currentTimeMillis();
         http.json(200, Map.of("range", range, "history", plugin.settings().health().history(),
-                "points", plugin.health().range(millis, MAX_POINTS)));
+                "from", now - millis, "to", now, "points", plugin.health().range(millis, MAX_POINTS)));
     }
 
     /** The newest point (every second) - the key figures stay live even when a long range is shown. */

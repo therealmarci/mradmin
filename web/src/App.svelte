@@ -22,6 +22,7 @@
   import Players from './pages/Players.svelte';
   import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
+  import Versions from './pages/Versions.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -70,7 +71,10 @@
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
   const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
   const chunkId = $derived(route.path.match(/^\/chunks\/(\d+)$/)?.[1] ?? null);
-  const playerId = $derived(route.path.match(/^\/players\/([0-9a-f-]{36})$/)?.[1] ?? null);
+  // /players/<uuid> is the overview, /players/<uuid>/<section> one section of it (tickets, mrsleep, ...).
+  const playerMatch = $derived(route.path.match(/^\/players\/([0-9a-f-]{36})(?:\/([a-z]+))?$/));
+  const playerId = $derived(playerMatch?.[1] ?? null);
+  const playerSection = $derived(playerMatch?.[2] ?? null);
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
   const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId ? '/pvp' : route.path);
 
@@ -85,6 +89,7 @@
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
           ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
+          ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
       : [],
@@ -99,6 +104,7 @@
   const icons = {
     more: 'M5 12h.01M12 12h.01M19 12h.01',
     terminal: 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5',
+    box: 'M12 3 4 7.5v9L12 21l8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
     tool: 'M14.7 6.3a4 4 0 0 0-5.4 5.2L4 16.8V20h3.2l5.3-5.3a4 4 0 0 0 5.2-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
     home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     ticket: 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z',
@@ -171,9 +177,11 @@
     {:else if route.path === '/chunks' && me.may.mrchunks}
       <Chunks />
     {:else if playerId && me.may.players}
-      {#key playerId}<PlayerView uuid={playerId} {me} />{/key}
+      {#key playerId}<PlayerView uuid={playerId} section={playerSection} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}
       <Players />
+    {:else if route.path === '/versions' && me.may.versions}
+      <Versions />
     {:else if route.path === '/maintenance' && (me.may.maintenance || me.may.announce)}
       <Maintenance {me} />
     {:else if route.path === '/console' && me.may.console}

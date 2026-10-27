@@ -357,6 +357,14 @@ public final class PublicRequests implements Listener {
     }
 
     private void mail(String to, Ticket ticket, String key, String answer) {
+        // Mails go to people outside the game - always the server language, also when a reply in game triggers them.
+        plugin.messages().server(() -> {
+            mailNow(to, ticket, key, answer);
+            return null;
+        });
+    }
+
+    private void mailNow(String to, Ticket ticket, String key, String answer) {
         var m = plugin.messages();
         String server = m.plain("mail-server-name");
         Object[] values = {"id", ticket.id(), "name", ticket.creatorName(), "subject", ticket.subject(),

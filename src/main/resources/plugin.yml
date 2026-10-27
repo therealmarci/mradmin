@@ -3,35 +3,35 @@ version: '${version}'
 main: at.marcelr.mradmin.MRAdmin
 api-version: '${mcVersion}'
 softdepend: [LuckPerms, LibertyBans]
-# Datenbank-Treiber für storage.type sqlite/mysql - Paper lädt sie beim ersten Start herunter (Ordner libraries/).
+# Database drivers for storage.type sqlite/mysql - Paper downloads them on the first start (folder libraries/).
 libraries:
   - com.zaxxer:HikariCP:${hikariVersion}
   - org.xerial:sqlite-jdbc:${sqliteVersion}
   - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
 author: _therealmarci
 website: ${website}/docs/${websiteSlug}/
-description: Admin-Werkzeuge - Wartungsmodus mit Uptime-Kuma-Anbindung, Ankündigungen und Admin-Modus.
+description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcements, admin mode and web interface.
 
 commands:
   mradmin:
-    description: Verwaltung von MRadmin (Ankündigungen, Admin-Modus, Wartung).
+    description: Management of MRadmin (announcements, admin mode, maintenance).
     usage: /mradmin <announce|mode|menu|player|tp|status|tickets|maintenance|discord|reload|version>
     aliases: [mra]
   report:
-    description: Ticket-Menü - Spieler melden, Bugs melden, sonstige Anfragen, eigene Tickets.
-    usage: /report [spieler]
+    description: Ticket menu - report players, report bugs, other requests, own tickets.
+    usage: /report [player]
     aliases: [melden, ticket, tickets, support]
   staffchat:
-    description: Chat nur für das Team (ohne Text umschalten).
-    usage: /sc [nachricht]
+    description: Chat for the team only (without a message it toggles).
+    usage: /sc [message]
     aliases: [sc]
 
-# Eine Permission pro Funktion - sie gilt ingame und in der Weboberfläche gleich. Zum einfachen Vergeben gibt es
-# die Pakete mradmin.support, mradmin.staff und mradmin.admin. Die Web-Konsole ist in keinem Paket enthalten.
+# One permission per feature - it applies in game and in the web interface alike. For easy granting there are
+# the packages mradmin.support, mradmin.staff and mradmin.admin. The web console is in no package.
 permissions:
-  # ------------------------------------------------------------------ Pakete
+  # ------------------------------------------------------------------ Packages
   mradmin.support:
-    description: "Paket Support: Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche."
+    description: "Package support: handle tickets, view players, staff chat, web interface."
     default: op
     children:
       mradmin.dashboard: true
@@ -45,7 +45,7 @@ permissions:
       mradmin.staffchat: true
       mradmin.web: true
   mradmin.staff:
-    description: "Paket Team: Support + Spieler-Werkzeuge, Admin-Modus, Serverzustand, Wartung ansehen und joinen."
+    description: "Package staff: support + player tools, admin mode, server status, view and join maintenance."
     default: op
     children:
       mradmin.support: true
@@ -62,7 +62,7 @@ permissions:
       mradmin.status: true
       mradmin.status.health: true
   mradmin.admin:
-    description: "Alle Rechte von MRadmin - außer der Web-Konsole (mradmin.web.console.*), die man bewusst einzeln vergibt."
+    description: "All permissions of MRadmin - except the web console (mradmin.web.console.*), which is granted individually on purpose."
     default: op
     children:
       mradmin.staff: true
@@ -75,124 +75,137 @@ permissions:
       mradmin.admin.storage: true
       mradmin.admin.discord: true
       mradmin.admin.update: true
+      mradmin.versions.install: true
+      mradmin.server.restart: true
 
   # ------------------------------------------------------------ Dashboard
   mradmin.dashboard:
-    description: Dashboard öffnen (/mradmin) bzw. Übersicht in der Weboberfläche.
+    description: Open the dashboard (/mradmin) or the overview in the web interface.
     default: op
   mradmin.status:
-    description: Serverzustand (/mradmin status, Server-Kachel, Übersicht im Web).
+    description: Server status (/mradmin status, server tile, overview in the web).
     default: op
   mradmin.status.health:
-    description: Health-Dashboard - Verlauf von TPS, MSPT, CPU, RAM, Lag-Quellen.
+    description: Health dashboard - history of TPS, MSPT, CPU, RAM, lag sources.
     default: op
 
   # -------------------------------------------------------------- Tickets
   mradmin.tickets.create:
-    description: /report - Tickets öffnen und die eigenen ansehen, beantworten und schließen.
+    description: /report - open tickets and view, answer and close your own.
     default: true
   mradmin.tickets.notify:
-    description: Meldung bei neuen Tickets und Antworten, beim Join die Zahl offener Tickets.
+    description: Notice about new tickets and replies, on join the number of open tickets.
     default: op
   mradmin.tickets.view:
-    description: Alle Tickets ansehen (/mradmin tickets, Dashboard, Web). Kein Cooldown beim Erstellen.
+    description: View all tickets (/mradmin tickets, dashboard, web). No cooldown when creating.
     default: op
   mradmin.tickets.reply:
-    description: In fremden Tickets antworten.
+    description: Reply in other players' tickets.
     default: op
   mradmin.tickets.claim:
-    description: Tickets übernehmen und freigeben.
+    description: Claim and release tickets.
     default: op
   mradmin.tickets.close:
-    description: Fremde Tickets schließen (auch die automatischen Chunkloader-Tickets).
+    description: Close other players' tickets (also the automatic chunk loader tickets).
     default: op
   mradmin.tickets.reopen:
-    description: Geschlossene Tickets wieder öffnen.
+    description: Reopen closed tickets.
     default: op
   mradmin.tickets.teleport:
-    description: Zum Ort eines Tickets bzw. zum gemeldeten Spieler teleportieren.
+    description: Teleport to the location of a ticket or to the reported player.
     default: op
 
-  # -------------------------------------------------------------- Wartung
+  # ---------------------------------------------------------- Maintenance
   mradmin.maintenance.view:
-    description: Wartungsstatus ansehen (/mradmin maintenance, Dashboard, Web).
+    description: View the maintenance status (/mradmin maintenance, dashboard, web).
     default: op
   mradmin.maintenance.manage:
-    description: Wartung starten, planen, verlängern und beenden.
+    description: Start, schedule, extend and end maintenance.
     default: op
   mradmin.maintenance.bypass:
-    description: Darf während einer Wartung joinen und wird beim Start nicht gekickt.
+    description: May join during maintenance and is not kicked when it starts.
     default: op
   mradmin.maintenance.notify:
-    description: Hinweise zum Wartungsmodus (z.B. Verbindung zu Uptime Kuma verloren).
+    description: Notices about the maintenance mode (e.g. connection to Uptime Kuma lost).
     default: op
 
-  # ------------------------------------------------- Ankündigung, Modus, Chat
+  # ---------------------------------------------- Announcements, mode, chat
   mradmin.announce:
-    description: /mradmin announce - Ankündigungen auf dem Bildschirm aller Spieler.
+    description: /mradmin announce - announcements on the screen of all players.
     default: op
   mradmin.mode:
-    description: /mradmin mode - Admin-Modus für sich selbst (der Kompass öffnet das Dashboard).
+    description: /mradmin mode - admin mode for yourself (the compass opens the dashboard).
     default: op
     children:
       mradmin.dashboard: true
   mradmin.mode.others:
-    description: /mradmin mode <on|off> <spieler> - Admin-Modus anderer Spieler steuern.
+    description: /mradmin mode <on|off> <player> - control other players' admin mode.
     default: op
   mradmin.staffchat:
-    description: /sc - Staff-Chat lesen und schreiben.
+    description: /sc - read and write the staff chat.
     default: op
 
-  # -------------------------------------------------------------- Spieler
+  # -------------------------------------------------------------- Players
   mradmin.player.view:
-    description: Spielerliste und Spieler-Menü bzw. Spielerprofil im Web (Infos, Tickets über den Spieler).
+    description: Player list and player menu or player profile in the web (info, tickets about the player).
     default: op
   mradmin.player.teleport:
-    description: Zu Spielern teleportieren (Spielerliste, Spieler-Menü, /mradmin tp, Serverzustand).
+    description: Teleport to players (player list, player menu, /mradmin tp, server status).
     default: op
   mradmin.player.summon:
-    description: Spieler zu sich holen.
+    description: Summon players to yourself.
     default: op
   mradmin.player.inventory:
-    description: Inventar und Enderchest anderer Spieler ansehen (nur lesen).
+    description: View other players' inventory and ender chest (read only).
     default: op
   mradmin.player.freeze:
-    description: Spieler einfrieren und auftauen; Hinweis, wenn sich ein eingefrorener Spieler ausloggt.
+    description: Freeze and unfreeze players; notice when a frozen player logs out.
     default: op
   mradmin.player.kick:
-    description: Spieler vom Server werfen.
+    description: Kick players from the server.
     default: op
 
-  # ---------------------------------------------------------- Weboberfläche
+  # --------------------------------------------------------- Web interface
   mradmin.web:
-    description: Weboberfläche nutzen (eigenes Konto per /mradmin web setup). Im Web gelten dieselben Rechte wie ingame.
+    description: Use the web interface (own account via /mradmin web setup). The web uses the same permissions as the game.
     default: op
   mradmin.web.audit:
-    description: Protokoll aller Web-Aktionen ansehen.
+    description: View the log of all web actions.
     default: op
   mradmin.web.manage:
-    description: Web-Konten anderer verwalten (/mradmin web invite|logout|remove).
+    description: Manage other players' web accounts (/mradmin web invite|logout|remove).
     default: op
   mradmin.web.console.view:
-    description: Live-Konsole in der Weboberfläche ansehen. Nicht in mradmin.admin enthalten.
+    description: View the live console in the web interface. Not included in mradmin.admin.
     default: false
   mradmin.web.console.execute:
-    description: Befehle über die Web-Konsole ausführen (so viel wie Konsolenzugriff!). Nicht in mradmin.admin enthalten.
+    description: Run commands via the web console (as powerful as console access!). Not included in mradmin.admin.
     default: false
     children:
       mradmin.web.console.view: true
 
-  # ------------------------------------------------------------ Verwaltung
+  # ------------------------------------------------------------ Management
   mradmin.admin.reload:
     description: /mradmin reload
     default: op
   mradmin.admin.storage:
-    description: /mradmin storage - Speicher (YAML, SQLite, MySQL) anzeigen.
+    description: /mradmin storage - show the storage (YAML, SQLite, MySQL).
     default: op
   mradmin.admin.discord:
     description: /mradmin discord [test]
     default: op
   mradmin.admin.update:
-    description: Hinweis beim Betreten des Servers, wenn ein Update verfügbar ist.
+    description: Notice when joining the server if an update is available.
+    default: op
+  mradmin.versions.view:
+    description: "Web interface: page Versions - installed MRtechnology plugins and their updates."
+    default: op
+  mradmin.versions.install:
+    description: "Web interface: download updates of MRtechnology plugins (installed on the next start)."
+    default: op
+    children:
+      mradmin.versions.view: true
+  mradmin.server.restart:
+    description: "Web interface: restart the server with a countdown."
     default: op
 

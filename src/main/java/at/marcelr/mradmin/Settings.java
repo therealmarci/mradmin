@@ -33,8 +33,20 @@ public record Settings(
         WebSettings web,
         HealthSettings health,
         MailSettings mail,
-        RequestSettings requests
+        RequestSettings requests,
+        VersionsSettings versions
 ) {
+
+    /**
+     * The version page of the web interface: MRtechnology plugins, their updates and the restart button.
+     *
+     * @param restartMethod "none" (no restart button - a server cannot start itself again), "stop" (a start script,
+     *                      watchdog or panel brings the server back) or "script" (restart-script from spigot.yml)
+     * @param restartDelays countdown choices in ms (0 = now)
+     */
+    public record VersionsSettings(boolean enabled, int checkHours, at.marcelr.mradmin.versions.ReleasePicker.Auto autoDownload,
+                                   boolean includePrereleases, String restartMethod, List<Long> restartDelays) {
+    }
 
     /**
      * Outgoing mail (SMTP) for answers to unban and contact requests. {@code security}: "ssl" (465), "starttls" (587)
@@ -295,7 +307,42 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log));
+    }
+
+    private static VersionsSettings versions(FileConfiguration c, Logger log) {
+        // "off" without quotes is a boolean in YAML - false counts as off.
+        String auto = c.getString("versions.auto-download", "off").trim().toUpperCase(Locale.ROOT);
+        at.marcelr.mradmin.versions.ReleasePicker.Auto mode;
+        try {
+            mode = auto.equals("FALSE") ? at.marcelr.mradmin.versions.ReleasePicker.Auto.OFF
+                    : at.marcelr.mradmin.versions.ReleasePicker.Auto.valueOf(auto);
+        } catch (IllegalArgumentException e) {
+            log.warning("versions.auto-download '" + auto.toLowerCase(Locale.ROOT) + "' is unknown (off, patch, minor, all), using off.");
+            mode = at.marcelr.mradmin.versions.ReleasePicker.Auto.OFF;
+        }
+        // Off unless the owner says something brings the server back - otherwise the button would only stop it.
+        String method = c.getString("versions.restart-method", "none").trim().toLowerCase(Locale.ROOT);
+        if (!method.equals("none") && !method.equals("stop") && !method.equals("script")) {
+            log.warning("versions.restart-method '" + method + "' is unknown (none, stop, script), using none.");
+            method = "none";
+        }
+        List<Long> delays = new ArrayList<>();
+        for (String raw : c.getStringList("versions.restart-delays")) {
+            String value = raw.trim().toLowerCase(Locale.ROOT);
+            long ms = value.equals("now") || value.equals("0") ? 0 : DurationUtil.parse(value);
+            if (ms < 0 || ms > 3_600_000L) {
+                log.warning("versions.restart-delays: '" + raw + "' is not a duration up to 1h (e.g. 5m, now), skipped.");
+                continue;
+            }
+            delays.add(ms);
+        }
+        if (delays.isEmpty()) {
+            delays = List.of(300_000L, 60_000L, 0L);
+        }
+        return new VersionsSettings(c.getBoolean("versions.enabled", true),
+                Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
+                c.getBoolean("versions.include-prereleases", false), method, List.copyOf(delays));
     }
 
     private static MailSettings mail(FileConfiguration c, Logger log) {

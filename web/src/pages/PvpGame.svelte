@@ -23,6 +23,8 @@
   let snapshotIndex = $state(0);
   let view = $state('inventory');
   let replayT = $state(0);
+  // Optional reason when taking a round out of the statistics.
+  let note = $state('');
   // side -> { hit, hurt }: lights up for a moment after a hit (dot on the map, hearts shake)
   let flashes = $state({ 1: { hit: false, hurt: false }, 2: { hit: false, hurt: false } });
   const FLASH = 900;
@@ -86,6 +88,7 @@
     try {
       await moduleAction('mrpvp', body);
       message = t('pvp.done.' + body.action, { id });
+      if (body.action === 'uncount') note = '';
       await load();
     } catch (e) {
       error = errorText(e);
@@ -133,14 +136,29 @@
   {#if running}
     <div class="head">
       <h1>{t('pvp.gameTitle', { id })}</h1>
-      <span class="badge-status running">{t('pvp.state.' + running.state)}</span>
+      <span class="badge-status running">{running.adminPause ? t('pvp.state.adminPaused', { name: running.adminPause }) : t('pvp.state.' + running.state)}</span>
       <span class="muted">{clock(running.elapsed)} · {running.kitName} · {running.arenaName}</span>
-      {#if me.may.mrpvpStop && running.state !== 'ending'}
-        <button class="secondary" disabled={busy} onclick={() => act({ action: 'stop', id: String(id) }, t('pvp.stopConfirm', { id }))}>
-          {t('pvp.stop')}
-        </button>
-      {/if}
     </div>
+    {#if running.state !== 'ending' && (me.may.mrpvpStop || me.may.mrpvpPause)}
+      <div class="controls">
+        {#if me.may.mrpvpPause}
+          {#if running.adminPause}
+            <button disabled={busy} onclick={() => act({ action: 'resume', id: String(id) })}>▶ {t('pvp.resume')}</button>
+          {:else if running.state === 'running'}
+            <button class="secondary" disabled={busy} onclick={() => act({ action: 'pause', id: String(id) })}>⏸ {t('pvp.pause')}</button>
+          {/if}
+        {/if}
+        {#if me.may.mrpvpStop}
+          {#each running.players as p (p.uuid)}
+            <button class="secondary" disabled={busy}
+              onclick={() => act({ action: 'win', id: String(id), side: String(p.side) }, t('pvp.winConfirm', { name: p.name, id }))}>🏆 {t('pvp.winFor', { name: p.name })}</button>
+          {/each}
+          <button class="danger" disabled={busy} onclick={() => act({ action: 'stop', id: String(id) }, t('pvp.stopConfirm', { id }))}>
+            {t('pvp.stop')}
+          </button>
+        {/if}
+      </div>
+    {/if}
     <div class="two">
       <section class="card pad">
         <h2>{t('pvp.map')}</h2>
@@ -180,10 +198,28 @@
     </div>
     <p class="muted small">
       {dateTime(game.startedAt)} ·
-      {game.review === 'pending' ? t('pvp.review.pending') : game.counted ? t('pvp.counted') : t('pvp.notCounted')}
+      {game.review === 'pending' ? t('pvp.review.pending') : game.review === 'removed' ? t('pvp.review.removed')
+        : game.counted ? t('pvp.counted') : t('pvp.notCounted')}
       {#if game.reviewedBy} · {t('pvp.review.by', { name: game.reviewedBy })}{/if}
+      {#if game.reviewNote} · {t('pvp.reviewNote', { note: game.reviewNote })}{/if}
       {#if game.stoppedBy} · {t('pvp.stoppedBy', { name: game.stoppedBy })}{/if}
     </p>
+    {#if me.may.mrpvpReview && game.review !== 'pending' && (game.counted || game.mayCountAgain)}
+      <div class="card pad review">
+        {#if game.counted}
+          <p class="muted small">{t('pvp.uncountHint')}</p>
+          <div class="review-actions">
+            <input type="text" bind:value={note} maxlength="200" placeholder={t('pvp.notePlaceholder')} aria-label={t('pvp.notePlaceholder')} />
+            <button class="secondary" disabled={busy}
+              onclick={() => act({ action: 'uncount', id: String(id), note }, t('pvp.uncountConfirm', { id }))}>{t('pvp.uncount')}</button>
+          </div>
+        {:else}
+          <div class="review-actions">
+            <button disabled={busy} onclick={() => act({ action: 'recount', id: String(id) }, t('pvp.recountConfirm', { id }))}>{t('pvp.recount')}</button>
+          </div>
+        {/if}
+      </div>
+    {/if}
     {#if game.flags?.length}
       <div class="card pad review" class:pending={game.review === 'pending'}>
         <div class="small"><strong>{t('pvp.review.flags')}</strong>
@@ -456,6 +492,16 @@
   }
 
   .review-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .review-actions input {
+    flex: 1 1 220px;
+  }
+
+  .controls {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;

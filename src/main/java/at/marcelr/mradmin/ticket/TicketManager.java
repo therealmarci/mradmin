@@ -202,7 +202,7 @@ public final class TicketManager {
 
         String categoryName = categoryName(category.id());
         messages().send(creator, "ticket-created", tag("id", ticket.id()), tag("type", categoryName),
-                tag("open", openButton(ticket)));
+                Messages.lazy("open", () -> openButton(ticket)));
         notifyNew(ticket);
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + category.id() + ") by " + creator.getName() + ": "
                 + summary(ticket) + " - " + TicketText.preview(cleanText, 200));
@@ -237,7 +237,7 @@ public final class TicketManager {
                     "subject", subject, "player", report.playerName(), "plugin", source);
         }
         if (open != null) {
-            note(open, source, messages().plain("ticket-report-again") + "\n" + report.text(), true);
+            note(open, source, messages().server(() -> messages().plain("ticket-report-again")) + "\n" + report.text(), true);
             notifyReport(open, report.player(), subject);
             notifyStaff(open, null, "ticket-notify-message", tag("id", open.id()), tag("player", source),
                     tag("text", TicketText.preview(report.text(), PREVIEW)), tag("open", openButton(open)));
@@ -312,11 +312,11 @@ public final class TicketManager {
         save(ticket);
         if (ticket.visibleInGame()) {
             notifyStaff(ticket, null, "ticket-notify-message", tag("id", ticket.id()), tag("player", ticket.creatorName()),
-                    tag("text", TicketText.preview(text, PREVIEW)), tag("open", openButton(ticket)));
+                    tag("text", TicketText.preview(text, PREVIEW)), Messages.lazy("open", () -> openButton(ticket)));
         }
         pushMessage(ticket, ticket.creatorName(), text, null);
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", ticket.creatorName(),
-                "text", TicketText.preview(text, 300), "summary", summary(ticket));
+                "text", TicketText.preview(text, 300), "summary", messages().server(() -> summary(ticket)));
         return null;
     }
 
@@ -327,13 +327,13 @@ public final class TicketManager {
     public void appeal(Ticket ticket, String text) {
         ticket.request(ticket.request().asAppeal());
         ticket.reopen();
-        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().plain("request-appeal-note"), Instant.now()));
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain("request-appeal-note")), Instant.now()));
         ticket.add(new Ticket.Message(ticket.creator(), ticket.creatorName(), false, text, Instant.now()));
         ticket.creatorUnread(false);
         ticket.staffUnread(true);
         save(ticket);
         notifyNew(ticket);
-        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", ticket.creatorName(), "summary", summary(ticket));
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", ticket.creatorName(), "summary", messages().server(() -> summary(ticket)));
     }
 
     /**
@@ -352,13 +352,13 @@ public final class TicketManager {
             ticket.add(new Ticket.Message(who, name, true, clean, Instant.now()));
         }
         ticket.request(ticket.request().withDecision(accepted ? WebRequest.ACCEPTED : WebRequest.REJECTED));
-        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().plain(accepted ? "request-accepted-note"
-                : "request-rejected-note", "admin", name), Instant.now()));
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain(accepted ? "request-accepted-note"
+                : "request-rejected-note", "admin", name)), Instant.now()));
         ticket.close(name, Instant.now());
         ticket.creatorUnread(true);
         ticket.staffUnread(false);
         save(ticket);
-        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", messages().server(() -> summary(ticket)));
         // One mail with the decision and the answer.
         requestChanged(ticket, clean);
         return null;
@@ -410,7 +410,7 @@ public final class TicketManager {
         Player online = Bukkit.getPlayer(player);
         if (online != null) {
             messages().send(online, "ticket-report-notify", tag("id", ticket.id()), tag("subject", subject),
-                    tag("open", openButton(ticket)));
+                    Messages.lazy("open", () -> openButton(ticket)));
             sound(online);
         }
     }
@@ -473,17 +473,17 @@ public final class TicketManager {
         if (staff) {
             Player creator = Bukkit.getPlayer(ticket.creator());
             if (creator != null) {
-                messages().send(creator, "ticket-answer", tag("id", ticket.id()), tag("open", openButton(ticket)),
+                messages().send(creator, "ticket-answer", tag("id", ticket.id()), Messages.lazy("open", () -> openButton(ticket)),
                         tag("text", TicketText.preview(clean, PREVIEW)));
                 sound(creator);
             }
         } else {
             notifyStaff(ticket, author, "ticket-notify-message", tag("id", ticket.id()), tag("player", author.getName()),
-                    tag("text", TicketText.preview(clean, PREVIEW)), tag("open", openButton(ticket)));
+                    tag("text", TicketText.preview(clean, PREVIEW)), Messages.lazy("open", () -> openButton(ticket)));
             pushMessage(ticket, author.getName(), clean, author.getUniqueId());
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", author.getName(),
-                "text", TicketText.preview(clean, 300), "summary", summary(ticket));
+                "text", TicketText.preview(clean, 300), "summary", messages().server(() -> summary(ticket)));
         if (staff) {
             requestChanged(ticket, clean);
         }
@@ -521,7 +521,7 @@ public final class TicketManager {
             Player creator = Bukkit.getPlayer(ticket.creator());
             if (creator != null && settings().notifyCreator()) {
                 messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
-                        tag("summary", summary(ticket)), tag("open", openButton(ticket)));
+                        Messages.lazy("summary", () -> summary(ticket)), Messages.lazy("open", () -> openButton(ticket)));
                 sound(creator);
             }
         } else if (ticket.claimedBy() != null) {
@@ -530,7 +530,7 @@ public final class TicketManager {
                 messages().send(claimer, "ticket-closed-by-creator", tag("id", ticket.id()), tag("player", by.getName()));
             }
         }
-        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", by.getName(), "summary", summary(ticket));
+        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", by.getName(), "summary", messages().server(() -> summary(ticket)));
         requestChanged(ticket, null);
     }
 
@@ -549,9 +549,9 @@ public final class TicketManager {
         messages().send(staff, "ticket-reopened", tag("id", ticket.id()));
         Player creator = Bukkit.getPlayer(ticket.creator());
         if (creator != null && !creator.equals(staff)) {
-            messages().send(creator, "ticket-reopened-creator", tag("id", ticket.id()), tag("open", openButton(ticket)));
+            messages().send(creator, "ticket-reopened-creator", tag("id", ticket.id()), Messages.lazy("open", () -> openButton(ticket)));
         }
-        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", staff.getName(), "summary", summary(ticket));
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", staff.getName(), "summary", messages().server(() -> summary(ticket)));
     }
 
     /** Claims the ticket for {@code staff}, or releases it if they already have it. */
@@ -600,17 +600,17 @@ public final class TicketManager {
         if (staff) {
             Player creator = Bukkit.getPlayer(ticket.creator());
             if (creator != null) {
-                messages().send(creator, "ticket-answer", tag("id", ticket.id()), tag("open", openButton(ticket)),
+                messages().send(creator, "ticket-answer", tag("id", ticket.id()), Messages.lazy("open", () -> openButton(ticket)),
                         tag("text", TicketText.preview(clean, PREVIEW)));
                 sound(creator);
             }
         } else {
             notifyStaff(ticket, null, "ticket-notify-message", tag("id", ticket.id()), tag("player", name),
-                    tag("text", TicketText.preview(clean, PREVIEW)), tag("open", openButton(ticket)));
+                    tag("text", TicketText.preview(clean, PREVIEW)), Messages.lazy("open", () -> openButton(ticket)));
             pushMessage(ticket, name, clean, ticket.creator());
         }
         plugin.discord().log("ticket-message", "id", ticket.id(), "author", name,
-                "text", TicketText.preview(clean, 300), "summary", summary(ticket));
+                "text", TicketText.preview(clean, 300), "summary", messages().server(() -> summary(ticket)));
         if (staff) {
             requestChanged(ticket, clean);
         }
@@ -628,11 +628,11 @@ public final class TicketManager {
         Player creator = Bukkit.getPlayer(ticket.creator());
         if (creator != null && !ticket.isCreator(who) && settings().notifyCreator()) {
             messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
-                    tag("summary", summary(ticket)), tag("open", openButton(ticket)));
+                    Messages.lazy("summary", () -> summary(ticket)), Messages.lazy("open", () -> openButton(ticket)));
             sound(creator);
         }
         requestChanged(ticket, null);
-        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", messages().server(() -> summary(ticket)));
         return null;
     }
 
@@ -645,9 +645,9 @@ public final class TicketManager {
         save(ticket);
         Player creator = Bukkit.getPlayer(ticket.creator());
         if (creator != null && !ticket.isCreator(who)) {
-            messages().send(creator, "ticket-reopened-creator", tag("id", ticket.id()), tag("open", openButton(ticket)));
+            messages().send(creator, "ticket-reopened-creator", tag("id", ticket.id()), Messages.lazy("open", () -> openButton(ticket)));
         }
-        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", name, "summary", summary(ticket));
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", name, "summary", messages().server(() -> summary(ticket)));
         return null;
     }
 
@@ -737,10 +737,10 @@ public final class TicketManager {
     private void notifyNew(Ticket ticket) {
         for (Player staff : ticket.visibleInGame() ? Bukkit.getOnlinePlayers() : List.<Player>of()) {
             if (staff.hasPermission(PERM_NOTIFY) && !ticket.isCreator(staff.getUniqueId())) {
-                messages().send(staff, "ticket-notify-new", tag("id", ticket.id()), tag("type", categoryName(ticket.category())),
-                        tag("player", ticket.creatorName()), tag("summary", summary(ticket)),
+                messages().send(staff, "ticket-notify-new", tag("id", ticket.id()), Messages.lazy("type", () -> categoryName(ticket.category())),
+                        tag("player", ticket.creatorName()), Messages.lazy("summary", () -> summary(ticket)),
                         tag("text", TicketText.preview(ticket.description(), PREVIEW)),
-                        tag("open", openButton(ticket)), tag("teleport", teleportButton(ticket)), tag("list", listButton()));
+                        Messages.lazy("open", () -> openButton(ticket)), Messages.lazy("teleport", () -> teleportButton(ticket)), Messages.lazy("list", this::listButton));
                 sound(staff);
             }
         }
@@ -748,7 +748,7 @@ public final class TicketManager {
         if (ticket.source() == null) {
             plugin.push("ticket-new", ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/tickets/" + ticket.id(),
                     id -> !ticket.isCreator(id),
-                    "id", ticket.id(), "player", ticket.creatorName(), "summary", summary(ticket));
+                    "id", ticket.id(), "player", ticket.creatorName(), "summary", messages().server(() -> summary(ticket)));
         }
     }
 
@@ -788,6 +788,10 @@ public final class TicketManager {
 
     /** On join: the team learns about open tickets, players about answers they have not read yet. */
     public void notifyOnJoin(Player player) {
+        messages().run(player, () -> notifyOnJoinNow(player));
+    }
+
+    private void notifyOnJoinNow(Player player) {
         int unread = (int) tickets.values().stream().filter(t -> t.isCreator(player.getUniqueId()) && t.creatorUnread()).count();
         if (unread > 0) {
             messages().send(player, "ticket-join-unread", tag("count", unread), tag("list", messages().get("ticket-button-mine")
@@ -797,7 +801,7 @@ public final class TicketManager {
         int open = openCountInGame();
         if (open > 0 && player.hasPermission(PERM_NOTIFY)) {
             messages().send(player, "ticket-join-staff", tag("count", open), tag("unread", staffUnreadCountInGame()),
-                    tag("list", listButton()));
+                    Messages.lazy("list", this::listButton));
         }
     }
 

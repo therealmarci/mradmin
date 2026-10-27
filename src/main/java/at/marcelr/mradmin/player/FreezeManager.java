@@ -56,7 +56,7 @@ public final class FreezeManager {
             for (UUID id : frozen) {
                 Player player = Bukkit.getPlayer(id);
                 if (player != null) {
-                    player.sendActionBar(plugin.messages().get("freeze-actionbar"));
+                    player.sendActionBar(plugin.messages().as(player, () -> plugin.messages().get("freeze-actionbar")));
                 }
             }
         }, 40L, 40L);

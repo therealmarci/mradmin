@@ -108,6 +108,9 @@
   }
 
   const outcomeOf = (g, p) => p?.outcome ?? g.result;
+
+  // Slots of an arena that are being built right now (after a round or to fill the pool).
+  const building = (id) => overview.slots.filter((s) => s.template === id && s.state === 'pasting').length;
 </script>
 
 <div class="stack">
@@ -162,7 +165,7 @@
             <button class="open" onclick={() => go('/pvp/' + g.id)}>
               <div class="top">
                 <strong>#{g.id}</strong>
-                <span class="badge-status {g.state}">{t('pvp.state.' + g.state)}</span>
+                <span class="badge-status {g.state}">{g.adminPause ? t('pvp.state.adminPaused', { name: g.adminPause }) : t('pvp.state.' + g.state)}</span>
                 <span class="muted small">{clock(g.elapsed)}</span>
               </div>
               {#each g.players as p (p.uuid)}
@@ -242,19 +245,14 @@
               <span class="badge-status">{a.enabled ? t('pvp.enabled') : t('pvp.disabled')}</span>
             </div>
             <div class="muted small mono">{a.id} · v{a.version} · {a.size.join('×')}</div>
-            <div class="small">{t('pvp.arenaSlots', { ready: a.ready, pool: a.pool, used: a.used })}</div>
+            <div class="facts small">
+              <span><span class="muted">{t('pvp.arena.pool')}</span> {a.pool}</span>
+              <span><span class="muted">{t('pvp.arena.ready')}</span> {a.ready}</span>
+              {#if building(a.id)}<span><span class="muted">{t('pvp.arena.building')}</span> {building(a.id)}</span>{/if}
+              <span><span class="muted">{t('pvp.arena.used')}</span> {a.used}</span>
+            </div>
             <div class="muted small">{a.kits.length ? a.kits.join(', ') : t('pvp.allKits')}{a.build ? ' · ' + t('pvp.build') : ''}</div>
           </div>
-        </div>
-      {/each}
-    </div>
-    <h2>{t('pvp.slots')}</h2>
-    <div class="card rows">
-      {#each overview.slots as s (s.index)}
-        <div class="row small">
-          <span class="mono">#{s.index}</span> {s.template ?? '-'}
-          <span class="badge-status {s.state}">{t('pvp.slot.' + s.state)}</span>
-          {#if s.pasteMillis}<span class="muted">{t('pvp.pasted', { ms: s.pasteMillis })}</span>{/if}
         </div>
       {/each}
     </div>
@@ -400,6 +398,12 @@
   .item.win, .item.good { border-left-color: var(--good); }
   .item.draw, .item.warn { border-left-color: var(--warn); }
   .item.aborted { border-left-color: var(--muted); }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
 
   .body {
     min-width: 0;

@@ -9,6 +9,40 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [0.7.0] - 2026-10-27
+
+### Neu
+- **Duelle steuern und nachträglich aus der Wertung nehmen (mit MRpvp):** Die Seite einer laufenden Runde hat jetzt Pausieren/Fortsetzen (`mrpvp.admin.pause`), „<Spieler> gewinnt“ und Abbrechen (`mrpvp.admin.stop`). Beendete Runden lassen sich aus der Wertung nehmen (mit optionalem Grund) und wieder werten (`mrpvp.admin.review`).
+- **Chunkloader: Accounts verknüpfen im Web:** Auf der Spielerseite unter „Verknüpfte Accounts“ lassen sich Accounts per Spielername als Zweit- oder Haupt-Account verknüpfen (mit MRchunks, `mrchunks.admin.manage`). Lösen ging schon vorher.
+- **Versionen & Updates in der Weboberfläche:** Neue Seite **Versionen** mit allen MRtechnology-Plugins (installierte und neueste Version, was neu ist). Updates lassen sich per Klick herunterladen - nur aus dem offiziellen GitHub-Release, für die eigene Minecraft-Version und mit geprüfter SHA-256-Prüfsumme - und werden beim nächsten Neustart von Paper installiert. Auf Wunsch automatisch: `versions.auto-download` (`off`, `patch`, `minor`, `all`). Permissions `mradmin.versions.view` und `mradmin.versions.install`, Config-Abschnitt `versions` (config-version 21).
+- **Server neu starten aus dem Web:** Knopf mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort), angekündigt wie `/mradmin announce restart`, abbrechbar. Standardmäßig **aus** (`versions.restart-method: none`), weil ein Server sich nicht selbst wieder starten kann. Mit `stop` stoppt der Server und ein Start-Skript mit Schleife, ein Wächter oder das Panel startet ihn wieder, mit `script` startet er über das `restart-script` der `spigot.yml` neu. Beispiel-Skripte stehen in der README. Permission `mradmin.server.restart`.
+- **Discord-Log:** neue Ereignisse `plugin-update-downloaded`, `server-restart` und `server-restart-cancelled`.
+- **Health-Dashboard: Diagramme im Vollbild:** Mit **⤢** öffnet sich ein Diagramm groß über der Seite (schließen mit Esc, Klick daneben oder „Schließen“).
+- **Jeder Spieler in seiner Sprache:** Chat, Menüs, Dialoge, Ankündigungen, Wartungs-Countdown, Bossbars, Titel, der Kick-Bildschirm und der Staff-Chat richten sich jetzt nach der Sprache, die der Spieler in Minecraft eingestellt hat (`language: auto`, neuer Standard): Deutsch (auch Österreich/Schweiz) bekommt Deutsch, Englisch bekommt Englisch, alle anderen `fallback-language` (Standard `en`). `language: de` oder `en` stellt weiterhin eine Sprache für alle ein.
+- **Server-Sprache (`server-language`):** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung (dort ist die Sprache des Spielers noch unbekannt), Push-Benachrichtigungen, Mails und Notizen in Tickets kommen in dieser Sprache (Standard `en`).
+- **Automatische Umstellung:** Bestehende Configs bekommen `language: auto`; eine bisher fest eingestellte Sprache wird zur `server-language`, damit z.B. die Discord-Logs eines deutschen Servers deutsch bleiben.
+- **Ankündigungen pro Spieler:** Vorlagen (z.B. `restart`) und die Standard-Überschrift eigener Texte sieht jeder in seiner Sprache; die Wartungs-Bossbars gibt es pro Spieler.
+
+### Entfernt
+- **`discord-announce.maintenance.post-start` und `post-end`:** Es gibt keine eigenen Posts für Beginn und Ende mehr - jede Wartung hat jetzt genau eine Nachricht, die mitgeführt wird (siehe unten). Die Schlüssel werden beim Update automatisch entfernt (config-version 20).
+
+### Behoben & geändert
+- **Duelle → Arenen übersichtlicher:** Jede Arena zeigt Vorrat, bereit, im Aufbau und belegt als eigene Werte; die Liste der einzelnen Plätze darunter ist entfallen.
+- **Admin-Kompass: Menütitel in der falschen Sprache:** Das Admin-Menü über den Kompass im Admin-Modus hatte den Titel in der Server-Sprache statt in der Sprache des Spielers.
+- **Health-Dashboard: Zeitachse passte nicht zum gewählten Zeitraum:** Die Achse reichte nur vom ersten bis zum letzten vorhandenen Wert, und 6 h / 24 h zeigten nach einem Neustart nur die Zeit seitdem. Jetzt zeigt jedes Diagramm genau den gewählten Zeitraum, und die gespeicherten 5-Minuten-Werte füllen die Zeit vor dem Neustart auf.
+- **Health-Dashboard: Garbage Collection bei langen Zeiträumen:** Im Mittel über Minuten verschwanden kurze GC-Pausen, und die Achse zeigte überall „0 ms“. Jetzt gibt es eine zweite Linie „Spitze“ (höchster Wert im Zeitabschnitt), und kleine Werte haben eine Nachkommastelle.- **Spielerseite in der Weboberfläche übersichtlicher:** Oben steht eine kurze Vorschau des Spielers (Ort, Spielmodus, Ping, Leben, Spielzeit, Einfrieren, Kicken), darunter eine Kachel pro Bereich - Tickets, Schlaf, Chunkloader, Duelle, Strafen - mit dem Status auf einen Blick. Ein Klick öffnet den Bereich mit allen Einzelheiten und Aktionen (eigene Adresse `/players/<uuid>/<bereich>`).
+- **Duelle auf der Spielerseite neu aufgebaut:** Statistik, die laufende Runde (Klick führt in die Duellsteuerung) und die letzten Runden sind jetzt Kacheln statt Textzeilen, jede Runde farbig nach Ergebnis. Der Bereich ist aufgebaut wie Schlaf und Chunkloader: Status oben, Aktionen in Abschnitten darunter, die Sperre mit Grund und roten Dauer-Knöpfen statt Auswahlliste (die Dauern stellt MRpvp mit `gui.ban-durations` ein).
+- **Discord-Ankündigung von Wartungen neu gebaut:** Bisher blieb z.B. „Wartungsarbeiten laufen bis 18:00“ stehen, obwohl die Wartung vorzeitig beendet war, und nach einem Verbindungsabbruch zu Uptime Kuma wurde eine Wartung als „abgesagt“ bzw. „beendet“ und gleich danach erneut (mit Ping) gepostet. Jetzt gilt:
+  - Jede Wartung hat **eine Nachricht**, die bearbeitet wird: geplant → läuft → „Server wieder online“ (mit tatsächlichem Beginn und Ende, bei vorzeitigem Ende mit Hinweis) oder abgesagt. Die Rolle wird nur beim ersten Post erwähnt.
+  - Beginn und Ende werden sofort eingetragen, neue Zeiten nach `debounce-seconds`.
+  - Nach einer (Neu-)Verbindung zu Uptime Kuma wird erst ausgewertet, wenn die Wartungsliste angekommen ist.
+  - Mehrere Wartungen werden unabhängig voneinander verfolgt.
+  - Wurde die Nachricht in Discord gelöscht oder ist ihre ID unbekannt, wird sie neu gepostet statt nicht mehr aktualisiert.
+  - Lief eine geplante Wartung ab, während der Server aus war, wird sie als beendet eingetragen statt als abgesagt.
+  - Die Texte `maintenance-started` und `maintenance-ended` im Abschnitt `discord-announce` der Sprachdateien zeigen den tatsächlichen Beginn und das Ende (neue Platzhalter `{started}` und `{ended}`, neuer Text `maintenance-ended-early`). Die beiden Texte werden in `de.yml` und `en.yml` automatisch auf den neuen Standard gesetzt - wer sie angepasst hatte, muss das danach wiederholen. Eine laufende Ankündigung aus 0.6.0 wird übernommen.
+- **Update-Hinweis bei `/mradmin version` doppelt:** Fand die Abfrage eine neue Version, kam zuerst der Admin-Hinweis „Für MRadmin gibt es ein Update“ und direkt danach „Neue Version verfügbar“. Jetzt kommt nur noch die Antwort auf den Befehl. Die Download-Links führen auf die Website (https://mrtechnology.marcelr.at/download/mradmin/).
+- **Config und plugin.yml auf Englisch:** Alle Kommentare in der `config.yml` und die Beschreibungen der Befehle und Permissions in der `plugin.yml` sind jetzt englisch. Bestehende Configs bekommen die neuen Kommentare beim nächsten Start automatisch (config-version 19, Sicherung als `config.v<alt>.backup.yml`), alle Einstellungen bleiben erhalten.
+
 ## [0.6.0] - 2026-10-27
 
 ### Geändert – Lizenz, Doku, Website

@@ -9,18 +9,21 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Public announcements for the community Discord (own webhook, separate from the admin log). Deliberately sparse:
  * <ul>
- *     <li>a maintenance gets at most three posts - <b>scheduled</b> (once it is {@code announce-ahead} away),
- *     <b>started</b> and <b>ended</b>. Moving, extending or cancelling edits the latest of them instead of posting
- *     again; several changes in a row are combined ({@code debounce-seconds}).</li>
+ *     <li>every maintenance gets <b>one</b> message that is edited through its states - scheduled (once it is
+ *     {@code announce-ahead} away), running, ended or cancelled. Only the first post may ping. The decisions are
+ *     made by {@link MaintenanceBoard}.</li>
  *     <li>announcements only for presets with a {@code discord} text (or {@code -d} for own texts), with a cooldown
  *     per preset - a restart script that announces "5 minutes" and "1 minute" results in one post.</li>
  * </ul>
@@ -28,35 +31,19 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class DiscordAnnouncer {
 
-    private enum State { SCHEDULED, STARTED }
-
     private record Config(boolean enabled, URI url, String username, String avatar, String pingRole, String footer,
-                          boolean maintenance, long announceAhead, long minLength, boolean postStart, boolean postEnd,
-                          boolean pingMaintenance, int debounceSeconds,
+                          boolean maintenance, MaintenanceBoard.Rules rules, boolean pingMaintenance,
                           boolean announcements, long cooldown, boolean pingAnnouncements,
                           int colorScheduled, int colorStarted, int colorEnded, int colorCancelled, int colorAnnounce) {
-        static final Config DISABLED = new Config(false, null, "", "", null, "", false, 0, 0, false, false, false, 0,
+        static final Config DISABLED = new Config(false, null, "", "", null, "", false, null, false,
                 false, 0, false, 0, 0, 0, 0, 0);
-    }
-
-    /** The maintenance that has been posted about. */
-    private static final class Track {
-        String key;
-        String title;
-        Instant start;
-        Instant end;
-        State state;
-        AnnounceWebhook.Post scheduledPost;
-        AnnounceWebhook.Post startedPost;
-        /** Times seen but not yet edited into the post (debounce). */
-        Instant dirtySince;
     }
 
     private final MRAdmin plugin;
     private final AnnounceWebhook webhook;
+    private final MaintenanceBoard board = new MaintenanceBoard();
     private Config config = Config.DISABLED;
     private String disabledReason = "discord-reason-disabled";
-    private Track track;
     private final Map<String, Instant> lastAnnounce = new HashMap<>();
 
     public DiscordAnnouncer(MRAdmin plugin) {
@@ -100,15 +87,14 @@ public final class DiscordAnnouncer {
             plugin.getLogger().warning("discord-announce.ping-role-id '" + role + "' is not a role id (only digits), no ping.");
             role = "";
         }
+        MaintenanceBoard.Rules rules = new MaintenanceBoard.Rules(
+                Duration.ofMillis(duration(s.getString("maintenance.announce-ahead", "24h"), 86_400_000L)),
+                Duration.ofMillis(duration(s.getString("maintenance.min-length", "0"), 0)),
+                Duration.ofSeconds(Math.clamp(s.getInt("maintenance.debounce-seconds", 60), 0, 3600)));
         config = new Config(true, url, s.getString("username", ""), s.getString("avatar-url", ""),
                 role.isEmpty() ? null : role, s.getString("footer", ""),
-                s.getBoolean("maintenance.enabled", true),
-                duration(s.getString("maintenance.announce-ahead", "24h"), 86_400_000L),
-                duration(s.getString("maintenance.min-length", "0"), 0),
-                s.getBoolean("maintenance.post-start", true),
-                s.getBoolean("maintenance.post-end", true),
+                s.getBoolean("maintenance.enabled", true), rules,
                 s.getBoolean("maintenance.ping", true),
-                Math.clamp(s.getInt("maintenance.debounce-seconds", 60), 0, 3600),
                 s.getBoolean("announcements.enabled", true),
                 duration(s.getString("announcements.cooldown", "10m"), 600_000L),
                 s.getBoolean("announcements.ping", false),
@@ -137,141 +123,59 @@ public final class DiscordAnnouncer {
     // ------------------------------------------------------------- maintenance
 
     /**
-     * Called every second by the maintenance manager with the chosen window and all windows.
+     * Called every second by the maintenance manager with all known windows.
      *
-     * @param kumaOffline Uptime Kuma is configured but not connected right now. A posted Kuma maintenance is then
-     *                    left alone - otherwise a Kuma restart would post "cancelled" and then "scheduled" again.
+     * @param kumaStale Uptime Kuma is configured but its list is not current (not connected, or connected but the
+     *                  list has not arrived yet). Its maintenances are then left alone - otherwise a reconnect would
+     *                  end them and post them again.
      */
-    public void update(Window current, List<Window> windows, Instant now, boolean kumaOffline) {
+    public void update(List<Window> windows, Instant now, boolean kumaStale) {
         Config c = config;
         if (!c.enabled() || !c.maintenance()) {
             return;
         }
-        if (track != null) {
-            Track t = track;
-            if (kumaOffline && t.key.startsWith(Window.KUMA + ":")) {
-                return;
-            }
-            Window same = current != null && current.key().equals(t.key) ? current
-                    : windows.stream().filter(w -> w.key().equals(t.key)).findFirst().orElse(null);
-            if (t.state == State.STARTED && (same == null || !same.activeAt(now))) {
-                ended(t);
-                return;
-            }
-            if (t.state == State.SCHEDULED && same == null) {
-                cancelled(t);
-                return;
-            }
-            if (t.state == State.SCHEDULED && same.activeAt(now)) {
-                started(t, same, false);
-                return;
-            }
-            if (!java.util.Objects.equals(same.start(), t.start) || !java.util.Objects.equals(same.end(), t.end)) {
-                if (t.dirtySince == null) {
-                    t.dirtySince = now;
-                }
-                if (!now.isBefore(t.dirtySince.plusSeconds(c.debounceSeconds()))) {
-                    t.start = same.start();
-                    t.end = same.end();
-                    t.title = same.title();
-                    t.dirtySince = null;
-                    editLatest(t, true);
-                    save();
-                }
+        List<MaintenanceBoard.Change> changes = board.update(windows, now, kumaStale, c.rules());
+        for (MaintenanceBoard.Change change : changes) {
+            MaintenanceBoard.Entry e = change.entry();
+            JsonObject payload = payload(c, change.ping() && c.pingMaintenance(), embed(e, c));
+            if (change.post()) {
+                e.post = webhook.post(c.url(), payload);
             } else {
-                t.dirtySince = null;
+                webhook.edit(c.url(), e.post, payload);
             }
-            return;
         }
-        if (current == null || !longEnough(current, c)) {
-            return;
-        }
-        if (current.activeAt(now)) {
-            Track t = newTrack(current);
-            started(t, current, true);
-        } else if (current.start() != null && current.start().toEpochMilli() - now.toEpochMilli() <= c.announceAhead()) {
-            Track t = newTrack(current);
-            t.state = State.SCHEDULED;
-            t.scheduledPost = webhook.post(c.url(), payload(c, c.pingMaintenance(), embed("scheduled", t, c.colorScheduled(), false)));
-            track = t;
+        if (!changes.isEmpty()) {
             save();
         }
     }
 
-    private static Track newTrack(Window w) {
-        Track t = new Track();
-        t.key = w.key();
-        t.title = w.title();
-        t.start = w.start();
-        t.end = w.end();
-        return t;
-    }
-
-    private static boolean longEnough(Window w, Config c) {
-        if (c.minLength() <= 0 || w.end() == null || w.start() == null) {
-            return true;
-        }
-        return w.end().toEpochMilli() - w.start().toEpochMilli() >= c.minLength();
-    }
-
-    /** @param first true if nothing was posted about this maintenance yet (then the post may ping) */
-    private void started(Track t, Window w, boolean first) {
-        Config c = config;
-        t.start = w.start();
-        t.end = w.end();
-        t.title = w.title();
-        t.state = State.STARTED;
-        t.dirtySince = null;
-        if (c.postStart()) {
-            t.startedPost = webhook.post(c.url(), payload(c, first && c.pingMaintenance(), embed("started", t, c.colorStarted(), false)));
-        } else if (t.scheduledPost != null) {
-            webhook.edit(c.url(), t.scheduledPost, payload(c, false, embed("started", t, c.colorStarted(), false)));
-        }
-        track = t;
-        save();
-    }
-
-    private void ended(Track t) {
-        Config c = config;
-        if (c.postEnd()) {
-            webhook.post(c.url(), payload(c, false, embed("ended", t, c.colorEnded(), false)));
-        }
-        track = null;
-        save();
-    }
-
-    private void cancelled(Track t) {
-        Config c = config;
-        webhook.edit(c.url(), t.scheduledPost, payload(c, false, embed("cancelled", t, c.colorCancelled(), false)));
-        track = null;
-        save();
-    }
-
-    /** Puts the new times into the latest post (started post if there is one, otherwise the scheduled one). */
-    private void editLatest(Track t, boolean changed) {
-        Config c = config;
-        if (t.state == State.STARTED && t.startedPost != null) {
-            webhook.edit(c.url(), t.startedPost, payload(c, false, embed("started", t, c.colorStarted(), changed)));
-        } else if (t.scheduledPost != null) {
-            String kind = t.state == State.STARTED ? "started" : "scheduled";
-            int color = t.state == State.STARTED ? c.colorStarted() : c.colorScheduled();
-            webhook.edit(c.url(), t.scheduledPost, payload(c, false, embed(kind, t, color, changed)));
-        }
-    }
-
-    private JsonObject embed(String kind, Track t, int color, boolean changed) {
-        String title = t.title == null ? "" : t.title;
-        String description = fill(text("maintenance-" + kind), t);
-        String topic = title.isEmpty() ? "" : fill(text("maintenance-topic-line"), t);
+    /** The message of a maintenance in its current state. */
+    private JsonObject embed(MaintenanceBoard.Entry e, Config c) {
+        String kind = switch (e.status) {
+            case SCHEDULED -> "scheduled";
+            case RUNNING -> "started";
+            case ENDED -> "ended";
+            case CANCELLED -> "cancelled";
+        };
+        int color = switch (e.status) {
+            case SCHEDULED -> c.colorScheduled();
+            case RUNNING -> c.colorStarted();
+            case ENDED -> c.colorEnded();
+            case CANCELLED -> c.colorCancelled();
+        };
         StringBuilder body = new StringBuilder();
-        if (!topic.isEmpty()) {
-            body.append(topic).append('\n');
+        if (e.title != null && !e.title.isEmpty()) {
+            body.append(fill(text("maintenance-topic-line"), e)).append('\n');
         }
-        body.append(description);
-        if (changed) {
+        body.append(fill(text("maintenance-" + kind), e));
+        if (e.endedEarly()) {
+            body.append('\n').append(fill(text("maintenance-ended-early"), e));
+        }
+        boolean open = e.status == MaintenanceBoard.Status.SCHEDULED || e.status == MaintenanceBoard.Status.RUNNING;
+        if (e.changed && open) {
             body.append("\n\n").append(text("maintenance-changed-note"));
         }
-        return embed(fill(text("maintenance-" + kind + "-title"), t), body.toString(), color);
+        return embed(fill(text("maintenance-" + kind + "-title"), e), body.toString(), color);
     }
 
     private JsonObject embed(String title, String description, int color) {
@@ -295,17 +199,22 @@ public final class DiscordAnnouncer {
     }
 
     private String text(String key) {
-        return plugin.messages().optional("discord-announce." + key);
+        return plugin.messages().server(() -> plugin.messages().optional("discord-announce." + key));
     }
 
-    /** {title} {start} {start-relative} {end} {end-relative} - times as Discord timestamps. */
-    private String fill(String text, Track t) {
+    /**
+     * {title} {start} {start-relative} {end} {end-relative} (planned) and {started} {ended} (actual) - times as
+     * Discord timestamps.
+     */
+    private String fill(String text, MaintenanceBoard.Entry e) {
         String open = text("open-end");
-        return text.replace("{title}", escape(t.title == null ? "" : t.title))
-                .replace("{start-relative}", t.start == null ? "" : "<t:" + t.start.getEpochSecond() + ":R>")
-                .replace("{start}", t.start == null ? open : "<t:" + t.start.getEpochSecond() + ":f>")
-                .replace("{end-relative}", t.end == null ? "" : "<t:" + t.end.getEpochSecond() + ":R>")
-                .replace("{end}", t.end == null ? open : "<t:" + t.end.getEpochSecond() + ":f>");
+        return text.replace("{title}", escape(e.title == null ? "" : e.title))
+                .replace("{start-relative}", e.start == null ? "" : "<t:" + e.start.getEpochSecond() + ":R>")
+                .replace("{start}", e.start == null ? open : "<t:" + e.start.getEpochSecond() + ":f>")
+                .replace("{end-relative}", e.end == null ? "" : "<t:" + e.end.getEpochSecond() + ":R>")
+                .replace("{end}", e.end == null ? open : "<t:" + e.end.getEpochSecond() + ":f>")
+                .replace("{started}", e.startedAt == null ? open : "<t:" + e.startedAt.getEpochSecond() + ":f>")
+                .replace("{ended}", e.endedAt == null ? open : "<t:" + e.endedAt.getEpochSecond() + ":f>");
     }
 
     // ----------------------------------------------------------- announcements
@@ -348,24 +257,45 @@ public final class DiscordAnnouncer {
 
     public void loadState() {
         YamlConfiguration y = plugin.storage().loadYaml("discord-announce", plugin.getLogger());
-        if (!y.contains("key")) {
-            return;
-        }
         try {
-            Track t = new Track();
-            t.key = y.getString("key");
-            t.title = y.getString("title", "");
-            t.start = instant(y.getString("start", ""));
-            t.end = instant(y.getString("end", ""));
-            t.state = State.valueOf(y.getString("state", "SCHEDULED"));
-            String scheduled = y.getString("scheduled-message", "");
-            String started = y.getString("started-message", "");
-            t.scheduledPost = scheduled.isEmpty() ? null : new AnnounceWebhook.Post(scheduled);
-            t.startedPost = started.isEmpty() ? null : new AnnounceWebhook.Post(started);
-            track = t;
+            if (y.contains("key")) {
+                // Up to 0.6.0: one maintenance with a "scheduled" and a "started" post. Go on with the newer one.
+                MaintenanceBoard.Entry e = entry(y, y.getString("key"));
+                e.status = "STARTED".equals(y.getString("state")) ? MaintenanceBoard.Status.RUNNING : MaintenanceBoard.Status.SCHEDULED;
+                String started = y.getString("started-message", "");
+                String id = started.isEmpty() ? y.getString("scheduled-message", "") : started;
+                e.post = new AnnounceWebhook.Post(id.isEmpty() ? null : id);
+                board.restore(e);
+                return;
+            }
+            ConfigurationSection all = y.getConfigurationSection("maintenances");
+            if (all == null) {
+                return;
+            }
+            for (String id : all.getKeys(false)) {
+                ConfigurationSection s = all.getConfigurationSection(id);
+                if (s == null) {
+                    continue;
+                }
+                MaintenanceBoard.Entry e = entry(s, s.getString("key"));
+                e.status = MaintenanceBoard.Status.valueOf(s.getString("status", "SCHEDULED"));
+                e.startedAt = instant(s.getString("started-at", ""));
+                e.changed = s.getBoolean("changed");
+                String message = s.getString("message", "");
+                e.post = new AnnounceWebhook.Post(message.isEmpty() ? null : message);
+                board.restore(e);
+            }
         } catch (RuntimeException e) {
             plugin.getLogger().warning("discord-announce.yml is unreadable, starting fresh: " + e.getMessage());
         }
+    }
+
+    private static MaintenanceBoard.Entry entry(ConfigurationSection s, String key) {
+        MaintenanceBoard.Entry e = new MaintenanceBoard.Entry(key);
+        e.title = s.getString("title", "");
+        e.start = instant(s.getString("start", ""));
+        e.end = instant(s.getString("end", ""));
+        return e;
     }
 
     /** Message ids arrive a moment after posting - the webhook saves again once they are there (onPosted). */
@@ -375,16 +305,18 @@ public final class DiscordAnnouncer {
 
     private void saveNow() {
         YamlConfiguration y = new YamlConfiguration();
-        y.options().setHeader(List.of("MRadmin - last maintenance posted to the announcement webhook (managed by the plugin)."));
-        Track t = track;
-        if (t != null) {
-            y.set("key", t.key);
-            y.set("title", t.title);
-            y.set("start", t.start == null ? "" : t.start.toString());
-            y.set("end", t.end == null ? "" : t.end.toString());
-            y.set("state", t.state.name());
-            y.set("scheduled-message", t.scheduledPost == null || t.scheduledPost.id == null ? "" : t.scheduledPost.id);
-            y.set("started-message", t.startedPost == null || t.startedPost.id == null ? "" : t.startedPost.id);
+        y.options().setHeader(List.of("MRadmin - maintenance posted to the announcement webhook (managed by the plugin)."));
+        int i = 0;
+        for (MaintenanceBoard.Entry e : board.entries()) {
+            String path = "maintenances.m" + i++ + ".";
+            y.set(path + "key", e.key);
+            y.set(path + "title", e.title);
+            y.set(path + "status", e.status.name());
+            y.set(path + "start", e.start == null ? "" : e.start.toString());
+            y.set(path + "end", e.end == null ? "" : e.end.toString());
+            y.set(path + "started-at", e.startedAt == null ? "" : e.startedAt.toString());
+            y.set(path + "changed", e.changed);
+            y.set(path + "message", e.post == null || e.post.id == null ? "" : e.post.id);
         }
         plugin.storage().saveYaml("discord-announce", y);
     }
@@ -421,7 +353,9 @@ public final class DiscordAnnouncer {
 
     /** For "/mradmin discord": the maintenance currently posted about, e.g. "kuma:3 (scheduled)", or null. */
     public String trackedKey() {
-        Track t = track;
-        return t == null ? null : t.key + " (" + t.state.name().toLowerCase(java.util.Locale.ROOT) + ")";
+        String keys = board.entries().stream()
+                .map(e -> e.key + " (" + e.status.name().toLowerCase(Locale.ROOT) + ")")
+                .collect(Collectors.joining(", "));
+        return keys.isEmpty() ? null : keys;
     }
 }

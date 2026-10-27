@@ -51,7 +51,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(12, Map.ofEntries(
+    private final Messages messages = new Messages(13, Map.ofEntries(
             Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
                     "maintenance-motd")),
             Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
@@ -70,13 +70,17 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             // 11: /mradmin announce for scripts (parts and named values).
             Map.entry(11, Set.of("announce-usage")),
             // 12: "Website | GitHub" in /mradmin version.
-            Map.entry(12, Set.of("version-links"))));
+            Map.entry(12, Set.of("version-links")),
+            // 13: one Discord message per maintenance with the actual begin and end.
+            Map.entry(13, Set.of("discord-announce.maintenance-started", "discord-announce.maintenance-ended"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
     private UpdateChecker updateChecker;
+    private at.marcelr.mradmin.versions.VersionManager versions;
+    private at.marcelr.mradmin.versions.RestartManager restarts;
     private FreezeManager freeze;
     private TicketManager tickets;
     private Modules modules;
@@ -104,6 +108,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
+        at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
@@ -124,6 +129,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.load();
         adminMode = new AdminModeManager(this);
         updateChecker = new UpdateChecker(this);
+        versions = new at.marcelr.mradmin.versions.VersionManager(this);
+        restarts = new at.marcelr.mradmin.versions.RestartManager(this);
         menuListener = new MenuListener(this);
 
         var pm = getServer().getPluginManager();
@@ -165,6 +172,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (freeze != null) {
             freeze.stop();
+        }
+        if (versions != null) {
+            versions.shutdown();
         }
         if (updateChecker != null) {
             updateChecker.stop();
@@ -221,12 +231,14 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.start();
         adminMode.start();
         updateChecker.start();
+        versions.start();
         menuListener.start();
     }
 
     private void loadConfiguration() {
         config = ConfigUpdater.load(this);
-        messages.load(this, config.getString("language", "de"));
+        messages.load(this, config.getString("language", "auto"), config.getString("fallback-language", "en"),
+                config.getString("server-language", "en"));
         settings = Settings.from(config, getLogger());
         discord.load(config.getConfigurationSection("discord"));
         discordAnnounce.load(config.getConfigurationSection("discord-announce"));
@@ -358,8 +370,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (web == null) {
             return;
         }
-        web.push().notify(kind, messages().plain("push-" + text + "-title", placeholders),
-                messages().plain("push-" + text + "-body", placeholders), url, who);
+        // Push notifications go to devices, not to players in the game - server language.
+        web.push().notify(kind, messages().server(() -> messages().plain("push-" + text + "-title", placeholders)),
+                messages().server(() -> messages().plain("push-" + text + "-body", placeholders)), url, who);
     }
 
     public WebServer web() {
@@ -387,5 +400,13 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public UpdateChecker updateChecker() {
         return updateChecker;
+    }
+
+    public at.marcelr.mradmin.versions.VersionManager versions() {
+        return versions;
+    }
+
+    public at.marcelr.mradmin.versions.RestartManager restarts() {
+        return restarts;
     }
 }
