@@ -177,11 +177,41 @@ Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per P
 In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Versionen bzw. `/<plugin> version`.
 - **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
-- **Server neu starten:** Knopf mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort), angekündigt wie `/mradmin announce restart`. Danach stoppt der Server - **dein Start-Skript oder Wächter muss ihn wieder starten** (z.B. ein Hoster-Panel oder ein Skript mit Absturz-Wächter). Alternativ `versions.restart-method: spigot` mit dem `restart-script` aus der `spigot.yml`.
+- **Server neu starten:** Nach dem Herunterladen zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
+  - `none` (Standard): kein Knopf.
+  - `stop`: Der Server stoppt, und **dein Start-Skript mit Schleife, ein Wächter oder dein Hoster-Panel** startet ihn wieder.
+  - `script`: Der Server startet über das `restart-script` aus der `spigot.yml` neu (`settings.restart-script`).
 - Downloads und Neustarts stehen im Web-Protokoll und im Discord-Log (`plugin-update-downloaded`, `server-restart`).
 
 > [!WARNING]
-> Steht der Server nach dem Stoppen nicht von selbst wieder auf, bleibt er nach einem Neustart über den Knopf aus. Prüf das einmal, bevor du den Knopf im Ernstfall benutzt.
+> Stell `stop` oder `script` nur ein, wenn du sicher weißt, dass der Server danach wieder hochkommt - sonst stoppt der Knopf ihn nur. Viele Hoster-Panels starten nach einem normalen Stopp **nicht** von selbst neu, nur nach einem Absturz. Probier es einmal aus, bevor du den Knopf im Ernstfall benutzt.
+
+<details>
+<summary>Beispiel: Start-Skript mit Schleife (für <code>restart-method: stop</code>)</summary>
+
+Das Skript startet den Server nach jedem Stopp nach 5 Sekunden wieder. Zum endgültigen Beenden in diesen 5 Sekunden `Strg+C` drücken.
+
+**Linux** (`start.sh`, ausführbar machen mit `chmod +x start.sh`, z.B. in `screen` oder `tmux` starten):
+```bash
+#!/bin/sh
+while true; do
+  java -Xms4G -Xmx4G -jar paper.jar --nogui
+  echo "Server stopped - restarting in 5 seconds (Ctrl+C to quit)"
+  sleep 5
+done
+```
+
+**Windows** (`start.bat`):
+```bat
+@echo off
+:loop
+java -Xms4G -Xmx4G -jar paper.jar --nogui
+echo Server stopped - restarting in 5 seconds (Ctrl+C to quit)
+timeout /t 5
+goto loop
+```
+Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
+</details>
 
 ---
 

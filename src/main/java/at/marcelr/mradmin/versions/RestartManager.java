@@ -10,8 +10,9 @@ import java.util.List;
 /**
  * Restarts the server after a countdown, announced like {@code /mradmin announce restart <time>} (the presets
  * {@code restart} and {@code restart-now} - own texts there apply here too). At the end the server stops
- * ({@code versions.restart-method: stop} - a start script or watchdog like mc.sh brings it back) or runs the server's
- * own restart ({@code spigot}: restart-script from spigot.yml). Main thread.
+ * ({@code versions.restart-method: stop} - a start script with a loop, a watchdog or a panel brings it back) or runs
+ * the server's own restart ({@code script}: restart-script from spigot.yml). With {@code none} (default) there is no
+ * restart, because a server cannot start itself again. Main thread.
  */
 public final class RestartManager {
 
@@ -40,9 +41,9 @@ public final class RestartManager {
         return by;
     }
 
-    /** @return false if a restart is already counting down */
+    /** @return false if a restart is already counting down or restarts are off ({@link #enabled()}) */
     public boolean start(long delayMillis, String by) {
-        if (task != null) {
+        if (task != null || !enabled()) {
             return false;
         }
         this.by = by;
@@ -72,6 +73,11 @@ public final class RestartManager {
         return true;
     }
 
+    /** Whether the owner set up something that brings the server back ({@code versions.restart-method}). */
+    public boolean enabled() {
+        return !plugin.settings().versions().restartMethod().equals("none");
+    }
+
     /** @return false if no restart was planned */
     public boolean cancel(String by) {
         if (task == null) {
@@ -99,7 +105,7 @@ public final class RestartManager {
         // A moment to read it, then down.
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             plugin.getLogger().info("Restarting the server (requested by " + by + ").");
-            if (plugin.settings().versions().restartMethod().equals("spigot")) {
+            if (plugin.settings().versions().restartMethod().equals("script")) {
                 Bukkit.restart();
             } else {
                 Bukkit.shutdown();

@@ -89,7 +89,8 @@ public final class VersionRoutes {
         result.put("checking", versions.checking());
         result.put("auto", plugin.settings().versions().autoDownload().name().toLowerCase(java.util.Locale.ROOT));
         result.put("restart", restart);
-        result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL), "restart", may(http, Perms.SERVER_RESTART)));
+        result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
+                "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
     }
 
@@ -133,6 +134,9 @@ public final class VersionRoutes {
 
     private void restart(Http http) throws Exception {
         require(http, may(http, Perms.SERVER_RESTART));
+        if (!plugin.restarts().enabled()) {
+            throw new Http.WebException(400, "restart-disabled");
+        }
         long delay;
         try {
             delay = Long.parseLong(String.valueOf(http.string("delay")).trim());

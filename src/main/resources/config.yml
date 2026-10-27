@@ -494,10 +494,12 @@ versions:
   auto-download: "off"
   # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
   include-prereleases: false
-  # How the restart button brings the server back:
-  #   stop   = the server stops; your start script, watchdog or hosting panel starts it again (e.g. mc.sh watchdog)
-  #   spigot = the server's own restart: runs restart-script from spigot.yml
-  restart-method: stop
+  # Restart button in the web interface. A server cannot start itself again - something outside has to do it:
+  #   none   = no restart button (default); after downloading, the page says "restart needed"
+  #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again
+  #   script = the server's own restart: runs restart-script from spigot.yml (settings.restart-script)
+  # Only switch it on if you know the server comes back - otherwise the button just stops it.
+  restart-method: none
   # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
   restart-delays: ["5m", "1m", "now"]
 

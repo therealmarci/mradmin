@@ -310,7 +310,7 @@ public final class AuthRoutes {
         boolean versions = plugin.versions().enabled();
         may.put("versions", versions && VersionRoutes.mayView(server, account.id()));
         may.put("versionsInstall", versions && perms.has(account.id(), Perms.VERSIONS_INSTALL));
-        may.put("serverRestart", versions && perms.has(account.id(), Perms.SERVER_RESTART));
+        may.put("serverRestart", versions && plugin.restarts().enabled() && perms.has(account.id(), Perms.SERVER_RESTART));
         Map<String, Object> me = new LinkedHashMap<>();
         me.put("uuid", account.id().toString());
         me.put("name", account.name());

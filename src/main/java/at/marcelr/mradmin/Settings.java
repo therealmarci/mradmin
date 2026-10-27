@@ -40,7 +40,8 @@ public record Settings(
     /**
      * The version page of the web interface: MRtechnology plugins, their updates and the restart button.
      *
-     * @param restartMethod "stop" (a start script or watchdog brings the server back) or "spigot" (Spigot's restart-script)
+     * @param restartMethod "none" (no restart button - a server cannot start itself again), "stop" (a start script,
+     *                      watchdog or panel brings the server back) or "script" (restart-script from spigot.yml)
      * @param restartDelays countdown choices in ms (0 = now)
      */
     public record VersionsSettings(boolean enabled, int checkHours, at.marcelr.mradmin.versions.ReleasePicker.Auto autoDownload,
@@ -320,10 +321,11 @@ public record Settings(
             log.warning("versions.auto-download '" + auto.toLowerCase(Locale.ROOT) + "' is unknown (off, patch, minor, all), using off.");
             mode = at.marcelr.mradmin.versions.ReleasePicker.Auto.OFF;
         }
-        String method = c.getString("versions.restart-method", "stop").trim().toLowerCase(Locale.ROOT);
-        if (!method.equals("stop") && !method.equals("spigot")) {
-            log.warning("versions.restart-method '" + method + "' is unknown (stop, spigot), using stop.");
-            method = "stop";
+        // Off unless the owner says something brings the server back - otherwise the button would only stop it.
+        String method = c.getString("versions.restart-method", "none").trim().toLowerCase(Locale.ROOT);
+        if (!method.equals("none") && !method.equals("stop") && !method.equals("script")) {
+            log.warning("versions.restart-method '" + method + "' is unknown (none, stop, script), using none.");
+            method = "none";
         }
         List<Long> delays = new ArrayList<>();
         for (String raw : c.getStringList("versions.restart-delays")) {

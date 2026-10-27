@@ -152,9 +152,11 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
   der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
-- **Server neu starten** (`mradmin.server.restart`): Countdown aus `versions.restart-delays`, angekündigt mit den
-  Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`restart-method: stop` - ein Start-Skript
-  oder Wächter startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu (`spigot`).
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn `versions.restart-method` eingestellt ist (Standard
+  `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
+  den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
+  Schleife, ein Wächter oder das Panel startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu
+  (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: README.
 - Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
 
 ## Push-Benachrichtigungen

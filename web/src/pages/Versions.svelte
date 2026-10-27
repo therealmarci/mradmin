@@ -111,7 +111,7 @@
         </div>
       </section>
     {:else if staged.length}
-      <div class="notice">{t('versions.restartNeeded', { n: staged.length })}</div>
+      <div class="notice"><strong>{t('versions.restartNeeded', { n: staged.length })}</strong><br />{t('versions.restartManual')}</div>
     {/if}
 
     {#if data.plugins.length === 0}
