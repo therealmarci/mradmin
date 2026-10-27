@@ -30,14 +30,21 @@
     return () => clearInterval(timer);
   });
 
+  // Each quick choice needs a level (limits in MRsleep's config): '' = support, 'Staff', 'Unlimited'. Older MRsleep
+  // versions send no levels - then everything is level ''.
+  const level = (kind, i) => p?.[kind + 'Levels']?.[i] ?? '';
+  const may = (kind, i) => !!me.may['mrsleep' + kind[0].toUpperCase() + kind.slice(1) + level(kind, i)];
+
   async function act(body, confirmText) {
     if (confirmText && !confirm(confirmText)) return;
     busy = true;
     error = '';
     try {
       await moduleAction('mrsleep', { uuid, ...body });
-      onDone(t('sleep.done.' + body.action));
-      if (body.action === 'ban') reason = '';
+      // bypassStaff / banUnlimited ... are the same action at a higher level (MRsleep's limits).
+      const base = body.action.replace(/(Staff|Unlimited)$/, '');
+      onDone(t('sleep.done.' + base));
+      if (base === 'ban') reason = '';
       await load();
     } catch (e) {
       error = errorText(e);
@@ -97,13 +104,14 @@
         <div class="group">
           <div class="glabel">{t('sleep.section.cooldown')}</div>
           <div class="buttons">
-            {#each p.bypassDurations as d}
-              <button class="secondary" disabled={busy} onclick={() => act({ action: 'bypass', duration: String(d) })}>{t('sleep.bypassFor', { time: time(d) })}</button>
+            {#each p.bypassDurations as d, i}
+              <button class="secondary" disabled={busy || !may('bypass', i)} title={may('bypass', i) ? '' : t('sleep.overLimit')}
+                onclick={() => act({ action: 'bypass' + level('bypass', i), duration: String(d) })}>{t('sleep.bypassFor', { time: time(d) })}</button>
             {/each}
             {#if p.bypass}
               <button class="secondary" disabled={busy} onclick={() => act({ action: 'removeBypass' })}>{t('sleep.removeBypass')}</button>
             {/if}
-            {#if p.cooldown}
+            {#if p.cooldown && (p.bypassLevels ? me.may.mrsleepReset : true)}
               <button class="secondary" disabled={busy} onclick={() => act({ action: 'resetCooldown' })}>{t('sleep.resetCooldown')}</button>
             {/if}
           </div>
@@ -118,9 +126,9 @@
           {:else}
             <input type="text" bind:value={reason} maxlength="200" placeholder={t('sleep.reasonPlaceholder')} />
             <div class="buttons">
-              {#each p.banDurations as d}
-                <button class="danger" disabled={busy}
-                  onclick={() => act({ action: 'ban', duration: String(d), reason }, t('sleep.banConfirm', { name, time: time(d) }))}>{t('sleep.banFor', { time: time(d) })}</button>
+              {#each p.banDurations as d, i}
+                <button class="danger" disabled={busy || !may('ban', i)} title={may('ban', i) ? '' : t('sleep.overLimit')}
+                  onclick={() => act({ action: 'ban' + level('ban', i), duration: String(d), reason }, t('sleep.banConfirm', { name, time: time(d) }))}>{t('sleep.banFor', { time: time(d) })}</button>
               {/each}
             </div>
           {/if}
