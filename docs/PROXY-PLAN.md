@@ -15,7 +15,9 @@ Spieler ──► VPS 2: Velocity (öffentlicher Port, bisherige Adresse)
 ```
 
 - **Adresse bleibt:** Die Domain zeigt künftig auf VPS 2, der Proxy übernimmt den bisherigen Port. Spieler müssen nichts ändern, Xaero findet seine vorhandenen Karten (Ordner nach Serveradresse).
-- **Verbindung VPS 2 → VPS 1:** Paper läuft hinter dem Proxy mit `online-mode=false` und Velocity-Forwarding (signiert mit geheimem Schlüssel). Zusätzlich lässt die Firewall auf VPS 1 den Paper-Port nur von VPS 2 zu. Empfehlung: WireGuard-Tunnel zwischen den VPS, weil Proxy → Server unverschlüsselt läuft.
+- **Komplett optional:** Ohne Proxy läuft alles wie bisher. Proxy, Lobby und `proxy:`-Abschnitt sind ein Zusatz für Server, die das wollen.
+- **Verbindung VPS 2 → VPS 1:** Beide VPS bei Hetzner, Verbindung über das **interne Hetzner-Netz** (kein Tunnel nötig). Paper läuft hinter dem Proxy mit `online-mode=false` und Velocity-Forwarding (signiert mit geheimem Schlüssel), lauscht nur auf der internen IP (`server-ip`), zusätzlich Hetzner-Firewall ohne öffentlichen Paper-Port.
+- **Gemeinsame Daten:** LuckPerms und LibertyBans laufen auf **MySQL/MariaDB**, gemeinsam für main, lobby und Proxy - Gruppen, Rechte und Bans sind überall gleich (bei LuckPerms ggf. mit `server`-Kontext main/lobby).
 - **Normalbetrieb:** Velocity `try = ["main", "lobby"]` - wer joint, landet wie bisher direkt auf dem Hauptserver. Die Lobby sieht man nur, wenn der Hauptserver nicht da ist.
 - **VPS 1 offline:** Neue Spieler landen gleich in der Lobby, die Serverliste zeigt die Wartung bzw. „Server startet neu“.
 - **Wartung an VPS 2 selbst** (Proxy-Neustart) trennt weiterhin alle - selten und kurz.
@@ -25,7 +27,7 @@ Spieler ──► VPS 2: Velocity (öffentlicher Port, bisherige Adresse)
 | Fall | Was passiert |
 |---|---|
 | Neustart (Knopf, `announce restart`, `mc.sh`) | Countdown wie heute, dann schickt MRadmin auf main alle in die Lobby und stoppt erst, wenn der Server leer ist. Lobby zeigt „Server startet neu“ und holt alle zurück, sobald main antwortet. |
-| Wartung beginnt | Statt Kick: Spieler ohne `mradmin.maintenance.bypass` gehen in die Lobby. Lobby zeigt Thema und Ende aus Uptime Kuma (Bossbar, pro Spieler in seiner Sprache). |
+| Wartung beginnt | Statt Kick: alle **im normalen Spiel** gehen in die Lobby - auch Teammitglieder. Wer im **MRadmin-Admin-Modus** ist, bleibt auf main. Lobby zeigt Thema und Ende aus Uptime Kuma (Bossbar, pro Spieler in seiner Sprache). |
 | Join während Wartung | main lehnt wie heute ab, Velocity versucht den nächsten Server der `try`-Liste → Lobby. |
 | Wartung endet | Lobby holt die Spieler gestaffelt zurück (z.B. 5 pro Sekunde). |
 | Absturz / VPS 1 weg | Velocity leitet nicht von selbst um (Standard: trennen bzw. nur Meldung). Dafür ein fertiges Fallback-Plugin auf dem Proxy (Musterkonfiguration). Lobby holt zurück, sobald main wieder antwortet. |
@@ -39,7 +41,7 @@ Neuer Config-Abschnitt `proxy:`:
 
 Rolle **main**:
 - Neustart/Stopp über MRadmin: Spieler per BungeeCord-Kanal (`Connect`, versteht Velocity) in die Lobby, dann stoppen.
-- Wartungsbeginn: Lobby statt Kick (bisherige `kick-on-start`-Logik bleibt ohne Proxy).
+- Wartungsbeginn: Lobby statt Kick für alle außerhalb des Admin-Modus (bisherige `kick-on-start`-Logik bleibt ohne Proxy).
 - Prüfungen (Web + `/mradmin status`): Velocity-Forwarding in `paper-global.yml` an, Spieler kommen über den Proxy, Lobby-Name gesetzt.
 
 Rolle **lobby**:
@@ -59,8 +61,8 @@ Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während 
 - `velocity.toml`-Auszug (Ports, Forwarding, `try`-Liste, Server)
 - Fallback-Plugin für Abstürze (Auswahl nach Test)
 - Paper main + lobby: `server.properties`, `paper-global.yml`, MRadmin-`proxy:`-Abschnitt
-- LibertyBans auf Proxy + Servern mit gemeinsamer MariaDB (MRadmin nutzt die LibertyBans-API auf main weiter, Entbannungs-Codes bleiben)
-- Firewall/WireGuard-Hinweise, Reihenfolge der Umstellung
+- LuckPerms und LibertyBans auf Proxy + Servern mit gemeinsamer MySQL (MRadmin nutzt die LibertyBans-API auf main weiter, Entbannungs-Codes bleiben)
+- Firewall-Hinweise (internes Netz, `server-ip`), Reihenfolge der Umstellung
 - Start-Skripte bleiben Sache des Users (`mc.sh` auf VPS 1 unverändert, für VPS 2 ein eigenes Skript)
 
 ## Umsetzung in Schritten
@@ -71,9 +73,15 @@ Dazu: Permission `mradmin.proxy.switch` (aus der Lobby zum Hauptserver während 
 5. Test mit Xaero (Karte aufdecken, Neustart, vergleichen), MRtoolbar-Mod (Handshake nach Wechsel), DE/EN-Client.
 6. User richtet VPS 2 ein, Umstellung der Domain.
 
+## Entscheidungen des Users (2026-10-27)
+- Alles rund um den Proxy ist **komplett optional**.
+- Proxy + Lobby auf VPS 2, Hauptserver auf VPS 1, beide bei Hetzner über das interne Netz.
+- LuckPerms und LibertyBans werden auf MySQL umgestellt (gemeinsam für alle Server).
+- Lobby ist **nur Warteraum** (Neustart, Absturz, Wartung), mit MRpvp-Duellen zum Zeitvertreib.
+- Bei Wartung bleibt nur, wer im MRadmin-Admin-Modus ist; alle anderen (auch Team im normalen Spiel) gehen in die Lobby.
+
 ## Offene Fragen an den User
-1. Welche Minigames außer Duellen (Parkour, Spleef, TNT-Run, Bootsrennen …)?
-2. Lobby nur als Warteraum (Empfehlung) oder auch normaler Einstieg?
-3. Verbinden sich die Spieler über eine Domain (für Xaero und die Umstellung wichtig)?
-4. Läuft LibertyBans heute mit SQLite/HSQLDB oder schon mit MariaDB?
-5. Laufen VPS 1 und VPS 2 im selben Rechenzentrum (Ping zwischen ihnen)?
+1. Neustart: auch Admins im Admin-Modus in die Lobby schicken? (Vorschlag: ja - der Server geht ja aus, sonst würden sie getrennt.)
+2. Join während Wartung: darf Team mit `mradmin.maintenance.bypass` weiter auf main joinen (um dort in den Admin-Modus zu gehen)? (Vorschlag: ja, Lobby-Rückweg über `mradmin.proxy.switch`.)
+3. Weitere Minigames außer Duellen - jetzt oder später?
+4. Verbinden sich die Spieler über eine Domain (für Xaero und die Umstellung wichtig)?
