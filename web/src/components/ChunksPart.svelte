@@ -123,7 +123,7 @@
       <p class="muted tiny">{t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
     {/if}
 
-    {@const canLink = me.may.mrchunksManage && c.linksEnabled && !c.main && c.secondAccounts.length < c.maxLinks}
+    {@const canLink = (me.may.mrchunksLink || me.may.mrchunksManage) && c.linksEnabled && !c.main && c.secondAccounts.length < c.maxLinks}
     {#if c.main || c.secondAccounts?.length || canLink}
       <h3>{t('chunks.linkedSection')}</h3>
       {#if c.main}
@@ -143,7 +143,7 @@
           {/each}
         </ul>
       {/if}
-      {#if me.may.mrchunksManage && (c.main || c.secondAccounts.length)}
+      {#if (me.may.mrchunksLink || me.may.mrchunksManage) && (c.main || c.secondAccounts.length)}
         <button class="secondary" disabled={busy}
           onclick={() => act({ action: 'unlink' }, t('chunks.unlinkConfirm', { name }))}>{t('chunks.unlink')}</button>
       {/if}
