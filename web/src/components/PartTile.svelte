@@ -38,6 +38,8 @@
     grid-template-rows: subgrid;
     row-gap: 6px;
     align-content: start;
+    /* Buttons centre their content (app.css) - a tile reads from the top left. */
+    align-items: start;
     text-align: left;
     color: var(--text);
     font-weight: 400;
