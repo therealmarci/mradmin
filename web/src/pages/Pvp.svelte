@@ -165,7 +165,7 @@
             <button class="open" onclick={() => go('/pvp/' + g.id)}>
               <div class="top">
                 <strong>#{g.id}</strong>
-                <span class="badge-status {g.state}">{t('pvp.state.' + g.state)}</span>
+                <span class="badge-status {g.state}">{g.adminPause ? t('pvp.state.adminPaused', { name: g.adminPause }) : t('pvp.state.' + g.state)}</span>
                 <span class="muted small">{clock(g.elapsed)}</span>
               </div>
               {#each g.players as p (p.uuid)}

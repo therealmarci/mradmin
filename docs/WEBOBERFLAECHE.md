@@ -120,12 +120,14 @@ Permissions: `mrsleep.admin.gui` ansehen, Blockaden aufheben mit `mrsleep.admin.
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
 ## Duelle (mit MRpvp)
-Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.ban`, `.reset`, `.restore`, `.review` handeln.
+Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.pause`, `.ban`, `.reset`, `.restore`, `.review` handeln.
 
-- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena, abbrechen. Pro Runde eine Seite mit Mini-Karte (der
+- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena. Steuern: pausieren und fortsetzen (`.pause`),
+  einen Sieger bestimmen oder abbrechen (`.stop`). Pro Runde eine Seite mit Mini-Karte (der
   Punkt leuchtet beim Treffen und Getroffenwerden), Inventaren und Kampf-Log; beendete Runden mit den gesicherten
   Inventaren (beim Betreten und am Ende, Enderchest, MRtoolbar-Gürtel) und einer Wiedergabe der Positionen.
-- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Arenen mit ihren Kopien,
+- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Gewertete Runden lassen sich auf
+  ihrer Seite nachträglich aus der Wertung nehmen (mit optionalem Grund) und wieder werten (`.review`). Arenen mit ihren Kopien,
   Auffälligkeiten der letzten 24 Stunden. Alles zu einem einzelnen Spieler (Statistik, Runden, Sperre) steht auf
   seiner Seite unter **Spieler**.
 
