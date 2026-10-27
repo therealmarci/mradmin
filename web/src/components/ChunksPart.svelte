@@ -19,6 +19,8 @@
   // The limit being edited ("place" / "active" / "dummy") and the value typed.
   let editing = $state(null);
   let value = $state('');
+  // Name typed for linking another account.
+  let other = $state('');
 
   async function load() {
     try {
@@ -44,6 +46,7 @@
       await playerAction(uuid, 'mrchunks', body);
       onDone(t('chunks.done.' + body.action));
       if (body.action === 'ban') reason = '';
+      if (body.action === 'link') other = '';
       editing = null;
       await load();
     } catch (e) {
@@ -120,7 +123,8 @@
       <p class="muted tiny">{t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
     {/if}
 
-    {#if c.main || c.secondAccounts?.length}
+    {@const canLink = me.may.mrchunksManage && c.linksEnabled && !c.main && c.secondAccounts.length < c.maxLinks}
+    {#if c.main || c.secondAccounts?.length || canLink}
       <h3>{t('chunks.linkedSection')}</h3>
       {#if c.main}
         <p class="small">
@@ -139,9 +143,23 @@
           {/each}
         </ul>
       {/if}
-      {#if me.may.mrchunksManage}
+      {#if me.may.mrchunksManage && (c.main || c.secondAccounts.length)}
         <button class="secondary" disabled={busy}
           onclick={() => act({ action: 'unlink' }, t('chunks.unlinkConfirm', { name }))}>{t('chunks.unlink')}</button>
+      {/if}
+      {#if canLink}
+        <div class="link-form">
+          <p class="muted tiny">{t('chunks.linkHint')}</p>
+          <input type="text" bind:value={other} maxlength="16" placeholder={t('chunks.linkPlaceholder')} aria-label={t('chunks.linkPlaceholder')} />
+          <div class="buttons">
+            <button class="secondary" disabled={busy || !other.trim()}
+              onclick={() => act({ action: 'link', other: other.trim(), role: 'second' }, t('chunks.linkSecondConfirm', { name, other: other.trim() }))}>{t('chunks.linkSecond')}</button>
+            {#if !c.secondAccounts.length}
+              <button class="secondary" disabled={busy || !other.trim()}
+                onclick={() => act({ action: 'link', other: other.trim(), role: 'main' }, t('chunks.linkMainConfirm', { name, other: other.trim() }))}>{t('chunks.linkMain')}</button>
+            {/if}
+          </div>
+        </div>
       {/if}
     {/if}
 
@@ -311,6 +329,13 @@
   .edit-links {
     display: flex;
     gap: 12px;
+  }
+
+  .link-form {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    max-width: 420px;
   }
 
   .linkish {

@@ -89,7 +89,9 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
   - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
-    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
+    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`). Verknüpfte Accounts
+    ansehen, lösen und neu verknüpfen - per Spielername als Zweit- oder Haupt-Account, ohne Zustimmung der Spieler
+    (`mrchunks.admin.manage`, wie `/mrchunks link`).
   - **MRpvp:** Duell-Statistik, die laufende Runde (Klick → Duellsteuerung) und die letzten Runden als Kacheln
     (`mrpvp.admin.games`), von Duellen sperren mit Grund und Schnellauswahl der Dauer (`mrpvp.admin.ban`, Dauern aus
     `gui.ban-durations` in der MRpvp-Config), gesicherte Stände zurückgeben (`mrpvp.admin.restore`), Statistik
