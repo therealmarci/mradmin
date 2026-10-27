@@ -1,38 +1,50 @@
 # MRadmin
 
-Admin-Werkzeuge für **Paper 26.3** (Java 25): Wartungsmodus mit Uptime-Kuma-Anbindung, Ankündigungen und Admin-Modus.
+**Der Werkzeugkasten für dein Server-Team:** Wartungen mit Countdown, Tickets und Reports, Admin-Modus, Spieler-Werkzeuge, Ankündigungen, Staff-Chat - im Spiel über Menüs und vom Handy über eine eigene Weboberfläche. Außerdem verbindet MRadmin alle anderen MRtechnology-Plugins miteinander.
 
-> 🧪 **Pre-Release (0.x):** MRadmin befindet sich in der Testphase. Bis zum Release 1.0.0 können sich Config,
-> Befehle und Permissions noch ändern.
+**[⬇ Download](https://mrtechnology.marcelr.at/download/mradmin/)** · **[📖 Anleitung online](https://mrtechnology.marcelr.at/docs/mradmin/)** · **[🐞 Fehler melden](https://mrtechnology.marcelr.at/report/mradmin/)**
 
-- **Wartungsarbeiten:** Während einer Wartung kann nur das Team joinen. Geplante Wartungen kommen live aus
-  **Uptime Kuma**, 15 Minuten vorher läuft eine **Bossbar mit Countdown**. Änderungen in Kuma (verlängern,
-  verschieben, absagen) werden sofort übernommen.
-- **Ankündigungen** auf dem Bildschirm aller Spieler, mit eigenem Text oder **Presets** (z.B. fürs Restart-Script).
-- **Admin-Modus:** Creative und ein Teleport-Kompass. Beim Beenden ist alles wieder exakt wie vorher: Inventar,
-  Rüstung, XP, Leben, Effekte und Position.
-- **LuckPerms-Permissions** für jede Funktion, **Sprachdateien** Deutsch/Englisch, alles in einer `config.yml`,
-  **Discord-Logs** und **Update-Check**.
+| Auf einen Blick | |
+|---|---|
+| Server | Paper 26.3 (oder ein Fork wie Purpur), Java 25 |
+| Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma und LibertyBans optional |
+| Sprachen | Deutsch, Englisch (eigene Übersetzungen möglich) |
+| Status | Vorabversion (0.x) - Config, Befehle und Permissions können sich bis 1.0.0 noch ändern |
 
----
+## Was kann MRadmin?
+- **Wartungsarbeiten:** Während einer Wartung kommt nur das Team auf den Server. Geplante Wartungen kommen auf Wunsch live aus **Uptime Kuma**, vorher läuft eine **Bossbar mit Countdown**.
+- **Tickets & Reports:** Spieler melden Regelverstöße, Bugs und Fragen mit `/report` über ein Menü. Das Team antwortet im Spiel oder im Web - wie in einem Chat.
+- **Admin-Modus:** Creative und ein Teleport-Kompass. Beim Beenden ist alles wieder exakt wie vorher - Inventar, XP, Leben, Position.
+- **Spieler-Werkzeuge:** hinteleportieren, herholen, Inventar und Enderchest ansehen, einfrieren, kicken.
+- **Ankündigungen** auf dem Bildschirm aller Spieler, mit Vorlagen (z.B. fürs Restart-Script) und auf Wunsch im Community-Discord.
+- **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
+- **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
+- **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
-## Installation
-1. `MRadmin-mc26.3-v<version>.jar` nach `plugins/` legen und den Server starten.
-2. `plugins/MRadmin/config.yml` anpassen und `/mradmin reload` ausführen.
-3. Dem Team die Rechte geben, z.B. `/lp group staff permission set mradmin.staff true`.
+## Schnellstart
+1. **[MRadmin herunterladen](https://mrtechnology.marcelr.at/download/mradmin/)** und die JAR in den Ordner `plugins/` legen.
+2. Den Server starten. Dabei entstehen `plugins/MRadmin/config.yml` und die Sprachdateien in `plugins/MRadmin/lang/`.
+3. **Dem Team die Rechte geben** - es gibt fertige Pakete:
+   ```text
+   /lp group supporter permission set mradmin.support true
+   /lp group staff permission set mradmin.staff true
+   /lp group admin permission set mradmin.admin true
+   ```
+4. Fertig: **`/mradmin`** öffnet das Dashboard, Spieler erstellen Tickets mit **`/report`**.
 
-Sprache: `language: de` oder `language: en` in der Config. Alle Texte (auch Presets und Discord) stehen in
-`plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
+Alles andere ist optional: [Uptime Kuma](#uptime-kuma) für geplante Wartungen, ein [Discord-Webhook](#discord) für Logs, die [Weboberfläche](#weboberfläche) fürs Handy.
+
+**Update:** Die alte JAR durch die neue ersetzen und den Server neu starten. Die Config wird automatisch angepasst: Deine Werte bleiben, neue Optionen kommen dazu, die alte Datei wird als `config.v<N>.backup.yml` gesichert.
 
 ### Funktionen ein- und ausschalten
-Jede Funktion lässt sich unter `features` in der Config abschalten (`/mradmin reload` genügt):
+Alles, was du nicht brauchst, schaltest du unter `features` in der Config ab (`/mradmin reload` genügt):
 
 ```yaml
 features:
   maintenance: true    # Wartungsmodus inkl. Uptime Kuma
   announce: true       # Ankündigungen
   admin-mode: true     # Admin-Modus und Kompass
-  teleport: true       # zu Spielern teleportieren (Spieler-Menü, /mradmin tp, Tickets, Serverzustand)
+  teleport: true       # zu Spielern teleportieren
   summon: true         # Spieler herholen
   inventory: true      # Inventar/Enderchest ansehen
   freeze: true         # Einfrieren
@@ -41,229 +53,71 @@ features:
   staff-chat: true     # Staff-Chat (/sc)
 ```
 
-Eine ausgeschaltete Funktion verschwindet komplett: Ihre Befehle melden „ausgeschaltet“, Knöpfe und Kacheln fehlen in
-allen Menüs, und sie greift nirgends mehr ein. Ihre Daten (Tickets, geplante Wartungen) bleiben erhalten.
-Sonderfälle: Wer beim Abschalten des Admin-Modus darin ist, bekommt sein Inventar sofort zurück (offline beim nächsten
-Join). Beim Abschalten von `freeze` sind alle eingefrorenen Spieler frei. Discord-Logs, Discord-Ankündigungen,
-Uptime Kuma und Update-Check haben ihren Schalter (`enabled`) im jeweiligen Abschnitt.
+Eine ausgeschaltete Funktion verschwindet komplett aus Befehlen, Menüs und Web. Ihre Daten (Tickets, geplante Wartungen) bleiben erhalten.
 
-### Zusammenarbeit mit MRsleep, MRchunks, MRtoolbar und MRpvp
-MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin die
-anderen automatisch, auch wenn sie später geladen oder entfernt werden, und passt die Menüs von selbst an:
-- **Dashboard:** ein Knopf je Plugin mit Live-Infos, der dessen Admin-Menü öffnet.
-- **Spieler-Menü:** die Infos des Spielers aus dem Plugin, ein Klick öffnet dessen Spieler-Menü.
-- **Serverzustand** (MRchunks): auffällige, gesperrte und pausierte Chunkloader statt der Chunks mit den meisten
-  Entities. Mit MRpvp stehen dort auch Duell-Runden, die auf eine Prüfung warten.
-- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle**, die Teile der Plugins auf der Spielerseite und
-  ihre Hinweise auf der Startseite (z.B. gesperrte Chunkloader, `/nosleep`-Blockaden, wartende Prüfungen).
-- **Tickets** aus Plugins (MRchunks: Ticket für den Owner bei einer Lag-Sperre).
+---
 
-**MRadmin ist auch die Verbindung zwischen den anderen MR-Plugins.** Sie kennen sich nicht gegenseitig, sondern
-sprechen über MRadmin miteinander. Ohne MRadmin laufen sie weiter, bekommen aber voneinander nichts mit:
+## Admin-Dashboard
+**`/mradmin`** (oder Rechtsklick mit dem Admin-Kompass) öffnet das Dashboard:
+- **Live-Kacheln** für Spieler, Server, Wartung und Tickets. Darunter zeigt eine farbige Scheibe den Zustand, z.B. TPS (grün ab 19,5, gelb ab 15), Wartung (gelb = geplant, rot = aktiv), Tickets (rot = warten auf Antwort).
+- **Ankündigen:** alle Vorlagen als Knöpfe, „Eigener Text“ öffnet einen Dialog.
+- **Plugin-Knöpfe:** Admin-Menüs der anderen MRtechnology-Plugins mit Live-Infos. Eigene Knöpfe (z.B. für Chunky) gehen über `admin-mode.menu.buttons`.
+- **Schalter** für Admin-Modus und Staff-Chat.
 
-| Mit MRadmin | Braucht außerdem |
-|---|---|
-| Spieler im Duell zählen nicht zur Schlafquote, die Arena-Welt wird nie verwaltet | MRsleep + MRpvp |
-| Die Werkzeugleiste pausiert im Duell, MRpvp sichert die Gürtel mit | MRtoolbar + MRpvp |
-| In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
-| Spieler im Admin-Modus zählen nicht zur Schlafquote, haben ihre Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
+Fehlt eine Permission, fehlt einfach der Knopf. Alle Befehle zeigt `/mradmin help`.
 
-Konfigurieren muss man dafür nichts. Wer eine Verbindung nicht möchte, schaltet sie unter `integrations` ab
-(`mrsleep: false`, `mrchunks: false`, `mrtoolbar: false`, `mrpvp: false`). Beim Start steht in der Konsole, welche
-Plugins verbunden sind - und eine Warnung, wenn eins zu alt für die Modul-Schnittstelle ist (dann alle zusammen
-aktualisieren). Wie ein Plugin sich verbindet: [docs/MODULE-API.md](docs/MODULE-API.md).
+## Admin-Modus
+- **`/mradmin mode on`** (oder der Schalter im Dashboard): Inventar, Rüstung, XP, Leben, Hunger, Effekte, Flugstatus und Position werden gespeichert. Danach bist du im Creative-Modus mit dem **Admin-Kompass**.
+- **`/mradmin mode off`:** Alles wird exakt wiederhergestellt, und du landest wieder am Ausgangspunkt.
+- Gespeichert wird **vor** jeder Änderung - auch ein Absturz verliert nichts. Du bist danach einfach noch im Admin-Modus.
+- Im Admin-Modus kann man nichts fallen lassen oder aufheben, damit keine Creative-Items ins Survival gelangen.
+- `/mradmin mode list` zeigt, wer im Admin-Modus ist. `/mradmin mode off <spieler>` beendet ihn für andere.
 
-### Speicher: YAML, SQLite oder MySQL
-Unter `storage.type` in der Config wählst du, wo MRadmin Tickets, Wartungen, eingefrorene Spieler und den Status der
-Discord-Ankündigungen speichert:
+## Spieler-Menü & Serverzustand
+**Spieler-Menü** (Kompass → Spieler teleportieren → Kopf anklicken, oder `/mradmin player <spieler>`):
+- Infos: Position, Spielmodus, Leben, Ping, Spielzeit, erster Join
+- **Hinteleportieren** und **zu mir holen** (Shift-Klick auf einen Kopf teleportiert direkt)
+- **Inventar** und **Enderchest** ansehen - live und nur lesend
+- **Einfrieren:** Der Spieler kann sich nicht bewegen, bauen oder kämpfen und nimmt keinen Schaden. Ausloggen hilft nicht.
+- Seine Reports und die Infos aus den anderen MRtechnology-Plugins
 
-| `type` | Wo | Wofür |
-|---|---|---|
-| `yaml` (Standard) | Dateien im Plugin-Ordner | kleine Server |
-| `sqlite` | eine Datei `plugins/MRadmin/mradmin.db` | viele Tickets, die kommende Weboberfläche |
-| `mysql` | MySQL oder MariaDB (`storage.mysql`) | später mehrere Server mit gemeinsamen Tickets |
+**Serverzustand** (Dashboard → Server oder `/mradmin status`): TPS, MSPT, RAM, Chunks, Entities und Spieler pro Welt. Darunter mit MRchunks die auffälligen und gesperrten Chunkloader, ohne MRchunks die Chunks mit den meisten Entities - ein Klick teleportiert hin.
 
-- Gespeichert wird immer im Hintergrund, nie auf dem Server-Thread. Mit SQLite/MySQL wird bei einer neuen
-  Nachricht nur diese geschrieben, nicht alle Tickets.
-- **Umstellen:** `type` ändern und den Server neu starten. Beim ersten Start werden die bisherigen YAML-Daten
-  übernommen, die Dateien bleiben als `*.migrated.yml`. `/mradmin storage` zeigt, welcher Speicher aktiv ist.
-- Ist die Datenbank beim Start nicht erreichbar, nutzt MRadmin vorerst die YAML-Dateien und meldet das in der
-  Konsole.
-- Die Treiber (HikariCP, SQLite, MariaDB) lädt Paper beim ersten Start selbst herunter (Ordner `libraries/` des
-  Servers), die JAR bleibt klein.
+## Tickets & Reports
+- **`/report`** (auch `/ticket`, `/support`) öffnet für alle Spieler das **Ticket-Menü**: neues Ticket, offene Tickets (neue Antworten leuchten) und das Archiv.
+- **Neues Ticket:** Kategorie wählen, dann ein Formular ausfüllen. Bei Spieler-Reports wird erst der Spieler gewählt. `/report <spieler>` springt direkt zur Auswahl des Grundes. Der Standort wird mitgespeichert.
+- **Kategorien** legst du unter `tickets.categories` an. Standard: Cheating, Chat, Griefing, Betrug, Bug, Frage/Sonstiges.
+- Im Ticket steht der Verlauf wie in einem Chat. Wer offline ist, erfährt beim nächsten Join von neuen Antworten.
+- Das **Team** bekommt neue Tickets mit **[Öffnen] [Teleport] [Alle Tickets]**. Unter Dashboard → Tickets oder `/mradmin tickets`: filtern, antworten, **übernehmen**, schließen, wieder öffnen. Wer zuerst antwortet, übernimmt das Ticket automatisch.
+- **Mit MRchunks** bekommt der Owner automatisch ein Ticket, wenn sein Chunkloader wegen Lag gesperrt wird - mit allen Messwerten. Schließen kann es nur das Team.
 
-### Weboberfläche (Vorschau)
-MRadmin vom Handy, Tablet oder PC bedienen: **Übersicht** (TPS, MSPT, RAM, Spieler online, Wartung, offene
-Tickets), **Tickets** (Liste mit Suche und Filtern, Chat-Ansicht: antworten, übernehmen, schließen, wieder öffnen -
-Änderungen erscheinen live), **Konto** (Geräte, Wiederherstellungscodes) und **Protokoll**. Weiteres folgt
-(Plan: [docs/WEB-PLAN.md](docs/WEB-PLAN.md)).
-
-1. In der Config `web.enabled: true`, `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`)
-   und `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
-2. Reverse Proxy einrichten: Domain mit HTTPS → `http://127.0.0.1:8125`. Der eingebaute Webserver lauscht nur
-   lokal und hat selbst kein HTTPS.
-3. Konto anlegen: ingame `/mradmin web setup` (Permission `mradmin.web`) → Link öffnen → Passwort festlegen,
-   Authenticator-App per QR-Code verbinden → Wiederherstellungscodes sichern. Für andere: `/mradmin web invite
-   <spieler>` (auch aus der Konsole).
-
-**Sicherheit**
-- Anmeldung immer mit Passwort **und** Code aus der Authenticator-App (oder einem Wiederherstellungscode).
-  Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
-- **Passkeys** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): unter **Konto** hinzufügen - zur Sicherheit
-  mit einem frischen Code aus der App. Danach geht die Anmeldung ohne Name, Passwort und Code; die Prüfung des Geräts
-  (Fingerabdruck, PIN) ist immer Pflicht und ersetzt beide Faktoren. Passkeys sind an die Adresse aus
-  `web.public-url` gebunden (ohne sie nur `http://localhost` zum Testen). Gespeichert werden nur öffentliche
-  Schlüssel. Wer sein Konto per Einrichtungslink zurücksetzt, verliert alle Passkeys (verlorenes Handy).
-- **2FA ausschalten** geht unter **Konto**, sobald ein Passkey da ist. Dann meldet sich das Konto nur noch per Passkey
-  an - mit Name und Passwort ist 2FA immer Pflicht. Schritte, die sonst einen frischen Code verlangen (Konsole
-  entsperren, Passkey hinzufügen), bestätigt man dann mit einem Passkey. Der letzte Passkey lässt sich ohne 2FA nicht
-  entfernen; 2FA kann jederzeit wieder eingeschaltet werden (neuer QR-Code, neue Wiederherstellungscodes).
-  Abschalten: `web.login.passkeys: false`.
-- **Mit Discord anmelden** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung
-  `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config. Jeder verknüpft sein Discord
-  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt). Danach Anmeldung mit
-  einem Klick; zählt wie ein Passkey - 2FA lässt sich ausschalten, Bestätigungen (Konsole, 2FA, Passkey hinzufügen)
-  gehen auch per Discord. Abgefragt wird nur `identify` (ID, Name, Avatar).
-- Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
-  Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein.
-- Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`. Änderungen nur mit eigenem Header und passender
-  Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
-- Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über
-  `web.roles` und `web.players`. Wer `mradmin.web` verliert, ist sofort überall abgemeldet.
-- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen und
-  Einrichtungen auch im Discord-Log (`web-login`, `web-setup`).
-- Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
-  und meldet alle Geräte ab.
-
-**Übersicht (Dashboard)**
-- Oben die **Lage**: Läuft etwas aus dem Ruder, steht hier jede Meldung mit Symbol und Wort, die dringendsten
-  zuerst: niedrige TPS, hohe Tick-Zeit, voller Arbeitsspeicher, wenig Speicherplatz, hohe CPU-Last, hoher Ping,
-  unbeantwortete und dir zugewiesene Tickets, gesperrte, auffällige oder pausierte Chunkloader, /nosleep-Blockaden,
-  Wartung. Läuft
-  alles rund, stehen dort die wichtigsten aktuellen Werte. Aktualisiert sich alle 2 Sekunden.
-- Darunter Kacheln für Server, Spieler, Tickets, Chunkloader, Schlaf und Wartung mit Klick zur jeweiligen Seite.
-- Jede Meldung und jede Kachel erscheint nur mit der Permission für ihren Bereich: Server und Spieler mit
-  `mradmin.status`, CPU mit `mradmin.status.health`, Tickets mit `mradmin.tickets.view` (zugewiesene mit
-  `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Schlaf mit `mrsleep.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
-  Plugin oder Feature nicht da, fehlt der Teil einfach.
-- Das **Konto** (Geräte, Wiederherstellungscodes) öffnet ein Klick auf deinen Kopf bzw. Namen oben rechts.
-
-**Health-Dashboard** (`mradmin.status.health`)
-- Wie der Health-Report von spark: TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU (Server und System),
-  Arbeitsspeicher, Garbage Collection, Spieler, Ø Ping, Chunks (mit MRchunks auch „davon Chunkloader“) und Entities
-  als Verlauf über 1 Minute bis 30 Tage, dazu Welten, Systeminfos, Servergröße (alle 10 Minuten im Hintergrund
-  gemessen), Größe der MRadmin-Datenbank und die 5 Chunks mit den meisten Entities.
-- Gemessen wird jede Sekunde aus Werten, die Java und Paper ohnehin führen (kein Lag), die Seite aktualisiert sich
-  live. Die letzte Stunde ist sekündlich da (ab 1 Minute wählbar), 24 Stunden im 10-Sekunden-Takt, ältere als
-  5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten). Aufbewahrung
-  `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über Neustarts hinweg.
-- `health.alert`: Warnung an das Team (ingame) und ins Discord-Log, wenn die TPS länger unter einer Grenze liegt,
-  und Entwarnung, sobald sie sich erholt hat.
-
-**Chunkloader** (mit MRchunks; Permissions von MRchunks: `mrchunks.admin.gui` ansehen, `mrchunks.admin.manage` handeln)
-- Alle Chunkloader mit Status (OK, aus, auffällig, gesperrt, pausiert - immer mit Symbol und Wort), Probleme
-  zuerst, Suche nach Name, Spieler, Welt oder Koordinaten, Server-Pause als Hinweis.
-- Pro Loader: Ort, Sperrgrund, alle Messwerte des Lag-Schutzes mit Warn- und Sperrgrenze, Mitglieder. Aktionen:
-  ein-/ausschalten, Sperre aufheben, löschen - der Owner bekommt wie ingame eine Nachricht, alles landet im
-  Discord- und im Web-Protokoll.
-
-**Spieler** (`mradmin.player.view`)
-- Alle, die schon auf dem Server waren: online zuerst, dann nach letztem Besuch, mit Suche, Filter (online,
-  auffällig) und Markierungen (eingefroren, gemeldet, blockiert /nosleep, Chunkloader gesperrt ...). Keine IP-Adressen.
-- Pro Spieler eine Seite: Ort, Spielmodus, Ping, Leben, erster Besuch, Spielzeit; Einfrieren
-  (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`); seine Tickets
-  (`mradmin.tickets.view`).
-- Darunter ein Teil pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt der Teil:
-  - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
-  - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
-    (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
-    (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
-  - **LibertyBans:** aktive Strafen und Verlauf (`libertybans.commands` + `libertybans.list.history`), bannen, muten,
-    verwarnen und kicken (`libertybans.<typ>.do.target.uuid`), aufheben (`libertybans.<typ>.undo.target.uuid`). Die
-    Dauer kommt aus der Schnellauswahl `libertybans.durations` in der MRadmin-Config; hat LibertyBans seine
-    Dauer-Permissions eingeschaltet (`duration-permissions`), gelten sie auch hier. Ausgeführt wird über die API von
-    LibertyBans - also mit dessen Kick-Bildschirm, Meldungen und Benachrichtigungen. In der Spielerliste erscheinen
-    gebannte (`libertybans.list.banlist`) und gemutete (`libertybans.list.mutelist`) Spieler markiert.
-- Spieler in Tickets, Chunkloadern und auf der Schlafseite verlinken direkt auf ihre Seite.
-
-**Schlaf** (mit MRsleep; `mrsleep.admin.gui`, Blockaden aufheben mit `mrsleep.admin.clear`)
-- Jede Welt mit Tag/Nacht, wie viele schlafen und wie viele nötig sind, dazu wer gerade mit /nosleep blockiert -
-  einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
-
-**Duelle** (mit MRpvp; Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.ban`,
-`.reset`, `.restore`, `.review` handeln)
-- Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena, abbrechen. Pro Runde eine Seite mit Mini-Karte (der
-  Punkt leuchtet beim Treffen und Getroffenwerden), Inventaren und Kampf-Log; beendete Runden mit den gesicherten
-  Inventaren (beim Betreten und am Ende, Enderchest, MRtoolbar-Gürtel) und einer Wiedergabe der Positionen.
-- **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Arenen mit ihren Kopien,
-  Auffälligkeiten der letzten 24 Stunden. Auf der Spielerseite: Duell-Statistik, Sperre, Statistik zurücksetzen.
-
-**Wartung & Ankündigungen** (`mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen)
-- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - Liste der
-  Wartungen dieses Servers mit Status (läuft, geplant, pausiert, vorbei), neue anlegen (jetzt bis zum Beenden, jetzt
-  mit Dauer oder geplant), verlängern, pausieren/fortsetzen, löschen. Neue Wartungen hängt MRadmin an
-  `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren Status-Seiten erscheinen); geändert
-  werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden angezeigt, bearbeitet in Kuma.
-- **Ohne Uptime Kuma**: die eigene Wartung von MRadmin wie `/mradmin maintenance` - jetzt starten oder mit Countdown
-  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
-- Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
-  Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
-
-**Push-Benachrichtigungen** (Konto → Benachrichtigungen)
-- Meldungen direkt aufs Gerät, auch bei geschlossener Seite: neue Tickets, Nachrichten in meinen Tickets, alle
-  Ticket-Nachrichten, gesperrte Chunkloader, Lag-Alarm, Wartungen. Jeder legt selbst fest, welche er bekommt - und
-  bekommt nur, wofür er die Rechte hat.
-- Pro Gerät einschaltbar (mehrere Geräte möglich, „Test senden“). Ein Gerät, das abgemeldet wird, bekommt nichts mehr.
-- Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
-  Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
-
-**Konsole** (`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle - beide in keinem Paket)
-- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
-  farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
-- Vor dem Öffnen noch einmal der Code aus der Authenticator-App (keine Wiederherstellungscodes), dann
-  `web.console.unlock-minutes` lang offen (pro Gerät). 5 falsche Codes sperren die Konsole 15 Minuten.
-- Befehle laufen als Konsole. `web.console.blocked` sperrt Befehle komplett - auch mit Namespace
-  (`minecraft:op`) und versteckt in `execute ... run`. Jeder Befehl landet im Web-Protokoll und im Discord-Log
-  (`web-console`), gesperrte Versuche im Protokoll.
-
-**Datenschutz & Impressum**
-- Jede Seite (auch die Anmeldung) hat eine Fußzeile mit **Impressum** und **Datenschutz**. Beim ersten Start legt
-  MRadmin Vorlagen in `plugins/MRadmin/web/impressum.md` und `datenschutz.md` an. Die Datenschutz-Vorlage beschreibt,
-  was die Oberfläche verarbeitet. Bitte ausfüllen und prüfen (keine Rechtsberatung). Alternativ eigene Seiten unter
-  `web.legal` verlinken.
-- Keine Drittanbieter: Auch die Spielerköpfe erzeugt MRadmin selbst aus den Skins, der Browser lädt nichts von
-  fremden Diensten. Nur ein technisch notwendiges Cookie, kein Tracking.
-- Das Protokoll wird nach `web.privacy.audit-retention` (Standard 90 Tage) gelöscht. Mit `web.privacy.mask-ip` werden
-  IP-Adressen nur gekürzt gespeichert.
-
-| Befehl | Funktion | Permission |
-|---|---|---|
-| `/mradmin web` | Status (läuft, Adresse, Konten, Geräte) | `mradmin.web` |
-| `/mradmin web setup` | Einrichtungslink für dich | `mradmin.web` |
-| `/mradmin web sessions [spieler]` | angemeldete Geräte | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web logout [spieler]` | alle Geräte abmelden | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web invite <spieler>` | Einrichtungslink für jemand anderen | `mradmin.web.manage` |
-| `/mradmin web remove <spieler>` | Web-Konto löschen | `mradmin.web.manage` |
+## Staff-Chat
+`/sc <nachricht>` schreibt an alle mit `mradmin.staffchat`, auch aus der Konsole. `/sc` ohne Text schaltet um: Dann geht dein normaler Chat ans Team. Spiegeln in den Admin-Discord ist optional (Event `staff-chat`).
 
 ---
 
 ## Wartungsarbeiten
-
-### Ablauf
 | Zeitpunkt | Was passiert |
 |---|---|
-| `warn-before` vor Beginn (Standard 15 min) | Chat-Ankündigung, **Bossbar mit Countdown** für alle (wird in der letzten Minute rot) |
-| `reminders` (15m, 10m, 5m, 2m, 1m, 30s) | Chat-Erinnerung mit Ton |
+| 15 Minuten vorher (`warn-before`) | Chat-Ankündigung und **Bossbar mit Countdown** für alle |
+| 15m, 10m, 5m, 2m, 1m, 30s vorher | Chat-Erinnerung mit Ton |
 | letzte 10 Sekunden | großer Countdown auf dem Bildschirm |
-| Beginn | Titel „Wartungsarbeiten“, nach `kick-delay-seconds` werden alle ohne Bypass gekickt |
-| während der Wartung | Join nur mit `mradmin.maintenance.bypass`. Staff sieht eine Bossbar mit der Restzeit. Die Serverliste zeigt „Wartung“ |
+| Beginn | Titel „Wartungsarbeiten“, kurz danach werden alle ohne Bypass gekickt |
+| während der Wartung | Join nur mit `mradmin.maintenance.bypass`, die Serverliste zeigt „Wartung“ |
 | Ende | Chat-Nachricht, alle dürfen wieder joinen |
 
-Wird die Wartung in Kuma **verlängert oder verkürzt**, bekommt das Team eine Nachricht und die Bossbar passt sich an.
-Wird sie **verschoben**, gibt es eine Nachricht an alle mit der neuen Zeit, und der Countdown läuft neu.
-Wird sie **abgesagt** (gelöscht oder pausiert), verschwindet die Bossbar und alle erhalten eine Nachricht.
+### Ohne Uptime Kuma
+| Befehl | Was er tut |
+|---|---|
+| `/mradmin maintenance` | Status |
+| `/mradmin maintenance on [dauer] [titel]` | Sofort starten (ohne Dauer bis `off`) |
+| `/mradmin maintenance schedule <in> [dauer] [titel]` | Mit Countdown planen, z.B. `schedule 15m 1h Update` |
+| `/mradmin maintenance extend <dauer>` | Ende verschieben, z.B. `30m` oder `-15m` |
+| `/mradmin maintenance off` | Beenden oder absagen |
 
-### Uptime Kuma einrichten
+### Uptime Kuma
+Wartungen, die du in [Uptime Kuma](https://github.com/louislam/uptime-kuma) planst, übernimmt MRadmin live - inklusive Countdown. Wird eine Wartung in Kuma **verlängert, verschoben oder abgesagt**, passt sich alles sofort an, und die Spieler werden informiert.
+
 ```yaml
 uptime-kuma:
   enabled: true
@@ -272,244 +126,161 @@ uptime-kuma:
   password: "geheim"
   monitor-ids: [12]      # nur Wartungen, die den Minecraft-Monitor (ID 12) betreffen
 ```
-- MRadmin meldet sich wie die Weboberfläche per Socket.IO an. Die öffentliche Statusseiten-API zeigt Wartungen
-  erst, wenn sie schon laufen, und reicht deshalb für den Countdown nicht.
-- **2FA aktiv?** Dann statt Passwort den Login-Token eintragen (`token`): im Browser bei Kuma einloggen, F12 →
-  Anwendung → Local Storage → Wert von `token` kopieren.
+
+- **2FA in Kuma aktiv?** Dann statt Passwort den Login-Token eintragen (`token`): im Browser bei Kuma einloggen, F12 → Anwendung → Local Storage → Wert von `token` kopieren.
 - `monitor-ids` / `maintenance-ids` legen fest, welche Wartungen für diesen Server gelten (beide leer = alle).
-- Ist Kuma nicht erreichbar, bleibt die zuletzt bekannte Planung gültig (`keep-schedule-when-offline`). Das Team
-  bekommt einen Hinweis, und MRadmin verbindet sich automatisch neu.
-- Status, Verbindung und letzte Abfrage zeigt `/mradmin maintenance`.
-
-Unterstützt werden alle Wartungsarten von Kuma: einmalig, wiederkehrend, Cron und manuell. Eine manuelle Wartung
-läuft, bis sie in Kuma beendet wird; das Ende zeigt MRadmin als „offen“.
-
-### Ohne Uptime Kuma
-| Befehl | |
-|---|---|
-| `/mradmin maintenance` | Status |
-| `/mradmin maintenance on [dauer] [titel]` | sofort starten (ohne Dauer bis `off`) |
-| `/mradmin maintenance schedule <in> [dauer] [titel]` | mit Countdown planen, z.B. `schedule 15m 1h Update` |
-| `/mradmin maintenance extend <dauer>` | Ende verschieben, z.B. `30m` oder `-15m` |
-| `/mradmin maintenance off` | beenden/absagen. Eine Kuma-Wartung bleibt aus, bis sie in Kuma neue Zeiten bekommt |
-| `/mradmin maintenance refresh` | Wartungen sofort von Kuma abfragen |
-
-Ohne LuckPerms prüft MRadmin die Rechte erst beim Join und kickt dann sofort. Die Join-Nachricht wird dabei
-unterdrückt.
-
----
+- Ist Kuma nicht erreichbar, bleibt die zuletzt bekannte Planung gültig, und MRadmin verbindet sich automatisch neu.
+- Unterstützt werden alle Wartungsarten von Kuma: einmalig, wiederkehrend, Cron und manuell. `/mradmin maintenance refresh` fragt sofort neu ab.
 
 ## Ankündigungen
-```
+```text
 /mradmin announce Heute Abend Event am Spawn!
 /mradmin announce Achtung | Der Nether wird gleich zurückgesetzt
 /mradmin announce restart 5 Minuten
-/mradmin announce event Bauwettbewerb um 20 Uhr
 ```
-- Eigener Text: erscheint unter der Überschrift `announce-custom-title`. Mit `|` getrennt werden **Titel | Untertitel**
-  gesetzt. MiniMessage ist erlaubt (`<red>`, `<bold>` …).
-- **Presets** stehen in der Sprachdatei unter `announce-presets` (`title`, `subtitle`, `chat`). Werte nach dem
-  Namen füllen `<arg1>`, `<arg2>` … bzw. `<args>` (alle zusammen). Eigene Presets einfach dazuschreiben.
-- Anzeigedauer, Chat-Ausgabe und Ton stellst du in der Config unter `announce` ein.
+- **Eigener Text** erscheint als Titel auf dem Bildschirm. Mit `|` trennst du **Titel | Untertitel**. Farben im [MiniMessage-Format](https://docs.advntr.dev/minimessage/format.html) sind erlaubt.
+- **Vorlagen** (z.B. `restart`, `event`) stehen in der Sprachdatei unter `announce-presets`. Werte nach dem Namen füllen `<arg1>`, `<arg2>` … Eigene Vorlagen schreibst du einfach dazu.
 
-**Restart-Script** (z.B. per RCON oder Konsole, z.B. mit `mcrcon`):
+<details>
+<summary>Beispiel: Restart-Script mit Countdown</summary>
+
 ```bash
 mcrcon -p "$RCON_PW" "mradmin announce restart 5 Minuten"; sleep 240
 mcrcon -p "$RCON_PW" "mradmin announce restart 1 Minute";  sleep 60
 mcrcon -p "$RCON_PW" "mradmin announce restart-now" "stop"
 ```
+</details>
+
+### Ankündigungen im Community-Discord
+Ein **eigener Webhook** für deinen öffentlichen Channel (`discord-announce`), getrennt vom Admin-Log. Er postet sparsam:
+- **„Wartungsarbeiten geplant“** höchstens 24 Stunden vorher - bei Änderungen wird derselbe Post bearbeitet, bei einer Absage durchgestrichen.
+- **„Wartungsarbeiten laufen“** und **„Server wieder online“** zu Beginn und Ende.
+- **Ankündigungen**, wenn die Vorlage einen `discord`-Text hat. Eigene Texte nur mit `-d`: `/mradmin announce -d Heute Abend Event!`. Mit `-q` geht eine Vorlage nicht nach Discord.
+
+Zeiten erscheinen als Discord-Zeitstempel - jeder sieht sie in seiner Zeitzone. Test: `/mradmin discord test announce`.
 
 ---
 
-## Discord-Ankündigungen (Community)
-Ein **eigener Webhook** für den öffentlichen Channel, getrennt vom Admin-Log (`discord`). Er ist bewusst sparsam:
+## Weboberfläche
+MRadmin vom Handy, Tablet oder PC bedienen: Übersicht mit Live-Werten, Tickets, Spieler, Serverzustand, Wartungen und Ankündigungen, Push-Benachrichtigungen, dazu Seiten für Chunkloader, Schlaf und Duelle, wenn die Plugins installiert sind. Im Web gelten **dieselben Rechte** wie im Spiel.
 
-| Ereignis | Discord |
+1. In der Config `web.enabled: true` und `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`), dann `/mradmin reload`.
+2. **Reverse Proxy** einrichten: deine Domain mit HTTPS → `http://127.0.0.1:8125`.
+3. Im Spiel **`/mradmin web setup`** → Link öffnen → Passwort festlegen und Authenticator-App verbinden. Fürs Team: `/mradmin web invite <spieler>`.
+
+Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per Passkey (Fingerabdruck, Face ID, Windows Hello) oder Discord. Alle Funktionen, Sicherheitsdetails, die Web-Konsole, Entbannungsanträge und das Kontaktformular: **[Weboberfläche im Detail](docs/WEBOBERFLAECHE.md)**.
+
+---
+
+## Zusammenarbeit mit anderen Plugins
+MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
+- **Dashboard:** ein Knopf je Plugin mit Live-Infos.
+- **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
+- **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle**.
+
+**MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
+
+| Mit MRadmin | Braucht außerdem |
 |---|---|
-| Wartung ist höchstens `announce-ahead` (24h) entfernt | **neuer Post** „Wartungsarbeiten geplant“ (pingt optional `ping-role-id`) |
-| verschoben / verlängert / verkürzt | der letzte Post wird **bearbeitet** (mehrere Änderungen in `debounce-seconds` werden zusammengefasst) |
-| abgesagt | der Post „geplant“ wird zu „abgesagt“ (durchgestrichen) |
-| Beginn | **neuer Post** „Wartungsarbeiten laufen“ (`post-start`) |
-| Ende | **neuer Post** „Server wieder online“ (`post-end`) |
-| Ankündigung mit Preset | **Post**, wenn das Preset einen `discord`-Text hat; dasselbe Preset höchstens einmal pro `cooldown` |
-| eigener Text | nur mit `-d`: `/mradmin announce -d Heute Abend Event!` |
+| Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
+| Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
+| In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
 
-- Zeiten sind Discord-Zeitstempel. Jeder sieht sie in seiner eigenen Zeitzone, dazu „in 2 Stunden“.
-- `-q` schickt ein Preset nicht nach Discord: `/mradmin announce -q restart 5 Minuten`.
-- Ist Uptime Kuma kurz nicht erreichbar, bleibt der Discord-Post unverändert. Es gibt also kein „abgesagt“
-  und danach wieder „geplant“.
-- Test: `/mradmin discord test announce`. Status: `/mradmin discord`.
+Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integrations` (z.B. `mrsleep: false`). Die Konsole zeigt beim Start, welche Plugins verbunden sind. Für Entwickler: [docs/MODULE-API.md](docs/MODULE-API.md).
 
----
-
-## Admin-Dashboard
-`/mradmin` (oder Rechtsklick mit dem Admin-Kompass) öffnet das Dashboard. Die Befehlsliste gibt es mit `/mradmin help`.
-```
-■ ■ ■ ■ [Du] ■ ■ ■ ■                                Kopf: Admin-Modus, Staff-Chat, Welt
-■ [Spieler] ■ [Server] ■ [Wartung] ■ [Tickets] ■     Live-Kacheln, Klick öffnet
-□ □ ▬ □ ▬ □ ▬ □ ▬ □                                  Statusleiste: grün / gelb / rot
-■ ■ [Ankündigen] ■ [MRsleep] ■ [MRchunks] ■ ■        Werkzeuge und Plugins
-■ ■ [Admin-Modus] ■ [Schließen] ■ [Staff-Chat] ■ ■   Schalter
-```
-- **Statusleiste:** Unter jeder Kachel zeigt eine Scheibe den Zustand, z.B. TPS (grün ab 19,5, gelb ab 15), Wartung
-  (gelb = geplant/Countdown, rot = aktiv), Tickets (gelb = offen, rot = warten auf Antwort) und eingefrorene Spieler (gelb).
-- **Ankündigen:** alle Presets als Buttons. Braucht ein Preset Werte (z.B. `restart`), fragt ein Dialog danach.
-  Rechtsklick kündigt ohne Discord an. „Eigener Text“ öffnet einen Dialog für Titel, Untertitel und optional Discord.
-- **Plugin-Buttons:** öffnen die Admin-Menüs anderer Plugins, mit Live-Infos, wenn das Plugin sie anbietet.
-  MRsleep und MRchunks kommen automatisch, sobald sie installiert sind und du deren Permission hast (siehe
-  [Zusammenarbeit](#zusammenarbeit-mit-mrsleep-und-mrchunks)). Eigene Buttons gehen über `admin-mode.menu.buttons`
-  in der Config, z.B. für Chunky.
-- **Schalter:** Admin-Modus an/aus und Staff-Chat an/aus.
-- Alle Reihen sind symmetrisch zur Mitte. Fehlt eine Permission, rücken die übrigen Buttons zusammen.
-
-## Admin-Modus
-- `/mradmin mode on` oder der Schalter im Dashboard: Inventar (inkl. Rüstung und Zweithand), ausgewählter Slot, XP,
-  Leben, Absorption, Hunger, Sättigung, Effekte, Feuer, Luft, Flugstatus und Position werden gespeichert. Danach
-  kommst du in den Creative-Modus und bekommst nur den **Admin-Kompass**. Rechtsklick öffnet das Dashboard.
-- `/mradmin mode off`: alles wird exakt wiederhergestellt, und du landest wieder am Ausgangspunkt.
-- Der Stand wird **vor** jeder Änderung in `plugins/MRadmin/admin-mode/<uuid>.yml` geschrieben. Bei einem Absturz
-  oder Neustart bist du danach einfach noch im Admin-Modus, es geht nichts verloren.
-- Im Admin-Modus kann man nichts fallen lassen oder aufheben (`prevent-drop`, `prevent-pickup`), damit keine
-  Creative-Items ins Survival gelangen. Beim Tod bleibt alles erhalten.
-- `end-on-quit: true` beendet den Admin-Modus beim Verlassen des Servers. Standardmäßig bleibt er aktiv.
-- `/mradmin mode list` zeigt, wer gerade im Admin-Modus ist. `/mradmin mode off <spieler>` beendet ihn für andere.
-
----
-
-## Spieler-Menü, Serverzustand, Tickets, Staff-Chat
-
-### Spieler-Menü
-Über Kompass → **Spieler teleportieren** → Klick auf einen Kopf (Shift-Klick teleportiert direkt) oder
-`/mradmin player <spieler>`:
-- **Infos:** Welt und Position, Spielmodus, Leben, Hunger, Level, Ping, Spielzeit, erster Join, eingefroren bzw. im Admin-Modus
-- **Hinteleportieren**, **zu mir holen**
-- **Inventar** (mit Rüstung und Zweithand) und **Enderchest** ansehen, live und **nur lesend**. Im Admin-Modus ist
-  dein Inventar nur geliehen, herausgenommene Items wären beim Beenden weg.
-- **Einfrieren / Auftauen:** Der Spieler kann sich nicht bewegen, bauen, kämpfen oder etwas benutzen und kann auch
-  keinen Schaden nehmen. Umschauen geht weiter. Ausloggen hilft nicht: Er bleibt eingefroren, und das Team bekommt
-  einen Hinweis.
-- **Reports** über diesen Spieler
-- **MRsleep / MRchunks:** die Infos des Spielers aus dem jeweiligen Plugin, ein Klick öffnet dessen Spieler-Menü.
-  „Zurück“ führt wieder zu MRadmin. Dafür braucht es die MRsleep- bzw. MRchunks-Version mit MRadmin-Anbindung;
-  ältere Versionen funktionieren weiter, nur ohne diese Infos.
-
-### Serverzustand
-Dashboard → **Server** oder `/mradmin status`: TPS (1, 5 und 15 min), MSPT, RAM, pro Welt geladene Chunks,
-Entities und Spieler. Darunter stehen:
-- mit **MRchunks** (ab der Version mit Lag-Schutz): die **auffälligen und gesperrten Chunkloader** samt Messwerten.
-  Ein Klick öffnet das Menü des Loaders mit Teleport und „Lag-Sperre aufheben“, „Zurück“ führt wieder hierher.
-- ohne MRchunks: die **21 Chunks mit den meisten Entities** (Lag-Quellen) samt häufigster Typen. Ein Klick
-  teleportiert zum Chunk.
-
-### Tickets & Reports
-- `/report` (auch `/ticket`, `/support`) öffnet für alle Spieler das **Ticket-Menü**: **Ticket erstellen**, darunter
-  die offenen Tickets (neue Antworten leuchten) und das **Archiv** mit den geschlossenen.
-- **Ticket erstellen:** erst die Kategorie wählen (ein Knopf pro Kategorie), dann das **Formular** (Minecraft-Dialog).
-  Bei Spieler-Reports wird vorher der Spieler gewählt (Köpfe der Online-Spieler oder Name eingeben, auch offline),
-  sonst gibt es Titel und Beschreibung. Der Standort wird mitgespeichert. `/report <spieler> [text]` springt direkt
-  zur Auswahl des Grundes.
-- **Kategorien** legst du in der Config unter `tickets.categories` an: Name, `player: true` für Spieler-Reports,
-  optional eine Permission. Standard: Cheating, Chat, Griefing, Betrug (Spieler-Reports), Bug, Frage/Sonstiges.
-- Im **Ticket** stehen oben die Details, darunter der Verlauf wie in einem Chat (Kopf, Name, Uhrzeit, Text) und ein
-  Antwortfeld. Wer gerade nicht online ist, erfährt beim nächsten Join von neuen Antworten. Klickbare
-  **[Öffnen]**-Links im Chat öffnen das Ticket direkt (`/report #<id>`).
-- Das Team bekommt neue Tickets mit **[Öffnen] [Teleport] [Alle Tickets]**, beim Join die Zahl offener Tickets.
-  Dashboard → **Tickets** oder `/mradmin tickets`: Filter nach Kategorie und offen/geschlossen, Linksklick öffnet das
-  Ticket, Rechtsklick teleportiert. Im Ticket: antworten, **übernehmen**/freigeben, teleportieren, schließen,
-  wieder öffnen. Wer zuerst antwortet, übernimmt das Ticket automatisch (abschaltbar).
-- Config `tickets`: Cooldowns, Höchstzahl offener Tickets, Textlängen, Kategorien, Symbol, Team-Namen anzeigen oder
-  nur „Team“, Ton. Discord-Events `ticket`, `ticket-message` (aus), `ticket-closed`, `ticket-reopened`.
-- Bestehende Reports aus `reports.yml` werden beim ersten Start automatisch zu Tickets (Backup
-  `reports.migrated.yml`).
-- **Mit MRchunks:** Wird ein Chunkloader wegen Lag gesperrt, öffnet MRadmin automatisch ein Ticket für den Owner
-  (Kategorie „Chunkloader-Sperre“) mit allen Details der Sperre: Messwerte, Grenzen, Ort, Zeit, Server-TPS. Der
-  Owner bekommt einen Link im Chat (offline beim nächsten Join) und kann im Ticket erklären, was passiert ist.
-  **Schließen kann es nur das Team.** Im Ticket öffnet
-  **Chunkloader-Menü** das Menü des Loaders (Teleport, an/aus, Grenze, Lag-Sperre aufheben). Wird der Loader erneut gesperrt oder entsperrt, auch außerhalb
-  des Tickets, steht das im selben Ticket. Abschaltbar mit `tickets.chunkloader-locks: false`.
-
-### Entbannungsanträge & Kontaktformular (Weboberfläche)
-Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`web.requests` in der Config).
-
-- **Entbannung** (`<public-url>/entbannung`, braucht LibertyBans): Wer gebannt ist und joinen will, sieht in der
-  Ban-Meldung die Adresse und einen **persönlichen Code** (z. B. `1-K7F2QX`). Nur mit Name und Code sieht man den
-  Bangrund und kann einen Antrag stellen, so kann niemand für andere Anträge stellen. Der Code wird nicht gespeichert,
-  sondern aus Spieler, Ban und einem Server-Geheimnis berechnet.
-  - **Ein Antrag pro Ban.** Im Ticket stehen die Stellungnahme und die Ban-Details. Das Team antwortet wie gewohnt
-    und entscheidet mit **Entbannen** (hebt den Ban in LibertyBans auf, braucht `libertybans.ban.undo.target.uuid`)
-    oder **Ablehnen**. Ein normales Schließen zählt als Ablehnung.
-  - Nach einer Ablehnung ist **einmal Einspruch** möglich, dann öffnet sich das Ticket wieder. Danach ist die
-    Entscheidung endgültig.
-  - Entbannungsanträge sind auch **ingame** im Ticket-Menü sichtbar.
-- **Kontakt** (`<public-url>/kontakt`, verlinkt unter dem Impressum und in der Fußzeile): Name, Mail-Adresse, Betreff,
-  Nachricht. Diese Anfragen gibt es **nur im Web**, ingame tauchen sie nie auf.
-- Nach dem Absenden bekommt man einen **privaten Statuslink** (`/anfrage/...`): Stand, Verlauf, antworten,
-  Einspruch.
-- **Mails** (optional, Abschnitt `mail`): Eingangsbestätigung mit Statuslink, Antworten des Teams und die
-  Entscheidung. Testen mit `/mradmin mail test <adresse>`. Ohne Mailversand sieht man Antworten über den Statuslink,
-  und bei Kontaktanfragen öffnet ein Knopf im Ticket das eigene Mailprogramm.
-- **Spamschutz ohne externe Dienste:** unsichtbares Lockfeld, Mindest-Ausfüllzeit, eine kleine Rechenaufgabe im
-  Browser (Proof of Work, ca. 1 s), Limits pro IP und Minute/Stunde, Obergrenze offener Kontaktanfragen.
-
-### Staff-Chat
-`/sc <nachricht>` schreibt an alle mit `mradmin.staffchat`, auch von der Konsole. `/sc` ohne Text schaltet um:
-Dann geht dein normaler Chat ans Team. Das Spiegeln in den Admin-Discord ist optional (Event `staff-chat`, aus).
+**LibertyBans:** Ist es installiert, zeigt MRadmin Strafen im Spieler-Menü und im Web und ermöglicht Entbannungsanträge über die Weboberfläche.
 
 ---
 
 ## Permissions
-Jede Funktion hat eine eigene Permission, und sie gilt **ingame und in der Weboberfläche gleich**. Wer ingame Tickets
-nur ansehen darf, darf das im Web auch nur. Menüs und Web zeigen nur, was man darf.
+Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Pakete**:
 
-**Pakete** zum einfachen Vergeben:
-
-| Paket | enthält |
+| Paket | Enthält |
 |---|---|
-| `mradmin.support` | Dashboard, Tickets (ansehen, antworten, übernehmen, schließen, wieder öffnen, Hinweise), Spieler ansehen, Staff-Chat, Weboberfläche |
-| `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen/joinen/Hinweise, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand und Health |
-| `mradmin.admin` | alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Protokoll und -Konten, Reload, Speicher, Discord, Update-Hinweis |
+| `mradmin.support` | Dashboard, Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche |
+| `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen und joinen, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand |
+| `mradmin.admin` | Alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten, Reload, Speicher, Discord, Update-Hinweis |
 
-**Einzelne Permissions** (Standard `op`, außer anders angegeben):
+<details>
+<summary>Alle einzelnen Permissions</summary>
+
+Standard ist `op`, außer anders angegeben.
 
 | Bereich | Permissions |
 |---|---|
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
 | Tickets | `mradmin.tickets.create` (**alle**, `/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
-| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` (enthält `mradmin.dashboard`) · `mradmin.mode.others` · `mradmin.staffchat` |
+| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
-| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (beide **nicht** in Paketen, Standard: niemand) |
+| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole in **keinem** Paket, Standard: niemand) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
 
-Die Permissions von MRchunks und MRsleep (z.B. `mrchunks.admin.manage`) gelten im Web ebenso für deren Bereiche.
+Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
+</details>
 
-Beispiel LuckPerms:
-```
-/lp group supporter permission set mradmin.support true
-/lp group staff permission set mradmin.staff true
-/lp group admin permission set mradmin.admin true
-/lp user <name> permission set mradmin.web.console.execute true   # Konsole im Web nur gezielt
-```
+> [!TIP]
+> Die Web-Konsole gibst du nur gezielt frei: `/lp user <name> permission set mradmin.web.console.execute true`
+
+## Konfiguration
+Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst du mit `/mradmin reload`.
+
+| Abschnitt | Wofür |
+|---|---|
+| `features` · `integrations` | Funktionen und Plugin-Verbindungen an/aus |
+| `maintenance` · `uptime-kuma` | Ablauf der Wartung, Anbindung an Uptime Kuma |
+| `announce` · `discord-announce` | Ankündigungen im Spiel und im Community-Discord |
+| `admin-mode` · `gui` | Admin-Modus, Kompass, eigene Dashboard-Knöpfe |
+| `tickets` | Kategorien, Cooldowns, Limits, wie lange geschlossene Tickets bleiben |
+| `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
+| `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
+| `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
+| `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
+
+**Sprache:** `language: de` oder `en`. Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
+
+### Speicher: YAML, SQLite oder MySQL
+| `storage.type` | Wo | Wofür |
+|---|---|---|
+| `yaml` (Standard) | Dateien im Plugin-Ordner | kleine Server |
+| `sqlite` | `plugins/MRadmin/mradmin.db` | viele Tickets, die Weboberfläche |
+| `mysql` | MySQL oder MariaDB | mehrere Server mit gemeinsamen Tickets |
+
+Umstellen: `type` ändern und den Server neu starten - die bisherigen Daten werden übernommen. Die Datenbank-Treiber lädt Paper beim ersten Start selbst herunter.
+
+### Discord
+Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integrationen → Webhooks*), unter `discord` aktivieren und die URL eintragen. Welche Ereignisse gesendet werden (Tickets, Wartung, Admin-Modus, Web-Anmeldungen …), stellst du unter `discord.events` ein. Test: `/mradmin discord test`.
 
 ---
 
-## Dateien
-| Datei | Inhalt |
-|---|---|
-| `config.yml` | alle Einstellungen (wird bei Updates automatisch migriert, Backup `config.v<N>.backup.yml`) |
-| `lang/de.yml`, `lang/en.yml` | alle Texte, Presets, Discord-Texte |
-| `maintenance.yml` | Zustand der Wartung (manuelle Wartung, letzter Stand aus Kuma), wird vom Plugin verwaltet |
-| `discord-announce.yml` | welche Wartung zuletzt im Community-Discord gepostet wurde (für Bearbeitungen), wird vom Plugin verwaltet |
-| `tickets.yml` | Tickets mit Verlauf (geschlossene werden nach `tickets.keep-closed` gelöscht) |
-| `frozen.yml` | eingefrorene Spieler |
-| `admin-mode/<uuid>.yml` | gespeicherter Stand von Spielern im Admin-Modus, **nicht löschen**, solange sie im Admin-Modus sind |
-| `mradmin.db` (+ `-wal`, `-shm`) | nur mit `storage.type: sqlite`: statt `tickets.yml`, `maintenance.yml`, `frozen.yml`, `discord-announce.yml` |
+## Häufige Fragen
+**Ein Teammitglied wird bei der Wartung trotzdem gekickt.**
+Es braucht `mradmin.maintenance.bypass` (in `mradmin.staff` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.
 
-## Bauen
-```
-./gradlew build      # JAR in build/libs/, inkl. Unit-Tests
-```
-Der Build baut auch die Weboberfläche (`web/`, Svelte). Node lädt Gradle dafür selbst herunter. Zum Entwickeln
-der Oberfläche: in `web/` `npm run dev` (leitet `/api` an ein laufendes MRadmin auf Port 8125 weiter).
-Versionen & Releases: [docs/RELEASES.md](docs/RELEASES.md). Lizenz: [LICENSE](LICENSE) (Nutzung und Änderung
-erlaubt, Weiterveröffentlichung nicht).
+**Ich war im Admin-Modus, und der Server ist abgestürzt.**
+Nichts verloren - du bist nach dem Neustart einfach noch im Admin-Modus. `/mradmin mode off` stellt alles wieder her. Die Dateien in `plugins/MRadmin/admin-mode/` bitte nicht löschen.
+
+**Wo sehe ich, welche Plugins verbunden sind?**
+In der Konsole beim Start. Ist ein Plugin zu alt für die Verbindung, steht dort eine Warnung - dann alle MRtechnology-Plugins zusammen aktualisieren.
+
+**Ich habe einen Fehler gefunden oder einen Wunsch.**
+Gern über das **[Formular auf der Website](https://mrtechnology.marcelr.at/report/mradmin/)** - am besten mit der Ausgabe von `/mradmin version`.
+
+---
+
+## Lizenz
+MRadmin steht unter der **[MRtechnology Lizenz](LICENSE)** (source-available, nicht Open Source). Kurz gesagt:
+
+| ✅ Erlaubt | ❌ Nicht erlaubt |
+|---|---|
+| Nutzen - privat und gewerblich, auch auf Servern mit Spenden, Rängen oder Shops | Weiterveröffentlichen (auch verändert), z.B. auf Modrinth, Spigot, in Modpacks |
+| Verändern und neu kompilieren | Verkaufen oder gegen Geld anbieten |
+| An dein Team oder deinen Hoster weitergeben | Als eigenes Werk ausgeben, Lizenzhinweis entfernen |
+| Verbesserungen per Pull Request einreichen | |
+
+Die Nutzung erfolgt auf eigenes Risiko - leg vor Updates eine Sicherung an. Maßgeblich ist der vollständige Text in [LICENSE](LICENSE).
+
+## Für Entwickler
+Selbst bauen mit Java 25: `gradlew build` → `build/libs/` (inkl. Unit-Tests und der Weboberfläche aus `web/`, Node lädt Gradle selbst). Zum Entwickeln der Oberfläche in `web/` `npm run dev` (leitet `/api` an ein laufendes MRadmin auf Port 8125 weiter). Modul-API für andere Plugins: [docs/MODULE-API.md](docs/MODULE-API.md), Branches und Releases: [docs/RELEASES.md](docs/RELEASES.md).
