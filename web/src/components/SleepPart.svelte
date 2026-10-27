@@ -60,7 +60,14 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile icon="🛏" title={t('sleep.title')} {chips} loading={!p} {error} {onOpen} />
+  {@const state = !p ? null : p.ban ? ['banned', 'bad'] : p.blocking.length ? ['blocked', 'warn'] : p.sleeping ? ['sleeping', 'good'] : ['ok', 'good']}
+  <PartTile label={t('nav.sleep')} loading={!p} {error} {onOpen} small
+    value={state ? t('sleep.tile.' + state[0]) : ''} tone={state?.[1]}
+    facts={p ? [
+      { label: t('sleep.section.cooldown'), value: p.cooldown ? duration(p.cooldown) : '–' },
+      { label: t('sleep.tile.bypass'), value: p.bypass ? duration(p.bypass) : '–', tone: p.bypass ? 'info' : '' },
+      { label: t('player.banFact'), value: !p.ban ? '–' : p.ban.permanent ? t('sleep.permanent') : dateTime(p.ban.until), tone: p.ban ? 'bad' : '' },
+    ] : []} />
 {:else}
 <section class="card part">
   <div class="phead">

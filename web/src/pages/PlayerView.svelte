@@ -172,9 +172,13 @@
       <div class="tiles">
         {#each sections as id (id)}
           {#if id === 'tickets'}
-            <PartTile icon="🎫" title={t('player.tickets')} onOpen={() => open('tickets')}
-              value={openTickets ? t('player.ticketsOpen', { n: openTickets }) : t('player.ticketsNoneOpen')}
-              sub={t('player.ticketsTotal', { n: player.tickets.length })} />
+            <PartTile label={t('player.tickets')} onOpen={() => open('tickets')}
+              value={String(openTickets)} unit={t('player.ticketsUnit')} tone={openTickets ? 'warn' : 'good'}
+              facts={[
+                { label: t('player.total'), value: String(player.tickets.length) },
+                { label: t('player.role.creator'), value: String(player.tickets.filter((tk) => tk.role === 'creator').length) },
+                { label: t('player.role.target'), value: String(player.tickets.filter((tk) => tk.role === 'target').length) },
+              ]} />
           {:else}
             {@const Part = PARTS[id]}
             <Part {uuid} {me} name={player.name} onDone={done} view="tile" onOpen={() => open(id)} />
@@ -195,10 +199,11 @@
     padding: 4px 0;
   }
 
+  /* Like the home page: the tiles' four rows are subgrid rows, so a row of tiles lines up. */
   .tiles {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   }
 
   /* In a section: who it is about, small above the section. */

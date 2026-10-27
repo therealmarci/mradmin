@@ -73,8 +73,15 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile icon="⚖" title={t('lb.title')} loading={!data} {error} {onOpen} {chips}
-    sub={data ? t('lb.tileHistory', { n: data.entries.length }) : ''} />
+  {@const until = (type) => { const e = active.find((x) => x.type === type); return !e ? '–' : e.end ? dateTime(e.end) : t('sleep.permanent'); }}
+  <PartTile label={t('lb.tileLabel')} loading={!data} {error} {onOpen}
+    value={!data ? '' : active.length ? String(active.length) : t('lb.tileNone')} small={data && !active.length}
+    unit={data && active.length ? t('lb.tileActiveUnit') : ''} tone={data ? (active.length ? 'bad' : 'good') : ''}
+    facts={data ? [
+      { label: t('lb.type.ban'), value: until('ban'), tone: active.some((e) => e.type === 'ban') ? 'bad' : '' },
+      { label: t('lb.type.mute'), value: until('mute'), tone: active.some((e) => e.type === 'mute') ? 'warn' : '' },
+      { label: t('lb.history'), value: String(data.entries.length) },
+    ] : []} />
 {:else}
 <section class="card part">
   <div class="phead">

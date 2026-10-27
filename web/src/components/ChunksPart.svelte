@@ -67,15 +67,17 @@
   ] : []);
   const chips = $derived(c ? [
     ...(c.exempt ? [{ text: t('chunks.exempt'), tone: '' }] : []),
-    ...(c.ban ? [{ text: '✕ ' + (c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })), tone: 'bad' }] : []),
-    ...(c.shared.length ? [{ text: t('chunks.tileShared', { n: c.shared.length }), tone: 'info' }] : []),
-  ] : []);
+    ...(c.ban ? [{ text: '✕ ' + (c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })), tone: 'bad' }] : []),  ] : []);
 </script>
 
 {#if view === 'tile'}
-  <PartTile icon="🧱" title={t('nav.chunks')} loading={!c} {error} {onOpen} {chips}
-    value={c ? t('chunks.tileLoaders', { n: c.loaders.length, max: limitText(c.limit) }) : ''}
-    sub={c ? t('chunks.tileActive', { n: c.active }) : ''} />
+  <PartTile label={t('nav.chunks')} loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
+    value={c ? String(c.loaders.length) : ''} unit={c ? t('chunks.tileUnit', { max: limitText(c.limit) }) : ''}
+    facts={c ? [
+      { label: t('chunks.tileActive'), value: c.active + ' / ' + limitText(c.activeLimit) },
+      { label: t('chunks.tileInvited'), value: String(c.shared.length) },
+      { label: t('player.banFact'), value: !c.ban ? (c.exempt ? t('chunks.exempt') : '–') : c.ban.permanent ? t('sleep.permanent') : dateTime(c.ban.until), tone: c.ban ? 'bad' : '' },
+    ] : []} />
 {:else}
 <section class="card part">
   <div class="phead">
@@ -262,12 +264,6 @@
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 14%, transparent);
   }
-
-  .tag.info {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-  }
-
   .limits {
     display: grid;
     gap: 10px;

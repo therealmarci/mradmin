@@ -77,9 +77,14 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile icon="⚔" title={t('pvp.partTitle')} loading={!p} {error} {onOpen} {chips}
-    value={p ? t('pvp.tileGames', { n: p.stats.games }) : ''}
-    sub={p && p.stats.games ? t('pvp.tileWins', { n: p.stats.wins, rate: p.stats.winRate.toFixed(0) }) : ''} />
+  <PartTile label={t('nav.pvp')} loading={!p} {error} {onOpen} tone={p?.ban ? 'bad' : p?.game ? 'info' : ''}
+    value={p ? String(p.stats.games) : ''} unit={t('pvp.tileUnit')}
+    facts={p ? [
+      ...(p.game ? [{ label: t('pvp.tileLive'), value: '#' + p.game, tone: 'info' }] : []),
+      { label: t('pvp.wins'), value: String(p.stats.wins) },
+      { label: t('pvp.winRate'), value: p.stats.games ? p.stats.winRate.toFixed(0) + ' %' : '–' },
+      { label: t('player.banFact'), value: !p.ban ? '–' : p.ban.permanent ? t('sleep.permanent') : dateTime(p.ban.until), tone: p.ban ? 'bad' : '' },
+    ] : []} />
 {:else}
 <section class="card part">
   <div class="phead">
