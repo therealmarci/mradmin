@@ -173,6 +173,8 @@ MRadmin vom Handy, Tablet oder PC bedienen: Übersicht mit Live-Werten, Tickets,
 
 Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per Passkey (Fingerabdruck, Face ID, Windows Hello) oder Discord. Alle Funktionen, Sicherheitsdetails, die Web-Konsole, Entbannungsanträge und das Kontaktformular: **[Weboberfläche im Detail](docs/WEBOBERFLAECHE.md)**.
 
+**Items wie im Spiel:** Inventare und Kits zeigt die Weboberfläche mit den echten Item-Bildern und -Namen samt Tooltip. Dafür lädt MRadmin beim ersten Start **einmal** den offiziellen Spiel-Client von Mojang (rund 40 MB) und speichert daraus nur die fertigen Bilder unter `plugins/MRadmin/items/`. Abschalten mit `web.item-icons: false` - dann stehen Kürzel statt Bildern da.
+
 ### Versionen & Updates
 In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Versionen bzw. `/<plugin> version`.
@@ -310,6 +312,9 @@ Es braucht `mradmin.maintenance.bypass` (in `mradmin.staff` enthalten). Ohne Luc
 
 **Ich war im Admin-Modus, und der Server ist abgestürzt.**
 Nichts verloren - du bist nach dem Neustart einfach noch im Admin-Modus. `/mradmin mode off` stellt alles wieder her. Die Dateien in `plugins/MRadmin/admin-mode/` bitte nicht löschen.
+
+**In der Weboberfläche stehen bei Items nur Kürzel statt Bildern.**
+MRadmin konnte die Bilder nicht von Mojang laden (die Konsole sagt beim Start, warum - meist kein Internet am Server) oder `web.item-icons` steht auf `false`. Nach dem Beheben `/mradmin reload` - geladen wird nur einmal pro Minecraft-Version.
 
 **Wo sehe ich, welche Plugins verbunden sind?**
 In der Konsole beim Start. Ist ein Plugin zu alt für die Verbindung, steht dort eine Warnung - dann alle MRtechnology-Plugins zusammen aktualisieren.

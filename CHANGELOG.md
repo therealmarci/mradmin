@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Items wie im Spiel in der Weboberfläche:** Inventare (z.B. bei Duellen) zeigen die echten Item-Bilder aus dem Inventar, Anzahl, Haltbarkeit, Verzauberungs-Glanz und beim Darüberfahren bzw. Antippen den Tooltip wie im Spiel (Name, Verzauberungen, Trank-Effekte, Beschreibung) - in der Sprache des Browsers. Dafür lädt MRadmin beim ersten Start mit eingeschalteter Weboberfläche **einmal** den offiziellen Spiel-Client deiner Minecraft-Version von Mojang (rund 40 MB, mit Prüfsumme geprüft) und speichert nur die fertigen Bilder und Item-Namen unter `plugins/MRadmin/items/<version>/`. Neuer Config-Schlüssel `web.item-icons` (Standard `true`, `false` = kein Download, dann Kürzel statt Bildern; config-version 22).
+- **Item-Editor:** Ein Dialog zum Bearbeiten eines Items - Item mit Bild suchen, Anzahl, eigener Name und Beschreibung (MiniMessage, nur Farben und Stil), Verzauberungen (auch über die normale Stufe hinaus), Glanz, unzerstörbar, Haltbarkeit, Trank mit eigenen Effekten, Lederfarbe, Rüstungsbesatz, Raketen-Flugdauer, mit Live-Vorschau. Benutzt wird er z.B. vom kommenden Kit-Editor in MRpvp.
+- **Modul-API 2 (`api-1.1.0`):** `MRadminService.items()` wandelt Items in Daten für die Weboberfläche und zurück (`WebItems`), damit andere Plugins Inventare und Items mit Bildern zeigen und bearbeiten lassen können. Plugins für API 1 laufen unverändert weiter.
+
 ## [0.7.0] - 2026-10-27
 
 ### Neu

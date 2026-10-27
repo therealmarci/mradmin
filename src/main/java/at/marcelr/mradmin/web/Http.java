@@ -187,6 +187,43 @@ public final class Http {
         return body;
     }
 
+    /**
+     * The whole body as plain Java values - like {@link #bodyValues()}, but objects and lists too (as Map / List,
+     * e.g. an item from the item editor). Whole numbers become Long, others Double.
+     */
+    public Map<String, Object> bodyTree() throws IOException {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> tree = (Map<String, Object>) plain(body());
+        return tree;
+    }
+
+    private static Object plain(JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (element.isJsonObject()) {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            for (Map.Entry<String, JsonElement> e : element.getAsJsonObject().entrySet()) {
+                map.put(e.getKey(), plain(e.getValue()));
+            }
+            return map;
+        }
+        if (element.isJsonArray()) {
+            java.util.List<Object> list = new java.util.ArrayList<>();
+            element.getAsJsonArray().forEach(e -> list.add(plain(e)));
+            return list;
+        }
+        var primitive = element.getAsJsonPrimitive();
+        if (primitive.isBoolean()) {
+            return primitive.getAsBoolean();
+        }
+        if (primitive.isNumber()) {
+            double number = primitive.getAsDouble();
+            return number == Math.rint(number) && Math.abs(number) < 9.0E15 ? (Object) (long) number : number;
+        }
+        return primitive.getAsString();
+    }
+
     /** A string field of the body, null if missing. */
     public String string(String field) throws IOException {
         JsonElement value = body().get(field);

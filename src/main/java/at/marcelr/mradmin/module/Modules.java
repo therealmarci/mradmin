@@ -6,6 +6,7 @@ import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.api.AdminModule;
 import at.marcelr.mradmin.api.HealthEntry;
 import at.marcelr.mradmin.api.MRadminService;
+import at.marcelr.mradmin.api.WebItems;
 import at.marcelr.mradmin.api.Report;
 import at.marcelr.mradmin.api.WebModule;
 import at.marcelr.mradmin.hook.Integration;
@@ -39,6 +40,7 @@ public final class Modules implements MRadminService {
     private final MRAdmin plugin;
     /** Registered modules by id. */
     private final Map<String, AdminModule> registered = new ConcurrentHashMap<>();
+    private final WebItems items = new at.marcelr.mradmin.items.ItemCodec();
 
     public Modules(MRAdmin plugin) {
         this.plugin = plugin;
@@ -59,6 +61,11 @@ public final class Modules implements MRadminService {
     @Override
     public int apiVersion() {
         return API_VERSION;
+    }
+
+    @Override
+    public WebItems items() {
+        return items;
     }
 
     @Override

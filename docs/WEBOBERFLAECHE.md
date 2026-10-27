@@ -131,6 +131,24 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   Auffälligkeiten der letzten 24 Stunden. Alles zu einem einzelnen Spieler (Statistik, Runden, Sperre) steht auf
   seiner Seite unter **Spieler**.
 
+## Items: Bilder, Namen und Editor
+Überall, wo die Weboberfläche Gegenstände zeigt (Inventare bei Duellen, Kits), sehen sie aus wie im Spiel: das Bild
+aus dem Inventar, Anzahl, Haltbarkeitsbalken, Verzauberungs-Glanz und beim Darüberfahren (am Handy: Antippen) der
+Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprache des Browsers.
+
+- **Woher die Bilder kommen:** MRadmin lädt beim ersten Start mit eingeschalteter Weboberfläche **einmal** den
+  offiziellen Spiel-Client deiner Minecraft-Version von Mojang (rund 40 MB, mit Prüfsumme kontrolliert), zeichnet daraus
+  alle Items und speichert nur das fertige Bild (rund 1,3 MB) und die Item-Namen unter `plugins/MRadmin/items/<version>/`.
+  Der Client selbst wird nicht gespeichert. In der Plugin-JAR steckt nichts davon - Mojang erlaubt das Weitergeben nicht.
+- **Neue Minecraft-Version:** Die Bilder werden für die neue Version einmal neu geladen, neue Items sind dann dabei.
+- **Ohne Internet oder mit `web.item-icons: false`:** Items zeigen ein Kürzel statt eines Bildes, alles andere geht.
+- **Item-Editor** (z.B. im Kit-Editor von MRpvp): Item suchen (Name oder ID, mit Bild), Anzahl, eigener Name und
+  Beschreibung (MiniMessage: Farben und Stil wie `<red>`, `<#ff8800>`, `<b>`, `<gradient:red:gold>`),
+  Verzauberungen (passende zuerst, auf Wunsch alle, Stufe 1-255, Hinweis bei Kombinationen, die es im Spiel nicht
+  gibt), Glanz an/aus, unzerstörbar, Haltbarkeit, Trank (Grund-Trank, Farbe, eigene Effekte mit Stufe und Dauer),
+  Farbe bei Lederrüstung, Rüstungsbesatz und Flugdauer bei Raketen. Rechts steht live der Tooltip. Beim Übernehmen
+  baut MRadmin das echte Item und prüft alle Werte; was der Editor nicht anzeigt, bleibt am Item erhalten.
+
 ## Wartung & Ankündigungen
 `mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
 

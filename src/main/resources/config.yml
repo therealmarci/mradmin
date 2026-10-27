@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 21
+config-version: 22
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -600,6 +600,11 @@ web:
       enabled: false
       client-id: ""
       client-secret: ""
+  # Item pictures (inventories, kit editor): MRadmin fetches the textures and item names of your Minecraft version once
+  # from Mojang (the official game client, about 40 MB, checked with its checksum) and keeps only the finished pictures
+  # under plugins/MRadmin/items/. Nothing of it is in the plugin itself - Mojang does not allow passing it on.
+  # false = no download; items then show short labels instead of pictures.
+  item-icons: true
   # Only WITHOUT LuckPerms: which permissions web users have. With LuckPerms the normal permissions simply apply.
   # Operators may do everything; otherwise role -> permissions ("*" = everything, "mradmin.*" = everything of MRadmin) and
   # player (name or UUID) -> role. Example:

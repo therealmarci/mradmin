@@ -81,7 +81,7 @@ public record Settings(
                               int sessionDays, boolean passkeys, boolean password,
                               java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
                               String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp,
-                              String pushContact) {
+                              String pushContact, boolean itemIcons) {
 
         /** Cookies only over HTTPS when the public address is HTTPS (plain http is only for local tests). */
         public boolean secure() {
@@ -426,7 +426,8 @@ public record Settings(
                 c.getString("web.legal.privacy-url", "").trim(),
                 duration(c, "web.privacy.audit-retention", 90 * 86_400_000L, log),
                 c.getBoolean("web.privacy.mask-ip", false),
-                c.getString("web.push.contact", "").trim());
+                c.getString("web.push.contact", "").trim(),
+                c.getBoolean("web.item-icons", true));
     }
 
     private static StorageSettings storage(FileConfiguration c, Logger log) {
