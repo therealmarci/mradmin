@@ -36,9 +36,9 @@ Spieler ──► Proxy (Velocity, öffentlicher Port)
 | Normaler Join | Velocity → main. |
 | Neustart (Neustart-Knopf, `/mra announce restart`, Konsole `stop`, Start-Skript) | Countdown wie bisher. Am Ende fängt MRadmin auf main den Stopp ab: Spieler im normalen Spiel → Lobby, Admin-Modus → getrennt mit Hinweis. Erst wenn main leer ist (höchstens 10 s), fährt der Server herunter. |
 | Wartung beginnt | Statt Kick: alle außerhalb des Admin-Modus → Lobby. |
-| Join während Wartung | main lehnt ab (außer Bypass + Admin-Modus oder Wechsel-Eintrag aus der Lobby), Velocity versucht den nächsten Server → Lobby. |
+| Join während Wartung | main lehnt ab (außer Bypass + Admin-Modus oder Wechsel-Eintrag aus der Lobby), Velocity versucht den nächsten Server → Lobby (getestet: der Spieler sieht den Ablehnungsgrund von main als Meldung und steht in der Lobby). |
 | Join, während main aus ist | Velocity erreicht main nicht → Lobby. |
-| Absturz / main-Rechner weg | Velocity schickt die Spieler bei Verbindungsabbruch in die Lobby (`failover-on-unexpected-server-disconnect`, `try`-Liste). Ob das auch beim „Server closed“-Kick eines abstürzenden Servers greift, wird im Testaufbau geprüft - sonst ein fertiges Fallback-Plugin auf dem Proxy. |
+| Absturz / main-Rechner weg | Velocity schickt die Spieler von selbst in die Lobby (`try`-Liste) - **getestet 2026-10-27 mit Velocity 4.3.1:** „Server closed“-Kick beim Stopp, harter Prozess-Abbruch und Kick im Spiel landen alle in der Lobby. Kein Fallback-Plugin nötig. |
 | In der Lobby | Bossbar mit dem Grund: „Server startet neu“, „Wartung: <Thema> bis 18:00“, „Server nicht erreichbar“. Pro Spieler in seiner Sprache. |
 | main wieder offen | Lobby holt alle gestaffelt zurück (Standard 5 pro Sekunde), sobald main „bereit“ meldet und keine Wartung läuft. Wer gerade ein Lobby-Duell spielt, kommt nach der Runde. |
 | `/mra mode` in der Lobby | Lobby legt in der Datenbank einen Wechsel-Eintrag an (30 s gültig, nur dieser Spieler) und schickt den Admin auf main. main lässt ihn durch und schaltet sofort den Admin-Modus ein. Ist main nicht erreichbar: Meldung, kein Wechsel. |
@@ -128,13 +128,13 @@ proxy:
 
 ## Teil B - Testaufbau und Tests (lokal)
 1. Velocity + main + lobby auf dem Testrechner, MariaDB lokal.
-2. Prüfen, bevor Code entsteht: Verschieben per BungeeCord-Kanal; was Velocity beim „Server closed“-Kick und bei Prozess-Abbruch macht; Join-Ablehnung → Lobby.
+2. ~~Vorab-Prüfungen~~ erledigt 2026-10-27 (Velocity 4.3.1): Stopp, Absturz, Kick und abgelehnter Join landen ohne Zusatz-Plugin in der Lobby. Verschieben per BungeeCord-Kanal wird mit dem MRadmin-Code getestet.
 3. Nach jedem Schritt: Neustart, Wartung (Kuma + manuell), Absturz (Prozess beenden), `/mra mode` aus der Lobby, Tickets von beiden Servern, Lobby-Duell zählt auf main.
 4. **Xaero:** Karte auf main aufdecken, Neustart über die Lobby, Karte vergleichen (Lobby weit draußen und als eigene Welt ausprobieren).
 5. MRtoolbar-Mod: Wechsel Lobby → main, DE- und EN-Client.
 
 ## Reihenfolge der Umsetzung
-1. Testaufbau + Vorab-Prüfungen (B1, B2).
+1. ~~Testaufbau + Vorab-Prüfungen (B1, B2)~~ erledigt.
 2. A1 MRadmin-Speicher (inkl. Umzug sqlite → MySQL).
 3. A2 MRadmin Rolle main.
 4. A2 MRadmin Rolle lobby.
