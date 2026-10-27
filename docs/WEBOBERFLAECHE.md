@@ -67,8 +67,12 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   gemessen), Größe der MRadmin-Datenbank und die 5 Chunks mit den meisten Entities.
 - Gemessen wird jede Sekunde aus Werten, die Java und Paper ohnehin führen (kein Lag), die Seite aktualisiert sich
   live. Die letzte Stunde ist sekündlich da (ab 1 Minute wählbar), 24 Stunden im 10-Sekunden-Takt, ältere als
-  5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten). Aufbewahrung
-  `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über Neustarts hinweg.
+  5-Minuten-Mittel (Spitzen bleiben als Höchstwert erhalten, bei der Garbage Collection als eigene Linie
+  „Spitze“). Aufbewahrung `health.history`: `24h`, `7d` oder `30d`, mit SQLite/MySQL bzw. `health.log` über
+  Neustarts hinweg. Nach einem Neustart füllen die gespeicherten 5-Minuten-Werte die Zeit davor auf.
+- Die Zeitachse zeigt immer genau den gewählten Zeitraum; wo keine Werte sind (Server aus), bleibt sie leer.
+- Jedes Diagramm lässt sich mit **⤢** im Vollbild öffnen (schließen mit Esc, Klick daneben oder „Schließen“) und
+  als Tabelle anzeigen.
 - `health.alert`: Warnung an das Team (ingame) und ins Discord-Log, wenn die TPS länger unter einer Grenze liegt,
   und Entwarnung, sobald sie sich erholt hat.
 
