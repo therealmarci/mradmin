@@ -90,6 +90,11 @@ public final class AdminModeManager {
         return states.values();
     }
 
+    /** Whether the player is in admin mode, also while offline (saved state) - thread-safe. */
+    public boolean saved(UUID id) {
+        return states.containsKey(id) || file(id).exists();
+    }
+
     private File file(UUID id) {
         return new File(folder, id + ".yml");
     }
@@ -99,6 +104,11 @@ public final class AdminModeManager {
     public void enable(Player player) {
         if (active(player)) {
             messages().send(player, "mode-already-on");
+            return;
+        }
+        if (plugin.proxy().lobby()) {
+            // The admin mode is for the main server: switch there and start it on arrival.
+            plugin.proxy().switchToMain(player);
             return;
         }
         SavedState state = SavedState.capture(player);

@@ -68,6 +68,30 @@ public interface Storage {
     default void pollTickets(java.util.function.Consumer<List<LoadedTicket>> changed) {
     }
 
+    // ------------------------------------------------------ proxy operation (shared only)
+
+    /** What this server reports about itself (YAML text), written in the background - only with {@link #shared()}. */
+    default void putServerState(String data) {
+    }
+
+    /** What all servers last reported, with its age (by the database clock). Blocking - not on the server thread. */
+    default List<ServerState> serverStates() {
+        return List.of();
+    }
+
+    /** A player may switch to {@code target} into admin mode within {@code ttlMillis}; {@code done} runs afterwards. */
+    default void putSwitch(UUID player, String target, long ttlMillis, Runnable done) {
+    }
+
+    /** Takes (and deletes) a valid switch of the player to {@code target}. Blocking - not on the server thread. */
+    default boolean takeSwitch(UUID player, String target) {
+        return false;
+    }
+
+    /** Report of a server: {@code data} as written, {@code ageMillis} since it was written. */
+    record ServerState(String server, String data, long ageMillis) {
+    }
+
     // ------------------------------------------------------------- audit log
 
     /** Appends an entry to the log of web actions in the background. */

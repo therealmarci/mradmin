@@ -135,6 +135,7 @@ public final class MRAdminCommand implements TabExecutor {
                 }
             }
             case "version", "ver" -> version(sender);
+            case "proxy" -> plugin.proxy().command(sender, args);
             default -> help(sender);
         }
         return true;
@@ -175,6 +176,9 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (sender.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
             messages().send(sender, "help-staffchat");
+        }
+        if (sender.hasPermission(at.marcelr.mradmin.proxy.ProxyManager.PERM_VIEW) && plugin.settings().proxy().enabled()) {
+            messages().send(sender, "help-proxy");
         }
         messages().send(sender, "help-version");
     }
@@ -589,6 +593,9 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, ServerStatusMenu.PERM, Feature.SERVER_STATUS, options, "status");
             addIf(sender, at.marcelr.mradmin.Perms.TICKETS_VIEW, Feature.TICKETS, options, "tickets");
             addIf(sender, AdminModeManager.PERM_TELEPORT, Feature.TELEPORT, options, "tp");
+            if (plugin.settings().proxy().enabled()) {
+                addIf(sender, at.marcelr.mradmin.proxy.ProxyManager.PERM_VIEW, options, "proxy");
+            }
         } else {
             String sub = args[0].toLowerCase(Locale.ROOT);
             switch (sub) {
@@ -631,6 +638,18 @@ public final class MRAdminCommand implements TabExecutor {
                     }
                 }
                 case "web" -> options.addAll(WebCommand.complete(sender, args));
+                case "proxy" -> {
+                    if (sender.hasPermission(at.marcelr.mradmin.proxy.ProxyManager.PERM_SEND)) {
+                        if (args.length == 2) {
+                            options.add("send");
+                        } else if (args.length == 3 && args[1].equalsIgnoreCase("send")) {
+                            options.add("all");
+                            Npcs.online().forEach(p -> options.add(p.getName()));
+                        } else if (args.length == 4 && args[1].equalsIgnoreCase("send")) {
+                            options.addAll(List.of("main", "lobby"));
+                        }
+                    }
+                }
                 case "mail" -> {
                     if (args.length == 2) {
                         options.add("test");

@@ -38,7 +38,12 @@ public final class MaintenanceListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
-        if (!manager().active() || event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED || !luckPerms) {
+        if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+            return;
+        }
+        // Behind a proxy: an admin coming from the waiting lobby into admin mode (/mradmin mode there).
+        plugin.proxy().preLogin(event.getUniqueId());
+        if (!manager().active() || !luckPerms) {
             return;
         }
         Boolean allowed;
@@ -52,6 +57,10 @@ public final class MaintenanceListener implements Listener {
         if (allowed == null) {
             // Not set in LuckPerms: like on the server, the plugin.yml default (op) decides.
             allowed = Bukkit.getOfflinePlayer(event.getUniqueId()).isOp();
+        }
+        if (plugin.proxy().main()) {
+            // Behind a proxy only the admin mode gets in - everyone else is sent to the waiting lobby by the proxy.
+            allowed = plugin.proxy().mayJoinDuringMaintenance(event.getUniqueId(), allowed);
         }
         if (!allowed) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, manager().kickScreen());

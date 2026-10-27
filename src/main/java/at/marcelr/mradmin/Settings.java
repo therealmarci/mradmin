@@ -34,8 +34,24 @@ public record Settings(
         HealthSettings health,
         MailSettings mail,
         RequestSettings requests,
-        VersionsSettings versions
+        VersionsSettings versions,
+        ProxySettings proxy
 ) {
+
+    /** What the lobby shows to waiting players. */
+    public enum ProxyDisplay { BOSSBAR, ACTIONBAR, NONE }
+
+    /**
+     * Proxy operation with a waiting lobby (section proxy).
+     *
+     * @param lobbyRole   true = this server is the waiting lobby, false = the main server
+     * @param mainServer  name of the main server in the velocity.toml
+     * @param lobbyServer name of the lobby in the velocity.toml
+     * @param mainHost    lobby only: host of the main server for the reachability check
+     */
+    public record ProxySettings(boolean enabled, boolean lobbyRole, String mainServer, String lobbyServer, String mainHost,
+                                int mainPort, int returnPerSecond, ProxyDisplay display, boolean teleportToSpawn) {
+    }
 
     /**
      * The version page of the web interface: MRtechnology plugins, their updates and the restart button.
@@ -307,7 +323,32 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), proxy(c, log));
+    }
+
+    private static ProxySettings proxy(FileConfiguration c, Logger log) {
+        String role = c.getString("proxy.role", "main").trim().toLowerCase(Locale.ROOT);
+        if (!role.equals("main") && !role.equals("lobby")) {
+            log.warning("proxy.role '" + role + "' is unknown (main, lobby), using main.");
+            role = "main";
+        }
+        String address = c.getString("proxy.lobby.main-address", "127.0.0.1:25565").trim();
+        String host = address;
+        int port = 25565;
+        int colon = address.lastIndexOf(':');
+        if (colon > 0) {
+            host = address.substring(0, colon);
+            try {
+                port = Math.clamp(Integer.parseInt(address.substring(colon + 1)), 1, 65535);
+            } catch (NumberFormatException e) {
+                log.warning("proxy.lobby.main-address '" + address + "' has no valid port, using 25565.");
+            }
+        }
+        return new ProxySettings(c.getBoolean("proxy.enabled", false), role.equals("lobby"),
+                c.getString("proxy.servers.main", "main").trim(), c.getString("proxy.servers.lobby", "lobby").trim(),
+                host, port, Math.clamp(c.getInt("proxy.lobby.return-per-second", 5), 1, 50),
+                parseEnum(c.getString("proxy.lobby.display"), ProxyDisplay.BOSSBAR, "proxy.lobby.display", log),
+                c.getBoolean("proxy.lobby.teleport-to-spawn", true));
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {

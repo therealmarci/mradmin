@@ -909,6 +909,75 @@ final class SqlStorage implements Storage {
         });
     }
 
+    // ------------------------------------------------------- proxy operation
+
+    @Override
+    public void putServerState(String data) {
+        if (!shared()) {
+            return;
+        }
+        write("save the server state", c -> {
+            try (PreparedStatement ps = c.prepareStatement("REPLACE INTO " + p + "server_state (server, data, updated) VALUES (?, ?, " + now() + ")")) {
+                ps.setString(1, server);
+                ps.setString(2, data);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    @Override
+    public List<ServerState> serverStates() {
+        List<ServerState> result = new ArrayList<>();
+        if (!shared()) {
+            return result;
+        }
+        try (Connection c = pool.getConnection(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT server, data, " + now() + " - updated FROM " + p + "server_state")) {
+            while (rs.next()) {
+                result.add(new ServerState(rs.getString(1), rs.getString(2), rs.getLong(3)));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Could not read the state of the other servers: " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public void putSwitch(UUID player, String target, long ttlMillis, Runnable done) {
+        if (!shared()) {
+            return;
+        }
+        executor.execute(() -> {
+            try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement("REPLACE INTO " + p
+                    + "proxy_switch (player, target, expires) VALUES (?, ?, " + now() + " + ?)")) {
+                ps.setString(1, player.toString());
+                ps.setString(2, target);
+                ps.setLong(3, ttlMillis);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().warning("Could not save the switch of " + player + ": " + e.getMessage());
+                return;
+            }
+            done.run();
+        });
+    }
+
+    @Override
+    public boolean takeSwitch(UUID player, String target) {
+        if (!shared()) {
+            return false;
+        }
+        try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement("DELETE FROM " + p
+                + "proxy_switch WHERE player = ? AND target = ? AND expires >= " + now())) {
+            ps.setString(1, player.toString());
+            ps.setString(2, target);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Could not check the switch of " + player + ": " + e.getMessage());
+            return false;
+        }
+    }
+
     // ---------------------------------------------------------------- writing
 
     private interface Write {
