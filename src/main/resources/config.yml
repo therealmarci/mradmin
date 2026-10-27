@@ -1,215 +1,216 @@
 ﻿# ==============================================================================
-#   MRadmin - Konfiguration
+#   MRadmin - Configuration
 # ==============================================================================
-#   Nach Änderungen:  /mradmin reload   (kein Neustart nötig)
-#   Dashboard:        /mradmin        Befehlsliste: /mradmin help
+#   After changes:   /mradmin reload   (no restart needed)
+#   Dashboard:       /mradmin        Command list: /mradmin help
+#   Help & docs:     https://mrtechnology.marcelr.at/docs/mradmin/
 #
-#   Zeitangaben: d = Tage, h = Stunden, m = Minuten, s = Sekunden,
-#                z.B. "30s", "15m", "1h30m". Eine reine Zahl zählt als Minuten.
+#   Durations: d = days, h = hours, m = minutes, s = seconds,
+#              e.g. "30s", "15m", "1h30m". A plain number counts as minutes.
 #
-#   Texte & Nachrichten (auch Ankündigungs-Presets und Discord): lang/de.yml bzw. lang/en.yml.
+#   Texts & messages (also announcement presets and Discord): lang/de.yml or lang/en.yml.
 #
-#   Diese Datei ist UTF-8-kodiert. Falls Umlaute (ä, ö, ü) falsch angezeigt werden,
-#   im Editor die Kodierung auf "UTF-8" stellen.
+#   This file is UTF-8 encoded. If special characters (ä, ö, ü) look wrong,
+#   set the encoding in your editor to "UTF-8".
 # ==============================================================================
 
-# Nicht ändern - wird für automatische Config-Updates verwendet.
-config-version: 18
+# Do not change - used for automatic config updates.
+config-version: 19
 
-# Sprache aller Texte: de = Deutsch, en = English. Die Texte stehen in plugins/MRadmin/lang/<sprache>.yml
-# und können dort angepasst werden. Eigene Sprache: Datei kopieren (z.B. fr.yml), übersetzen, language: fr.
+# Language of all texts: de = German, en = English. The texts are in plugins/MRadmin/lang/<language>.yml
+# and can be edited there. Own language: copy a file (e.g. as fr.yml), translate it, set language: fr.
 language: de
 
-# Zeitzone für alle angezeigten Uhrzeiten, z.B. "Europe/Vienna" oder "Europe/Berlin". Leer = Zeitzone des Servers.
+# Time zone for all displayed times, e.g. "Europe/Vienna" or "Europe/Berlin". Empty = the server's time zone.
 timezone: ""
 
-# Funktionen ein- und ausschalten. Eine ausgeschaltete Funktion verschwindet komplett: ihre Befehle melden
-# "ausgeschaltet", ihre Knöpfe fehlen in den Menüs und sie greift nirgends mehr ein. Gespeicherte Daten (Tickets,
-# geplante Wartungen ...) bleiben erhalten und sind nach dem Einschalten wieder da. Wirkt mit /mradmin reload.
-# Discord-Logs, Discord-Ankündigungen, Uptime Kuma und der Update-Check haben ihren Schalter (enabled) im
-# jeweiligen Abschnitt weiter unten.
+# Switch features on and off. A switched-off feature disappears completely: its commands report
+# "switched off", its buttons are missing from the menus and it no longer interferes anywhere. Stored data (tickets,
+# scheduled maintenance ...) is kept and is back after switching it on again. Takes effect with /mradmin reload.
+# Discord logs, Discord announcements, Uptime Kuma and the update check have their switch (enabled) in their
+# own section further down.
 features:
-  # Wartungsmodus: Countdown, Bossbar, MOTD, Join-Sperre (inkl. Uptime-Kuma-Anbindung).
+  # Maintenance mode: countdown, boss bar, MOTD, join lock (including the Uptime Kuma connection).
   maintenance: true
-  # Ankündigungen: /mradmin announce und das Ankündigungs-Menü.
+  # Announcements: /mradmin announce and the announcement menu.
   announce: true
-  # Admin-Modus: /mradmin mode und der Admin-Kompass. Wer beim Ausschalten im Admin-Modus ist, bekommt sein
-  # Inventar sofort zurück (offline: beim nächsten Join).
+  # Admin mode: /mradmin mode and the admin compass. Whoever is in admin mode when this is switched off gets their
+  # inventory back immediately (offline: on the next join).
   admin-mode: true
-  # Spieler-Werkzeuge im Spieler-Menü: zu Spielern teleportieren (auch /mradmin tp), Spieler herholen, Inventar und
-  # Enderchest ansehen, einfrieren (beim Ausschalten sind eingefrorene Spieler sofort frei).
+  # Player tools in the player menu: teleport to players (also /mradmin tp), summon players, view inventory and
+  # ender chest, freeze (when switched off, frozen players are free immediately).
   teleport: true
   summon: true
   inventory: true
   freeze: true
-  # Serverzustand: /mradmin status und die Server-Kachel im Dashboard.
+  # Server status: /mradmin status and the server tile in the dashboard.
   server-status: true
-  # Tickets & Reports: /report und /mradmin tickets.
+  # Tickets & reports: /report and /mradmin tickets.
   tickets: true
-  # Staff-Chat: /sc.
+  # Staff chat: /sc.
   staff-chat: true
 
-# Zusammenarbeit mit meinen anderen Plugins. MRadmin erkennt sie automatisch - auch wenn sie später geladen oder
-# entfernt werden - und passt die Menüs von selbst an: Knopf im Dashboard mit Live-Infos, Infos im Spieler-Menü,
-# bei MRchunks auffällige Chunkloader im Serverzustand, bei MRtoolbar die Gürtel eines Spielers (nur ansehen, wie Inventar
-# und Enderchest). Ist ein Plugin nicht installiert, fehlt nur sein Teil.
-# Alle Plugins laufen auch einzeln. false = nicht verbinden, auch wenn das Plugin installiert ist.
+# Working together with my other plugins. MRadmin detects them automatically - also when they are loaded or
+# removed later - and adapts the menus by itself: button in the dashboard with live info, info in the player menu,
+# suspicious chunk loaders in the server status with MRchunks, a player's belts with MRtoolbar (view only, like
+# inventory and ender chest). If a plugin is not installed, only its part is missing.
+# All plugins also run on their own. false = do not connect, even if the plugin is installed.
 integrations:
   mrsleep: true
   mrchunks: true
   mrtoolbar: true
   mrpvp: true
-  # LibertyBans: Banns, Mutes, Warns und Kicks auf der Spielerseite im Web. Es gelten die Permissions von LibertyBans
-  # (z.B. libertybans.ban.do.target.uuid, libertybans.list.history), auch seine Dauer-Permissions, falls eingeschaltet.
+  # LibertyBans: bans, mutes, warns and kicks on the player page in the web interface. LibertyBans' permissions apply
+  # (e.g. libertybans.ban.do.target.uuid, libertybans.list.history), also its duration permissions, if switched on.
   libertybans: true
 
-# Schnellauswahl für Banns und Mutes auf der Spielerseite im Web ("perm" = dauerhaft).
+# Quick choices for bans and mutes on the player page in the web interface ("perm" = permanent).
 libertybans:
   durations: ["1h", "1d", "7d", "30d", "perm"]
 
 
 # ------------------------------------------------------------------------------
-#   1) WARTUNGSARBEITEN
+#   1) MAINTENANCE
 # ------------------------------------------------------------------------------
-# Während einer Wartung können nur Spieler mit der Permission "mradmin.maintenance.bypass" joinen
-# (in LuckPerms z.B. der Staff-Gruppe geben: /lp group staff permission set mradmin.maintenance.bypass true).
-# Wartungen kommen aus Uptime Kuma (Abschnitt uptime-kuma unten) oder per Befehl:
-#   /mradmin maintenance           Status
-#   /mradmin maintenance on [dauer]             sofort starten (ohne Dauer: bis "off")
-#   /mradmin maintenance schedule <in> [dauer]  geplante Wartung mit Countdown, z.B. "schedule 15m 1h"
-#   /mradmin maintenance off                    beenden bzw. Planung aufheben
+# During maintenance only players with the permission "mradmin.maintenance.bypass" can join
+# (in LuckPerms e.g. give it to the staff group: /lp group staff permission set mradmin.maintenance.bypass true).
+# Maintenance comes from Uptime Kuma (section uptime-kuma below) or by command:
+#   /mradmin maintenance                        status
+#   /mradmin maintenance on [duration]          start now (without duration: until "off")
+#   /mradmin maintenance schedule <in> [duration]  scheduled maintenance with countdown, e.g. "schedule 15m 1h"
+#   /mradmin maintenance off                    end it or cancel the schedule
 maintenance:
-  # So lange vor Beginn erscheint die Bossbar mit Countdown.
+  # The boss bar with countdown appears this long before the start.
   warn-before: "15m"
 
-  # Bossbar mit Countdown vor Beginn (alle Spieler) und mit der Restzeit während der Wartung (nur Staff).
+  # Boss bar with a countdown before the start (all players) and with the remaining time during maintenance (staff only).
   bossbar:
     enabled: true
-    # Farben: PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+    # Colours: PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
     color: YELLOW
-    # In den letzten "final-seconds" Sekunden vor Beginn wechselt die Farbe auf final-color.
+    # In the last "final-seconds" seconds before the start the colour changes to final-color.
     final-color: RED
     final-seconds: 60
-    # Unterteilung: PROGRESS (durchgehend), NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+    # Segments: PROGRESS (continuous), NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
     overlay: NOTCHED_10
-    # Während der Wartung eine Bossbar mit der Restzeit für Staff anzeigen (wenn das Ende bekannt ist).
+    # During maintenance show staff a boss bar with the remaining time (if the end is known).
     show-during-maintenance: true
     during-color: PURPLE
 
-  # Zusätzliche Erinnerungen vor Beginn (Chat-Nachricht maintenance-reminder), jeweils so lange vorher.
+  # Additional reminders before the start (chat message maintenance-reminder), each this long before.
   reminders: ["15m", "10m", "5m", "2m", "1m", "30s"]
-  # Ab so vielen Sekunden vor Beginn läuft zusätzlich ein großer Countdown auf dem Bildschirm (0 = aus).
+  # From this many seconds before the start, a big countdown also runs on screen (0 = off).
   title-countdown-seconds: 10
-  # Ton bei Erinnerungen und Countdown ("" = kein Ton). Namen: https://jd.papermc.io/paper/org/bukkit/Sound.html
+  # Sound for reminders and countdown ("" = no sound). Names: https://jd.papermc.io/paper/org/bukkit/Sound.html
   sound: BLOCK_NOTE_BLOCK_PLING
 
-  # Spieler ohne Bypass-Permission beim Start der Wartung vom Server kicken.
+  # Kick players without the bypass permission from the server when maintenance starts.
   kick-on-start: true
-  # So viele Sekunden nach dem Start wird gekickt (Zeit, um die Nachricht noch zu lesen).
+  # Kick this many seconds after the start (time to still read the message).
   kick-delay-seconds: 5
 
-  # Serverliste während der Wartung: Text aus der Sprachdatei (maintenance-motd) statt der normalen MOTD.
+  # Server list during maintenance: text from the language file (maintenance-motd) instead of the normal MOTD.
   motd:
     enabled: true
-    # Statt der Spieleranzahl erscheint rechts "Wartung" (maintenance-version-text) in rot.
+    # Instead of the player count, "Maintenance" (maintenance-version-text) appears on the right in red.
     replace-version: true
 
 
 # ------------------------------------------------------------------------------
 #   2) UPTIME KUMA
 # ------------------------------------------------------------------------------
-# MRadmin meldet sich wie die Weboberfläche bei Uptime Kuma an und liest die Wartungen live mit:
-# geplante Wartungen lösen den Countdown aus, Änderungen in Kuma (Verlängern, Verschieben, Pausieren,
-# Löschen) werden sofort übernommen. Gedacht für Uptime Kuma 2.x (1.23 sollte ebenfalls funktionieren).
-# Uptime Kuma kennt nur einen Benutzer - hier also deinen Kuma-Login eintragen. Er wird nur an Kuma geschickt.
+# MRadmin logs in to Uptime Kuma like the web interface and follows the maintenance windows live:
+# scheduled maintenance triggers the countdown, changes in Kuma (extending, moving, pausing,
+# deleting) are applied immediately. Made for Uptime Kuma 2.x (1.23 should work as well).
+# Uptime Kuma only knows one user - so enter your Kuma login here. It is only sent to Kuma.
 uptime-kuma:
   enabled: false
-  # Adresse der Weboberfläche, z.B. "https://status.deinserver.de" oder "http://192.168.1.10:3001"
+  # Address of the web interface, e.g. "https://status.yourserver.com" or "http://192.168.1.10:3001"
   url: ""
-  # Login: Benutzername + Passwort ...
+  # Login: username + password ...
   username: ""
   password: ""
-  # ... oder stattdessen ein Login-Token (nötig, wenn 2FA aktiv ist): im Browser bei Kuma einloggen,
-  # Entwicklertools (F12) -> Anwendung/Speicher -> Local Storage -> Wert von "token" kopieren.
-  # Der Token bleibt gültig, bis das Kuma-Passwort geändert wird.
+  # ... or a login token instead (needed if 2FA is active): log in to Kuma in the browser,
+  # developer tools (F12) -> Application/Storage -> Local Storage -> copy the value of "token".
+  # The token stays valid until the Kuma password is changed.
   token: ""
 
-  # Welche Wartungen gelten für DIESEN Server? (Beide Listen leer = jede Wartung in Kuma.)
-  # monitor-ids: Wartungen, die einen dieser Monitore betreffen. Die ID steht in der Adresse des Monitors,
-  #              z.B. https://status.deinserver.de/dashboard/12  ->  12
+  # Which maintenance windows apply to THIS server? (Both lists empty = every maintenance in Kuma.)
+  # monitor-ids: maintenance affecting one of these monitors. The ID is in the monitor's address,
+  #              e.g. https://status.yourserver.com/dashboard/12  ->  12
   monitor-ids: []
-  # maintenance-ids: genau diese Wartungen (ID aus https://status.deinserver.de/maintenance/3  ->  3)
+  # maintenance-ids: exactly these maintenance windows (ID from https://status.yourserver.com/maintenance/3  ->  3)
   maintenance-ids: []
 
-  # So oft wird die Liste zusätzlich neu abgefragt (Änderungen kommen sonst sofort).
+  # The list is additionally fetched again this often (otherwise changes arrive immediately).
   refresh-seconds: 60
-  # Nach einem Verbindungsabbruch wird es nach so vielen Sekunden erneut versucht.
+  # After a lost connection, try again after this many seconds.
   reconnect-seconds: 30
-  # Ist Kuma nicht erreichbar, bleibt die zuletzt bekannte Planung gültig (true) oder wird verworfen (false).
+  # If Kuma cannot be reached, the last known schedule stays valid (true) or is discarded (false).
   keep-schedule-when-offline: true
 
 
 # ------------------------------------------------------------------------------
-#   3) ANKÜNDIGUNGEN
+#   3) ANNOUNCEMENTS
 # ------------------------------------------------------------------------------
-# /mradmin announce <text>               eigener Text (MiniMessage erlaubt, z.B. <red>Achtung!)
-# /mradmin announce <preset> [werte...]  vorbereitete Ankündigung aus der Sprachdatei (announce-presets)
-# Auch von der Konsole/RCON nutzbar, z.B. im Restart-Script:  mradmin announce restart 5m
+# /mradmin announce <text>               own text (MiniMessage allowed, e.g. <red>Attention!)
+# /mradmin announce <preset> [values...] prepared announcement from the language file (announce-presets)
+# Also usable from the console/RCON, e.g. in the restart script:  mradmin announce restart 5m
 #
-# Für Scripts frei zusammensetzbar - jeder Teil ist optional, nur Angegebenes wird gezeigt (Werte mit Leerzeichen
-# in "Anführungszeichen"):
-#   mradmin announce title="<red><bold>Neustart" subtitle="<gray>in <white>5 Minuten" chat="..." actionbar="..."
-#                    discord="Neustart in **5 Minuten**" id=restart sound=BLOCK_NOTE_BLOCK_BELL stay=4 to=all
-#   discord = Text für den Community-Discord, id = Name für die Sperrzeit (ein Countdown postet so nur einmal),
-#   sound = Bukkit-Name oder Key ("none" = still), stay/fade-in/fade-out in Sekunden,
-#   to = "all" oder eine Permission (z.B. mradmin.staffchat für nur das Team). -q = nicht in den Discord.
-# Eigene Presets können benannte Werte nutzen: <grund> im Text, aufgerufen mit  mradmin announce wartung grund="Backup"
-# (im discord-Text als {grund}). Die mitgelieferten Presets nutzen <args>:  mradmin announce restart 5m
+# Freely combinable for scripts - every part is optional, only what is given is shown (values with spaces
+# in "quotes"):
+#   mradmin announce title="<red><bold>Restart" subtitle="<gray>in <white>5 minutes" chat="..." actionbar="..."
+#                    discord="Restart in **5 minutes**" id=restart sound=BLOCK_NOTE_BLOCK_BELL stay=4 to=all
+#   discord = text for the community Discord, id = name for the cooldown (so a countdown only posts once),
+#   sound = Bukkit name or key ("none" = silent), stay/fade-in/fade-out in seconds,
+#   to = "all" or a permission (e.g. mradmin.staffchat for the team only). -q = not to Discord.
+# Own presets can use named values: <reason> in the text, called with  mradmin announce maintenance reason="Backup"
+# (as {reason} in the discord text). The bundled presets use <args>:  mradmin announce restart 5m
 announce:
-  # Wie lange der Text auf dem Bildschirm steht (in Sekunden).
+  # How long the text stays on screen (in seconds).
   fade-in: 0.5
   stay: 6
   fade-out: 1
-  # Zusätzlich im Chat ausgeben.
+  # Also print it in the chat.
   chat: true
-  # Ton ("" = kein Ton) mit Lautstärke und Tonhöhe.
+  # Sound ("" = no sound) with volume and pitch.
   sound: BLOCK_NOTE_BLOCK_BELL
   volume: 1.0
   pitch: 1.0
 
 
 # ------------------------------------------------------------------------------
-#   4) ADMIN-MODUS
+#   4) ADMIN MODE
 # ------------------------------------------------------------------------------
-# /mradmin mode on   Inventar, Rüstung, XP, Leben, Hunger, Effekte und Position werden gespeichert,
-#                    du kommst in den Creative-Modus und bekommst nur den Admin-Kompass (Menü: Teleport, Plugins, Wartung).
-# /mradmin mode off  alles wird exakt wiederhergestellt und du landest wieder am Ausgangspunkt.
-# Der gespeicherte Stand liegt in plugins/MRadmin/admin-mode/ und übersteht auch Abstürze und Neustarts.
+# /mradmin mode on   inventory, armour, XP, health, hunger, effects and position are saved,
+#                    you get into creative mode and only get the admin compass (menu: teleport, plugins, maintenance).
+# /mradmin mode off  everything is restored exactly and you are back where you started.
+# The saved state is in plugins/MRadmin/admin-mode/ and also survives crashes and restarts.
 admin-mode:
-  # Spielmodus im Admin-Modus: CREATIVE oder SPECTATOR
+  # Game mode in admin mode: CREATIVE or SPECTATOR
   gamemode: CREATIVE
-  # Beim Beenden zum Ausgangspunkt zurück teleportieren.
+  # Teleport back to the starting point when ending it.
   return-to-start: true
-  # Teleport-Kompass: Material und Slot in der Hotbar (0-8).
+  # Teleport compass: material and slot in the hotbar (0-8).
   compass-material: COMPASS
   compass-slot: 4
-  # Items im Admin-Modus nicht fallen lassen / nicht aufheben (schützt vor Creative-Items im Survival).
+  # Do not drop / pick up items in admin mode (protects against creative items in survival).
   prevent-drop: true
   prevent-pickup: true
-  # Was passiert, wenn ein Admin im Admin-Modus den Server verlässt?
-  #   true  = Admin-Modus wird beendet (alles zurück, Teleport zum Ausgangspunkt)
-  #   false = bleibt aktiv, beim nächsten Join geht es im Admin-Modus weiter
+  # What happens when an admin in admin mode leaves the server?
+  #   true  = admin mode ends (everything back, teleport to the starting point)
+  #   false = stays active, on the next join it continues in admin mode
   end-on-quit: false
 
-  # Eigene Knöpfe im Dashboard (Reihe "Werkzeuge"), z.B. für das Admin-Menü eines anderen Plugins. MRsleep,
-  # MRchunks und MRtoolbar brauchen hier keinen Eintrag, sie kommen automatisch (siehe integrations oben). Jeder Knopf führt einen
-  # Befehl als Spieler aus, die Rechte prüft dann das jeweilige Plugin selbst. Höchstens 6 Knöpfe inkl. MRsleep,
-  # MRchunks und MRtoolbar, Reihenfolge wie hier.
-  #   plugin:     nur anzeigen, wenn dieses Plugin installiert ist ("" = immer)
-  #   permission: nur anzeigen, wenn der Spieler diese Permission hat ("" = alle mit Dashboard)
-  #   enabled:    false = Knopf ausblenden (z.B. statt ihn zu löschen)
-  # Name und Beschreibung stehen in der Sprachdatei unter gui-hub-buttons.<name> (fehlt er dort: der Name von hier).
-  # Beispiel:
+  # Own buttons in the dashboard (row "Tools"), e.g. for the admin menu of another plugin. MRsleep,
+  # MRchunks and MRtoolbar need no entry here, they come automatically (see integrations above). Every button runs a
+  # command as the player, the respective plugin then checks the permissions itself. At most 6 buttons including MRsleep,
+  # MRchunks and MRtoolbar, in the order given here.
+  #   plugin:     only show if this plugin is installed ("" = always)
+  #   permission: only show if the player has this permission ("" = everyone with the dashboard)
+  #   enabled:    false = hide the button (e.g. instead of deleting it)
+  # Name and description are in the language file under gui-hub-buttons.<name> (if missing there: the name from here).
+  # Example:
   #   chunky:
   #     plugin: Chunky
   #     material: MAP
@@ -221,59 +222,59 @@ admin-mode:
 # ------------------------------------------------------------------------------
 #   5) TICKETS & REPORTS
 # ------------------------------------------------------------------------------
-# /report öffnet für alle Spieler (Permission mradmin.tickets.create) das Ticket-Menü: "Ticket erstellen" (Kategorie wählen,
-# dann ein Formular), die offenen Tickets und das Archiv mit den geschlossenen. Im Ticket schreiben Spieler und
-# Team hin und her wie in einem Chat.
-# Das Team (mradmin.tickets.notify) bekommt eine Meldung mit [Öffnen] und [Teleport]. Alle Tickets stehen im
-# Dashboard bzw. unter /mradmin tickets (mradmin.tickets.view, dazu .reply, .claim, .close, .reopen, .teleport).
-# Texte: lang/<sprache>.yml, Abschnitte ticket-... und ticket-categories.
+# /report opens the ticket menu for all players (permission mradmin.tickets.create): "Create ticket" (pick a category,
+# then a form), the open tickets and the archive with the closed ones. In the ticket, players and
+# team write back and forth like in a chat.
+# The team (mradmin.tickets.notify) gets a message with [Open] and [Teleport]. All tickets are in the
+# dashboard or under /mradmin tickets (mradmin.tickets.view, plus .reply, .claim, .close, .reopen, .teleport).
+# Texts: lang/<language>.yml, sections ticket-... and ticket-categories.
 tickets:
-  # So lange muss ein Spieler zwischen zwei neuen Tickets warten (Team: kein Cooldown).
+  # A player has to wait this long between two new tickets (team: no cooldown).
   cooldown: "60s"
-  # Mindestabstand zwischen zwei Nachrichten eines Spielers im Ticket (gegen Spam).
+  # Minimum time between two messages of a player in a ticket (against spam).
   reply-cooldown: "3s"
-  # Höchstens so viele offene Tickets pro Spieler (alle Kategorien zusammen).
+  # At most this many open tickets per player (all categories together).
   max-open-per-player: 3
-  # Länge des Titels (alle Kategorien außer Spieler-Reports) und der Texte. Das Formular lässt nicht mehr zu.
+  # Length of the subject (all categories except player reports) and of the texts. The form does not allow more.
   min-subject-length: 3
   max-subject-length: 50
   min-text-length: 10
   max-text-length: 500
-  # Dem Spieler Bescheid geben, wenn das Team sein Ticket geschlossen hat (falls er online ist). Neue Antworten
-  # werden immer gemeldet, offline beim nächsten Join.
+  # Let the player know when the team has closed their ticket (if they are online). New replies
+  # are always reported, when offline on the next join.
   notify-creator: true
-  # Namen der Teammitglieder im Ticket zeigen. false = Spieler sehen nur "Team".
+  # Show the names of team members in the ticket. false = players only see "Team".
   show-staff-names: true
-  # Bild neben Team-Nachrichten, wenn die Namen ausgeblendet sind (sonst der Kopf des Teammitglieds).
+  # Picture next to team messages when the names are hidden (otherwise the team member's head).
   team-icon: "NETHER_STAR"
-  # Wer als Erster aus dem Team antwortet, übernimmt das Ticket automatisch (weitere Nachrichten des Spielers gehen
-  # dann nur an ihn, solange er online ist).
+  # Whoever from the team answers first takes over the ticket automatically (further messages of the player then
+  # only go to them while they are online).
   auto-claim: true
-  # So viele der letzten Nachrichten zeigt das Ticket (ältere werden ausgeblendet).
+  # The ticket shows this many of the latest messages (older ones are hidden).
   shown-messages: 20
-  # Ton bei Meldungen über neue Tickets und Antworten (Bukkit-Name oder Key). Leer = kein Ton.
+  # Sound for notices about new tickets and replies (Bukkit name or key). Empty = no sound.
   sound: "BLOCK_NOTE_BLOCK_PLING"
-  # Geschlossene Tickets so lange aufheben (auch für den Spieler sichtbar), danach werden sie gelöscht.
+  # Keep closed tickets this long (also visible to the player), afterwards they are deleted.
   keep-closed: "7d"
-  # Mit MRchunks: Wird ein Chunkloader wegen Lag gesperrt, bekommt sein Owner automatisch ein Ticket mit allen
-  # Details der Sperre (Link im Chat). Darin kann er erklären, was passiert ist. Schließen kann es nur das Team, das
-  # den Loader über "Chunkloader-Menü" im Ticket entsperren kann. Wird er erneut gesperrt oder entsperrt, steht das im selben Ticket.
+  # With MRchunks: if a chunk loader is locked because of lag, its owner automatically gets a ticket with all
+  # details of the lock (link in the chat). There they can explain what happened. Only the team can close it, and
+  # the team can unlock the loader via "Chunk loader menu" in the ticket. If it is locked or unlocked again, that is noted in the same ticket.
   chunkloader-locks: true
-  # Symbol aller Tickets in den Menüs (Item-Name).
+  # Icon of all tickets in the menus (item name).
   icon: "NAME_TAG"
-  # Kategorien, die beim Erstellen zur Auswahl stehen (in dieser Reihenfolge). Eigene einfach ergänzen, nicht
-  # benötigte löschen oder mit enabled: false ausblenden. Pro Kategorie:
-  #   name:       Anzeigename. Leer = Text aus der Sprachdatei (ticket-categories.<id>), sonst die ID.
-  #   player:     true = Spieler-Report: erst wird der Spieler ausgewählt, dann der Vorfall beschrieben.
-  #               false = normales Ticket mit Titel und Beschreibung.
-  #   permission: nur Spieler mit dieser Permission sehen die Kategorie. Leer = alle mit mradmin.tickets.create.
-  #   enabled:    false = ausgeblendet (bestehende Tickets bleiben erhalten).
-  # Beispiel für eine eigene Kategorie:
-  #   bewerbung:
-  #     name: "Bewerbung fürs Team"
+  # Categories offered when creating a ticket (in this order). Simply add your own, delete the ones you do not
+  # need or hide them with enabled: false. Per category:
+  #   name:       display name. Empty = text from the language file (ticket-categories.<id>), otherwise the ID.
+  #   player:     true = player report: first the player is chosen, then the incident is described.
+  #               false = normal ticket with subject and description.
+  #   permission: only players with this permission see the category. Empty = everyone with mradmin.tickets.create.
+  #   enabled:    false = hidden (existing tickets are kept).
+  # Example of an own category:
+  #   application:
+  #     name: "Team application"
   #     player: false
   #     permission: ""
-  # Die ID (hier "bewerbung") wird im Ticket gespeichert - nicht mehr ändern, sobald es Tickets damit gibt.
+  # The ID (here "application") is stored in the ticket - do not change it any more once there are tickets with it.
   categories:
     cheating:
       name: ""
@@ -296,16 +297,16 @@ tickets:
 
 
 # ------------------------------------------------------------------------------
-#   6) DISCORD-LOGS (Admin)
+#   6) DISCORD LOGS (admin)
 # ------------------------------------------------------------------------------
-# Webhook anlegen: Discord-Kanal -> Kanal bearbeiten -> Integrationen -> Webhooks
-#                  -> Neuer Webhook -> Webhook-URL kopieren.
-# Die Texte der Events stehen in der Sprachdatei (lang/<sprache>.yml, Abschnitt discord).
-# Ein Event mit "enabled: false" oder leerem Text wird nicht gesendet.
-# Funktioniert es nicht? -> /mradmin discord zeigt den Status, /mradmin discord test schickt eine Testnachricht.
+# Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
+#                   -> New Webhook -> Copy Webhook URL.
+# The texts of the events are in the language file (lang/<language>.yml, section discord).
+# An event with "enabled: false" or an empty text is not sent.
+# Not working? -> /mradmin discord shows the status, /mradmin discord test sends a test message.
 discord:
   enabled: false
-  # Komplette URL in Anführungszeichen, z.B. "https://discord.com/api/webhooks/123456/abcdef"
+  # Full URL in quotes, e.g. "https://discord.com/api/webhooks/123456/abcdef"
   webhook-url: ""
   username: "MRadmin"
   avatar-url: ""
@@ -342,7 +343,7 @@ discord:
     admin-mode-off:
       enabled: true
       color: "#1ABC9C"
-    # Meldungen anderer Plugins, z.B. auffällige Duelle von MRpvp.
+    # Notices from other plugins, e.g. suspicious duels from MRpvp.
     plugin-alert:
       enabled: true
       color: "#E74C3C"
@@ -352,7 +353,7 @@ discord:
     ticket:
       enabled: true
       color: "#E67E22"
-    # Jede Nachricht in einem Ticket (standardmäßig aus).
+    # Every message in a ticket (off by default).
     ticket-message:
       enabled: false
       color: "#3498DB"
@@ -374,22 +375,22 @@ discord:
     player-freeze-quit:
       enabled: true
       color: "#E74C3C"
-    # Jede Staff-Chat-Nachricht auch im Admin-Discord (standardmäßig aus).
+    # Every staff chat message also in the admin Discord (off by default).
     staff-chat:
       enabled: false
       color: "#7F8C8D"
-    # Anmeldungen in der Weboberfläche und Einrichtung/Zurücksetzen eines Web-Kontos.
+    # Logins to the web interface and setting up/resetting a web account.
     web-login:
       enabled: true
       color: "#3498DB"
     web-setup:
       enabled: true
       color: "#9B59B6"
-    # Jeder Befehl aus der Web-Konsole.
+    # Every command from the web console.
     web-console:
       enabled: true
       color: "#E74C3C"
-    # Der Server laggt länger (health.alert) bzw. hat sich wieder erholt.
+    # The server lags for a longer time (health.alert) or has recovered.
     health-alert:
       enabled: true
       color: "#E74C3C"
@@ -399,43 +400,43 @@ discord:
 
 
 # ------------------------------------------------------------------------------
-#   7) DISCORD-ANKÜNDIGUNGEN (Community)
+#   7) DISCORD ANNOUNCEMENTS (community)
 # ------------------------------------------------------------------------------
-# Eigener Webhook für den öffentlichen Ankündigungs-Channel deines Discords - getrennt von den Admin-Logs oben.
-# Bewusst sparsam: pro Wartung höchstens 3 Posts (geplant, gestartet, beendet). Verschieben, Verlängern und
-# Absagen werden in den letzten Post eingearbeitet, statt neu zu posten. Zeiten erscheinen als Discord-Zeitstempel
-# (jeder sieht sie in seiner eigenen Zeitzone, mit "in 2 Stunden").
-# Texte: lang/<sprache>.yml, Abschnitt discord-announce. Testen: /mradmin discord test announce
+# Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
+# Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
+# cancelling are worked into the last post instead of posting again. Times appear as Discord timestamps
+# (everyone sees them in their own time zone, with "in 2 hours").
+# Texts: lang/<language>.yml, section discord-announce. Test: /mradmin discord test announce
 discord-announce:
   enabled: false
   webhook-url: ""
   username: ""
   avatar-url: ""
   footer: ""
-  # Rolle, die beim ersten Post erwähnt wird (z.B. @Server-News). Leer = niemand wird gepingt.
-  # ID: Discord-Einstellungen -> Erweitert -> Entwicklermodus an, dann Rechtsklick auf die Rolle -> "ID kopieren".
+  # Role mentioned in the first post (e.g. @Server-News). Empty = nobody is pinged.
+  # ID: Discord settings -> Advanced -> Developer Mode on, then right-click the role -> "Copy ID".
   ping-role-id: ""
 
   maintenance:
     enabled: true
-    # Erst posten, wenn die Wartung höchstens so lange entfernt ist (später angelegte: sofort).
-    # Verhindert, dass wiederkehrende Wartungen weit im Voraus gepostet werden.
+    # Only post once the maintenance is at most this far away (ones created later: immediately).
+    # Prevents recurring maintenance from being posted far in advance.
     announce-ahead: "24h"
-    # Kürzere Wartungen gar nicht posten ("0" = alle posten).
+    # Do not post shorter maintenance at all ("0" = post all).
     min-length: "0"
-    # Eigener Post beim Start bzw. beim Ende ("Server wieder online"). false = nur der Post "geplant".
+    # Own post at the start and at the end ("Server back online"). false = only the "scheduled" post.
     post-start: true
     post-end: true
-    # ping-role-id beim ersten Post einer Wartung erwähnen (nie bei Bearbeitungen oder beim Ende).
+    # Mention ping-role-id in the first post of a maintenance (never in edits or at the end).
     ping: true
-    # Mehrere Änderungen in Kuma kurz hintereinander werden zu einer Bearbeitung zusammengefasst.
+    # Several changes in Kuma in quick succession are combined into one edit.
     debounce-seconds: 60
 
   announcements:
-    # Ankündigungen posten: Presets mit "discord"-Text in der Sprachdatei automatisch (außer mit -q),
-    # eigene Texte nur mit -d, z.B. /mradmin announce -d Heute Abend Event!
+    # Post announcements: presets with a "discord" text in the language file automatically (except with -q),
+    # own texts only with -d, e.g. /mradmin announce -d Event tonight!
     enabled: true
-    # Dasselbe Preset höchstens einmal in dieser Zeit posten (Restart-Script mit 5m/1m = ein Post).
+    # Post the same preset at most once within this time (restart script with 5m/1m = one post).
     cooldown: "10m"
     ping: false
 
@@ -448,32 +449,32 @@ discord-announce:
 
 
 # ------------------------------------------------------------------------------
-#   8) UPDATE-CHECK
+#   8) UPDATE CHECK
 # ------------------------------------------------------------------------------
 update-checker:
   enabled: true
-  # Quelle: "github" (GitHub Releases, Standard) oder "modrinth"
+  # Source: "github" (GitHub Releases, default) or "modrinth"
   source: github
-  # Auch Beta-/Alpha-Versionen melden. Läuft selbst eine Vorabversion (0.x), werden sie immer gemeldet.
+  # Also report beta/alpha versions. If a pre-release (0.x) is running, they are always reported.
   include-prereleases: false
   interval-hours: 6
-  # Spieler mit "mradmin.admin.update" beim Betreten des Servers informieren.
+  # Notify players with "mradmin.admin.update" when they join the server.
   notify-on-join: true
 
 
 # ------------------------------------------------------------------------------
-#   SERVERZUSTAND (Health)
+#   SERVER HEALTH
 # ------------------------------------------------------------------------------
-# MRadmin misst jede Sekunde TPS, MSPT (Durchschnitt, 95 %, Spitze), CPU, Arbeitsspeicher, Garbage Collection,
-# Spieler, Chunks und Entities - wie der Health-Report von spark. Zu sehen in der Weboberfläche unter "Health"
-# (Permission mradmin.status.health). Die Messung kostet praktisch nichts: es werden nur Werte gelesen, die Java
-# und Paper ohnehin führen.
+# MRadmin measures TPS, MSPT (average, 95 %, peak), CPU, memory, garbage collection, players, chunks and
+# entities every second - like spark's health report. Visible in the web interface under "Health"
+# (permission mradmin.status.health). Measuring costs practically nothing: it only reads values Java
+# and Paper keep anyway.
 health:
-  # Wie lange der Verlauf aufbewahrt wird: 24h, 7d oder 30d. Die letzte Stunde ist sekündlich da, 24 Stunden im 10-Sekunden-Takt,
-  # ältere Werte als 5-Minuten-Mittel (mit storage sqlite/mysql bzw. der Datei health.log - übersteht Neustarts).
+  # How long the history is kept: 24h, 7d or 30d. The last hour is there per second, 24 hours in 10-second steps,
+  # older values as 5-minute averages (with storage sqlite/mysql or the file health.log - survives restarts).
   history: 7d
-  # Warnung an das Team (ingame, mradmin.status.health) und ins Discord-Log, wenn die TPS so lange unter der Grenze
-  # liegt - und Entwarnung, sobald sie sich erholt hat.
+  # Warning to the team (in game, mradmin.status.health) and to the Discord log when the TPS stays below the limit
+  # for this long - and an all-clear as soon as it has recovered.
   alert:
     enabled: true
     below-tps: 15
@@ -481,25 +482,25 @@ health:
 
 
 # ------------------------------------------------------------------------------
-#   9) MENÜS
+#   9) MENUS
 # ------------------------------------------------------------------------------
 gui:
-  # Wie oft offene Menüs aktualisiert werden (in Ticks, 20 = 1 Sekunde).
+  # How often open menus are refreshed (in ticks, 20 = 1 second).
   refresh-ticks: 20
   sounds: true
 
 
 # ------------------------------------------------------------------------------
-#   10) SPEICHER
+#   10) STORAGE
 # ------------------------------------------------------------------------------
-# Wo MRadmin Tickets, Wartungen, eingefrorene Spieler und (später) die Web-Konten speichert.
-#   yaml   = Dateien im Plugin-Ordner (Standard, wie bisher)
-#   sqlite = eine Datei plugins/MRadmin/mradmin.db - empfohlen ab vielen Tickets und für die Weboberfläche
-#   mysql  = MySQL oder MariaDB (z.B. für mehrere Server mit gemeinsamen Tickets)
-# Gespeichert wird immer im Hintergrund, der Server laggt dabei nicht. Änderungen hier wirken erst nach einem
-# Neustart. Beim ersten Start mit sqlite/mysql werden die bisherigen YAML-Daten automatisch übernommen (die Dateien
-# bleiben als *.migrated.yml). Ist die Datenbank nicht erreichbar, nutzt MRadmin vorerst die YAML-Dateien.
-# Die Treiber lädt Paper beim ersten Start selbst herunter (Ordner libraries/ im Server).
+# Where MRadmin stores tickets, maintenance, frozen players and the web accounts.
+#   yaml   = files in the plugin folder (default)
+#   sqlite = one file plugins/MRadmin/mradmin.db - recommended with many tickets and for the web interface
+#   mysql  = MySQL or MariaDB (e.g. for several servers sharing tickets)
+# Saving always happens in the background, the server does not lag. Changes here only take effect after a
+# restart. On the first start with sqlite/mysql, the previous YAML data is taken over automatically (the files
+# stay as *.migrated.yml). If the database cannot be reached, MRadmin uses the YAML files for the time being.
+# Paper downloads the drivers itself on the first start (folder libraries/ of the server).
 storage:
   type: yaml
   mysql:
@@ -508,144 +509,144 @@ storage:
     database: mradmin
     username: ""
     password: ""
-    # Gleichzeitige Verbindungen zur Datenbank.
+    # Simultaneous connections to the database.
     pool-size: 4
-  # Name dieses Servers in der Datenbank - nur wichtig, wenn sich später mehrere Server eine Datenbank teilen.
+  # Name of this server in the database - only relevant if several servers share one database later.
   server-id: "main"
-  # Vor jeden Tabellennamen (z.B. mradmin_tickets), falls die Datenbank auch für anderes genutzt wird.
+  # Put before every table name (e.g. mradmin_tickets), in case the database is also used for other things.
   table-prefix: "mradmin_"
 
 
 # ------------------------------------------------------------------------------
-#   11) WEBOBERFLÄCHE
+#   11) WEB INTERFACE
 # ------------------------------------------------------------------------------
-# MRadmin vom Handy, Tablet oder PC bedienen (zuerst Tickets und Server-Status). Der eingebaute Webserver lauscht
-# nur lokal - erreichbar wird er über deinen Reverse Proxy (nginx, Caddy, Traefik, Cloudflare ...) mit HTTPS und
-# Domain, z.B. https://admin.deinserver.de -> http://127.0.0.1:8125. Für die Weboberfläche empfiehlt sich
-# storage.type: sqlite (siehe oben).
+# Control MRadmin from your phone, tablet or PC. The built-in web server only listens
+# locally - it becomes reachable through your reverse proxy (nginx, Caddy, Traefik, Cloudflare ...) with HTTPS and
+# a domain, e.g. https://admin.yourserver.com -> http://127.0.0.1:8125. For the web interface,
+# storage.type: sqlite is recommended (see above).
 #
-# Konto einrichten: ingame /mradmin web setup (Permission mradmin.web) oder in der Konsole
-# /mradmin web invite <spieler> -> Link (10 Minuten, einmalig) -> Passwort + Code einer Authenticator-App
-# (z.B. Google Authenticator, Aegis). Dazu gibt es Wiederherstellungscodes. Passwort oder Handy weg? Einfach einen
-# neuen Einrichtungslink holen. Im Web gelten dieselben Permissions wie ingame.
+# Set up an account: in game /mradmin web setup (permission mradmin.web) or in the console
+# /mradmin web invite <player> -> link (10 minutes, single use) -> password + code from an authenticator app
+# (e.g. Google Authenticator, Aegis). There are also recovery codes. Password or phone gone? Simply get a
+# new setup link. The web interface uses the same permissions as the game.
 web:
   enabled: false
-  # Nur ändern, wenn der Reverse Proxy auf einem anderen Rechner läuft (dann z.B. "0.0.0.0" + Firewall!).
+  # Only change this if the reverse proxy runs on another machine (then e.g. "0.0.0.0" + firewall!).
   bind: "127.0.0.1"
   port: 8125
-  # Öffentliche Adresse, unter der die Oberfläche erreichbar ist (für Links und Anmeldungen), z.B.
-  # "https://admin.deinserver.de". Ohne HTTPS werden Anmelde-Cookies nicht als "Secure" markiert - nur zum Testen.
+  # Public address under which the interface can be reached (for links and logins), e.g.
+  # "https://admin.yourserver.com". Without HTTPS, login cookies are not marked "Secure" - for testing only.
   public-url: ""
-  # Adressen deines Reverse Proxys. Nur denen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For) - wichtig für
-  # die Begrenzung der Anmeldeversuche und das Protokoll.
+  # Addresses of your reverse proxy. MRadmin only trusts these for the real visitor IP (X-Forwarded-For) - important for
+  # limiting login attempts and for the log.
   trusted-proxies: ["127.0.0.1"]
-  # So lange bleibt ein Gerät angemeldet (Tage). Abmelden geht jederzeit im Web oder mit /mradmin web logout.
+  # A device stays logged in this long (days). Logging out is possible at any time in the web or with /mradmin web logout.
   session-days: 30
   login:
-    # Passkeys (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): im Web unter "Konto" hinzufügen (mit Code aus
-    # der App), dann Anmeldung ohne Passwort und Code. Sie gelten nur für die Adresse aus public-url (ohne sie: nur
-    # http://localhost zum Testen). Ein Zurücksetzen per Einrichtungslink entfernt alle Passkeys des Kontos.
+    # Passkeys (fingerprint, Face ID, Windows Hello, password manager): add them in the web under "Account" (with a code
+    # from the app), then log in without password and code. They only work for the address from public-url (without it:
+    # only http://localhost for testing). A reset via setup link removes all passkeys of the account.
     passkeys: true
-    # Passwort - immer zusammen mit einem Code aus der Authenticator-App.
+    # Password - always together with a code from the authenticator app.
     password: true
-    # Anmelden mit Discord: Discord-Anwendung anlegen (https://discord.com/developers/applications), unter OAuth2 die
-    # Weiterleitung "<public-url>/api/discord/callback" eintragen (ohne public-url: http://localhost:<port>/...),
-    # Client ID und Secret hier eintragen. Jeder verknüpft sein Discord im Web unter Konto -> Sicherheit (nur
-    # angemeldet möglich). Mit verknüpftem Discord lässt sich 2FA ausschalten - wie mit einem Passkey.
-    # Das Secret ist geheim: nicht weitergeben; falls es doch passiert, in Discord neu erzeugen.
+    # Log in with Discord: create a Discord application (https://discord.com/developers/applications), under OAuth2 add
+    # the redirect "<public-url>/api/discord/callback" (without public-url: http://localhost:<port>/...),
+    # enter client ID and secret here. Everyone links their Discord in the web under Account -> Security (only
+    # possible while logged in). With Discord linked, 2FA can be switched off - like with a passkey.
+    # The secret is secret: do not share it; if it happens anyway, regenerate it in Discord.
     discord:
       enabled: false
       client-id: ""
       client-secret: ""
-  # Nur OHNE LuckPerms: welche Rechte Web-Nutzer haben. Mit LuckPerms gelten einfach die normalen Permissions.
-  # Operatoren dürfen alles; sonst Rolle -> Permissions ("*" = alles, "mradmin.*" = alles von MRadmin) und
-  # Spieler (Name oder UUID) -> Rolle. Beispiel:
+  # Only WITHOUT LuckPerms: which permissions web users have. With LuckPerms the normal permissions simply apply.
+  # Operators may do everything; otherwise role -> permissions ("*" = everything, "mradmin.*" = everything of MRadmin) and
+  # player (name or UUID) -> role. Example:
   #   roles:
   #     support: ["mradmin.support", "mradmin.status"]
   #   players:
   #     Steve: support
   roles: {}
   players: {}
-  # Impressum und Datenschutzerklärung - verlinkt in der Fußzeile jeder Seite (auch auf der Anmeldeseite).
-  # Leer = die Texte aus plugins/MRadmin/web/impressum.md und datenschutz.md (beim ersten Start als Vorlage angelegt,
-  # bitte ausfüllen). Oder hier die Adresse eigener Seiten eintragen, z.B. "https://deinserver.de/impressum".
+  # Imprint and privacy policy - linked in the footer of every page (also on the login page).
+  # Empty = the texts from plugins/MRadmin/web/impressum.md and datenschutz.md (created as templates on the first start,
+  # please fill them in). Or enter the address of your own pages here, e.g. "https://yourserver.com/imprint".
   legal:
     imprint-url: ""
     privacy-url: ""
-  # Push-Benachrichtigungen (Konto -> Benachrichtigungen).
+  # Push notifications (Account -> Notifications).
   push:
-    # Kontakt, den MRadmin bei jeder Push-Nachricht an die Push-Dienste (Google, Mozilla, Apple) mitschickt:
-    # "mailto:du@deinserver.de" oder "https://deinserver.de". Leer = public-url (wenn sie mit https:// beginnt).
-    # Apple (iPhone, iPad, Safari) lehnt Push-Nachrichten ohne gültigen Kontakt ab - also ohne https-public-url und
-    # ohne contact, oder mit localhost / .local. Dann kommt auf Apple-Geräten nichts an.
+    # Contact MRadmin sends along with every push message to the push services (Google, Mozilla, Apple):
+    # "mailto:you@yourserver.com" or "https://yourserver.com". Empty = public-url (if it starts with https://).
+    # Apple (iPhone, iPad, Safari) rejects push messages without a valid contact - i.e. without an https public-url and
+    # without contact, or with localhost / .local. Then nothing arrives on Apple devices.
     contact: ""
   privacy:
-    # Einträge im Protokoll der Weboberfläche (mit IP-Adressen) nach dieser Zeit automatisch löschen.
+    # Delete entries in the web interface's log (with IP addresses) automatically after this time.
     audit-retention: "90d"
-    # IP-Adressen nur gekürzt speichern (1.2.3.4 -> 1.2.3.0) - im Protokoll und bei den angemeldeten Geräten.
-    # Weniger personenbezogen, Missbrauch lässt sich aber schlechter nachverfolgen.
+    # Only store shortened IP addresses (1.2.3.4 -> 1.2.3.0) - in the log and for the logged-in devices.
+    # Less personal, but misuse is harder to trace.
     mask-ip: false
-  # Web-Konsole: Live-Log (Permission mradmin.web.console.view) und Befehle (mradmin.web.console.execute). Beide
-  # stecken in keinem Paket (auch nicht in mradmin.admin) und müssen bewusst einzeln vergeben werden. Vor dem Öffnen
-  # fragt die Oberfläche noch einmal nach dem Code aus der Authenticator-App. Jeder Befehl landet im Web-Protokoll
-  # und im Discord-Log (web-console).
+  # Web console: live log (permission mradmin.web.console.view) and commands (mradmin.web.console.execute). Both
+  # are in no package (not even in mradmin.admin) and have to be granted individually on purpose. Before opening,
+  # the interface asks once more for the code from the authenticator app. Every command ends up in the web log
+  # and in the Discord log (web-console).
   console:
     enabled: true
-    # So lange bleibt die Konsole nach dem Code offen (Minuten, pro Gerät).
+    # The console stays open this long after the code (minutes, per device).
     unlock-minutes: 15
-    # So viele der neuesten Zeilen hält MRadmin vor.
+    # MRadmin keeps this many of the newest lines.
     lines: 1000
-    # Diese Befehle gehen über die Web-Konsole nie - auch nicht versteckt in "execute ... run". Verglichen wird der
-    # Anfang des Befehls, ohne "/" und ohne Namespace ("minecraft:op" = "op"). Mehrere Wörter gehen auch ("mradmin web").
+    # These commands never work through the web console - not even hidden in "execute ... run". The start of the
+    # command is compared, without "/" and without namespace ("minecraft:op" = "op"). Several words work too ("mradmin web").
     blocked: ["op", "deop", "stop", "restart", "reload", "lp", "luckperms", "perm", "perms", "permissions", "pex",
       "mradmin web", "whitelist off", "save-off"]
-    # Links und IP-Adressen in der Ausgabe ausblenden (z.B. Einrichtungslinks, IPs beim Join).
+    # Hide links and IP addresses in the output (e.g. setup links, IPs on join).
     hide-links: true
     hide-ips: true
-  # Öffentliche Formulare der Weboberfläche - ohne Anmeldung erreichbar, landen als Tickets bei euch.
+  # Public forms of the web interface - reachable without logging in, they end up as tickets with you.
   requests:
-    # Entbannungsanträge unter <public-url>/entbannung (braucht LibertyBans). Wer gebannt ist, sieht beim Joinen in
-    # der Ban-Meldung einen persönlichen Code - nur damit lässt sich ein Antrag stellen und der Bangrund ansehen.
-    # Pro Ban gibt es einen Antrag; lehnt ihr ab, einmal Einspruch. Danach ist die Entscheidung endgültig.
+    # Unban requests under <public-url>/entbannung (needs LibertyBans). Whoever is banned sees a personal code in
+    # the ban message when joining - only with it a request can be made and the ban reason viewed.
+    # There is one request per ban; if you decline it, one appeal. After that the decision is final.
     unban:
       enabled: true
-      # Adresse und Code an die Ban-Meldung von LibertyBans anhängen (Text: "unban-kick" in der Sprachdatei).
+      # Append the address and code to LibertyBans' ban message (text: "unban-kick" in the language file).
       kick-message: true
-    # Kontaktformular unter <public-url>/kontakt, verlinkt unter dem Impressum. Diese Anfragen gibt es nur im Web,
-    # ingame tauchen sie nie auf. Antworten gehen per Mail (siehe "mail" unten).
+    # Contact form under <public-url>/kontakt, linked below the imprint. These requests only exist in the web,
+    # they never show up in game. Replies go out by mail (see "mail" below).
     contact:
       enabled: true
-    # Antworten des Teams und Entscheidungen auch per Mail schicken (wenn eine Adresse angegeben ist und "mail"
-    # eingerichtet ist). Den Statuslink bekommt man immer direkt nach dem Absenden angezeigt.
+    # Also send the team's replies and decisions by mail (if an address was given and "mail" is
+    # set up). The status link is always shown right after submitting.
     notify-by-mail: true
-    # Länge der Nachricht (Rechtfertigung, Einspruch, Kontaktanfrage).
+    # Length of the message (justification, appeal, contact request).
     min-text-length: 20
     max-text-length: 3000
-    # Spamschutz, ganz ohne externe Dienste: ein unsichtbares Lockfeld, eine Mindest-Ausfüllzeit, eine kleine
-    # Rechenaufgabe, die der Browser im Hintergrund löst, und diese Grenzen.
+    # Spam protection, without any external services: an invisible honeypot field, a minimum time to fill in, a small
+    # calculation the browser solves in the background, and these limits.
     spam:
-      # Höchstens so viele Anträge/Anfragen pro IP-Adresse und Stunde.
+      # At most this many requests per IP address and hour.
       per-ip-per-hour: 5
-      # Sind so viele Kontaktanfragen offen, nimmt das Formular keine neuen an, bis ihr welche geschlossen habt.
+      # If this many contact requests are open, the form accepts no new ones until you have closed some.
       max-open-contact: 50
-      # Schwierigkeit der Rechenaufgabe (0 = aus, 16 = etwa eine Sekunde am Handy, jede +1 verdoppelt die Zeit).
+      # Difficulty of the calculation (0 = off, 16 = about one second on a phone, every +1 doubles the time).
       proof-of-work: 16
 
-# Mailversand (SMTP) für Antworten auf Entbannungsanträge und Kontaktanfragen. Ohne Mailversand funktioniert alles
-# trotzdem: Antragsteller sehen Antworten über ihren Statuslink, und bei Kontaktanfragen öffnet ein Knopf im Ticket
-# euer eigenes Mailprogramm. Testen: /mradmin mail test <adresse>
+# Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
+# mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens
+# your own mail program. Test: /mradmin mail test <address>
 mail:
   enabled: false
   host: ""
-  # ssl (meist Port 465), starttls (meist 587) oder none (nur für einen Mailserver auf demselben Rechner).
+  # ssl (usually port 465), starttls (usually 587) or none (only for a mail server on the same machine).
   security: "starttls"
   port: 587
   username: ""
-  # Geheim halten. Bei vielen Anbietern (Gmail, Outlook ...) braucht es ein eigenes App-Passwort.
+  # Keep it secret. Many providers (Gmail, Outlook ...) need a separate app password.
   password: ""
-  # Absender, z.B. "noreply@deinserver.de" - muss euer Mailserver erlauben.
+  # Sender, e.g. "noreply@yourserver.com" - your mail server has to allow it.
   from: ""
   from-name: "MRadmin"
-  # Wohin Antworten auf die Mails gehen sollen (leer = an den Absender). Achtung: was dort ankommt, landet NICHT im
-  # Ticket - die Mails weisen darauf hin, über den Statuslink zu antworten.
+  # Where replies to the mails should go (empty = to the sender). Note: what arrives there does NOT end up in the
+  # ticket - the mails point out to reply via the status link.
   reply-to: ""
