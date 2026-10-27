@@ -4,9 +4,10 @@ import at.marcelr.mradmin.announce.Announcer;
 import at.marcelr.mradmin.command.MRAdminCommand;
 import at.marcelr.mradmin.command.ReportCommand;
 import at.marcelr.mradmin.command.StaffChat;
-import at.marcelr.mradmin.hook.PluginHooks;
+import at.marcelr.mradmin.module.Modules;
 import at.marcelr.mradmin.player.FreezeListener;
 import at.marcelr.mradmin.player.FreezeManager;
+import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.ticket.TicketManager;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
 import at.marcelr.mradmin.gui.MenuListener;
@@ -16,7 +17,6 @@ import at.marcelr.mradmin.mode.AdminModeListener;
 import at.marcelr.mradmin.mode.CreativeClearGuard;
 import at.marcelr.mradmin.mode.AdminModeManager;
 import at.marcelr.mradmin.hook.Integration;
-import at.marcelr.mradmin.hook.LockTickets;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.health.HealthMonitor;
 import at.marcelr.mradmin.web.AuthRoutes;
@@ -32,7 +32,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -52,24 +51,26 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(11, Map.of(
-            2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
-                    "maintenance-motd"),
-            3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
-                    "announce-presets.update.chat"),
-            4, Set.of("maintenance-motd", "maintenance-motd-open"),
-            5, Set.of("mode-on", "mode-compass-name", "mode-compass-lore"),
-            6, Set.of("gui-teleport-player-lore"),
-            7, Set.of("help-mode"),
-            8, Set.of("help-menu", "gui-title-hub"),
-            9, Set.of("ticket-categories.cheating", "ticket-categories.chat", "ticket-categories.griefing",
+    private final Messages messages = new Messages(12, Map.ofEntries(
+            Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
+                    "maintenance-motd")),
+            Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
+                    "announce-presets.update.chat")),
+            Map.entry(4, Set.of("maintenance-motd", "maintenance-motd-open")),
+            Map.entry(5, Set.of("mode-on", "mode-compass-name", "mode-compass-lore")),
+            Map.entry(6, Set.of("gui-teleport-player-lore")),
+            Map.entry(7, Set.of("help-mode")),
+            Map.entry(8, Set.of("help-menu", "gui-title-hub")),
+            Map.entry(9, Set.of("ticket-categories.cheating", "ticket-categories.chat", "ticket-categories.griefing",
                     "ticket-categories.scam", "ticket-categories.other", "gui-my-tickets-head-lore", "gui-my-tickets-empty",
                     "gui-my-tickets-empty-lore", "gui-ticket-lore", "gui-ticket-lore-staff", "gui-tickets-filter-type",
                     "gui-tickets-filter-type-lore", "ticket-form-player-hint", "ticket-form-other-hint",
-                    "ticket-chat-header-player", "ticket-chat-header-other", "gui-new-ticket-none"),
-            10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff"),
+                    "ticket-chat-header-player", "ticket-chat-header-other", "gui-new-ticket-none")),
+            Map.entry(10, Set.of("gui-teleport-player-lore", "gui-ticket-lore-staff")),
             // 11: /mradmin announce for scripts (parts and named values).
-            11, Set.of("announce-usage")));
+            Map.entry(11, Set.of("announce-usage")),
+            // 12: "Website | GitHub" in /mradmin version.
+            Map.entry(12, Set.of("version-links"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private final Announcer announcer = new Announcer(this);
@@ -78,8 +79,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private UpdateChecker updateChecker;
     private FreezeManager freeze;
     private TicketManager tickets;
-    private PluginHooks hooks;
-    private LockTickets lockTickets;
+    private Modules modules;
     private Storage storage;
     private WebServer web;
     private HealthMonitor health;
@@ -100,9 +100,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PanelRoutes.register(web);
         at.marcelr.mradmin.web.SiteRoutes.register(web);
         at.marcelr.mradmin.web.HealthRoutes.register(web);
-        at.marcelr.mradmin.web.ChunkRoutes.register(web);
-        at.marcelr.mradmin.web.SleepRoutes.register(web);
-        at.marcelr.mradmin.web.PvpRoutes.register(web);
+        at.marcelr.mradmin.web.ModuleRoutes.register(web);
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
@@ -117,8 +115,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         freeze.load();
         tickets = new TicketManager(this);
         tickets.load();
-        hooks = new PluginHooks(this);
-        lockTickets = new LockTickets(this);
+        modules = new Modules(this);
+        // Before the other plugins enable (they softdepend on MRadmin) - they register their modules then.
+        modules.offer();
         staffChat = new StaffChat(this);
         maintenance = new MaintenanceManager(this);
         discordAnnounce.loadState();
@@ -211,7 +210,6 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     }
 
     private void startServices() {
-        hooks.clear();
         web.permissions().clear();
         web.start();
         if (feature(Feature.SERVER_STATUS)) {
@@ -236,6 +234,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
+        if (Npcs.is(event.getPlayer())) {
+            return;
+        }
         updateChecker.notifyIfOutdated(event.getPlayer());
         if (feature(Feature.TICKETS)) {
             tickets.notifyOnJoin(event.getPlayer());
@@ -260,14 +261,21 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     // ------------------------------------------------------ integrations
 
-    /** Integrations whose plugin is installed and enabled and that are not switched off. */
+    /**
+     * After all plugins are enabled: built-in integrations whose plugin runs but registered no module are an older
+     * version from before the module API (connected modules log themselves when they register, see Modules).
+     */
     private void logIntegrations() {
         for (Integration integration : Integration.ALL) {
             Plugin other = getServer().getPluginManager().getPlugin(integration.plugin());
-            if (other != null && other.isEnabled()) {
-                listen(integration, other);
-                getLogger().info(integration.plugin() + " found - " + (integrationOn(integration)
-                        ? "connected (dashboard button, player menu)." : "not connected (integrations." + integration.id() + ": false)."));
+            if (other == null || !other.isEnabled()) {
+                continue;
+            }
+            if (!modules.enabled(integration.id())) {
+                getLogger().info(integration.plugin() + " found - not connected (integrations." + integration.id() + ": false).");
+            } else if (modules.module(integration.id()) == null) {
+                getLogger().warning(integration.plugin() + " " + other.getPluginMeta().getVersion()
+                        + " is too old for MRadmin's module API - update it to connect it.");
             }
         }
         // LibertyBans: only through its API, for the player page of the web interface.
@@ -280,42 +288,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
     }
 
-    private boolean integrationOn(Integration integration) {
-        return settings.adminMode().buttons().stream().anyMatch(b -> b.id().equals(integration.id()));
-    }
-
-    /** Events of the plugin (MRchunks: chunk loader locks open tickets). */
-    private void listen(Integration integration, Plugin other) {
-        if (integration.id().equals("mrchunks")) {
-            lockTickets.register(other);
-        }
-    }
-
-    /** MRsleep/MRchunks loaded later (e.g. plugin manager): connect right away; menus adapt with their next refresh. */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onPluginEnable(PluginEnableEvent event) {
-        Integration integration = Integration.byPlugin(event.getPlugin().getName());
-        if (integration != null && event.getPlugin() != this) {
-            hooks.clear();
-            listen(integration, event.getPlugin());
-            if (integrationOn(integration)) {
-                getLogger().info(integration.plugin() + " was enabled - connected.");
-            }
-        }
-    }
-
-    /** MRsleep/MRchunks disabled or removed: disconnect, its buttons disappear from the menus. */
+    /** A plugin was disabled or removed: its module goes, its button disappears from the menus. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPluginDisable(PluginDisableEvent event) {
-        Integration integration = Integration.byPlugin(event.getPlugin().getName());
-        if (integration != null && event.getPlugin() != this) {
-            hooks.clear();
-            if (lockTickets.registeredFor(event.getPlugin())) {
-                lockTickets.unregister();
-            }
-            if (integrationOn(integration)) {
-                getLogger().info(integration.plugin() + " was disabled - disconnected.");
-            }
+        if (event.getPlugin() != this && modules.pluginDisabled(event.getPlugin())) {
+            getLogger().info(event.getPlugin().getName() + " was disabled - disconnected.");
         }
     }
 
@@ -393,8 +370,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         return health;
     }
 
-    public PluginHooks hooks() {
-        return hooks;
+    /** The plugins MRadmin works with (module API and old hooks). */
+    public Modules modules() {
+        return modules;
     }
 
     public StaffChat staffChat() {

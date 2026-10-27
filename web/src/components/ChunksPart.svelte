@@ -1,8 +1,8 @@
 <script>
-  // MRchunks' part of a player's page: their loaders, limits, chunk loader ban, invites and loaders shared with
-  // them - with MRchunks' permissions (limit, ban, manage).
+  // MRchunks' part of a player's page: their loaders, limits, chunk loader ban, invites, loaders shared with them,
+  // linked accounts and dummies - with MRchunks' permissions (limit, ban, manage).
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { playerAction, playerPart } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -14,13 +14,13 @@
   let error = $state('');
   let busy = $state(false);
   let reason = $state('');
-  // The limit being edited ("place" / "active") and the value typed.
+  // The limit being edited ("place" / "active" / "dummy") and the value typed.
   let editing = $state(null);
   let value = $state('');
 
   async function load() {
     try {
-      c = await api('GET', `/players/${uuid}/mrchunks`);
+      c = await playerPart(uuid, 'mrchunks');
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -39,7 +39,7 @@
     busy = true;
     error = '';
     try {
-      await api('POST', `/players/${uuid}/mrchunks`, body);
+      await playerAction(uuid, 'mrchunks', body);
       onDone(t('chunks.done.' + body.action));
       if (body.action === 'ban') reason = '';
       editing = null;
@@ -61,6 +61,7 @@
   const limits = $derived(c ? [
     { kind: 'place', label: t('chunks.limitPlace'), used: c.loaders.length, limit: c.limit },
     { kind: 'active', label: t('chunks.limitActive'), used: c.active, limit: c.activeLimit },
+    ...(c.dummiesEnabled ? [{ kind: 'dummy', label: t('chunks.limitDummy'), used: c.dummies, limit: c.dummyLimit }] : []),
   ] : []);
 </script>
 
@@ -106,6 +107,31 @@
       <p class="muted tiny">{t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
     {/if}
 
+    {#if c.main || c.secondAccounts?.length}
+      <h3>{t('chunks.linkedSection')}</h3>
+      {#if c.main}
+        <p class="small">
+          {t('chunks.secondOf', { name: c.main.name })}
+          {#if me.may.players}<button class="linkish" onclick={() => go('/players/' + c.main.uuid)}>{c.main.name} →</button>{/if}
+        </p>
+      {:else}
+        <p class="small muted">{t('chunks.secondAccounts')}</p>
+        <ul class="people">
+          {#each c.secondAccounts as s (s.uuid)}
+            <li>
+              <button class="link-row" onclick={() => go('/players/' + s.uuid)} disabled={!me.may.players}>
+                <img src={head(s.uuid)} alt="" width="20" height="20" /> {s.name}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      {#if me.may.mrchunksManage}
+        <button class="secondary" disabled={busy}
+          onclick={() => act({ action: 'unlink' }, t('chunks.unlinkConfirm', { name }))}>{t('chunks.unlink')}</button>
+      {/if}
+    {/if}
+
     <h3>{t('chunks.ownLoaders')}</h3>
     {#if c.loaders.length === 0}
       <p class="muted small">{t('chunks.noLoaders')}</p>
@@ -118,6 +144,7 @@
               <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + l.status)}</span>
               <strong>{l.name}</strong>
               <span class="muted small mono">{l.world} {l.x} {l.y} {l.z}</span>
+              {#if l.dummyPresent}<span class="tag">🧍 {t('chunks.dummyBadge')}</span>{/if}
             </button>
           </li>
         {/each}

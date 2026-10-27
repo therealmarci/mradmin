@@ -41,11 +41,10 @@
     health: () => me.may.health && '/health',
     tickets: () => me.may.tickets && '/tickets',
     'tickets-mine': () => me.may.tickets && '/tickets',
-    chunks: () => me.may.mrchunks && '/chunks',
-    sleep: () => me.may.mrsleep && '/sleep',
     maintenance: () => me.may.maintenance && '/maintenance',
   };
-  const target = (a) => (a.page && pages[a.page]?.()) || null;
+  // Hints of modules (MRchunks, MRsleep ...) name the page themselves - linked if the member may see the module.
+  const target = (a) => (a.module ? (me.may[a.module] && a.page) : a.page && pages[a.page]?.()) || null;
 
   function open(a) {
     if (a.page === 'tickets-mine') {
@@ -59,6 +58,7 @@
   }
 
   function alertText(a) {
+    if (a.text) return a.text;
     const v = { ...a.values };
     if (a.key === 'disk') v.free = mb(v.free);
     if (a.key === 'maintenanceSoon') v.start = v.start ? dateTime(v.start) : '–';

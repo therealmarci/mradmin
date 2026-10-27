@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../lib/api.js';
+  import { moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { ago, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -13,7 +13,7 @@
 
   async function load() {
     try {
-      [overview, loaders] = await Promise.all([api('GET', '/mrchunks/overview'), api('GET', '/mrchunks/loaders')]);
+      [overview, loaders] = await Promise.all([moduleData('mrchunks', 'overview'), moduleData('mrchunks', 'loaders')]);
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -70,6 +70,10 @@
       <div class="card kpi"><div class="label">{t('chunks.active')}</div><div class="value">{overview.active}</div></div>
       <div class="card kpi"><div class="label">{t('chunks.chunks')}</div><div class="value">{overview.chunks}</div>
         <div class="sub">{t('chunks.size', { n: overview.size })}</div></div>
+      {#if overview.dummiesEnabled}
+        <div class="card kpi"><div class="label">{t('chunks.dummies')}</div><div class="value">{overview.dummies}</div>
+          <div class="sub">{t('chunks.dummiesSub', { n: overview.links })}</div></div>
+      {/if}
       <div class="card kpi"><div class="label">{t('chunks.problems')}</div>
         <div class="value">{overview.locked + overview.warn}</div>
         <div class="sub">{overview.locked} {t('chunks.status.locked')} · {overview.warn} {t('chunks.status.warn')}</div></div>
@@ -100,6 +104,7 @@
           <div class="body">
             <div class="top">
               <strong>{l.name}</strong>
+              {#if l.dummyPresent}<span class="tag" title={t('chunks.dummySits')}>🧍 {t('chunks.dummyBadge')}</span>{/if}
               <span class="badge-status {STATUS[l.status].tone}">{STATUS[l.status].icon} {t('chunks.status.' + l.status)}</span>
             </div>
             <div class="muted small">{l.ownerName} · <span class="mono">{l.world} {l.x} {l.y} {l.z}</span></div>
@@ -215,8 +220,12 @@
     display: flex;
     gap: 8px;
     align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
+  }
+
+  /* Status on the right, the dummy tag (if any) next to the name. */
+  .top .badge-status {
+    margin-left: auto;
   }
 
   .badge-status {
@@ -226,6 +235,15 @@
     border-radius: 999px;
     background: var(--surface-2);
     color: var(--muted);
+  }
+
+  .tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .badge-status.good {

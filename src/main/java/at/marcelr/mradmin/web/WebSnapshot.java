@@ -5,6 +5,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
+import at.marcelr.mradmin.player.Npcs;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -33,10 +34,10 @@ final class WebSnapshot {
         Map<String, Object> server = new LinkedHashMap<>();
         server.put("tps", List.of(round(Math.min(20, tps[0])), round(Math.min(20, tps[1])), round(Math.min(20, tps[2]))));
         server.put("mspt", round(Bukkit.getAverageTickTime()));
-        server.put("online", Bukkit.getOnlinePlayers().size());
+        server.put("online", Npcs.online().size());
         server.put("max", Bukkit.getMaxPlayers());
         List<Map<String, Object>> players = new ArrayList<>();
-        Bukkit.getOnlinePlayers().stream().sorted(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER))
+        Npcs.online().stream().sorted(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER))
                 .forEach(p -> players.add(Map.of("name", p.getName(), "uuid", p.getUniqueId().toString(),
                         "world", p.getWorld().getName(), "ping", p.getPing(),
                         "admin", plugin.adminMode().active(p), "frozen", plugin.freeze().frozen(p.getUniqueId()))));
@@ -51,15 +52,29 @@ final class WebSnapshot {
         result.put("server", server);
 
         // MRchunks (optional): counts and server pause - cheap, the plugin keeps them anyway.
-        Settings.HubButton chunks = ChunkRoutes.hook(plugin);
-        if (chunks != null && plugin.hooks().web(chunks, "overview", Map.of()) instanceof Map<?, ?> overview) {
+        if (overview(plugin, "mrchunks") instanceof Map<?, ?> overview) {
             result.put("mrchunks", overview);
         }
         // MRsleep (optional): sleep status per world and /nosleep blocks.
-        Settings.HubButton sleep = SleepRoutes.hook(plugin);
-        if (sleep != null && plugin.hooks().web(sleep, "overview", Map.of()) instanceof Map<?, ?> overview) {
+        if (overview(plugin, "mrsleep") instanceof Map<?, ?> overview) {
             result.put("mrsleep", overview);
         }
+        // Hints of all modules for the start page (filtered by permission per member, see PanelRoutes).
+        Map<String, Object> moduleAlerts = new LinkedHashMap<>();
+        plugin.modules().webModules().forEach((id, web) -> {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (var a : plugin.modules().call(plugin.modules().module(id), web::alerts, List.<at.marcelr.mradmin.api.WebAlert>of())) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("tone", a.tone());
+                entry.put("text", a.text());
+                entry.put("page", a.page());
+                list.add(entry);
+            }
+            if (!list.isEmpty()) {
+                moduleAlerts.put(id, list);
+            }
+        });
+        result.put("moduleAlerts", moduleAlerts);
 
         if (plugin.feature(Feature.MAINTENANCE)) {
             MaintenanceManager m = plugin.maintenance();
@@ -81,6 +96,13 @@ final class WebSnapshot {
                     "claimed", claimed));
         }
         return Map.copyOf(result);
+    }
+
+    /** The "overview" data of a module (counts it keeps anyway - cheap), or null without it. */
+    private static Object overview(MRAdmin plugin, String id) {
+        var web = plugin.modules().web(id);
+        return web == null ? null
+                : plugin.modules().call(plugin.modules().module(id), () -> web.data("overview", Map.of()), null);
     }
 
     private static double round(double value) {

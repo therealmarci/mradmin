@@ -239,7 +239,7 @@ public final class PushService {
         if (kind.feature() != null && !plugin.feature(kind.feature())) {
             return false;
         }
-        if (kind.key().equals("chunks-locked") && at.marcelr.mradmin.web.ChunkRoutes.hook(plugin) == null) {
+        if (kind.key().equals("chunks-locked") && plugin.modules().module("mrchunks") == null) {
             return false;
         }
         return permissions.has(account, kind.permission());

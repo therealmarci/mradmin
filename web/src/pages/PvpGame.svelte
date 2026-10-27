@@ -3,7 +3,7 @@
   // the combat log so far. Finished: result and numbers, the saved inventories (on entering and at the end, with
   // ender chest and MRtoolbar belts), the combat log and a replay of the positions on the mini map.
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { head, dateTime } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -44,7 +44,7 @@
 
   async function load() {
     try {
-      running = await api('GET', '/mrpvp/live/' + id);
+      running = await moduleData('mrpvp', 'live', { id });
       flash(running);
       error = '';
       return;
@@ -60,7 +60,7 @@
       return;
     }
     try {
-      game = await api('GET', '/mrpvp/game/' + id);
+      game = await moduleData('mrpvp', 'game', { id });
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -84,7 +84,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', '/mrpvp/action', body);
+      await moduleAction('mrpvp', body);
       message = t('pvp.done.' + body.action, { id });
       await load();
     } catch (e) {

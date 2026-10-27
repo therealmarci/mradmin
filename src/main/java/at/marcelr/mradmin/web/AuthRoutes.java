@@ -292,25 +292,16 @@ public final class AuthRoutes {
         may.put("maintenance", plugin.feature(Feature.MAINTENANCE) && perms.has(account.id(), Perms.MAINTENANCE_VIEW));
         may.put("maintenanceManage", plugin.feature(Feature.MAINTENANCE) && perms.has(account.id(), Perms.MAINTENANCE_MANAGE));
         may.put("announce", plugin.feature(Feature.ANNOUNCE) && perms.has(account.id(), Perms.ANNOUNCE));
-        boolean chunks = ChunkRoutes.hook(plugin) != null;
-        may.put("mrchunks", chunks && perms.has(account.id(), ChunkRoutes.PERM_VIEW));
-        may.put("mrchunksManage", chunks && perms.has(account.id(), ChunkRoutes.PERM_MANAGE));
-        may.put("mrchunksLimit", chunks && perms.has(account.id(), ChunkRoutes.PERM_LIMIT));
-        may.put("mrchunksBan", chunks && perms.has(account.id(), ChunkRoutes.PERM_BAN));
-        // Every action also needs mrsleep.admin.gui - the routes check the same.
-        boolean sleep = SleepRoutes.hook(plugin) != null && perms.has(account.id(), SleepRoutes.PERM_VIEW);
-        may.put("mrsleep", sleep);
-        may.put("mrsleepClear", sleep && perms.has(account.id(), SleepRoutes.PERM_CLEAR));
-        may.put("mrsleepBypass", sleep && perms.has(account.id(), SleepRoutes.PERM_BYPASS));
-        may.put("mrsleepBan", sleep && perms.has(account.id(), SleepRoutes.PERM_BAN));
-        boolean pvp = PvpRoutes.hook(plugin) != null && perms.has(account.id(), PvpRoutes.PERM_VIEW);
-        may.put("mrpvp", pvp);
-        may.put("mrpvpGames", pvp && perms.has(account.id(), PvpRoutes.PERM_GAMES));
-        may.put("mrpvpStop", pvp && perms.has(account.id(), PvpRoutes.PERM_STOP));
-        may.put("mrpvpBan", pvp && perms.has(account.id(), PvpRoutes.PERM_BAN));
-        may.put("mrpvpReset", pvp && perms.has(account.id(), PvpRoutes.PERM_RESET));
-        may.put("mrpvpRestore", pvp && perms.has(account.id(), PvpRoutes.PERM_RESTORE));
-        may.put("mrpvpReview", pvp && perms.has(account.id(), PvpRoutes.PERM_REVIEW));
+        // Modules (MRchunks, MRsleep, MRpvp ...): "<id>" = may see it, "<id><Key>" for each of its permission keys,
+        // e.g. mrchunksManage. Every key also needs viewing - the routes check the same.
+        plugin.modules().webModules().forEach((id, web) -> {
+            boolean view = ModuleRoutes.may(server, account.id(), id, "view");
+            may.put(id, view);
+            for (String key : web.permissions().keySet()) {
+                may.put(id + Character.toUpperCase(key.charAt(0)) + key.substring(1),
+                        view && ModuleRoutes.may(server, account.id(), id, key));
+            }
+        });
         may.put("players", perms.has(account.id(), Perms.PLAYER_VIEW));
         boolean console = ConsoleRoutes.enabled(plugin) && perms.has(account.id(), Perms.WEB_CONSOLE_VIEW);
         may.put("console", console);

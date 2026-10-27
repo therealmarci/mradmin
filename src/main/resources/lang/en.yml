@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 11
+lang-version: 12
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -145,8 +145,8 @@ push-ticket-new-title: "New ticket #<id>"
 push-ticket-new-body: "<player>: <summary>"
 push-ticket-message-title: "Ticket #<id> - new message"
 push-ticket-message-body: "<player>: <text>"
-push-lock-title: "Chunk loader locked"
-push-lock-body: "<name> of <owner> was locked because of lag."
+push-report-title: "New ticket: <subject>"
+push-report-body: "<player> (<plugin>)"
 push-lag-title: "The server is lagging"
 push-lag-body: "Only <tps> TPS for <minutes> minutes."
 push-maintenance-soon-title: "Maintenance announced"
@@ -599,11 +599,9 @@ ticket-close-no: "<gray>Back"
 
 # Automatic tickets for chunk loader locks (MRchunks). The text of the lock itself comes from MRchunks' language file
 # (lock-details).
-ticket-lock-subject: "<name> locked"
-ticket-lock-notify: "<prefix><yellow>There is now ticket <white>#<id></white> about the lock of your chunk loader <white><name></white>.</yellow> <gray>Explain there what happened - the team reads along and can lift the lock.</gray> <open>"
+ticket-report-notify: "<prefix><yellow>There is now ticket <white>#<id></white> about <white><subject></white>.</yellow> <gray>Explain there what happened - the team reads along.</gray> <open>"
 ticket-lock-hint: "<gray>Your chunk loader was locked automatically. Write here what happened and what you changed on the farm. The team can lift the lock and closes the ticket afterwards."
-ticket-lock-again: "The chunk loader was locked again:"
-ticket-lock-unlocked: "The lock was lifted by <admin>. The chunk loader is still off and can be switched on again."
+ticket-report-again: "Reported again:"
 ticket-close-team-only: "<prefix><gray>Only the team can close this ticket."
 ticket-view-object: "<aqua>Chunk loader menu"
 ticket-view-object-hover: "<gray>The loader's menu: teleport, on/off, border, activity"
@@ -724,7 +722,7 @@ version-latest: "<prefix><green>You are using the latest version."
 version-outdated: "<prefix><gold>New version available: <white><latest></white> <gray>(installed: <current>) <download>"
 version-unknown: "<prefix><gray>Update status unknown: <reason>"
 version-checking: "<prefix><gray>Checking for updates ..."
-version-links: "<prefix><modrinth> <dark_gray>| <github>"
+version-links: "<prefix><website> <dark_gray>| <github>"
 update-download-label: "<aqua><u>[Download]</u></aqua>"
 update-join-notify: "<prefix><gold>An update for MRadmin is available: <white><latest></white> <gray>(installed: <current>) <download>"
 update-reason-disabled: "update check is disabled"

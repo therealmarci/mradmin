@@ -9,7 +9,7 @@ libraries:
   - org.xerial:sqlite-jdbc:${sqliteVersion}
   - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
 author: _therealmarci
-website: https://github.com/${githubRepository}
+website: ${website}/docs/${websiteSlug}/
 description: Admin-Werkzeuge - Wartungsmodus mit Uptime-Kuma-Anbindung, Ankündigungen und Admin-Modus.
 
 commands:

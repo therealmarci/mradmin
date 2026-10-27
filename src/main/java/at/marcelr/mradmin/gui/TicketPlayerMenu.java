@@ -3,7 +3,7 @@ package at.marcelr.mradmin.gui;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
-import org.bukkit.Bukkit;
+import at.marcelr.mradmin.player.Npcs;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -32,7 +32,7 @@ public final class TicketPlayerMenu extends Menu {
     @Override
     protected void draw() {
         Messages messages = plugin.messages();
-        List<Player> players = Bukkit.getOnlinePlayers().stream()
+        List<Player> players = Npcs.online().stream()
                 .filter(p -> !p.equals(viewer) && viewer.canSee(p))
                 .map(p -> (Player) p)
                 .sorted(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER))

@@ -1,6 +1,6 @@
 <script>
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { ago, dateTime, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -15,7 +15,7 @@
 
   async function load() {
     try {
-      loader = await api('GET', '/mrchunks/loaders/' + id);
+      loader = await moduleData('mrchunks', 'loader', { id });
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -36,7 +36,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', `/mrchunks/loaders/${id}/${action}`);
+      await moduleAction('mrchunks', { action, id });
       if (action === 'delete') {
         go('/chunks');
         return;
@@ -78,6 +78,10 @@
       <dl class="facts">
         <dt>{t('ticket.location')}</dt><dd class="mono coords"><span>{loader.world}</span><span>X {loader.x}</span><span>Y {loader.y}</span><span>Z {loader.z}</span></dd>
         <dt>{t('chunks.created')}</dt><dd>{dateTime(loader.created)}</dd>
+        {#if loader.dummiesEnabled}
+          <dt>{t('chunks.dummy')}</dt>
+          <dd class:good-text={loader.dummyPresent}>{loader.dummyPresent ? '🧍 ' + t('chunks.dummySits') : loader.dummy ? t('chunks.dummyWaiting') : t('chunks.dummyNone')}</dd>
+        {/if}
         {#if loader.lock}
           <dt>{t('chunks.status.locked')}</dt>
           <dd class="bad-text">{t('chunks.lockedBy', { metric: loader.lock.metric, value: Math.round(loader.lock.value), limit: Math.round(loader.lock.limit) })} · {dateTime(loader.lock.since)}</dd>
@@ -90,6 +94,11 @@
           {:else}
             <button class:secondary={loader.active} onclick={() => act('toggle')} disabled={busy}>
               {loader.active ? t('chunks.switchOff') : t('chunks.switchOn')}
+            </button>
+          {/if}
+          {#if loader.dummiesEnabled}
+            <button class="secondary" onclick={() => act('dummy')} disabled={busy}>
+              {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
             </button>
           {/if}
           <button class="danger" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>

@@ -126,10 +126,8 @@ public record Settings(
      *
      * @param plugin     only shown if this plugin is installed and enabled ("" = always)
      * @param permission only shown with this permission ("" = everyone in admin mode)
-     * @param hook       optional class of the plugin for live information and its player menu (see PluginHooks)
      */
-    public record HubButton(String id, String plugin, Material material, String command, String permission,
-                            String hook) {
+    public record HubButton(String id, String plugin, Material material, String command, String permission) {
     }
 
     public record UpdateSettings(boolean enabled, String source, boolean includePrereleases,
@@ -452,12 +450,10 @@ public record Settings(
      */
     private static List<HubButton> hubButtons(FileConfiguration c, Logger log) {
         List<HubButton> buttons = new ArrayList<>();
-        Set<String> builtInHooks = new java.util.HashSet<>();
         for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
-            builtInHooks.add(integration.hook());
             if (c.getBoolean("integrations." + integration.id(), true)) {
                 buttons.add(new HubButton(integration.id(), integration.plugin(), integration.material(),
-                        integration.command(), integration.permission(), integration.hook()));
+                        integration.command(), integration.permission()));
             }
         }
         var section = c.getConfigurationSection("admin-mode.menu.buttons");
@@ -469,8 +465,9 @@ public record Settings(
             if (!c.getBoolean(path + ".enabled", true)) {
                 continue;
             }
-            if (builtInHooks.contains(c.getString(path + ".hook", "").trim())) {
-                // Old config: MRsleep/MRchunks are built in now (integrations), no second button.
+            var builtIn = at.marcelr.mradmin.hook.Integration.byPlugin(c.getString(path + ".plugin", "").trim());
+            if (builtIn != null && builtIn.id().equals(id)) {
+                // Old config: MRsleep/MRchunks ... are built in now (integrations), no second button.
                 continue;
             }
             String command = c.getString(path + ".command", "").trim();
@@ -491,7 +488,7 @@ public record Settings(
                 break;
             }
             buttons.add(new HubButton(id, c.getString(path + ".plugin", "").trim(), material, command,
-                    c.getString(path + ".permission", "").trim(), c.getString(path + ".hook", "").trim()));
+                    c.getString(path + ".permission", "").trim()));
         }
         return List.copyOf(buttons);
     }

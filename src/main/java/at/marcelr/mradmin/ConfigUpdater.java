@@ -90,7 +90,7 @@ public final class ConfigUpdater {
             for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
                 String button = "admin-mode.menu.buttons." + integration.id();
                 if (existing.isConfigurationSection(button)
-                        && integration.hook().equals(existing.getString(button + ".hook", "").trim())) {
+                        && integration.plugin().equalsIgnoreCase(existing.getString(button + ".plugin", "").trim())) {
                     if (!existing.getBoolean(button + ".enabled", true)) {
                         existing.set("integrations." + integration.id(), false);
                     }

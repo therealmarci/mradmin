@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.Texts;
+import at.marcelr.mradmin.player.Npcs;
 import com.google.gson.JsonObject;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.sound.Sound;
@@ -294,7 +295,7 @@ public final class MaintenanceManager {
                         messages().get("maintenance-countdown-title", tag("seconds", second)),
                         messages().get("maintenance-countdown-subtitle", resolvers(current, now)),
                         Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ofMillis(300)));
-                Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
+                Npcs.online().forEach(p -> p.showTitle(title));
                 playSound(m);
             }
             lastRemaining = remaining;
@@ -349,7 +350,7 @@ public final class MaintenanceManager {
         messages().broadcast("maintenance-started", resolvers(window, now));
         Title title = Title.title(messages().get("maintenance-start-title", resolvers(window, now)),
                 messages().get("maintenance-start-subtitle", resolvers(window, now)));
-        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
+        Npcs.online().forEach(p -> p.showTitle(title));
         playSound(m);
         plugin.discord().log("maintenance-start", discordTags(window));
         plugin.getLogger().info("Maintenance started" + (window.end() == null ? " (open end)." : ", ends at " + window.end() + "."));
@@ -358,7 +359,7 @@ public final class MaintenanceManager {
                 if (!active) {
                     return;
                 }
-                for (Player player : List.copyOf(Bukkit.getOnlinePlayers())) {
+                for (Player player : List.copyOf(Npcs.online())) {
                     if (!canJoin(player)) {
                         player.kick(kickScreen());
                     }
@@ -387,7 +388,7 @@ public final class MaintenanceManager {
             return;
         }
         Sound sound = Sound.sound(m.sound(), Sound.Source.MASTER, 1f, 1f);
-        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(sound, Sound.Emitter.self()));
+        Npcs.online().forEach(p -> p.playSound(sound, Sound.Emitter.self()));
     }
 
     // ---------------------------------------------------------------- bossbar
@@ -402,7 +403,7 @@ public final class MaintenanceManager {
                 countdownBar.progress(clamp(m.warnBefore() <= 0 ? 0 : (float) remaining / m.warnBefore()));
                 countdownBar.color(remaining <= m.finalSeconds() * 1000L ? m.finalColor() : m.color());
                 countdownBar.overlay(m.overlay());
-                Bukkit.getOnlinePlayers().forEach(p -> countdown.add(p.getUniqueId()));
+                Npcs.online().forEach(p -> countdown.add(p.getUniqueId()));
             } else if (phase == Phase.ACTIVE && m.showDuring()) {
                 if (window.end() != null && window.start() != null) {
                     long total = window.end().toEpochMilli() - window.start().toEpochMilli();
@@ -415,7 +416,7 @@ public final class MaintenanceManager {
                         resolvers(window, now)));
                 activeBar.color(m.duringColor());
                 activeBar.overlay(m.overlay());
-                for (Player player : Bukkit.getOnlinePlayers()) {
+                for (Player player : Npcs.online()) {
                     if (player.hasPermission(PERM_BYPASS)) {
                         during.add(player.getUniqueId());
                     }

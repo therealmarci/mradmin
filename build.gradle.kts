@@ -18,6 +18,8 @@ version = "mc$mcVersion-v$pluginVersion"
 
 val modrinthProjectId = providers.gradleProperty("modrinthProjectId").get()
 val githubRepository = providers.gradleProperty("githubRepository").get()
+val website = providers.gradleProperty("website").get()
+val websiteSlug = providers.gradleProperty("websiteSlug").get()
 val socketIoVersion = providers.gradleProperty("socketIoVersion").get()
 val hikariVersion = providers.gradleProperty("hikariVersion").get()
 val sqliteVersion = providers.gradleProperty("sqliteVersion").get()
@@ -39,6 +41,8 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApi")
+    // Die Modul-API (api/) steckt mit in der JAR - andere Plugins nutzen sie zur Laufzeit von hier.
+    implementation(project(":api"))
     // Optional: Rechte schon vor dem Join prüfen (Wartungsmodus). Ohne LuckPerms wird erst beim Join gekickt.
     compileOnly("net.luckperms:api:5.5")
     // Optional: Banns, Mutes, Warns und Kicks über LibertyBans auf der Spielerseite im Web. Ohne LibertyBans fehlt der Teil.
@@ -93,6 +97,8 @@ tasks.processResources {
         "mcVersion" to mcVersion,
         "modrinthProjectId" to modrinthProjectId,
         "githubRepository" to githubRepository,
+        "website" to website,
+        "websiteSlug" to websiteSlug,
         "hikariVersion" to hikariVersion,
         "sqliteVersion" to sqliteVersion,
         "mariadbVersion" to mariadbVersion,

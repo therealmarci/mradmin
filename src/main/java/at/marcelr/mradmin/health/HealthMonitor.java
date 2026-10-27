@@ -3,6 +3,7 @@ package at.marcelr.mradmin.health;
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.Settings;
+import at.marcelr.mradmin.player.Npcs;
 import com.google.gson.Gson;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -163,11 +164,11 @@ public final class HealthMonitor {
         }
         worlds = List.copyOf(list);
 
-        double ping = Bukkit.getOnlinePlayers().stream().mapToInt(org.bukkit.entity.Player::getPing).average().orElse(-1);
+        double ping = Npcs.online().stream().mapToInt(org.bukkit.entity.Player::getPing).average().orElse(-1);
 
         add(new Point(now, round(tps), round(Bukkit.getAverageTickTime()), round(p95), round(max), cpu, cpuSystem,
                 heap.getUsed() / 1_048_576, (heap.getMax() > 0 ? heap.getMax() : heap.getCommitted()) / 1_048_576,
-                round(gc), Bukkit.getOnlinePlayers().size(), chunks, entities, tiles, ping < 0 ? -1 : round(ping),
+                round(gc), Npcs.online().size(), chunks, entities, tiles, ping < 0 ? -1 : round(ping),
                 loaderChunks()));
         alert(Math.min(20, Bukkit.getTPS()[0]), now);
     }
@@ -324,8 +325,9 @@ public final class HealthMonitor {
 
     /** Chunks the loaders of MRchunks keep loaded - only if MRchunks runs and offers web data, else -1. */
     private int loaderChunks() {
-        Settings.HubButton hook = at.marcelr.mradmin.web.ChunkRoutes.hook(plugin);
-        return hook != null && plugin.hooks().web(hook, "chunks", java.util.Map.of()) instanceof Number n ? n.intValue() : -1;
+        var web = plugin.modules().web("mrchunks");
+        return web != null && plugin.modules().call(plugin.modules().module("mrchunks"), () -> web.data("chunks", java.util.Map.of()), null)
+                instanceof Number n ? n.intValue() : -1;
     }
 
     private static double maxOf(List<Point> points, ToDoubleFunction<Point> f) {

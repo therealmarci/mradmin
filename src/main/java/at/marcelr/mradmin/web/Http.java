@@ -114,6 +114,48 @@ public final class Http {
         params.putAll(values);
     }
 
+    /** The query string as name -> value (first value wins), e.g. {@code ?id=3&filter=all}. */
+    public Map<String, String> query() {
+        Map<String, String> values = new java.util.LinkedHashMap<>();
+        String raw = exchange.getRequestURI().getRawQuery();
+        if (raw == null || raw.isEmpty()) {
+            return values;
+        }
+        for (String part : raw.split("&")) {
+            int eq = part.indexOf('=');
+            String name = URLDecoder.decode(eq < 0 ? part : part.substring(0, eq), StandardCharsets.UTF_8);
+            String value = eq < 0 ? "" : URLDecoder.decode(part.substring(eq + 1), StandardCharsets.UTF_8);
+            if (!name.isEmpty()) {
+                values.putIfAbsent(name, value);
+            }
+        }
+        return values;
+    }
+
+    /**
+     * The JSON body as plain values: strings, booleans, whole numbers as Long, other numbers as Double. Nested objects
+     * and arrays are left out.
+     */
+    public Map<String, Object> bodyValues() throws IOException {
+        Map<String, Object> values = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, JsonElement> entry : body().entrySet()) {
+            if (!entry.getValue().isJsonPrimitive()) {
+                continue;
+            }
+            var primitive = entry.getValue().getAsJsonPrimitive();
+            if (primitive.isBoolean()) {
+                values.put(entry.getKey(), primitive.getAsBoolean());
+            } else if (primitive.isNumber()) {
+                double number = primitive.getAsDouble();
+                values.put(entry.getKey(), number == Math.rint(number) && Math.abs(number) < 9.0E15
+                        ? (Object) (long) number : number);
+            } else {
+                values.put(entry.getKey(), primitive.getAsString());
+            }
+        }
+        return values;
+    }
+
     public String cookie(String name) {
         String header = header("Cookie");
         if (header == null) {

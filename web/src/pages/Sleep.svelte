@@ -1,7 +1,7 @@
 <script>
   // MRsleep's worlds: sleep status and who blocks with /nosleep. Everything about one player (cooldown, bypass,
   // ban) is on their page in the player management.
-  import { api } from '../lib/api.js';
+  import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { head, duration } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -15,7 +15,7 @@
 
   async function load() {
     try {
-      overview = await api('GET', '/mrsleep/overview');
+      overview = await moduleData('mrsleep', 'overview');
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -35,7 +35,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', '/mrsleep/action', body);
+      await moduleAction('mrsleep', body);
       message = t('sleep.done.' + body.action);
       await load();
     } catch (e) {
