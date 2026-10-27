@@ -55,6 +55,11 @@ public final class Perms {
     public static final String ADMIN_DISCORD = "mradmin.admin.discord";
     public static final String ADMIN_UPDATE = "mradmin.admin.update";
 
+    // versions and restart (web interface)
+    public static final String VERSIONS_VIEW = "mradmin.versions.view";
+    public static final String VERSIONS_INSTALL = "mradmin.versions.install";
+    public static final String SERVER_RESTART = "mradmin.server.restart";
+
     private Perms() {
     }
 }

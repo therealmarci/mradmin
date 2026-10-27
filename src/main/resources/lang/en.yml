@@ -677,6 +677,9 @@ discord:
   web-console: "⌨️ **{player}** ran in the web console: `{command}`"
   health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
   health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
+  plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
+  server-restart: "🔄 **{admin}** restarts the server (countdown: {time})."
+  server-restart-cancelled: "❎ **{admin}** cancelled the restart."
 # Texts for the community Discord (discord-announce in config.yml). Markdown like in Discord.
 # Placeholders: {title} (topic) {start} {end} (Discord timestamps, everyone sees their own timezone) {start-relative} {end-relative} ("in 2 hours"), {started} {ended} (actual begin and end).
 discord-announce:
@@ -724,6 +727,8 @@ version-outdated: "<prefix><gold>New version available: <white><latest></white> 
 version-unknown: "<prefix><gray>Update status unknown: <reason>"
 version-checking: "<prefix><gray>Checking for updates ..."
 version-links: "<prefix><website> <dark_gray>| <github>"
+restart-cancelled: "<prefix><green>The planned restart has been cancelled."
+versions-auto: "automatically"
 update-download-label: "<aqua><u>[Download]</u></aqua>"
 update-join-notify: "<prefix><gold>An update for MRadmin is available: <white><latest></white> <gray>(installed: <current>) <download>"
 update-reason-disabled: "update check is disabled"

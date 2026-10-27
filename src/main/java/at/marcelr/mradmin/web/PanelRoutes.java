@@ -131,6 +131,20 @@ public final class PanelRoutes {
                 alerts.add(alert("info", "maintenanceSoon", "maintenance", Map.of("start", m.get("start") instanceof Number n ? n : 0)));
             }
         }
+        if (plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())) {
+            var plugins = plugin.versions().list();
+            long updates = plugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
+            long staged = plugins.stream().filter(e -> e.staged != null).count();
+            long restartAt = server.sync(() -> plugin.restarts().endsAt());
+            result.put("versions", Map.of("plugins", plugins.size(), "updates", updates, "staged", staged, "restartAt", restartAt));
+            if (restartAt > 0) {
+                alerts.add(alert("warn", "restartSoon", "versions", Map.of("time", restartAt)));
+            } else if (staged > 0) {
+                alerts.add(alert("info", "versionsStaged", "versions", Map.of("n", staged)));
+            } else if (updates > 0) {
+                alerts.add(alert("info", "versionsUpdates", "versions", Map.of("n", updates)));
+            }
+        }
         List<String> order = List.of("bad", "warn", "info");
         alerts.sort(java.util.Comparator.comparingInt(a -> order.indexOf((String) a.get("tone"))));
         result.put("alerts", alerts);

@@ -42,6 +42,7 @@
     tickets: () => me.may.tickets && '/tickets',
     'tickets-mine': () => me.may.tickets && '/tickets',
     maintenance: () => me.may.maintenance && '/maintenance',
+    versions: () => me.may.versions && '/versions',
   };
   // Hints of modules (MRchunks, MRsleep ...) name the page themselves - linked if the member may see the module.
   const target = (a) => (a.module ? (me.may[a.module] && a.page) : a.page && pages[a.page]?.()) || null;
@@ -62,6 +63,7 @@
     const v = { ...a.values };
     if (a.key === 'disk') v.free = mb(v.free);
     if (a.key === 'maintenanceSoon') v.start = v.start ? dateTime(v.start) : '–';
+    if (a.key === 'restartSoon') v.time = dateTime(v.time);
     if (a.key === 'tps' || a.key === 'mspt') v.value = Number(v.value).toFixed(1);
     return t('alert.' + a.key, v);
   }
@@ -213,6 +215,22 @@
             {/if}
           </div>
           <div class="small link">{t('home.toMaintenance')} →</div>
+        </button>
+      {/if}
+
+      {#if data.versions}
+        {@const v = data.versions}
+        <button class="card tile" onclick={() => go('/versions')}>
+          <div class="label">{t('nav.versions')}</div>
+          <div class="big small-big {v.restartAt ? 'bad' : v.staged ? 'info' : v.updates ? 'warn' : 'good'}">
+            {v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : v.updates ? t('home.versionsUpdates', { n: v.updates }) : t('home.versionsCurrent')}
+          </div>
+          <div class="facts">
+            <div><span class="muted">{t('home.versionsPlugins')}</span> {v.plugins}</div>
+            <div><span class="muted">{t('home.versionsAvailable')}</span> {v.updates}</div>
+            <div><span class="muted">{t('home.versionsWaiting')}</span> {v.staged}</div>
+          </div>
+          <div class="small link">{t('home.toVersions')} →</div>
         </button>
       {/if}
     </div>

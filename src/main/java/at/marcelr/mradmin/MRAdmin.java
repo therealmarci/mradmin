@@ -79,6 +79,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
     private UpdateChecker updateChecker;
+    private at.marcelr.mradmin.versions.VersionManager versions;
+    private at.marcelr.mradmin.versions.RestartManager restarts;
     private FreezeManager freeze;
     private TicketManager tickets;
     private Modules modules;
@@ -106,6 +108,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
+        at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
@@ -126,6 +129,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.load();
         adminMode = new AdminModeManager(this);
         updateChecker = new UpdateChecker(this);
+        versions = new at.marcelr.mradmin.versions.VersionManager(this);
+        restarts = new at.marcelr.mradmin.versions.RestartManager(this);
         menuListener = new MenuListener(this);
 
         var pm = getServer().getPluginManager();
@@ -167,6 +172,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (freeze != null) {
             freeze.stop();
+        }
+        if (versions != null) {
+            versions.shutdown();
         }
         if (updateChecker != null) {
             updateChecker.stop();
@@ -223,6 +231,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.start();
         adminMode.start();
         updateChecker.start();
+        versions.start();
         menuListener.start();
     }
 
@@ -391,5 +400,13 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public UpdateChecker updateChecker() {
         return updateChecker;
+    }
+
+    public at.marcelr.mradmin.versions.VersionManager versions() {
+        return versions;
+    }
+
+    public at.marcelr.mradmin.versions.RestartManager restarts() {
+        return restarts;
     }
 }

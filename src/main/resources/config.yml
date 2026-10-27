@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 20
+config-version: 21
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -408,6 +408,15 @@ discord:
     health-recovered:
       enabled: true
       color: "#2ECC71"
+    plugin-update-downloaded:
+      enabled: true
+      color: "#3498DB"
+    server-restart:
+      enabled: true
+      color: "#E67E22"
+    server-restart-cancelled:
+      enabled: true
+      color: "#95A5A6"
 
 
 # ------------------------------------------------------------------------------
@@ -469,6 +478,28 @@ update-checker:
   interval-hours: 6
   # Notify players with "mradmin.admin.update" when they join the server.
   notify-on-join: true
+
+
+# ------------------------------------------------------------------------------
+#   VERSIONS & RESTART (web interface, page "Versions")
+# ------------------------------------------------------------------------------
+# All installed MRtechnology plugins with their updates. Downloads come only from the official GitHub release of
+# each plugin (for this Minecraft version, checked with the SHA-256 checksum) and go to plugins/update/ - Paper
+# installs them on the next start. Nothing is replaced while the server runs.
+versions:
+  enabled: true
+  # How often to look for new versions (hours).
+  check-interval-hours: 6
+  # Download new versions by themselves: "off", "patch" (only hotfixes 1.2.x), "minor" (1.x), "all".
+  auto-download: "off"
+  # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
+  include-prereleases: false
+  # How the restart button brings the server back:
+  #   stop   = the server stops; your start script, watchdog or hosting panel starts it again (e.g. mc.sh watchdog)
+  #   spigot = the server's own restart: runs restart-script from spigot.yml
+  restart-method: stop
+  # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
+  restart-delays: ["5m", "1m", "now"]
 
 
 # ------------------------------------------------------------------------------

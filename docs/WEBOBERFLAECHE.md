@@ -140,6 +140,22 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 
+## Versionen (`mradmin.versions.view`)
+- Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
+  (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
+  auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
+- Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
+  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (höchstens einmal pro
+  Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+- **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
+  SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
+  JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. `versions.auto-download`
+  (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
+- **Server neu starten** (`mradmin.server.restart`): Countdown aus `versions.restart-delays`, angekündigt mit den
+  Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`restart-method: stop` - ein Start-Skript
+  oder Wächter startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu (`spigot`).
+- Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
+
 ## Push-Benachrichtigungen
 Unter **Konto → Benachrichtigungen**.
 

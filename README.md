@@ -19,6 +19,7 @@
 - **Ankündigungen** auf dem Bildschirm aller Spieler, mit Vorlagen (z.B. fürs Restart-Script) und auf Wunsch im Community-Discord.
 - **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
 - **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
+- **Versionen & Updates:** alle MRtechnology-Plugins mit ihren Updates im Web, Updates per Klick herunterladen (Installation beim nächsten Neustart) und den Server mit Countdown neu starten.
 - **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
 ## Schnellstart
@@ -172,6 +173,16 @@ MRadmin vom Handy, Tablet oder PC bedienen: Übersicht mit Live-Werten, Tickets,
 
 Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per Passkey (Fingerabdruck, Face ID, Windows Hello) oder Discord. Alle Funktionen, Sicherheitsdetails, die Web-Konsole, Entbannungsanträge und das Kontaktformular: **[Weboberfläche im Detail](docs/WEBOBERFLAECHE.md)**.
 
+### Versionen & Updates
+In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
+- **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht.
+- **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
+- **Server neu starten:** Knopf mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort), angekündigt wie `/mradmin announce restart`. Danach stoppt der Server - **dein Start-Skript oder Wächter muss ihn wieder starten** (z.B. ein Hoster-Panel oder ein Skript mit Absturz-Wächter). Alternativ `versions.restart-method: spigot` mit dem `restart-script` aus der `spigot.yml`.
+- Downloads und Neustarts stehen im Web-Protokoll und im Discord-Log (`plugin-update-downloaded`, `server-restart`).
+
+> [!WARNING]
+> Steht der Server nach dem Stoppen nicht von selbst wieder auf, bleibt er nach einem Neustart über den Knopf aus. Prüf das einmal, bevor du den Knopf im Ernstfall benutzt.
+
 ---
 
 ## Zusammenarbeit mit anderen Plugins
@@ -203,7 +214,7 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 |---|---|
 | `mradmin.support` | Dashboard, Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche |
 | `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen und joinen, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand |
-| `mradmin.admin` | Alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten, Reload, Speicher, Discord, Update-Hinweis |
+| `mradmin.admin` | Alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten |
 
 <details>
 <summary>Alle einzelnen Permissions</summary>
@@ -219,6 +230,7 @@ Standard ist `op`, außer anders angegeben.
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole in **keinem** Paket, Standard: niemand) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
+| Versionen & Neustart (Web) | `mradmin.versions.view` (ansehen) · `mradmin.versions.install` (herunterladen) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
 </details>
@@ -240,6 +252,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
+| `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 
 **Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
 - **Jeder Spieler bekommt seine Sprache:** Mit `language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
