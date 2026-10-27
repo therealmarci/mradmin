@@ -493,17 +493,11 @@ public record Settings(
     }
 
     /**
-     * The built-in integrations that are switched on (they only show while their plugin runs, see
-     * {@link at.marcelr.mradmin.hook.Integration}), followed by the owner's own buttons - at most 6 together.
+     * The owner's own buttons (admin-mode.menu.buttons). The buttons of connected plugins come from their modules
+     * and are put in front ({@link at.marcelr.mradmin.module.Modules#buttons()}) - at most 6 together.
      */
     private static List<HubButton> hubButtons(FileConfiguration c, Logger log) {
         List<HubButton> buttons = new ArrayList<>();
-        for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
-            if (c.getBoolean("integrations." + integration.id(), true)) {
-                buttons.add(new HubButton(integration.id(), integration.plugin(), integration.material(),
-                        integration.command(), integration.permission()));
-            }
-        }
         var section = c.getConfigurationSection("admin-mode.menu.buttons");
         if (section == null) {
             return List.copyOf(buttons);

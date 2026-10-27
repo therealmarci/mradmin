@@ -9,11 +9,23 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+> [!WARNING]
+> **Neue Permission-Gruppen:** Die Pakete `mradmin.support`, `mradmin.staff` und `mradmin.admin` gibt es nicht mehr. Stattdessen gibt es in allen MRtechnology-Plugins dieselben Gruppen `<plugin>.player` und `<plugin>.groups.support|staff|admin`. Bitte die LuckPerms-Gruppen umstellen, z.B. `/lp group staff permission unset mradmin.staff` und `/lp group staff permission set mradmin.groups.staff true`. Außerdem ist `/report` nicht mehr automatisch für alle Spieler da: `/lp group default permission set mradmin.player true`.
+
 ### Neu
+- **Permission-Gruppen:** `mradmin.player` (`/report`), `mradmin.groups.support` (Übersicht, Serverzustand und Health, Tickets komplett, Spieler ansehen, Teleport, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und joinen, Versionen und Web-Konsole ansehen), `mradmin.groups.staff` (+ herholen, einfrieren, kicken, Admin-Modus) und `mradmin.groups.admin` (alles, auch Befehle in der Web-Konsole). Jede Gruppe enthält die darunter, alle Einzel-Permissions bleiben.
 - **Items wie im Spiel in der Weboberfläche:** Inventare (z.B. bei Duellen) zeigen die echten Item-Bilder aus dem Inventar, Anzahl, Haltbarkeit, Verzauberungs-Glanz und beim Darüberfahren bzw. Antippen den Tooltip wie im Spiel (Name, Verzauberungen, Trank-Effekte, Beschreibung) - in der Sprache des Browsers. Dafür lädt MRadmin beim ersten Start mit eingeschalteter Weboberfläche **einmal** den offiziellen Spiel-Client deiner Minecraft-Version von Mojang (rund 40 MB, mit Prüfsumme geprüft) und speichert nur die fertigen Bilder und Item-Namen unter `plugins/MRadmin/items/<version>/`. Neuer Config-Schlüssel `web.item-icons` (Standard `true`, `false` = kein Download, dann Kürzel statt Bildern; config-version 22).
 - **Item-Editor:** Ein Dialog zum Bearbeiten eines Items - Item mit Bild suchen, Anzahl, eigener Name und Beschreibung (MiniMessage, nur Farben und Stil), Verzauberungen (auch über die normale Stufe hinaus), Glanz, unzerstörbar, Haltbarkeit, Trank mit eigenen Effekten, Lederfarbe, Rüstungsbesatz, Raketen-Flugdauer, mit Live-Vorschau. Benutzt wird er z.B. vom kommenden Kit-Editor in MRpvp.
 - **Kit-Editor für Duelle (mit MRpvp):** Neue Seite Duelle → Kits mit allen Kits, Reihenfolge, Kopieren, Neu, Umbenennen, Löschen und dem Kit-Editor (Inventar mit Item-Editor, Texte DE/EN, Symbol, Permission, alle Regeln). Ist ein Kit noch auf eine gelöschte Arena festgelegt, zeigt der Editor das an. Permission `mrpvp.admin.kits`.
 - **Modul-API 2 (`api-1.1.0`):** `MRadminService.items()` wandelt Items in Daten für die Weboberfläche und zurück (`WebItems`), damit andere Plugins Inventare und Items mit Bildern zeigen und bearbeiten lassen können. Modul-Aktionen bekommen jetzt auch verschachtelte Werte (Listen, Objekte). Plugins für API 1 laufen unverändert weiter.
+
+### Entfernt
+- **Pakete `mradmin.support`, `mradmin.staff`, `mradmin.admin`:** ersetzt durch `mradmin.groups.support`, `mradmin.groups.staff` und `mradmin.groups.admin` (siehe oben - Support darf jetzt mehr als vorher: Serverzustand, Teleport, Inventar ansehen, Wartung joinen).
+
+### Behoben & geändert
+- **`/report` nur noch mit Permission:** `mradmin.tickets.create` ist nicht mehr automatisch für alle Spieler - vergib `mradmin.player` an deine Spieler-Gruppe.
+- **Web-Konsole in den Gruppen:** Ansehen (`mradmin.web.console.view`) ist in `mradmin.groups.support`, Befehle ausführen (`mradmin.web.console.execute`) in `mradmin.groups.admin`. Bisher war die Konsole in keinem Paket.
+- **Dashboard-Knöpfe der anderen Plugins:** Ob ein Teammitglied den Knopf von MRchunks, MRpvp, MRsleep oder MRtoolbar sieht, bestimmt jetzt das jeweilige Plugin selbst (seine Ansichts-Permission). MRadmin hat keine Permission-Namen anderer Plugins mehr fest eingebaut - auch nicht für die Push-Benachrichtigung „Chunkloader gesperrt“.
 
 ## [0.7.0] - 2026-10-27
 

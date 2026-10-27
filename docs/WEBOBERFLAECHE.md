@@ -200,7 +200,7 @@ Unter **Konto → Benachrichtigungen**.
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
 ## Konsole
-`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle ausführen - beide in **keinem** Paket, also nur gezielt vergeben.
+`mradmin.web.console.view` ansehen (in `mradmin.groups.support`), `mradmin.web.console.execute` Befehle ausführen (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole).
 
 - Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
   farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).

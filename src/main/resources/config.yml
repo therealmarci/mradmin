@@ -609,7 +609,7 @@ web:
   # Operators may do everything; otherwise role -> permissions ("*" = everything, "mradmin.*" = everything of MRadmin) and
   # player (name or UUID) -> role. Example:
   #   roles:
-  #     support: ["mradmin.support", "mradmin.status"]
+  #     support: ["mradmin.groups.support", "mrpvp.groups.support"]
   #   players:
   #     Steve: support
   roles: {}
@@ -633,8 +633,8 @@ web:
     # Only store shortened IP addresses (1.2.3.4 -> 1.2.3.0) - in the log and for the logged-in devices.
     # Less personal, but misuse is harder to trace.
     mask-ip: false
-  # Web console: live log (permission mradmin.web.console.view) and commands (mradmin.web.console.execute). Both
-  # are in no package (not even in mradmin.admin) and have to be granted individually on purpose. Before opening,
+  # Web console: live log (permission mradmin.web.console.view, in mradmin.groups.support) and commands
+  # (mradmin.web.console.execute, in mradmin.groups.admin - as powerful as the server console). Before opening,
   # the interface asks once more for the code from the authenticator app. Every command ends up in the web log
   # and in the Discord log (web-console).
   console:

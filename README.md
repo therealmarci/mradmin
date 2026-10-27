@@ -25,11 +25,12 @@
 ## Schnellstart
 1. **[MRadmin herunterladen](https://mrtechnology.marcelr.at/download/mradmin/)** und die JAR in den Ordner `plugins/` legen.
 2. Den Server starten. Dabei entstehen `plugins/MRadmin/config.yml` und die Sprachdateien in `plugins/MRadmin/lang/`.
-3. **Dem Team die Rechte geben** - es gibt fertige Pakete:
+3. **Rechte geben** - es gibt fertige Gruppen (in allen MRtechnology-Plugins gleich aufgebaut):
    ```text
-   /lp group supporter permission set mradmin.support true
-   /lp group staff permission set mradmin.staff true
-   /lp group admin permission set mradmin.admin true
+   /lp group default permission set mradmin.player true
+   /lp group supporter permission set mradmin.groups.support true
+   /lp group staff permission set mradmin.groups.staff true
+   /lp group admin permission set mradmin.groups.admin true
    ```
 4. Fertig: **`/mradmin`** öffnet das Dashboard, Spieler erstellen Tickets mit **`/report`**.
 
@@ -240,13 +241,17 @@ Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integr
 ---
 
 ## Permissions
-Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Pakete**:
+Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Gruppen**. Sie sind in allen MRtechnology-Plugins gleich aufgebaut (`<plugin>.player` und `<plugin>.groups.support|staff|admin`), jede Gruppe enthält die darunter. Standardmäßig haben sie nur OPs.
 
-| Paket | Enthält |
+| Gruppe | Enthält |
 |---|---|
-| `mradmin.support` | Dashboard, Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche |
-| `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen und joinen, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand |
-| `mradmin.admin` | Alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen |
+| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen, Web-Konsole ansehen |
+| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken, Admin-Modus |
+| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** |
+
+> [!WARNING]
+> `mradmin.groups.admin` enthält das Ausführen von Befehlen in der Web-Konsole - so mächtig wie die Server-Konsole. Gib die Gruppe nur Leuten, denen du den Server anvertraust. Vor dem Öffnen fragt das Web zusätzlich den 2FA-Code ab.
 
 <details>
 <summary>Alle einzelnen Permissions</summary>
@@ -256,11 +261,11 @@ Standard ist `op`, außer anders angegeben.
 | Bereich | Permissions |
 |---|---|
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
-| Tickets | `mradmin.tickets.create` (**alle**, `/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
+| Tickets | `mradmin.tickets.create` (`/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
 | Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
-| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole in **keinem** Paket, Standard: niemand) |
+| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
 | Versionen & Neustart (Web) | `mradmin.versions.view` (ansehen) · `mradmin.versions.install` (herunterladen) · `mradmin.server.restart` (neu starten) |
 
@@ -268,7 +273,7 @@ Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren
 </details>
 
 > [!TIP]
-> Die Web-Konsole gibst du nur gezielt frei: `/lp user <name> permission set mradmin.web.console.execute true`
+> Einzelnen Leuten gibst du zusätzlich einzelne Rechte, z.B. `/lp user <name> permission set mradmin.announce true`. Aus einer Gruppe nimmst du eins heraus mit z.B. `/lp group staff permission set mradmin.player.kick false`.
 
 ## Konfiguration
 Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst du mit `/mradmin reload`.
@@ -308,7 +313,7 @@ Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integratione
 
 ## Häufige Fragen
 **Ein Teammitglied wird bei der Wartung trotzdem gekickt.**
-Es braucht `mradmin.maintenance.bypass` (in `mradmin.staff` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.
+Es braucht `mradmin.maintenance.bypass` (in `mradmin.groups.support` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.
 
 **Ich war im Admin-Modus, und der Server ist abgestürzt.**
 Nichts verloren - du bist nach dem Neustart einfach noch im Admin-Modus. `/mradmin mode off` stellt alles wieder her. Die Dateien in `plugins/MRadmin/admin-mode/` bitte nicht löschen.
