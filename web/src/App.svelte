@@ -70,7 +70,10 @@
   // /tickets/12 -> "12"; on a single ticket "Tickets" stays highlighted in the navigation.
   const ticketId = $derived(route.path.match(/^\/tickets\/(\d+)$/)?.[1] ?? null);
   const chunkId = $derived(route.path.match(/^\/chunks\/(\d+)$/)?.[1] ?? null);
-  const playerId = $derived(route.path.match(/^\/players\/([0-9a-f-]{36})$/)?.[1] ?? null);
+  // /players/<uuid> is the overview, /players/<uuid>/<section> one section of it (tickets, mrsleep, ...).
+  const playerMatch = $derived(route.path.match(/^\/players\/([0-9a-f-]{36})(?:\/([a-z]+))?$/));
+  const playerId = $derived(playerMatch?.[1] ?? null);
+  const playerSection = $derived(playerMatch?.[2] ?? null);
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
   const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId ? '/pvp' : route.path);
 
@@ -171,7 +174,7 @@
     {:else if route.path === '/chunks' && me.may.mrchunks}
       <Chunks />
     {:else if playerId && me.may.players}
-      {#key playerId}<PlayerView uuid={playerId} {me} />{/key}
+      {#key playerId}<PlayerView uuid={playerId} section={playerSection} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}
       <Players />
     {:else if route.path === '/maintenance' && (me.may.maintenance || me.may.announce)}

@@ -1,14 +1,16 @@
 <script>
   // MRchunks' part of a player's page: their loaders, limits, chunk loader ban, invites, loaders shared with them,
   // linked accounts and dummies - with MRchunks' permissions (limit, ban, manage).
+  // view "tile": only the status as a tile on the player's overview.
   import { untrack } from 'svelte';
   import { playerAction, playerPart } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { STATUS } from '../lib/chunks.js';
+  import PartTile from './PartTile.svelte';
 
-  let { uuid, me, name, onDone } = $props();
+  let { uuid, me, name, onDone, view = 'full', onOpen } = $props();
 
   let c = $state(null);
   let error = $state('');
@@ -63,15 +65,24 @@
     { kind: 'active', label: t('chunks.limitActive'), used: c.active, limit: c.activeLimit },
     ...(c.dummiesEnabled ? [{ kind: 'dummy', label: t('chunks.limitDummy'), used: c.dummies, limit: c.dummyLimit }] : []),
   ] : []);
+  const chips = $derived(c ? [
+    ...(c.exempt ? [{ text: t('chunks.exempt'), tone: '' }] : []),
+    ...(c.ban ? [{ text: '✕ ' + (c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })), tone: 'bad' }] : []),
+    ...(c.shared.length ? [{ text: t('chunks.tileShared', { n: c.shared.length }), tone: 'info' }] : []),
+  ] : []);
 </script>
 
+{#if view === 'tile'}
+  <PartTile icon="🧱" title={t('nav.chunks')} loading={!c} {error} {onOpen} {chips}
+    value={c ? t('chunks.tileLoaders', { n: c.loaders.length, max: limitText(c.limit) }) : ''}
+    sub={c ? t('chunks.tileActive', { n: c.active }) : ''} />
+{:else}
 <section class="card part">
   <div class="phead">
     <h2>🧱 {t('nav.chunks')}</h2>
     {#if c}
       <div class="chips">
-        {#if c.exempt}<span class="tag">{t('chunks.exempt')}</span>{/if}
-        {#if c.ban}<span class="tag bad">✕ {c.ban.permanent ? t('sleep.bannedPermanent') : t('sleep.bannedUntil', { time: dateTime(c.ban.until) })}</span>{/if}
+        {#each chips as ch}<span class="tag {ch.tone}">{ch.text}</span>{/each}
       </div>
     {/if}
   </div>
@@ -211,6 +222,7 @@
     <p class="muted small">{t('common.loading')}</p>
   {/if}
 </section>
+{/if}
 
 <style>
   .phead {
@@ -249,6 +261,11 @@
   .tag.bad {
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 14%, transparent);
+  }
+
+  .tag.info {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .limits {

@@ -8,8 +8,10 @@
   import ChunksPart from '../components/ChunksPart.svelte';
   import PvpPart from '../components/PvpPart.svelte';
   import BansPart from '../components/BansPart.svelte';
+  import PartTile from '../components/PartTile.svelte';
 
-  let { uuid, me } = $props();
+  // Without a section: preview of the player and one tile per section; a tile opens /players/<uuid>/<section>.
+  let { uuid, me, section = null } = $props();
 
   let player = $state(null);
   let error = $state('');
@@ -57,14 +59,69 @@
   }
 
   const self = $derived(player && player.uuid === me.uuid);
+
+  const PARTS = { mrsleep: SleepPart, mrchunks: ChunksPart, mrpvp: PvpPart, libertybans: BansPart };
+  // Sections this player's page has, in the order of the tiles.
+  const sections = $derived(player ? [
+    ...(player.tickets ? ['tickets'] : []),
+    ...Object.keys(PARTS).filter((id) => player.parts[id]),
+  ] : []);
+  const open = (id) => go(`/players/${uuid}/${id}`);
+  const openTickets = $derived(player?.tickets?.filter((tk) => tk.open).length ?? 0);
+
+  // An unknown or unavailable section (old link, plugin removed) shows the overview.
+  $effect(() => {
+    if (player && section && !sections.includes(section)) go(`/players/${uuid}`, true);
+  });
+
+  // Messages of the overview do not belong to a section and the other way round.
+  $effect(() => {
+    section;
+    untrack(() => { message = ''; });
+  });
 </script>
 
 <div class="stack">
-  <button class="back" onclick={() => go('/players')}>← {t('player.back')}</button>
+  {#if section && player}
+    <button class="back" onclick={() => go(`/players/${uuid}`)}>← {t('player.backTo', { name: player.name })}</button>
+  {:else}
+    <button class="back" onclick={() => go('/players')}>← {t('player.back')}</button>
+  {/if}
   {#if error}<div class="error">{error}</div>{/if}
   {#if message}<div class="notice">{message}</div>{/if}
 
-  {#if player}
+  {#if player && section}
+    <div class="mini">
+      <img src={head(player.uuid)} alt="" width="32" height="32" />
+      <strong>{player.name}</strong>
+      <span class="state" class:on={player.online}>
+        {player.online ? '● ' + t('players.online') : t('player.lastSeen', { time: ago(player.lastSeen) })}
+      </span>
+    </div>
+    {#if section === 'tickets'}
+      <section class="card">
+        <h2>🎫 {t('player.tickets')}</h2>
+        {#if player.tickets.length === 0}
+          <p class="muted small">{t('player.noTickets')}</p>
+        {:else}
+          <ul class="tickets">
+            {#each player.tickets as tk (tk.id)}
+              <li>
+                <button class="link-row" onclick={() => go('/tickets/' + tk.id)}>
+                  <span class="id">#{tk.id}</span>
+                  <span class="tsum">{tk.summary || tk.category}</span>
+                  <span class="muted small">{t('player.role.' + tk.role)} · {tk.open ? t('ticket.statusOpen') : t('ticket.statusClosed')} · {ago(tk.lastActivity)}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+    {:else if PARTS[section]}
+      {@const Part = PARTS[section]}
+      <Part {uuid} {me} name={player.name} onDone={done} />
+    {/if}
+  {:else if player}
     <section class="card">
       <div class="title">
         <img src={head(player.uuid)} alt="" width="52" height="52" />
@@ -111,38 +168,19 @@
       {/if}
     </section>
 
-    {#if player.tickets}
-      <section class="card">
-        <h2>{t('player.tickets')}</h2>
-        {#if player.tickets.length === 0}
-          <p class="muted small">{t('player.noTickets')}</p>
-        {:else}
-          <ul class="tickets">
-            {#each player.tickets as tk (tk.id)}
-              <li>
-                <button class="link-row" onclick={() => go('/tickets/' + tk.id)}>
-                  <span class="id">#{tk.id}</span>
-                  <span class="tsum">{tk.summary || tk.category}</span>
-                  <span class="muted small">{t('player.role.' + tk.role)} · {tk.open ? t('ticket.statusOpen') : t('ticket.statusClosed')} · {ago(tk.lastActivity)}</span>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </section>
-    {/if}
-
-    {#if player.parts.mrsleep}
-      <SleepPart {uuid} {me} name={player.name} onDone={done} />
-    {/if}
-    {#if player.parts.mrchunks}
-      <ChunksPart {uuid} {me} name={player.name} onDone={done} />
-    {/if}
-    {#if player.parts.mrpvp}
-      <PvpPart {uuid} {me} name={player.name} onDone={done} />
-    {/if}
-    {#if player.parts.libertybans}
-      <BansPart {uuid} {me} name={player.name} onDone={done} />
+    {#if sections.length}
+      <div class="tiles">
+        {#each sections as id (id)}
+          {#if id === 'tickets'}
+            <PartTile icon="🎫" title={t('player.tickets')} onOpen={() => open('tickets')}
+              value={openTickets ? t('player.ticketsOpen', { n: openTickets }) : t('player.ticketsNoneOpen')}
+              sub={t('player.ticketsTotal', { n: player.tickets.length })} />
+          {:else}
+            {@const Part = PARTS[id]}
+            <Part {uuid} {me} name={player.name} onDone={done} view="tile" onOpen={() => open(id)} />
+          {/if}
+        {/each}
+      </div>
     {/if}
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
@@ -155,6 +193,25 @@
     background: transparent;
     color: var(--accent);
     padding: 4px 0;
+  }
+
+  .tiles {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  }
+
+  /* In a section: who it is about, small above the section. */
+  .mini {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .mini img {
+    border-radius: 6px;
+    image-rendering: pixelated;
   }
 
   .title {

@@ -1,13 +1,15 @@
 <script>
   // LibertyBans' part of a player's page: active punishments, history, and punishing - with LibertyBans'
   // permissions (do / undo per type, duration permissions if switched on there).
+  // view "tile": only the status as a tile on the player's overview.
   import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, duration } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
+  import PartTile from './PartTile.svelte';
 
-  let { uuid, me, name, onDone } = $props();
+  let { uuid, me, name, onDone, view = 'full', onOpen } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -55,6 +57,9 @@
   const TONE = { ban: 'bad', mute: 'warn', warn: 'warn', kick: 'muted' };
 
   const active = $derived((data?.entries ?? []).filter((e) => e.active));
+  const chips = $derived(data ? (active.length
+    ? active.map((e) => ({ text: ICON[e.type] + ' ' + t('lb.active.' + e.type), tone: TONE[e.type] }))
+    : [{ text: '✓ ' + t('lb.clean'), tone: 'good' }]) : []);
   const shown = $derived(showAll ? data?.entries ?? [] : (data?.entries ?? []).slice(0, 10));
   const canPunish = $derived(data && !data.self && TYPES.some((ty) => data.may[ty].do));
   const time = (d) => (d === 'perm' ? t('sleep.permanent') : d);
@@ -67,15 +72,16 @@
   }
 </script>
 
+{#if view === 'tile'}
+  <PartTile icon="⚖" title={t('lb.title')} loading={!data} {error} {onOpen} {chips}
+    sub={data ? t('lb.tileHistory', { n: data.entries.length }) : ''} />
+{:else}
 <section class="card part">
   <div class="phead">
     <h2>⚖ {t('lb.title')}</h2>
     {#if data}
       <div class="chips">
-        {#each active as e (e.id)}
-          <span class="tag {TONE[e.type]}">{ICON[e.type]} {t('lb.active.' + e.type)}</span>
-        {/each}
-        {#if active.length === 0}<span class="tag good">✓ {t('lb.clean')}</span>{/if}
+        {#each chips as c}<span class="tag {c.tone}">{c.text}</span>{/each}
       </div>
     {/if}
   </div>
@@ -161,6 +167,7 @@
     <p class="muted small">{t('common.loading')}</p>
   {/if}
 </section>
+{/if}
 
 <style>
   .phead {

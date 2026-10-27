@@ -75,14 +75,21 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
 ## Spieler (`mradmin.player.view`)
 - Alle, die schon auf dem Server waren: online zuerst, dann nach letztem Besuch, mit Suche, Filter (online,
   auffällig) und Markierungen (eingefroren, gemeldet, blockiert /nosleep, Chunkloader gesperrt ...). Keine IP-Adressen.
-- Pro Spieler eine Seite: Ort, Spielmodus, Ping, Leben, erster Besuch, Spielzeit; Einfrieren
-  (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`); seine Tickets
-  (`mradmin.tickets.view`).
-- Darunter ein Teil pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt der Teil:
+- Pro Spieler eine Seite: oben eine kurze Vorschau mit Ort, Spielmodus, Ping, Leben, erstem Besuch und Spielzeit;
+  Einfrieren (`mradmin.player.freeze`) und Kicken mit Grund (`mradmin.player.kick`, Discord-Log `player-kick`).
+- Darunter eine **Kachel pro Bereich** mit seinem Status auf einen Blick (z.B. „2 offen“, „3 / 5 Loader“, „im Duell
+  #12“, „gesperrt bis …“). Ein Klick öffnet den Bereich mit allen Einzelheiten und Aktionen (Adresse
+  `/players/<uuid>/<bereich>`, lässt sich also auch als Lesezeichen speichern). Bereiche: seine Tickets
+  (`mradmin.tickets.view`) und ein Bereich pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt
+  die Kachel:
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
   - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
     (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`).
+  - **MRpvp:** Duell-Statistik, die laufende Runde (Klick → Duellsteuerung) und die letzten Runden als Kacheln
+    (`mrpvp.admin.games`), von Duellen sperren mit Grund und Schnellauswahl der Dauer (`mrpvp.admin.ban`, Dauern aus
+    `gui.ban-durations` in der MRpvp-Config), gesicherte Stände zurückgeben (`mrpvp.admin.restore`), Statistik
+    zurücksetzen (`mrpvp.admin.reset`).
   - **LibertyBans:** aktive Strafen und Verlauf (`libertybans.commands` + `libertybans.list.history`), bannen, muten,
     verwarnen und kicken (`libertybans.<typ>.do.target.uuid`), aufheben (`libertybans.<typ>.undo.target.uuid`). Die
     Dauer kommt aus der Schnellauswahl `libertybans.durations` in der MRadmin-Config; hat LibertyBans seine
@@ -113,7 +120,8 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   Punkt leuchtet beim Treffen und Getroffenwerden), Inventaren und Kampf-Log; beendete Runden mit den gesicherten
   Inventaren (beim Betreten und am Ende, Enderchest, MRtoolbar-Gürtel) und einer Wiedergabe der Positionen.
 - **Prüfen:** auffällige Runden, die noch nicht zählen - werten oder verwerfen. Arenen mit ihren Kopien,
-  Auffälligkeiten der letzten 24 Stunden. Auf der Spielerseite: Duell-Statistik, Sperre, Statistik zurücksetzen.
+  Auffälligkeiten der letzten 24 Stunden. Alles zu einem einzelnen Spieler (Statistik, Runden, Sperre) steht auf
+  seiner Seite unter **Spieler**.
 
 ## Wartung & Ankündigungen
 `mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
