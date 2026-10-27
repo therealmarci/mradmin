@@ -153,11 +153,13 @@ mcrcon -p "$RCON_PW" "mradmin announce restart-now" "stop"
 
 ### Ankündigungen im Community-Discord
 Ein **eigener Webhook** für deinen öffentlichen Channel (`discord-announce`), getrennt vom Admin-Log. Er postet sparsam:
-- **„Wartungsarbeiten geplant“** höchstens 24 Stunden vorher - bei Änderungen wird derselbe Post bearbeitet, bei einer Absage durchgestrichen.
-- **„Wartungsarbeiten laufen“** und **„Server wieder online“** zu Beginn und Ende.
+- **Eine Nachricht pro Wartung**, höchstens 24 Stunden vorher (`announce-ahead`). Sie wird mitgeführt statt neu gepostet: **„Wartungsarbeiten geplant“** → **„Wartungsarbeiten laufen“** → **„Server wieder online“** mit der tatsächlichen Zeit (bei vorzeitigem Ende mit Hinweis) oder **„Wartung abgesagt“**. Neue Zeiten werden in dieselbe Nachricht eingetragen. Die Rolle aus `ping-role-id` wird nur beim ersten Post erwähnt.
 - **Ankündigungen**, wenn die Vorlage einen `discord`-Text hat. Eigene Texte nur mit `-d`: `/mradmin announce -d Heute Abend Event!`. Mit `-q` geht eine Vorlage nicht nach Discord.
 
 Zeiten erscheinen als Discord-Zeitstempel - jeder sieht sie in seiner Zeitzone. Test: `/mradmin discord test announce`.
+
+> [!NOTE]
+> Discord benachrichtigt bei bearbeiteten Nachrichten nicht. Beginn und Ende einer Wartung sieht also, wer in den Channel schaut - der Ping kommt nur, wenn die Wartung zum ersten Mal gepostet wird.
 
 ---
 

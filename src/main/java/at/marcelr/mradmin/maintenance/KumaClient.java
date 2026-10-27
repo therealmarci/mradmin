@@ -41,6 +41,8 @@ public final class KumaClient {
 
     private volatile Socket socket;
     private volatile State state = State.DISABLED;
+    /** A maintenance list has arrived since the last login (see {@link #upToDate()}). */
+    private volatile boolean listSinceLogin;
     /** Language key or raw text of the last problem (shown in /mradmin maintenance). */
     private volatile String problemKey;
     private volatile String problemDetail;
@@ -220,6 +222,9 @@ public final class KumaClient {
             return;
         }
         boolean changed = state != State.CONNECTED;
+        if (changed) {
+            listSinceLogin = false;
+        }
         state = State.CONNECTED;
         problemKey = null;
         problemDetail = null;
@@ -289,7 +294,18 @@ public final class KumaClient {
         lastUpdate = Instant.now();
         lastCount = maintenances.size();
         lastList = List.copyOf(maintenances);
-        Bukkit.getScheduler().runTask(plugin, () -> onList.accept(maintenances));
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            onList.accept(maintenances);
+            listSinceLogin = true;
+        });
+    }
+
+    /**
+     * Whether the maintenance list is current: logged in and a list has arrived since. Right after a (re)connect
+     * Kuma counts as connected before its list is there - in between, nothing may be taken as "no maintenance".
+     */
+    public boolean upToDate() {
+        return state == State.CONNECTED && listSinceLogin;
     }
 
     // ---------------------------------------------------------------- manage

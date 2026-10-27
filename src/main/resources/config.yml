@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 19
+config-version: 20
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -428,6 +428,7 @@ discord-announce:
   # ID: Discord settings -> Advanced -> Developer Mode on, then right-click the role -> "Copy ID".
   ping-role-id: ""
 
+  # Every maintenance gets ONE message that is edited as it goes: scheduled -> running -> ended (or cancelled).
   maintenance:
     enabled: true
     # Only post once the maintenance is at most this far away (ones created later: immediately).
@@ -435,12 +436,9 @@ discord-announce:
     announce-ahead: "24h"
     # Do not post shorter maintenance at all ("0" = post all).
     min-length: "0"
-    # Own post at the start and at the end ("Server back online"). false = only the "scheduled" post.
-    post-start: true
-    post-end: true
-    # Mention ping-role-id in the first post of a maintenance (never in edits or at the end).
+    # Mention ping-role-id when a maintenance is posted (never in the later edits).
     ping: true
-    # Several changes in Kuma in quick succession are combined into one edit.
+    # New times or titles in quick succession are combined into one edit. Start and end are edited in right away.
     debounce-seconds: 60
 
   announcements:

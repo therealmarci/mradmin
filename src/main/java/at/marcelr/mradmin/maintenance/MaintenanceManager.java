@@ -314,8 +314,7 @@ public final class MaintenanceManager {
             save();
         }
         updateBars(current, now, m);
-        plugin.discordAnnounce().update(current, windows(), now,
-                plugin.settings().kuma().enabled() && kuma.state() != KumaClient.State.CONNECTED);
+        plugin.discordAnnounce().update(windows(), now, plugin.settings().kuma().enabled() && !kuma.upToDate());
     }
 
     private static Phase phaseOf(Window window, Instant now, Settings.MaintenanceSettings m) {
