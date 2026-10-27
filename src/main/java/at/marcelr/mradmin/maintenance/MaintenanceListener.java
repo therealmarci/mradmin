@@ -65,7 +65,7 @@ public final class MaintenanceListener implements Listener {
         }
         if (manager().active() && !manager().canJoin(event.getPlayer())) {
             event.joinMessage(null);
-            event.getPlayer().kick(manager().kickScreen());
+            event.getPlayer().kick(plugin.messages().as(event.getPlayer(), manager()::kickScreen));
         } else if (manager().active()) {
             plugin.messages().send(event.getPlayer(), "maintenance-join-staff",
                     manager().resolvers(manager().current(), Instant.now()));

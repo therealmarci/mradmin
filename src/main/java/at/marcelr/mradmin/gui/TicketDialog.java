@@ -455,7 +455,7 @@ public final class TicketDialog {
     private static DialogAction action(MRAdmin plugin, Player viewer, Consumer<DialogResponseView> run) {
         return DialogAction.customClick((response, audience) -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (viewer.isOnline()) {
-                run.accept(response);
+                plugin.messages().run(viewer, () -> run.accept(response));
             }
         }), ONCE);
     }

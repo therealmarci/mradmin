@@ -295,7 +295,7 @@ public final class DiscordAnnouncer {
     }
 
     private String text(String key) {
-        return plugin.messages().optional("discord-announce." + key);
+        return plugin.messages().server(() -> plugin.messages().optional("discord-announce." + key));
     }
 
     /** {title} {start} {start-relative} {end} {end-relative} - times as Discord timestamps. */

@@ -8,7 +8,7 @@
 |---|---|
 | Server | Paper 26.3 (oder ein Fork wie Purpur), Java 25 |
 | Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma und LibertyBans optional |
-| Sprachen | Deutsch, Englisch (eigene Übersetzungen möglich) |
+| Sprachen | Deutsch, Englisch - jeder Spieler automatisch in der Sprache seines Minecraft-Clients |
 | Status | Vorabversion (0.x) - Config, Befehle und Permissions können sich bis 1.0.0 noch ändern |
 
 ## Was kann MRadmin?
@@ -239,7 +239,11 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 
-**Sprache:** `language: de` oder `en`. Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
+**Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
+- **Jeder Spieler bekommt seine Sprache:** Mit `language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
+- **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
+- Die Konsole ist immer Englisch.
+- Ankündigungen, Wartungs-Countdown, Bossbars und Titel sieht jeder Spieler in seiner Sprache. Die Weboberfläche richtet sich nach der Sprache des Browsers.
 
 ### Speicher: YAML, SQLite oder MySQL
 | `storage.type` | Wo | Wofür |

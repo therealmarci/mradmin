@@ -21,12 +21,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static at.marcelr.mradmin.Messages.tag;
 
@@ -67,10 +66,9 @@ public final class MaintenanceManager {
     private volatile boolean active;
     private volatile Window activeWindow;
 
-    private final BossBar countdownBar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
-    private final BossBar activeBar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.PURPLE, BossBar.Overlay.PROGRESS);
-    private final Set<UUID> countdownViewers = new HashSet<>();
-    private final Set<UUID> activeViewers = new HashSet<>();
+    /** Boss bars per player - every player reads them in their own language. */
+    private final Map<UUID, BossBar> countdownBars = new HashMap<>();
+    private final Map<UUID, BossBar> activeBars = new HashMap<>();
     private BukkitTask task;
 
     public MaintenanceManager(MRAdmin plugin) {
@@ -223,9 +221,12 @@ public final class MaintenanceManager {
 
     // ------------------------------------------------------------------ tick
 
-    /** Everything here reaches players, so it is built in their language even when a console command triggered it. */
+    /**
+     * Logs and Discord in the server language, even when a command of some player triggered the tick; everything that
+     * reaches players is built per player in their language.
+     */
     private void tick() {
-        messages().forPlayers(() -> {
+        messages().server(() -> {
             evaluate();
             return null;
         });
@@ -291,11 +292,11 @@ public final class MaintenanceManager {
             long second = (remaining + 999) / 1000;
             if (second <= m.titleCountdownSeconds() && second > 0 && second != lastTitleSecond) {
                 lastTitleSecond = second;
-                Title title = Title.title(
+                TagResolver[] tags = resolvers(current, now);
+                messages().each(Npcs.online(), p -> ((Player) p).showTitle(Title.title(
                         messages().get("maintenance-countdown-title", tag("seconds", second)),
-                        messages().get("maintenance-countdown-subtitle", resolvers(current, now)),
-                        Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ofMillis(300)));
-                Npcs.online().forEach(p -> p.showTitle(title));
+                        messages().get("maintenance-countdown-subtitle", tags),
+                        Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ofMillis(300)))));
                 playSound(m);
             }
             lastRemaining = remaining;
@@ -348,9 +349,9 @@ public final class MaintenanceManager {
                 "end", window.end() == null ? messages().plain("push-open-end") : Texts.at(plugin, window.end()));
         Settings.MaintenanceSettings m = plugin.settings().maintenance();
         messages().broadcast("maintenance-started", resolvers(window, now));
-        Title title = Title.title(messages().get("maintenance-start-title", resolvers(window, now)),
-                messages().get("maintenance-start-subtitle", resolvers(window, now)));
-        Npcs.online().forEach(p -> p.showTitle(title));
+        TagResolver[] tags = resolvers(window, now);
+        messages().each(Npcs.online(), p -> ((Player) p).showTitle(Title.title(
+                messages().get("maintenance-start-title", tags), messages().get("maintenance-start-subtitle", tags))));
         playSound(m);
         plugin.discord().log("maintenance-start", discordTags(window));
         plugin.getLogger().info("Maintenance started" + (window.end() == null ? " (open end)." : ", ends at " + window.end() + "."));
@@ -361,7 +362,7 @@ public final class MaintenanceManager {
                 }
                 for (Player player : List.copyOf(Npcs.online())) {
                     if (!canJoin(player)) {
-                        player.kick(kickScreen());
+                        player.kick(messages().as(player, this::kickScreen));
                     }
                 }
             }, m.kickDelaySeconds() * 20L);
@@ -394,62 +395,72 @@ public final class MaintenanceManager {
     // ---------------------------------------------------------------- bossbar
 
     private void updateBars(Window window, Instant now, Settings.MaintenanceSettings m) {
-        Set<UUID> countdown = new HashSet<>();
-        Set<UUID> during = new HashSet<>();
+        Map<UUID, BossBar> countdown = new HashMap<>();
+        Map<UUID, BossBar> during = new HashMap<>();
         if (m.bossbar() && window != null) {
+            TagResolver[] tags = resolvers(window, now);
             if (phase == Phase.UPCOMING) {
                 long remaining = window.start().toEpochMilli() - now.toEpochMilli();
-                countdownBar.name(messages().get("maintenance-bossbar", resolvers(window, now)));
-                countdownBar.progress(clamp(m.warnBefore() <= 0 ? 0 : (float) remaining / m.warnBefore()));
-                countdownBar.color(remaining <= m.finalSeconds() * 1000L ? m.finalColor() : m.color());
-                countdownBar.overlay(m.overlay());
-                Npcs.online().forEach(p -> countdown.add(p.getUniqueId()));
+                float progress = clamp(m.warnBefore() <= 0 ? 0 : (float) remaining / m.warnBefore());
+                BossBar.Color color = remaining <= m.finalSeconds() * 1000L ? m.finalColor() : m.color();
+                for (Player player : Npcs.online()) {
+                    countdown.put(player.getUniqueId(), bar(countdownBars, player, "maintenance-bossbar", tags,
+                            progress, color, m.overlay()));
+                }
             } else if (phase == Phase.ACTIVE && m.showDuring()) {
+                float progress = 1f;
                 if (window.end() != null && window.start() != null) {
                     long total = window.end().toEpochMilli() - window.start().toEpochMilli();
                     long remaining = window.end().toEpochMilli() - now.toEpochMilli();
-                    activeBar.progress(clamp(total <= 0 ? 0 : (float) remaining / total));
-                } else {
-                    activeBar.progress(1f);
+                    progress = clamp(total <= 0 ? 0 : (float) remaining / total);
                 }
-                activeBar.name(messages().get(window.end() == null ? "maintenance-bossbar-active-open" : "maintenance-bossbar-active",
-                        resolvers(window, now)));
-                activeBar.color(m.duringColor());
-                activeBar.overlay(m.overlay());
+                String key = window.end() == null ? "maintenance-bossbar-active-open" : "maintenance-bossbar-active";
                 for (Player player : Npcs.online()) {
                     if (player.hasPermission(PERM_BYPASS)) {
-                        during.add(player.getUniqueId());
+                        during.put(player.getUniqueId(), bar(activeBars, player, key, tags, progress, m.duringColor(),
+                                m.overlay()));
                     }
                 }
             }
         }
-        sync(countdownBar, countdownViewers, countdown);
-        sync(activeBar, activeViewers, during);
+        sync(countdownBars, countdown);
+        sync(activeBars, during);
     }
 
-    private static void sync(BossBar bar, Set<UUID> shown, Set<UUID> wanted) {
-        for (UUID id : Set.copyOf(shown)) {
-            Player player = Bukkit.getPlayer(id);
-            if (!wanted.contains(id) || player == null) {
+    /** The player's bar of this kind, created if needed and updated with the text in their language. */
+    private BossBar bar(Map<UUID, BossBar> bars, Player player, String key, TagResolver[] tags, float progress,
+                        BossBar.Color color, BossBar.Overlay overlay) {
+        Component name = messages().as(player, () -> messages().get(key, tags));
+        BossBar bar = bars.computeIfAbsent(player.getUniqueId(), id -> BossBar.bossBar(name, progress, color, overlay));
+        bar.name(name);
+        bar.progress(progress);
+        bar.color(color);
+        bar.overlay(overlay);
+        return bar;
+    }
+
+    /** Shows the wanted bars and hides (and forgets) all others of this kind. */
+    private static void sync(Map<UUID, BossBar> shown, Map<UUID, BossBar> wanted) {
+        for (Map.Entry<UUID, BossBar> entry : Map.copyOf(shown).entrySet()) {
+            if (!wanted.containsKey(entry.getKey())) {
+                Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null) {
-                    player.hideBossBar(bar);
+                    player.hideBossBar(entry.getValue());
                 }
-                shown.remove(id);
+                shown.remove(entry.getKey());
             }
         }
-        for (UUID id : wanted) {
-            if (shown.add(id)) {
-                Player player = Bukkit.getPlayer(id);
-                if (player != null) {
-                    player.showBossBar(bar);
-                }
+        for (Map.Entry<UUID, BossBar> entry : wanted.entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null) {
+                player.showBossBar(entry.getValue());
             }
         }
     }
 
     private void hideBars() {
-        sync(countdownBar, countdownViewers, Set.of());
-        sync(activeBar, activeViewers, Set.of());
+        sync(countdownBars, Map.of());
+        sync(activeBars, Map.of());
     }
 
     private static float clamp(float value) {
@@ -496,9 +507,9 @@ public final class MaintenanceManager {
      * While running with an open end, {@code <countdown>} and {@code <remaining>} show time-open-end.
      */
     public TagResolver[] resolvers(Window window, Instant now) {
-        String open = Texts.at(plugin, null);
+        Supplier<String> open = () -> Texts.at(plugin, null);
         if (window == null) {
-            return new TagResolver[]{tag("title", ""), tag("start", open), tag("end", open),
+            return new TagResolver[]{tag("title", ""), Messages.lazy("start", open), Messages.lazy("end", open),
                     tag("in", "0s"), tag("countdown", "0:00:00"), tag("remaining", "0s"),
                     tag("title-line", Component.empty()), tag("kick-title-line", Component.empty())};
         }
@@ -509,13 +520,15 @@ public final class MaintenanceManager {
         String title = window.title() == null ? "" : window.title();
         return new TagResolver[]{
                 tag("title", title),
-                tag("title-line", title.isEmpty() ? Component.empty() : messages().get("maintenance-title-line", tag("title", title))),
-                tag("kick-title-line", title.isEmpty() ? Component.empty() : messages().get("maintenance-kick-title-line", tag("title", title))),
-                tag("start", Texts.at(plugin, window.start())),
-                tag("end", Texts.at(plugin, window.end())),
+                Messages.lazy("title-line", () -> title.isEmpty() ? Component.empty()
+                        : messages().get("maintenance-title-line", tag("title", title))),
+                Messages.lazy("kick-title-line", () -> title.isEmpty() ? Component.empty()
+                        : messages().get("maintenance-kick-title-line", tag("title", title))),
+                Messages.lazy("start", () -> Texts.at(plugin, window.start())),
+                Messages.lazy("end", () -> Texts.at(plugin, window.end())),
                 tag("in", Texts.duration(untilStart)),
-                tag("countdown", running && openEnd ? open : Texts.clock(running ? untilEnd : untilStart)),
-                tag("remaining", openEnd ? open : Texts.duration(untilEnd))};
+                Messages.lazy("countdown", () -> running && openEnd ? open.get() : Texts.clock(running ? untilEnd : untilStart)),
+                Messages.lazy("remaining", () -> openEnd ? open.get() : Texts.duration(untilEnd))};
     }
 
     /** Whether the running maintenance has no known end (manual one without duration, Kuma "manual" strategy). */

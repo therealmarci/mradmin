@@ -226,7 +226,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     private void loadConfiguration() {
         config = ConfigUpdater.load(this);
-        messages.load(this, config.getString("language", "de"));
+        messages.load(this, config.getString("language", "auto"), config.getString("fallback-language", "en"),
+                config.getString("server-language", "en"));
         settings = Settings.from(config, getLogger());
         discord.load(config.getConfigurationSection("discord"));
         discordAnnounce.load(config.getConfigurationSection("discord-announce"));
@@ -358,8 +359,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (web == null) {
             return;
         }
-        web.push().notify(kind, messages().plain("push-" + text + "-title", placeholders),
-                messages().plain("push-" + text + "-body", placeholders), url, who);
+        // Push notifications go to devices, not to players in the game - server language.
+        web.push().notify(kind, messages().server(() -> messages().plain("push-" + text + "-title", placeholders)),
+                messages().server(() -> messages().plain("push-" + text + "-body", placeholders)), url, who);
     }
 
     public WebServer web() {

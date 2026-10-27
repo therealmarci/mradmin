@@ -37,13 +37,13 @@ final class AnnounceDialog {
         DialogAction send = DialogAction.customClick((response, audience) -> {
             String text = response.getText(VALUES);
             // Run on the main thread: the click may arrive on the network thread.
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.getScheduler().runTask(plugin, () -> plugin.messages().run(viewer, () -> {
                 if (!viewer.isOnline()) {
                     return;
                 }
                 List<String> values = text == null || text.isBlank() ? List.of() : Arrays.asList(text.trim().split("\\s+"));
                 plugin.announcer().announcePreset(preset, values, viewer.getName(), toDiscord);
-            });
+            }));
         }, ONCE);
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(messages.get("announce-dialog-title", tag("preset", preset)))
@@ -67,7 +67,7 @@ final class AnnounceDialog {
             String title = response.getText(TITLE);
             String subtitle = response.getText(SUBTITLE);
             Boolean discord = discordAvailable ? response.getBoolean(DISCORD) : Boolean.FALSE;
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.getScheduler().runTask(plugin, () -> plugin.messages().run(viewer, () -> {
                 if (!viewer.isOnline()) {
                     return;
                 }
@@ -81,7 +81,7 @@ final class AnnounceDialog {
                 // "Title | Subtitle", or just the text under the default heading.
                 String text = t.isEmpty() ? s : s.isEmpty() ? t + " |" : t + " | " + s;
                 plugin.announcer().announceText(text, viewer.getName(), Boolean.TRUE.equals(discord));
-            });
+            }));
         }, ONCE);
         List<DialogInput> inputs = new java.util.ArrayList<>(List.of(
                 DialogInput.text(TITLE, messages.get("announce-custom-dialog-title-label")).maxLength(60).width(250).build(),
@@ -105,7 +105,7 @@ final class AnnounceDialog {
     private static DialogAction cancel(MRAdmin plugin, Player viewer, Runnable back) {
         return DialogAction.customClick((response, audience) -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (viewer.isOnline()) {
-                back.run();
+                plugin.messages().run(viewer, back);
             }
         }), ONCE);
     }

@@ -2,7 +2,6 @@ package at.marcelr.mradmin.command;
 
 import at.marcelr.mradmin.MRAdmin;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -74,13 +73,7 @@ public final class StaffChat implements TabExecutor, Listener {
 
     /** Sends a message to every staff member and the console. */
     public void send(String from, String message) {
-        Component line = plugin.messages().forPlayers(() ->
-                plugin.messages().get("staffchat-format", tag("player", from), tag("message", message)));
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.hasPermission(PERM)) {
-                player.sendMessage(line);
-            }
-        }
+        plugin.messages().broadcastTo(PERM, "staffchat-format", tag("player", from), tag("message", message));
         plugin.getLogger().info("[Staff] " + from + ": " + message);
         plugin.discord().log("staff-chat", "player", from, "text", message);
     }

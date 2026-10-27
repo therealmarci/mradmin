@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static at.marcelr.mradmin.Messages.tag;
@@ -87,22 +88,16 @@ public final class Announcer {
      * ({@code time="5m"} fills {@code <time>} and {@code {time}} in the Discord text).
      */
     public void announcePreset(String preset, List<String> args, Map<String, String> named, String by, boolean toDiscord) {
-        plugin.messages().forPlayers(() -> {
-            buildPreset(preset, args, named, by, toDiscord);
-            return null;
-        });
-    }
-
-    private void buildPreset(String preset, List<String> args, Map<String, String> named, String by, boolean toDiscord) {
         Messages messages = plugin.messages();
         TagResolver[] resolvers = argResolvers(args, named);
         String base = PRESETS + "." + preset + ".";
-        Component title = messages.get(base + "title", resolvers);
-        Component subtitle = messages.has(base + "subtitle") ? messages.get(base + "subtitle", resolvers) : Component.empty();
-        Component chat = messages.has(base + "chat") ? messages.get(base + "chat", resolvers) : null;
-        show(title, subtitle, chat, by);
+        // Built once per player in their language, and once in the server language for log and Discord.
+        Supplier<Shown> build = () -> new Shown(messages.get(base + "title", resolvers),
+                messages.has(base + "subtitle") ? messages.get(base + "subtitle", resolvers) : Component.empty(),
+                messages.has(base + "chat") ? messages.get(base + "chat", resolvers) : null);
+        Component title = show(build, by);
         // Only presets with a "discord" text go to the community Discord (with a cooldown per preset).
-        String discordText = messages.optional(base + "discord");
+        String discordText = messages.server(() -> messages.optional(base + "discord"));
         if (toDiscord && !discordText.isEmpty()) {
             String filled = discordText.replace("{args}", DiscordAnnouncer.escape(String.join(" ", args)));
             for (int i = 1; i <= 9; i++) {
@@ -120,48 +115,50 @@ public final class Announcer {
      * subtitle under the default heading {@code announce-custom-title}.
      */
     public void announceText(String text, String by, boolean toDiscord) {
-        plugin.messages().forPlayers(() -> {
-            buildText(text, by, toDiscord);
-            return null;
-        });
-    }
-
-    private void buildText(String text, String by, boolean toDiscord) {
         Messages messages = plugin.messages();
-        Component title;
-        Component subtitle;
         int split = text.indexOf('|');
-        if (split >= 0) {
-            title = messages.parse(text.substring(0, split).trim());
-            subtitle = messages.parse(text.substring(split + 1).trim());
-        } else {
-            title = messages.get("announce-custom-title");
-            subtitle = messages.parse(text);
-        }
-        Component chat = messages.get("announce-custom-chat", tag("title", title), tag("message", subtitle));
-        show(title, subtitle, chat, by);
+        Supplier<Shown> build = () -> {
+            Component title = split >= 0 ? messages.parse(text.substring(0, split).trim()) : messages.get("announce-custom-title");
+            Component subtitle = messages.parse(split >= 0 ? text.substring(split + 1).trim() : text);
+            return new Shown(title, subtitle, messages.get("announce-custom-chat", tag("title", title), tag("message", subtitle)));
+        };
+        Component title = show(build, by);
         if (toDiscord) {
+            Component subtitle = messages.server(build).subtitle();
             plugin.discordAnnounce().announce(null, PLAIN.serialize(title), DiscordAnnouncer.escape(PLAIN.serialize(subtitle)));
         }
     }
 
-    private void show(Component title, Component subtitle, Component chat, String by) {
+    /** Title, subtitle and chat line of an announcement in one language. */
+    private record Shown(Component title, Component subtitle, Component chat) {
+    }
+
+    /**
+     * Shows the announcement to every player in their language; logs it in the server language.
+     * @return the title in the server language (for Discord)
+     */
+    private Component show(Supplier<Shown> build, String by) {
         Settings.AnnounceSettings s = plugin.settings().announce();
-        Title shown = Title.title(title, subtitle, Title.Times.times(
-                Duration.ofMillis(s.fadeIn() * 50L), Duration.ofMillis(s.stay() * 50L), Duration.ofMillis(s.fadeOut() * 50L)));
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(s.fadeIn() * 50L), Duration.ofMillis(s.stay() * 50L), Duration.ofMillis(s.fadeOut() * 50L));
         Sound sound = s.sound() == null ? null : Sound.sound(s.sound(), Sound.Source.MASTER, s.volume(), s.pitch());
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.showTitle(shown);
-            if (s.chat() && chat != null && !chat.equals(Component.empty())) {
-                player.sendMessage(chat);
-            }
+            plugin.messages().run(player, () -> {
+                Shown shown = build.get();
+                player.showTitle(Title.title(shown.title(), shown.subtitle(), times));
+                if (s.chat() && shown.chat() != null && !shown.chat().equals(Component.empty())) {
+                    player.sendMessage(shown.chat());
+                }
+            });
             if (sound != null) {
                 player.playSound(sound, Sound.Emitter.self());
             }
         }
-        String text = PLAIN.serialize(title) + " - " + PLAIN.serialize(subtitle);
+        Shown server = plugin.messages().server(build);
+        String text = PLAIN.serialize(server.title()) + " - " + PLAIN.serialize(server.subtitle());
         plugin.getLogger().info("Announcement by " + by + ": " + text);
         plugin.discord().log("announce", "admin", by, "text", text);
+        return server.title();
     }
 
     // ------------------------------------------------------------------ parts (scripts)
@@ -182,7 +179,8 @@ public final class Announcer {
      * @return null if it was shown, otherwise the name of the invalid part
      */
     public String announceParts(Map<String, String> parts, String by, boolean toDiscord) {
-        return plugin.messages().forPlayers(() -> buildParts(parts, by, toDiscord));
+        // The parts are typed by the script, not from the language file - built once, in the server language.
+        return plugin.messages().server(() -> buildParts(parts, by, toDiscord));
     }
 
     private String buildParts(Map<String, String> parts, String by, boolean toDiscord) {
