@@ -1,114 +1,150 @@
-# Plan: Proxy und Wartelobby
+# Plan: Proxy-Betrieb mit Wartelobby
 
-Stand: 2026-10-27, **Entwurf - noch nicht vom User abgenommen.**
+Stand: 2026-10-27, **zur Abnahme durch den User**. Die Umstellung eines konkreten Servers steht nicht hier, sondern in einer privaten Datei des Users.
 
 ## Ziel
-Spieler bleiben bei Neustarts, Wartungen, Abstürzen und sogar bei abgeschaltetem Hauptserver (VPS 1) verbunden. Sie warten in einer kleinen Lobby mit Minigames und kommen automatisch zurück, sobald der Hauptserver wieder offen ist. Ohne Proxy ändert sich an MRadmin nichts (Funktion standardmäßig aus).
+Spieler bleiben bei Neustart, Absturz und Wartung verbunden. Statt eines Kicks warten sie in einer kleinen Lobby, auf Wunsch mit Minigames (z.B. MRpvp-Duelle), und kommen automatisch zurück, sobald der Hauptserver wieder offen ist. Der Hauptserver darf dabei sogar komplett abgeschaltet sein.
 
-## Aufbau
+**Alles ist optional.** Ohne Proxy laufen alle Plugins genau wie bisher.
+
+## Begriffe
 
 ```
-Spieler ──► VPS 2: Velocity (öffentlicher Port, bisherige Adresse)
-                 ├─► VPS 1: Paper "main"   (Hauptserver, Port nur für VPS 2 offen)
-                 └─► VPS 2: Paper "lobby"  (Wartelobby, nur lokal erreichbar)
-            VPS 2: MariaDB (LibertyBans, optional MRadmin-Speicher der Lobby)
+Spieler ──► Proxy (Velocity, öffentlicher Port)
+               ├─► main   = Hauptserver (Paper, nur intern erreichbar)
+               └─► lobby  = Wartelobby (Paper, nur intern erreichbar)
+            MySQL/MariaDB - gemeinsam für alle (LuckPerms, LibertyBans, MRadmin, MRpvp)
 ```
 
-- **Adresse bleibt:** Die Domain zeigt künftig auf VPS 2, der Proxy übernimmt den bisherigen Port. Spieler müssen nichts ändern, Xaero findet seine vorhandenen Karten (Ordner nach Serveradresse).
-- **Komplett optional:** Ohne Proxy läuft alles wie bisher. Proxy, Lobby und `proxy:`-Abschnitt sind ein Zusatz für Server, die das wollen.
-- **Verbindung VPS 2 → VPS 1:** Beide VPS bei Hetzner, Verbindung über das **interne Hetzner-Netz** (kein Tunnel nötig). Paper läuft hinter dem Proxy mit `online-mode=false` und Velocity-Forwarding (signiert mit geheimem Schlüssel), lauscht nur auf der internen IP (`server-ip`), zusätzlich Hetzner-Firewall ohne öffentlichen Paper-Port.
-- **Gemeinsame Daten:** LuckPerms und LibertyBans laufen auf **MySQL/MariaDB**, gemeinsam für main, lobby und Proxy - Gruppen, Rechte und Bans sind überall gleich (bei LuckPerms ggf. mit `server`-Kontext main/lobby).
-- **Normalbetrieb:** Velocity `try = ["main", "lobby"]` - wer joint, landet wie bisher direkt auf dem Hauptserver. Die Lobby sieht man nur, wenn der Hauptserver nicht da ist.
-- **VPS 1 offline:** Neue Spieler landen gleich in der Lobby, die Serverliste zeigt die Wartung bzw. „Server startet neu“.
-- **Wartung an VPS 2 selbst** (Proxy-Neustart) trennt weiterhin alle - selten und kurz.
+- `main` und `lobby` sind die Namen der Server in der `velocity.toml`.
+- Im Alltag landet jeder auf main (`try = ["main", "lobby"]`), die Lobby sieht man nur, wenn main nicht offen ist.
+
+## Entscheidungen des Users (2026-10-27)
+1. Alles rund um den Proxy ist **komplett optional**.
+2. Lobby ist **nur Warteraum** (Neustart, Absturz, Wartung). Minigames sind optional (nicht jeder hat MRpvp), weitere kommen später.
+3. **Wartung:** Nur wer im MRadmin-Admin-Modus ist, bleibt auf main. Alle anderen - auch Team im normalen Spiel - gehen in die Lobby.
+4. **Neustart:** Spieler im normalen Spiel gehen in die Lobby, Admins im Admin-Modus werden **getrennt** (der Admin-Modus bleibt gespeichert und geht beim nächsten Join weiter).
+5. **Join während Wartung:** mit Bypass-Permission **und** Admin-Modus → main; ohne Admin-Modus → Lobby. Ist main aus → Lobby, auch im Admin-Modus.
+6. Admins nutzen `/mra` auch in der Lobby wie gewohnt. `/mra mode` in der Lobby = auf main wechseln und dort den Admin-Modus einschalten (auch während Wartung). Kein eigener Knopf, keine neue Permission.
+7. MRpvp-Duelle in der Lobby zählen in **dieselbe Statistik** wie auf main.
+8. Im Proxy-Betrieb ist **MySQL/MariaDB Pflicht** (MRadmin, für die gemeinsame MRpvp-Statistik auch MRpvp).
 
 ## Abläufe
 
 | Fall | Was passiert |
 |---|---|
-| Neustart (Knopf, `announce restart`, `mc.sh`) | Countdown wie heute, dann schickt MRadmin auf main alle **im normalen Spiel** in die Lobby. Wer im **Admin-Modus** ist, wird getrennt (der Admin-Modus bleibt gespeichert, `admin-mode.end-on-quit: false`). Erst dann stoppt der Server. Lobby zeigt „Server startet neu“ und holt alle zurück, sobald main antwortet. |
-| Wartung beginnt | Statt Kick: alle **im normalen Spiel** gehen in die Lobby - auch Teammitglieder. Wer im **MRadmin-Admin-Modus** ist, bleibt auf main. Lobby zeigt Thema und Ende aus Uptime Kuma (Bossbar, pro Spieler in seiner Sprache). |
-| Join während Wartung | Nur wer `mradmin.maintenance.bypass` hat **und** im Admin-Modus ist (gespeicherter Zustand), kommt auf main. Alle anderen - auch Team ohne Admin-Modus - lehnt main ab, Velocity versucht den nächsten Server der `try`-Liste → Lobby. |
-| Join, während main aus ist | Velocity kann main nicht erreichen → Lobby, auch für Admins im Admin-Modus. |
-| Wartung endet | Lobby holt die Spieler gestaffelt zurück (z.B. 5 pro Sekunde). |
-| Absturz / VPS 1 weg | Velocity leitet nicht von selbst um (Standard: trennen bzw. nur Meldung). Dafür ein fertiges Fallback-Plugin auf dem Proxy (Musterkonfiguration). Lobby holt zurück, sobald main wieder antwortet. |
-| Admin in der Lobby will auf main | MRadmin läuft auch in der Lobby, `/mra` funktioniert dort wie gewohnt. `/mra mode` in der Lobby schickt den Admin auf main und schaltet dort sofort den Admin-Modus ein (auch während einer Wartung). Ist main nicht erreichbar, gibt es eine Meldung. Signal an main über die gemeinsame Datenbank (siehe Teil 1). |
+| Normaler Join | Velocity → main. |
+| Neustart (Neustart-Knopf, `/mra announce restart`, Konsole `stop`, Start-Skript) | Countdown wie bisher. Am Ende fängt MRadmin auf main den Stopp ab: Spieler im normalen Spiel → Lobby, Admin-Modus → getrennt mit Hinweis. Erst wenn main leer ist (höchstens 10 s), fährt der Server herunter. |
+| Wartung beginnt | Statt Kick: alle außerhalb des Admin-Modus → Lobby. |
+| Join während Wartung | main lehnt ab (außer Bypass + Admin-Modus oder Wechsel-Eintrag aus der Lobby), Velocity versucht den nächsten Server → Lobby. |
+| Join, während main aus ist | Velocity erreicht main nicht → Lobby. |
+| Absturz / main-Rechner weg | Velocity schickt die Spieler bei Verbindungsabbruch in die Lobby (`failover-on-unexpected-server-disconnect`, `try`-Liste). Ob das auch beim „Server closed“-Kick eines abstürzenden Servers greift, wird im Testaufbau geprüft - sonst ein fertiges Fallback-Plugin auf dem Proxy. |
+| In der Lobby | Bossbar mit dem Grund: „Server startet neu“, „Wartung: <Thema> bis 18:00“, „Server nicht erreichbar“. Pro Spieler in seiner Sprache. |
+| main wieder offen | Lobby holt alle gestaffelt zurück (Standard 5 pro Sekunde), sobald main „bereit“ meldet und keine Wartung läuft. Wer gerade ein Lobby-Duell spielt, kommt nach der Runde. |
+| `/mra mode` in der Lobby | Lobby legt in der Datenbank einen Wechsel-Eintrag an (30 s gültig, nur dieser Spieler) und schickt den Admin auf main. main lässt ihn durch und schaltet sofort den Admin-Modus ein. Ist main nicht erreichbar: Meldung, kein Wechsel. |
 
-## Teil 1: MRadmin (optional, `proxy.enabled: false`)
-Neuer Config-Abschnitt `proxy:`:
-- `enabled`, `role: main | lobby`
-- `servers.main`, `servers.lobby` - Namen wie in der `velocity.toml`
-- Rolle lobby: `main-address` (interne Adresse zum Anpingen), `check-seconds`, `return-per-second`, Anzeige (Bossbar/Actionbar)
+## Teil A - Plugins
 
-Rolle **main**:
-- Neustart/Stopp über MRadmin: Spieler per BungeeCord-Kanal (`Connect`, versteht Velocity) in die Lobby, dann stoppen.
-- Wartungsbeginn: Lobby statt Kick für alle außerhalb des Admin-Modus (bisherige `kick-on-start`-Logik bleibt ohne Proxy).
-- Join während Wartung: zulassen nur mit Bypass **und** gespeichertem Admin-Modus oder mit gültigem Wechsel-Eintrag aus der Lobby, sonst ablehnen → Velocity schickt in die Lobby.
-- **Wechsel aus der Lobby:** `/mra mode` in der Lobby legt in der gemeinsamen Datenbank einen Eintrag „Spieler X will in den Admin-Modus“ an (30 s gültig). main sieht ihn beim Verbinden, lässt durch und schaltet den Admin-Modus ein. (Minecraft-Cookies wären die Alternative ohne Datenbank - nicht nötig, weil MySQL ohnehin Pflicht ist.)
-- Prüfungen (Web + `/mradmin status`): Velocity-Forwarding in `paper-global.yml` an, Spieler kommen über den Proxy, Lobby-Name gesetzt.
+### A1. MRadmin: Speicher für mehrere Server
+Grund: Heute laden Tickets beim Start in den Speicher, jeder Server zählt Ticket-Nummern selbst und die Nummer allein ist der Tabellenschlüssel. Manuelle Wartungen und vorzeitig beendete Kuma-Wartungen kennt nur der Server, auf dem sie gesetzt wurden. Web-Konten liegen pro Server.
 
-Rolle **lobby**:
-- Pingt main regelmäßig an (Server-List-Ping), liest die Wartung aus Uptime Kuma (gleiche Einstellungen wie main).
-- Zeigt den Grund des Wartens: Neustart, Wartung bis X, Server nicht erreichbar.
-- Holt Spieler zurück, sobald main antwortet und keine Wartung läuft.
-- Rest von MRadmin (Tickets, Staff-Chat, Web) läuft normal; mit MySQL teilen sich beide Server die Daten (Server-Spalte gibt es).
-
-Dazu: Dashboard-Kachel „Proxy“, Texte DE/EN, README, CHANGELOG, `config-version`.
-
-## Gemeinsame Daten (MySQL ist im Proxy-Betrieb Pflicht)
-Ergebnis der Prüfung von MRadmin (2026-10-27): Ohne gemeinsame Datenbank geht es nicht sauber.
-- **Wartung:** Neben Uptime Kuma gibt es manuelle Wartungen (`/mra maintenance`) und vorzeitig beendete Kuma-Wartungen. Beides steht nur im Speicher von main - die Lobby wüsste nichts davon und würde Spieler falsch zurückholen bzw. festhalten.
-- **Tickets:** Werden beim Start in den Speicher geladen, die Nummer zählt jeder Server selbst, und die Ticket-Nummer allein ist der Schlüssel der Tabelle. Zwei Server würden sich Tickets gegenseitig überschreiben, ein `/report` aus der Lobby wäre auf main unsichtbar.
-- **Web-Konten, Sitzungen, Entbannungsanträge, Push:** pro Server gespeichert - ohne gemeinsame Datenbank zwei getrennte Weboberflächen.
-
-Deshalb: `proxy.enabled: true` setzt `storage.type: mysql` voraus (gleiche Datenbank, eigene `server-id` je Server), sonst bleibt der Proxy-Teil mit Warnung aus. Ohne Proxy ändert sich nichts (yaml/sqlite wie bisher).
-
-Umbau in MRadmin (Speicherschicht, kein Neubau):
-| Daten | Künftig |
+| Daten | Künftig mit MySQL |
 |---|---|
-| Tickets | gemeinsam: Nummer von der Datenbank vergeben, Änderungen je Ticket schreiben statt alles, andere Server laden Änderungen nach (alle paar Sekunden über eine Änderungszeit) |
-| Wartung (manuell, Kuma-Ausnahmen) | gemeinsam, main führt, Lobby liest nur |
-| Web-Konten, Sitzungen, Entbannungsanträge, Push | gemeinsam |
-| Discord-Ankündigungen | nur main postet |
-| Protokoll, Leistungsdaten | pro Server (wie bisher über die Server-Spalte), Web zeigt beide |
-| Freeze, Admin-Modus-Zustand | pro Server |
+| Tickets | gemeinsam: Nummer vergibt die Datenbank, Änderungen werden je Ticket geschrieben, andere Server laden Änderungen nach (Spalte „geändert“, Abfrage alle paar Sekunden) |
+| Wartung (manuell, Kuma-Ausnahmen, angekündigter Stand) | gemeinsam - main führt, die Lobby liest nur |
+| Web-Konten, Sitzungen, Entbannungsanträge, Push-Abos | gemeinsam |
+| Proxy-Zustand (main bereit / stoppt, Wechsel-Einträge) | neue Tabelle, gemeinsam |
+| Protokoll, Leistungsdaten | pro Server (Server-Spalte gibt es), Web zeigt sie je Server |
+| Freeze, Admin-Modus-Zustand, Discord-Ankündigungsstand | pro Server |
 
-**MRpvp:** Duelle in der Lobby zählen in **dieselbe Statistik** (User-Entscheidung). MRpvp bekommt dafür MySQL/MariaDB als zweite Speicherart neben SQLite (Spiel-IDs von der Datenbank, Statistik und Bewertungen gemeinsam; Arenen, Spielerzustände und laufende Partien bleiben pro Server). Eigener Schritt, ebenfalls optional.
+- Tabellenversion 3 mit Migration. yaml/sqlite ohne Proxy unverändert.
+- **Umzug sqlite → MySQL:** Heute übernimmt MRadmin beim ersten Start nur YAML-Dateien. Neu: Sind die MySQL-Tabellen leer und liegt eine `mradmin.db`, wird sie einmalig übernommen (wie bei YAML, Datei bleibt liegen). Wichtig: zuerst main umstellen, dann die Lobby.
 
-## Teil 2: Wartelobby
-- Kleiner Paper-Server auf VPS 2 (ca. 1 GB, kleine Sichtweite), Abenteuermodus, eigene Spielerdaten (Inventar vom Hauptserver unberührt).
-- **Xaero:** Lobby-Welt mit eigenem Dimensionsschlüssel (z.B. `minecraft:lobby`), damit Xaero sie getrennt speichert. Proxy-Plugins für Xaero-Welt-IDs nur nach Test - sie könnten vorhandene Karten einer neuen ID zuordnen (Karte wäre „weg“).
-- **Minigames sind optional:** Die Lobby funktioniert auch ohne (nicht jeder mit MRadmin hat MRpvp). Wer will, installiert MRpvp für Duelle (mit MySQL dieselbe Statistik wie auf main). Weitere Minigames kommen später.
+### A2. MRadmin: Proxy-Betrieb
+Neuer Config-Abschnitt (Standard aus):
+```yaml
+proxy:
+  enabled: false
+  role: main            # main | lobby
+  servers:
+    main: main          # Namen wie in der velocity.toml
+    lobby: lobby
+  # nur Rolle lobby:
+  main-address: "10.0.0.2:25565"   # zum Anpingen von main
+  return-per-second: 5
+  display: BOSSBAR      # BOSSBAR | ACTIONBAR | NONE
+  teleport-to-spawn: true
+```
+- Voraussetzung: `storage.type: mysql`, sonst bleibt der Proxy-Teil aus (Warnung in Konsole, `/mra status` und Web).
+- Spieler werden über den BungeeCord-Kanal von Velocity verschoben (`Connect`) - auf dem Proxy ist dafür nur `bungee-plugin-message-channel = true` nötig (Standard).
 
-## Teil 3: Musterkonfiguration (`docs/proxy/` + Anleitung als Website-Tab)
-- `velocity.toml`-Auszug (Ports, Forwarding, `try`-Liste, Server)
-- Fallback-Plugin für Abstürze (Auswahl nach Test)
-- Paper main + lobby: `server.properties`, `paper-global.yml`, MRadmin-`proxy:`-Abschnitt
-- LuckPerms und LibertyBans auf Proxy + Servern mit gemeinsamer MySQL (MRadmin nutzt die LibertyBans-API auf main weiter, Entbannungs-Codes bleiben)
-- Firewall-Hinweise (internes Netz, `server-ip`), Reihenfolge der Umstellung
-- Start-Skripte bleiben Sache des Users (`mc.sh` auf VPS 1 unverändert, für VPS 2 ein eigenes Skript)
+**Rolle main**
+- Stopp abfangen (Konsole/Spieler `stop` und `restart`, Neustart-Knopf, Countdown-Ende): verschieben bzw. Admin-Modus trennen, warten bis leer (max. 10 s), dann herunterfahren. Start-Skripte brauchen dafür keine Änderung.
+- Wartungsbeginn: Lobby statt Kick (`maintenance.kick-on-start` gilt dann für „verschieben“).
+- Join während Wartung: Prüfung wie in der Tabelle oben (Admin-Modus-Zustand bzw. Wechsel-Eintrag).
+- Meldet alle 5 s in der Datenbank „bereit“, beim Stopp sofort „stoppt“.
+- Discord-Ankündigungen nur von main.
 
-## Umsetzung in Schritten
-1. Lokaler Testaufbau: Velocity + zwei Paper-Server auf dem Testrechner.
-2. MRadmin Speicher für mehrere Server (Tickets, Wartung, Web-Konten gemeinsam).
-3. MRadmin Rolle main (Lobby statt Kick, Neustart über Lobby, Prüfungen).
-4. MRadmin Rolle lobby (Anzeige, Zurückholen).
-5. MRpvp mit MySQL.
-6. Musterkonfiguration + Anleitung, Website-Tab.
-7. Test mit Xaero (Karte aufdecken, Neustart, vergleichen), MRtoolbar-Mod (Handshake nach Wechsel), DE/EN-Client.
-8. User richtet VPS 2 ein, Umstellung der Domain.
+**Rolle lobby**
+- Wartung nur anzeigen (Kuma + gemeinsamer Wartungsstand), nie kicken, keine Discord-Posts, keine eigene Wartungs-MOTD.
+- Prüft alle 2 s: main meldet „bereit“ (nicht älter als 15 s) **und** antwortet auf einen Ping **und** keine Wartung → zurückholen, gestaffelt.
+- Beim Join: an den Spawn (abschaltbar), Bossbar mit Grund.
+- `/mra mode`: Wechsel-Eintrag + verschieben (siehe Abläufe). Alle anderen `/mra`-Funktionen laufen normal.
 
-## Entscheidungen des Users (2026-10-27)
-- Alles rund um den Proxy ist **komplett optional**.
-- Proxy + Lobby auf VPS 2, Hauptserver auf VPS 1, beide bei Hetzner über das interne Netz.
-- LuckPerms und LibertyBans werden auf MySQL umgestellt (gemeinsam für alle Server).
-- Lobby ist **nur Warteraum** (Neustart, Absturz, Wartung). Minigames sind optional (z.B. MRpvp), weitere kommen später.
-- Bei Wartung bleibt nur, wer im MRadmin-Admin-Modus ist; alle anderen (auch Team im normalen Spiel) gehen in die Lobby.
-- Neustart: Admins im Admin-Modus werden getrennt, nicht in die Lobby geschickt.
-- Join während Wartung: Admin mit Admin-Modus → main, ohne Admin-Modus → Lobby. Ist main aus → Lobby, auch im Admin-Modus.
-- Die Domain stellt der User selbst auf VPS 2 um.
-- Admins nutzen `/mra` auch in der Lobby; `/mra mode` dort = auf main in den Admin-Modus (kein eigener Knopf, keine eigene Permission).
-- MRpvp-Duelle in der Lobby zählen in dieselbe Statistik wie auf main.
+**Befehle und Permissions**
+- `/mra proxy` - Status (Rolle, main bereit?, Spieler in der Lobby, Prüfungen). Permission `mradmin.proxy.view`.
+- `/mra proxy send <spieler|all> <main|lobby>` - von Hand verschieben. Permission `mradmin.proxy.send`.
+- Beide in den bestehenden Paketen (`mradmin.staff` bzw. `mradmin.admin`).
 
-## Offene Fragen an den User
-1. MySQL als Pflicht für den Proxy-Betrieb von MRadmin - einverstanden?
+**Prüfungen** (Konsole beim Start, `/mra proxy`, Web): Velocity-Forwarding in `paper-global.yml` aktiv, `online-mode=false`, MySQL verbunden, main von der Lobby erreichbar, Servernamen gesetzt.
+
+**Web:** Dashboard-Kachel „Proxy“ (Rolle, Zustand von main, Spieler in der Lobby, Warnungen). Web-Konten sind gemeinsam, die Weboberfläche kann auf main und/oder der Lobby laufen (jede zeigt ihre Live-Daten, Tickets usw. sind gleich).
+
+**Sonst:** Texte DE/EN (Bossbar, Verschieben, Trennung im Admin-Modus beim Neustart, Prüfungen), `config-version` + `ConfigUpdater`, `lang-version`, README (eigener Abschnitt + Anleitung `docs/PROXY.md` als Website-Tab), CHANGELOG. Keine Änderung der Modul-API nötig.
+
+### A3. MRpvp: MySQL
+- Neuer Abschnitt `storage:` (`type: sqlite | mysql`, Zugangsdaten, `server-id`, `table-prefix`), Standard sqlite wie bisher.
+- Gemeinsam: Spiele (Nummer von der Datenbank, neue Spalte `server`), Statistik, Bewertungen, Protokoll der Wertungsänderungen.
+- Pro Server: Arenen/Vorlagen, gespeicherte Spielerzustände (bleiben als Datei - wer auf main während eines Duells abstürzt, bekommt seine Sachen auf main zurück), laufende Partien.
+- Statistik-Neuberechnung und Wertungsänderungen in Transaktionen (zwei Server schreiben gleichzeitig).
+- Tagesgrenze pro Gegner und Anti-Farming zählen über beide Server (aus der gemeinsamen Datenbank).
+- Umzug: Sind die MySQL-Tabellen leer und liegt eine `mrpvp.db`, wird sie einmalig übernommen. Zuerst main umstellen.
+- Web: Verlauf/Statistik gemeinsam; Live-Partien sieht man in der Weboberfläche des Servers, auf dem sie laufen (Spalte „Server“ in der Liste).
+- `config-version`, README, CHANGELOG.
+
+### A4. Andere Plugins prüfen
+- **MRtoolbar:** Handshake nach Serverwechsel (Lobby → main) im Test prüfen; die Mod muss in der Lobby ohne Plugin ruhig bleiben und auf main neu verbinden. Falls nötig: Mod setzt ihren Zustand beim Serverwechsel zurück (Protokoll unverändert, `COMPATIBILITY.md` prüfen).
+- **MRchunks, MRsleep:** laufen nur auf main, keine Änderung. In der Lobby nicht installieren.
+- **MRpvp in der Lobby:** Arena-Welt `mrpvp_arenas` liegt dort getrennt; Kits wie auf main.
+
+### A5. Musterkonfiguration (`mradmin/docs/proxy/` + Anleitung `docs/PROXY.md`)
+- `velocity.toml`-Auszug: Forwarding `modern`, `[servers]`, `try`, `failover-on-unexpected-server-disconnect`, `bungee-plugin-message-channel`.
+- Paper main und lobby: `server.properties` (`online-mode=false`, `server-ip` intern), `paper-global.yml` (`proxies.velocity`), MRadmin-`proxy:` je Rolle, MRpvp-`storage:`.
+- Lobby: kleine Sichtweite, Abenteuermodus, Gamerules (kein Tageszeit-/Wetterwechsel, kein Fallschaden), Spawn-Schutz.
+- LuckPerms und LibertyBans auf Proxy + allen Servern mit gemeinsamer MySQL (LuckPerms `messaging-service: sql`).
+- Xaero-Hinweis: Lobby weit weg von 0/0 bauen bzw. in eigener Welt (siehe Test).
+- Firewall: nur der Proxy-Port öffentlich, Paper- und Datenbank-Ports nur intern.
+- Reihenfolge der Umstellung und Rückweg.
+
+## Teil B - Testaufbau und Tests (lokal)
+1. Velocity + main + lobby auf dem Testrechner, MariaDB lokal.
+2. Prüfen, bevor Code entsteht: Verschieben per BungeeCord-Kanal; was Velocity beim „Server closed“-Kick und bei Prozess-Abbruch macht; Join-Ablehnung → Lobby.
+3. Nach jedem Schritt: Neustart, Wartung (Kuma + manuell), Absturz (Prozess beenden), `/mra mode` aus der Lobby, Tickets von beiden Servern, Lobby-Duell zählt auf main.
+4. **Xaero:** Karte auf main aufdecken, Neustart über die Lobby, Karte vergleichen (Lobby weit draußen und als eigene Welt ausprobieren).
+5. MRtoolbar-Mod: Wechsel Lobby → main, DE- und EN-Client.
+
+## Reihenfolge der Umsetzung
+1. Testaufbau + Vorab-Prüfungen (B1, B2).
+2. A1 MRadmin-Speicher (inkl. Umzug sqlite → MySQL).
+3. A2 MRadmin Rolle main.
+4. A2 MRadmin Rolle lobby.
+5. A3 MRpvp MySQL.
+6. A4 MRtoolbar-Prüfung, ggf. Mod-Fix.
+7. A5 Musterkonfiguration + Anleitung + Website-Tab.
+8. Gesamttest (B3-B5), danach Release (Versionen legt der User fest).
+
+## Später / optional
+- MOTD am Proxy während Wartung (heute statisch in der `velocity.toml`; Alternativen: Maintenance-Plugin von kennytv oder ein kleines eigenes Velocity-Plugin).
+- Staff-Chat und Ankündigungen über beide Server.
+- Eine Weboberfläche mit Server-Umschalter für Live-Daten beider Server.
+- Weitere Minigames für die Lobby.
