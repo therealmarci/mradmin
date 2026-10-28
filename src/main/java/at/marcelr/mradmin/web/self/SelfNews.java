@@ -75,6 +75,7 @@ public final class SelfNews {
             m.put("title", i.title());
             m.put("text", i.content());
             m.put("critical", i.critical());
+            m.put("level", i.level());
             m.put("created", i.created());
             m.put("link", plugin.settings().kuma().url() + "/status/" + i.slug());
             alerts.add(m);

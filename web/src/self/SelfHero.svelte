@@ -85,12 +85,12 @@
       onkeydown={key} tabindex="-1" role="presentation">
       <div class="track" class:dragging={startX !== null} style="transform: translateX(calc({-index * 100}% + {drag}px))">
         {#each slides as s, i (s.type + ':' + (s.id ?? s.page + s.text))}
-          {@const kind = s.type === 'maintenance' ? 'maintenance-' + s.phase : s.type}
-          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : s.type === 'notice' ? s.tone : s.type === 'incident' && !s.critical ? 'warn' : tone[s.type]}"
+          {@const kind = s.type === 'maintenance' ? 'maintenance-' + s.phase : s.type === 'incident' && s.level === 'info' ? 'incident-info' : s.type}
+          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : s.type === 'notice' ? s.tone : s.type === 'incident' ? (s.level === 'critical' ? 'bad' : s.level === 'warning' ? 'warn' : 'accent') : tone[s.type]}"
             aria-roledescription="slide" aria-label={t('self.hero.of', { n: i + 1, total: slides.length })} aria-hidden={i !== index}
             inert={i !== index}>
             <div class="kind">
-              <span aria-hidden="true">{s.icon ?? icon[s.type]}</span>
+              <span aria-hidden="true">{s.icon ?? (s.level === 'info' ? 'ℹ️' : icon[s.type])}</span>
               {s.type === 'notice' ? s.title : t('self.hero.kind.' + kind)}
               {#if s.pinned}<span class="pin" title={t('self.hero.pinned')}>📌</span>{/if}
               {#if s.created}<span class="when">{dateTime(s.created)}</span>{/if}

@@ -19,8 +19,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static at.marcelr.mradmin.Messages.tag;
@@ -32,10 +34,12 @@ import static at.marcelr.mradmin.Messages.tag;
  *   <li><b>News and changelogs</b> once per player as a short preview in the chat with a link to the player page: to
  *   everyone online when published, otherwise on the next join (at most {@code player-web.news.chat-preview.max},
  *   not older than {@code max-age-days}). Only for players who may open the page (mradmin.web.self).</li>
- *   <li><b>Warnings</b> (written in MRadmin or pinned in Uptime Kuma, see {@link KumaIncidents}) to everyone online in
- *   the chat and as a title, and in the chat on every join while they are on.</li>
+ *   <li><b>Warnings</b> written in MRadmin, and Uptime Kuma incidents of style danger: to everyone online in the chat
+ *   and as a title, in the chat on every join while they are on. Kuma "warning": the same without the title. Kuma
+ *   info, primary, light, dark: a note, once per player in the chat like a news (see {@link KumaIncidents}).</li>
  * </ul>
- * Who saw which post is kept in the storage file "news-seen" (the highest post id per player).
+ * Who saw which post is kept in the storage file "news-seen" (the highest post id per player, and the notes from
+ * Uptime Kuma they got).
  */
 public final class NewsDelivery implements Listener {
 
@@ -45,6 +49,7 @@ public final class NewsDelivery implements Listener {
     private final News news;
     private final KumaIncidents incidents;
     private final Map<UUID, Integer> seen = new HashMap<>();
+    private final Map<UUID, Set<String>> seenIncidents = new HashMap<>();
     private boolean loaded;
 
     public NewsDelivery(MRAdmin plugin, News news) {
@@ -123,7 +128,10 @@ public final class NewsDelivery implements Listener {
         return discord.postNews(post.kind(), head, body.toString().strip(), link(post));
     }
 
-    /** A new or changed incident on an Uptime Kuma status page: like a warning written in MRadmin. */
+    /**
+     * A new or changed incident on an Uptime Kuma status page, by its style: critical (danger) chat + title to
+     * everyone, warning only chat, a note (info, primary, light, dark) once per player in the chat like a news.
+     */
     private void incident(KumaIncidents.Incident incident) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             incidentAlert(player, incident, true);
@@ -192,25 +200,38 @@ public final class NewsDelivery implements Listener {
         plugin.messages().run(player, () -> {
             String lang = plugin.messages().languageOf(player);
             String link = player.hasPermission(Perms.WEB_SELF) ? link(post) : null;
-            show(player, post.heading(lang), post.preview(lang, 160), link, fresh);
+            show(player, post.heading(lang), post.preview(lang, 160), link, fresh, false);
         });
     }
 
+    /**
+     * An incident for one player. Critical and warning: in the chat (on every join while pinned), critical also as a
+     * title when it is new. A note: once per player in the chat (remembered in news-seen).
+     */
     private void incidentAlert(Player player, KumaIncidents.Incident incident, boolean fresh) {
         String url = plugin.settings().kuma().url() + "/status/" + incident.slug();
-        plugin.messages().run(player, () -> {
-            String text = incident.content().replace('\n', ' ');
-            show(player, incident.title(), text.length() > 160 ? text.substring(0, 159) + "…" : text, url, fresh);
-        });
+        String text = incident.content().replace('\n', ' ');
+        String shortText = text.length() > 160 ? text.substring(0, 159) + "…" : text;
+        if ("info".equals(incident.level())) {
+            if (!seenIncident(player.getUniqueId(), incident.key())) {
+                plugin.messages().run(player, () -> plugin.messages().send(player, "incident-info-chat",
+                        tag("title", incident.title()), tag("text", shortText), tag("link", linkButton(url))));
+            }
+            return;
+        }
+        boolean title = fresh && "critical".equals(incident.level());
+        plugin.messages().run(player, () -> show(player, incident.title(), shortText, url, title,
+                "warning".equals(incident.level())));
     }
 
-    /** Chat line (always, if alerts.chat) and, when it is new, the title on the screen (alerts.title). */
-    private void show(Player player, String title, String text, String link, boolean fresh) {
+    /** Chat line (always, if alerts.chat) and, if {@code title}, the title on the screen (alerts.title). */
+    private void show(Player player, String title, String text, String link, boolean showTitle, boolean warning) {
         Messages m = plugin.messages();
         if (settings().alertChat()) {
-            m.send(player, "alert-chat", tag("title", title), tag("text", text), tag("link", linkButton(link)));
+            m.send(player, warning ? "warning-chat" : "alert-chat", tag("title", title), tag("text", text),
+                    tag("link", linkButton(link)));
         }
-        if (fresh && settings().alertTitle()) {
+        if (showTitle && settings().alertTitle()) {
             player.showTitle(Title.title(m.get("alert-title", tag("title", title)), m.get("alert-subtitle", tag("text", text)),
                     Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(6), Duration.ofMillis(800))));
         }
@@ -241,11 +262,37 @@ public final class NewsDelivery implements Listener {
         load();
         if (id > seen.getOrDefault(player, 0)) {
             seen.put(player, id);
-            YamlConfiguration y = new YamlConfiguration();
-            y.options().setHeader(List.of("MRadmin - the newest post each player got as a chat preview (managed by the plugin)."));
-            seen.forEach((uuid, last) -> y.set(uuid.toString(), last));
-            plugin.storage().saveYaml(SEEN_FILE, y);
+            save();
         }
+    }
+
+    /**
+     * Whether the player already got this note from Uptime Kuma; if not, it counts as seen from now on. Notes no longer
+     * pinned are forgotten.
+     */
+    private boolean seenIncident(UUID player, String key) {
+        load();
+        Set<String> current = new HashSet<>();
+        incidents.current().forEach(i -> current.add(i.key()));
+        seenIncidents.values().forEach(keys -> keys.retainAll(current));
+        if (!seenIncidents.computeIfAbsent(player, k -> new HashSet<>()).add(key)) {
+            return true;
+        }
+        save();
+        return false;
+    }
+
+    private void save() {
+        YamlConfiguration y = new YamlConfiguration();
+        y.options().setHeader(List.of("MRadmin - the newest post each player got as a chat preview, and the notes from",
+                "Uptime Kuma they got (managed by the plugin)."));
+        seen.forEach((uuid, last) -> y.set("posts." + uuid, last));
+        seenIncidents.forEach((uuid, keys) -> {
+            if (!keys.isEmpty()) {
+                y.set("incidents." + uuid, List.copyOf(keys));
+            }
+        });
+        plugin.storage().saveYaml(SEEN_FILE, y);
     }
 
     private void load() {
@@ -254,12 +301,25 @@ public final class NewsDelivery implements Listener {
         }
         loaded = true;
         YamlConfiguration y = plugin.storage().loadYaml(SEEN_FILE, plugin.getLogger());
-        for (String key : y.getKeys(false)) {
-            try {
-                seen.put(UUID.fromString(key), y.getInt(key));
-            } catch (IllegalArgumentException ignored) {
-                // broken entry
+        var posts = y.getConfigurationSection("posts");
+        if (posts != null) {
+            for (String key : posts.getKeys(false)) {
+                uuid(key, uuid -> seen.put(uuid, posts.getInt(key)));
             }
+        }
+        var notes = y.getConfigurationSection("incidents");
+        if (notes != null) {
+            for (String key : notes.getKeys(false)) {
+                uuid(key, uuid -> seenIncidents.put(uuid, new HashSet<>(notes.getStringList(key))));
+            }
+        }
+    }
+
+    private static void uuid(String raw, java.util.function.Consumer<UUID> then) {
+        try {
+            then.accept(UUID.fromString(raw));
+        } catch (IllegalArgumentException ignored) {
+            // broken entry
         }
     }
 }

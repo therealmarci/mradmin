@@ -115,8 +115,8 @@
     {#if data.alerts.length}
       <section class="alerts" aria-label={t('self.news.alerts')}>
         {#each data.alerts as a (a.type + a.id)}
-          <article class="alert" class:soft={a.type === 'incident' && !a.critical}>
-            <span class="alert-icon" aria-hidden="true">⚠</span>
+          <article class="alert level-{a.type === 'incident' ? a.level : 'critical'}">
+            <span class="alert-icon" aria-hidden="true">{a.level === 'info' ? 'i' : '!'}</span>
             <div class="alert-body">
               <div class="alert-head">
                 <strong>{a.title}</strong>
@@ -340,8 +340,12 @@
     box-shadow: var(--shadow);
   }
 
-  .alert.soft {
+  .alert.level-warning {
     --a: var(--warn);
+  }
+
+  .alert.level-info {
+    --a: var(--accent);
   }
 
   .alert-icon {

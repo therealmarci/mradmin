@@ -195,9 +195,18 @@ bestehenden Beitrag lässt sich das einmal nachholen.
 Neue Neuigkeiten und Changelogs bekommt jeder Spieler mit `mradmin.web.self` **einmal als Vorschau im Chat** mit einem
 Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`player-web.news.chat-preview`).
 
-**Warnungen aus Uptime Kuma:** Ein auf einer Kuma-Statusseite angehefteter Vorfall (`uptime-kuma.status-pages`) wird wie
-eine Warnung gezeigt - auf der Spielerseite, im Spiel (Chat und Titel, wenn er neu ist) und oben auf dieser Seite. Geändert
-und beendet wird er in Uptime Kuma.
+**Warnungen aus Uptime Kuma:** Vorfälle, die auf einer Kuma-Statusseite angeheftet sind (`uptime-kuma.status-pages`,
+dafür reicht `uptime-kuma.url`), erscheinen auf der Spielerseite, im Karussell und oben auf dieser Seite. Was im Spiel
+passiert, hängt vom Stil in Kuma ab:
+
+| Stil in Kuma | Farbe | Im Spiel |
+|---|---|---|
+| danger | rot | neu: Chat + Titel an alle; beim Join im Chat, solange angeheftet |
+| warning | gelb | neu: Chat an alle (kein Titel); beim Join im Chat, solange angeheftet |
+| info, primary, light, dark | blau | einmal pro Spieler im Chat, wie eine Neuigkeit |
+
+Was beim Serverstart schon angeheftet ist, wird nicht noch einmal an alle angekündigt. Geändert und beendet werden die
+Vorfälle in Uptime Kuma; im Discord postet MRadmin sie nicht.
 
 **Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
 und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon

@@ -33,7 +33,19 @@ public final class KumaIncidents {
     /** One incident. {@code key} changes when Kuma's text changes (announced again then). */
     public record Incident(String key, String slug, String title, String content, String style, long created) {
 
-        /** Kuma's "danger" (red) counts as critical, everything else as a plain warning. */
+        /**
+         * How serious: Kuma's "danger" (red) is critical, "warning" (yellow) a warning, everything else (info, primary,
+         * light, dark) a note.
+         */
+        public String level() {
+            return switch (style) {
+                case "danger" -> "critical";
+                case "warning" -> "warning";
+                default -> "info";
+            };
+        }
+
+        /** Kuma's "danger" (red). */
         public boolean critical() {
             return "danger".equals(style);
         }

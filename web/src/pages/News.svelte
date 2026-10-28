@@ -135,7 +135,7 @@
       <h2>⚠ {t('news.kumaTitle')}</h2>
       <p class="muted small">{t('news.kumaHint')}</p>
       {#each data.incidents as i (i.key)}
-        <div class="incident" class:critical={i.style === 'danger'}>
+        <div class="incident level-{i.level}">
           <strong>{i.title}</strong>
           <span class="muted tiny">{i.slug} · {dateTime(i.created)}</span>
           {#if i.content}<p class="small">{i.content}</p>{/if}
@@ -649,7 +649,11 @@
     border-left: 3px solid var(--warn);
   }
 
-  .incident.critical {
+  .incident.level-info {
+    border-left-color: var(--accent);
+  }
+
+  .incident.level-critical {
     border-left-color: var(--bad);
   }
 </style>
