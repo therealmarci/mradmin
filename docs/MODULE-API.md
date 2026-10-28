@@ -191,6 +191,9 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   (Rangliste, eigener Platz hervorgehoben), `AreaMap` (Bereiche in Blockkoordinaten, je Welt, ohne Gelände; Link auf eine
   große Karte möglich). Ein `Button` kann nachfragen (`confirm`) oder vorher einen Text abfragen (`input`, kommt als
   `args.value`).
+- **Kachel auf der Startseite (`summary`):** Die erste Kennzahl aus `Stats` steht groß, die weiteren darunter; ein Wert
+  der Form „a / b“ (z.B. `120 / 245 Chunks`) wird zusätzlich als Balken gezeigt (Ton `warn`/`bad` färbt ihn), `Text`
+  erscheint als kurze Zeile (z.B. eine Sperre). Farbe und großes Symbol kommen aus der Plugin-ID bzw. dem `icon`.
 - **Sprache:** `viewer.lang()` ist `de` oder `en` - alle Texte darin bauen. Texte sind reiner Text, nie HTML.
 - **Sicherheit:** MRadmin prüft vor jedem Aufruf `mradmin.web.self` und LibertyBans-Sperren. Alles andere (Besitz,
   Permissions, Limits) prüft das Plugin in `selfAction` selbst. Aktionen sind pro Spieler auf 60 pro Minute begrenzt.

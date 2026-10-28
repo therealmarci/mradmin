@@ -5,8 +5,8 @@
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
-  import Blocks from './Blocks.svelte';
   import SelfHero from './SelfHero.svelte';
+  import SelfTile from './SelfTile.svelte';
 
   let { player } = $props();
 </script>
@@ -27,11 +27,7 @@
   {:else}
     <div class="tiles">
       {#each player.areas as a (a.module + '/' + a.id)}
-        <button class="card tile" onclick={() => go(`/me/${a.module}/${a.id}`)}>
-          <span class="label">{a.icon} {a.title}</span>
-          <Blocks blocks={a.summary} />
-          <span class="small link">{t('self.open')} →</span>
-        </button>
+        <SelfTile area={a} onclick={() => go(`/me/${a.module}/${a.id}`)} />
       {/each}
     </div>
   {/if}
@@ -67,20 +63,8 @@
 
   .tiles {
     display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  }
-
-  .tile {
-    display: grid;
-    gap: 10px;
-    text-align: left;
-    color: inherit;
-    font: inherit;
-  }
-
-  .label {
-    font-weight: 700;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   }
 
   .tip {
@@ -88,9 +72,5 @@
     text-align: center;
     font-size: 0.8rem;
     opacity: 0.8;
-  }
-
-  .link {
-    color: var(--accent);
   }
 </style>
