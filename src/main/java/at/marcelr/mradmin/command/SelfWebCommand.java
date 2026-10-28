@@ -17,7 +17,8 @@ import static at.marcelr.mradmin.Messages.tag;
  * /web - the player's own page in the web interface (player area, see
  * {@link at.marcelr.mradmin.web.self.SelfRoutes}):
  * <ul>
- *   <li>{@code /web} - a link that signs this browser in (works once, a few minutes); the page can be bookmarked</li>
+ *   <li>{@code /web} - the link to the page (always the same, can be bookmarked) and a 6-digit code to sign in there
+ *   (works once, player-web.code-seconds; a click copies it)</li>
  *   <li>{@code /web devices} - how many browsers are signed in, with a button to sign them all out</li>
  *   <li>{@code /web logout} - signs out every browser</li>
  * </ul>
@@ -65,12 +66,14 @@ public final class SelfWebCommand implements TabExecutor {
                     plugin.getLogger().info(player.getName() + " signed out all browsers of their own page (" + count + ").");
                 }
                 default -> {
+                    // Always the same address (bookmark); the page asks for the code, a click in the chat copies it.
                     String code = web.playerSessions().code(player.getUniqueId(), player.getName());
-                    // The code is in the fragment: browsers never send it to a server, it stays out of every log.
-                    String link = url + "/me/login#" + code;
-                    var button = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(link));
-                    messages.send(sender, "web-self-link", tag("link", button),
-                            tag("minutes", plugin.settings().playerWeb().linkMinutes()));
+                    var link = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(url + "/me"));
+                    var copy = messages.get("web-self-code", tag("code", code))
+                            .clickEvent(ClickEvent.copyToClipboard(code))
+                            .hoverEvent(messages.get("web-self-code-hover"));
+                    messages.send(sender, "web-self-link", tag("link", link), tag("code", copy),
+                            tag("seconds", plugin.settings().playerWeb().codeSeconds()));
                 }
             }
             return true;

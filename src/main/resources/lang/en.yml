@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 13
+lang-version: 14
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -58,7 +58,9 @@ web-setup-link: "<prefix><green>Your setup link:</green> <link> <gray>(valid for
 web-setup-link-other: "<prefix><green>Setup link for <white><player></white>:</green> <link> <gray>(valid for 10 minutes, works once - give it only to <player>!)"
 web-link-label: "<aqua><u>[Open setup]</u></aqua>"
 # The player's own page in the web interface (/web). Placeholders: <link>, <minutes>, <count>, <button>
-web-self-link: "<prefix><green>Your page on the web: <link> <gray>(the link works for <minutes> minutes and only once - afterwards you can bookmark the page)"
+web-self-link: "<prefix><green>Your page on the web: <link> <gray>· Code to sign in: <code> <dark_gray>(works <seconds> seconds and only once)"
+web-self-code: "<yellow><b><code></b></yellow>"
+web-self-code-hover: "<gray>Click to copy"
 web-self-link-label: "<aqua><u>[Open my page]</u></aqua>"
 web-self-disabled: "<prefix><gray>The player page on the web is not switched on on this server."
 web-self-no-url: "<prefix><red>The address of the web interface is missing (web.public-url) - please tell the team."

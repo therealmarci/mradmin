@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 28
+config-version: 29
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -681,15 +681,19 @@ web:
       proof-of-work: 16
 
 # Player area of the web interface: every player gets their own page - their chunk loaders, duel statistics, tickets,
-# rankings ... (whatever the installed MRtechnology plugins offer). Players open it only with /web in game: the link
-# signs that browser in, afterwards the page can be bookmarked. Needs the web interface (web.enabled) and
+# rankings ... (whatever the installed MRtechnology plugins offer). The address is always <web.public-url>/me (can be
+# bookmarked); to sign in, the page asks for a 6-digit code that players get with /web in game - again after
+# session-days, or after idle-days without use. Needs the web interface (web.enabled) and
 # web.public-url. Permission for /web: mradmin.web.self (in mradmin.player).
 player-web:
   enabled: false
-  # How long a browser stays signed in without being used (days). Every visit starts the time again.
-  session-days: 90
-  # How long the link from /web works (minutes). It works only once.
-  link-minutes: 5
+  # A browser stays signed in at most this many days after the code from /web was entered - then the page asks for a
+  # new code (the address stays the same, a bookmark keeps working).
+  session-days: 14
+  # ... and is signed out earlier if the page was not opened for this many days.
+  idle-days: 7
+  # How long the 6-digit code from /web works (seconds). It works only once.
+  code-seconds: 120
   # Browsers per player at most (phone, PC ...). Signing in on one more signs out the one used longest ago.
   max-devices: 5
   # Statistics page: rankings of the game's own statistics (all players, also offline) and of the plugins (e.g. MRpvp:

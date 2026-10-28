@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * The player area of the web interface ("/me" in the browser, API under /api/self) - every player sees and manages only their own things.
  * <pre>
- *  POST /api/self/login         {code}   redeems the code from /web, signs this browser in (open)
+ *  POST /api/self/login         {code}   redeems the 6-digit code from /web, signs this browser in (open)
  *  GET  /api/self                        who is signed in and which areas there are
  *  POST /api/self/logout                 signs this browser out
  *  GET  /api/self/devices                the player's signed-in browsers
@@ -76,7 +76,8 @@ public final class SelfRoutes {
         if (!plugin.settings().playerWeb().enabled()) {
             throw new Http.WebException(404, "player-web-off");
         }
-        if (!server.allow("me-login:" + http.ip(), 20)) {
+        // 6 digits: few tries per address (and PlayerSessions limits wrong codes from everyone together).
+        if (!server.allow("me-login:" + http.ip(), 6)) {
             throw new Http.WebException(429, "rate-limit");
         }
         PlayerSessions.Result result = sessions().redeem(http.string("code"), http.storedIp(), http.header("User-Agent"));
@@ -93,7 +94,7 @@ public final class SelfRoutes {
             throw new Http.WebException(403, "player-banned");
         }
         http.setCookie(WebServer.PLAYER_COOKIE, result.token(),
-                plugin.settings().playerWeb().sessionDays() * 86_400L, plugin.settings().web().secure());
+                sessions().cookieSeconds(), plugin.settings().web().secure());
         plugin.getLogger().info(result.session().name() + " signed in to their own page in the web interface.");
         http.json(200, Map.of("name", result.session().name(), "uuid", player.toString()));
     }

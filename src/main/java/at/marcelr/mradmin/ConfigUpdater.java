@@ -35,8 +35,10 @@ public final class ConfigUpdater {
  * 26: player-web.news (slideshow with news and changelogs of the team).
  * 27: player-web.personal-stats (own statistics as a tile on the start page).
  * 28: player-web.news.show-plugin-notices and show-tickets (warnings and ticket answers in the slideshow).
+ * 29: player-web sign-in with a 6-digit code: session-days 90 -> 14 (only the old default), idle-days, code-seconds
+ * instead of link-minutes.
      */
-    public static final int CURRENT_VERSION = 28;
+    public static final int CURRENT_VERSION = 29;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -136,6 +138,10 @@ public final class ConfigUpdater {
                     template.set("server-language", old);
                 }
                 template.set("language", "auto");
+            }
+            // v29: the player page asks for a new code from /web after at most 14 days - the old default of 90 goes.
+            if (version < 29 && existing.getInt("player-web.session-days", 90) == 90) {
+                template.set("player-web.session-days", 14);
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

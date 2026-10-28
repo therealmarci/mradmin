@@ -184,7 +184,7 @@ Neben dem Team-Bereich hat jeder **Spieler** seine eigene Seite in der Weboberfl
 2. In der Config `player-web.enabled: true`, dann `/mradmin reload`.
 3. Spieler brauchen `mradmin.web.self` - das steckt in `mradmin.player`.
 
-**Für Spieler:** `/web` im Spiel eingeben und auf den Link im Chat klicken. Der Link gilt nur einmal und ein paar Minuten, meldet das Gerät aber dauerhaft an - danach die Seite (`<deine Adresse>/me`) als **Lesezeichen** speichern. Wer die Seite regelmäßig öffnet, bleibt angemeldet (`player-web.session-days`, Standard 90 Tage). `/web devices` zeigt, auf wie vielen Geräten man angemeldet ist, `/web logout` meldet alle ab - einzelne Geräte gehen auch auf der Seite unter **Geräte**.
+**Für Spieler:** Die Seite hat immer dieselbe Adresse (`<deine Adresse>/me`) - am besten als **Lesezeichen** speichern. Zum Anmelden fragt sie nach einem **6-stelligen Code**: `/web` im Spiel eingeben, der Chat zeigt den Link zur Seite und den Code (ein Klick auf den Code kopiert ihn). Der Code gilt 2 Minuten und nur einmal (`player-web.code-seconds`). Danach bleibt das Gerät **höchstens 14 Tage** angemeldet (`player-web.session-days`) und wird schon nach **7 Tagen ohne Besuch** abgemeldet (`player-web.idle-days`) - dann fragt die Seite einfach wieder nach einem Code. `/web devices` zeigt, auf wie vielen Geräten man angemeldet ist, `/web logout` meldet alle ab - einzelne Geräte gehen auch auf der Seite unter **Geräte**.
 
 Was auf der Seite steht, hängt davon ab, was installiert ist:
 
@@ -317,7 +317,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
-| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
+| `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 

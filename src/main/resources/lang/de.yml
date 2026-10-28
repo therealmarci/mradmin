@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 13
+lang-version: 14
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -58,7 +58,9 @@ web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <gray>(10 
 web-setup-link-other: "<prefix><green>Einrichtungslink für <white><player></white>:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nur an <player> geben!)"
 web-link-label: "<aqua><u>[Einrichtung öffnen]</u></aqua>"
 # Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
-web-self-link: "<prefix><green>Deine Seite im Web: <link> <gray>(der Link gilt <minutes> Minuten und nur einmal - danach kannst du die Seite als Lesezeichen speichern)"
+web-self-link: "<prefix><green>Deine Seite im Web: <link> <gray>· Code zum Anmelden: <code> <dark_gray>(gilt <seconds> Sekunden und nur einmal)"
+web-self-code: "<yellow><b><code></b></yellow>"
+web-self-code-hover: "<gray>Klicken zum Kopieren"
 web-self-link-label: "<aqua><u>[Meine Seite öffnen]</u></aqua>"
 web-self-disabled: "<prefix><gray>Die Spielerseite im Web ist auf diesem Server nicht eingeschaltet."
 web-self-no-url: "<prefix><red>Die Adresse der Weboberfläche fehlt (web.public-url) - bitte melde das dem Team."

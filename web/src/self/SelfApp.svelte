@@ -2,7 +2,7 @@
   // The player area ("/me"): every player sees and manages only their own things. Separate from the team's panel -
   // own sign-in (only through /web in game), own navigation. The areas come from the installed plugins.
   import { untrack } from 'svelte';
-  import { api } from '../lib/api.js';
+  import { api, whenSignedOut } from '../lib/api.js';
   import { route, go } from '../lib/router.svelte.js';
   import { t, lang, setLang, errorText } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
@@ -31,7 +31,14 @@
   }
 
   $effect(() => {
-    if (route.path !== '/me/login' && player === undefined) untrack(load);
+    // Old links /me/login#<code> (before the 6-digit codes) lead to the page itself.
+    if (route.path === '/me/login') untrack(() => go('/me', true));
+    else if (player === undefined) untrack(load);
+  });
+
+  // A session that ran out (session-days, idle-days) or was signed out elsewhere: back to the code.
+  whenSignedOut(() => {
+    player = null;
   });
 
   async function logout() {
@@ -58,21 +65,10 @@
   ]);
 </script>
 
-{#if route.path === '/me/login'}
-  <SelfLogin onSignedIn={() => { player = undefined; go('/me', true); }} />
-{:else if player === undefined}
+{#if player === undefined}
   <div class="center muted">{t('common.loading')}</div>
 {:else if player === null}
-  <div class="center">
-    <section class="card gate">
-      <img src="/icon.svg" alt="" width="48" height="48" />
-      <h1>{t('self.title')}</h1>
-      {#if error}<div class="error">{error}</div>{/if}
-      <p>{t('self.howTo')}</p>
-      <p class="muted small">{t('self.howToBookmark')}</p>
-      <button class="linkish small" onclick={() => setLang(lang === 'de' ? 'en' : 'de')}>{lang === 'de' ? 'English' : 'Deutsch'}</button>
-    </section>
-  </div>
+  <SelfLogin {error} onSignedIn={() => { error = ''; player = undefined; }} />
 {:else}
   <header class="top">
     <div class="who">
@@ -114,23 +110,6 @@
     display: grid;
     place-items: center;
     padding: 16px;
-  }
-
-  .gate {
-    max-width: 420px;
-    text-align: center;
-    display: grid;
-    gap: 10px;
-    justify-items: center;
-  }
-
-  .gate h1 {
-    margin: 0;
-    font-size: 1.3rem;
-  }
-
-  .gate p {
-    margin: 0;
   }
 
   .top {
@@ -187,9 +166,4 @@
     padding: 16px;
   }
 
-  .linkish {
-    background: transparent;
-    color: var(--accent);
-    padding: 0;
-  }
 </style>

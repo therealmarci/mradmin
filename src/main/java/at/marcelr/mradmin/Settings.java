@@ -313,13 +313,13 @@ public record Settings(
     }
 
     /**
-     * The player area of the web interface (/web): on/off, how long a signed-in browser stays signed in (days, every
-     * use extends it), how long a link from /web works (minutes) and how many browsers a player may have; the
+     * The player area of the web interface (/web): on/off, how long a browser stays signed in after the code from /web
+     * (days at most, and days without use), how long that code works (seconds) and how many browsers a player may have; the
      * statistics page (rankings: on/off, how many places, which of the game's statistics); the slideshow of the start
      * page (news: on/off, seconds per slide, how many posts, maintenance, restarts, plugin warnings and ticket answers in
      * it); the own statistics on the start page (personal-stats).
      */
-    public record PlayerWebSettings(boolean enabled, int sessionDays, int linkMinutes, int maxDevices,
+    public record PlayerWebSettings(boolean enabled, int sessionDays, int idleDays, int codeSeconds, int maxDevices,
                                     boolean rankings, int rankingTop, List<String> rankingKinds,
                                     boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
                                     boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
@@ -329,8 +329,9 @@ public record Settings(
     private static PlayerWebSettings playerWeb(FileConfiguration c) {
         return new PlayerWebSettings(
                 c.getBoolean("player-web.enabled", false),
-                Math.clamp(c.getInt("player-web.session-days", 90), 1, 365),
-                Math.clamp(c.getInt("player-web.link-minutes", 5), 1, 60),
+                Math.clamp(c.getInt("player-web.session-days", 14), 1, 365),
+                Math.clamp(c.getInt("player-web.idle-days", 7), 1, 365),
+                Math.clamp(c.getInt("player-web.code-seconds", 120), 30, 600),
                 Math.clamp(c.getInt("player-web.max-devices", 5), 1, 20),
                 c.getBoolean("player-web.rankings.enabled", true),
                 Math.clamp(c.getInt("player-web.rankings.top", 10), 3, 100),

@@ -5,30 +5,43 @@ import at.marcelr.mradmin.web.auth.Secrets;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.security.SecureRandom;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * Sign-in of players to their own page (the player area of the web interface, see {@link SelfRoutes}) - separate from
- * the team's web accounts. There is no password: {@code /web} in game gives a link with a one-time code (a few minutes,
- * once), and opening it signs that browser in for {@code player-web.session-days}. Every use extends it, so a
- * bookmark of the page keeps working. Only hashes of codes and cookie tokens are kept. Thread-safe (web threads and the
- * server thread).
+ * the team's web accounts. There is no password: the page (always the same address, it can be bookmarked) asks for a
+ * 6-digit code that {@code /web} gives in game (valid {@code player-web.code-seconds}, once). A signed-in browser
+ * stays signed in for at most {@code player-web.session-days} after the code, and is signed out earlier after
+ * {@code player-web.idle-days} without use - then the page asks for a new code. Only hashes of codes and cookie tokens
+ * are kept. Guessing is limited per address (in {@link SelfRoutes}) and for everyone together here. Thread-safe (web
+ * threads and the server thread).
  */
 public final class PlayerSessions {
 
     private static final String FILE = "player-sessions";
-    /** Extend a session at most once per hour (and save then), not on every request. */
-    private static final long EXTEND_EVERY = 3_600_000L;
+    /** Note the use of a session at most once per hour (and save then), not on every request. */
+    private static final long SEEN_EVERY = 3_600_000L;
+    /** Wrong codes from all addresses together per minute - more and every code is refused for a moment. */
+    private static final int MAX_WRONG_PER_MINUTE = 30;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
-    /** A signed-in browser of a player. {@code id} is public (device list), the token only stored hashed. */
-    public record Session(String id, String hash, UUID player, String name, long created, long lastSeen, long expires,
-                          String ip, String agent) {
+    /**
+     * A signed-in browser of a player. {@code id} is public (device list), the token only stored hashed.
+     * {@code verified}: when the code was entered; {@code expires}: the earlier of verified + session-days and
+     * lastSeen + idle-days.
+     */
+    public record Session(String id, String hash, UUID player, String name, long created, long verified, long lastSeen,
+                          long expires, String ip, String agent) {
     }
 
     /** Result of redeeming a code: the cookie token, or an error key. */
@@ -41,42 +54,61 @@ public final class PlayerSessions {
     private final MRAdmin plugin;
     /** hash of the cookie token -> session */
     private final Map<String, Session> sessions = new HashMap<>();
-    /** hash of the one-time code -> who it signs in */
+    /** hash of the code -> who it signs in (one per player) */
     private final Map<String, Code> codes = new HashMap<>();
+    /** times of wrong codes in the last minute (all addresses) */
+    private final Deque<Long> wrong = new ArrayDeque<>();
 
     public PlayerSessions(MRAdmin plugin) {
         this.plugin = plugin;
     }
 
-    private long sessionMillis() {
-        return plugin.settings().playerWeb().sessionDays() * 86_400_000L;
+    /** When a session verified at {@code verified} and last used at {@code lastSeen} runs out. */
+    private long expiry(long verified, long lastSeen) {
+        var s = plugin.settings().playerWeb();
+        return Math.min(verified + s.sessionDays() * 86_400_000L, lastSeen + s.idleDays() * 86_400_000L);
+    }
+
+    /** Seconds a signed-in browser may keep its cookie at most (session-days). */
+    public long cookieSeconds() {
+        return plugin.settings().playerWeb().sessionDays() * 86_400L;
     }
 
     // --------------------------------------------------------------- codes
 
-    /** A new one-time code for the player (an older unused one stays valid until it runs out). */
+    /** A new 6-digit code for the player; an older one of them is no longer valid. Unique among the valid codes. */
     public synchronized String code(UUID player, String name) {
         long now = System.currentTimeMillis();
-        codes.values().removeIf(c -> c.expires() < now);
-        String code = Secrets.token(18);
-        codes.put(Secrets.sha256(code), new Code(player, name,
-                now + plugin.settings().playerWeb().linkMinutes() * 60_000L));
+        codes.values().removeIf(c -> c.expires() < now || c.player().equals(player));
+        String code;
+        do {
+            code = String.format(Locale.ROOT, "%06d", RANDOM.nextInt(1_000_000));
+        } while (codes.containsKey(Secrets.sha256(code)));
+        codes.put(Secrets.sha256(code), new Code(player, name, now + plugin.settings().playerWeb().codeSeconds() * 1000L));
         return code;
     }
 
-    /** Redeems a one-time code: a new session for this browser. Too many devices: the oldest one is signed out. */
-    public synchronized Result redeem(String code, String ip, String agent) {
-        if (code == null || code.isBlank()) {
-            return new Result(null, null, "code-invalid");
-        }
-        Code c = codes.remove(Secrets.sha256(code.strip()));
+    /**
+     * Redeems a code (spaces and the like are ignored): a new session for this browser. Too many devices: the one
+     * used longest ago is signed out. Errors: code-invalid, rate-limit (too many wrong codes from everyone).
+     */
+    public synchronized Result redeem(String raw, String ip, String agent) {
         long now = System.currentTimeMillis();
+        while (!wrong.isEmpty() && wrong.peekFirst() < now - 60_000L) {
+            wrong.pollFirst();
+        }
+        if (wrong.size() >= MAX_WRONG_PER_MINUTE) {
+            return new Result(null, null, "rate-limit");
+        }
+        String code = raw == null ? "" : raw.replaceAll("\\D", "");
+        Code c = code.length() == 6 ? codes.remove(Secrets.sha256(code)) : null;
         if (c == null || c.expires() < now) {
+            wrong.addLast(now);
             return new Result(null, null, "code-invalid");
         }
         String token = Secrets.token(32);
-        Session session = new Session(Secrets.token(9), Secrets.sha256(token), c.player(), c.name(), now, now,
-                now + sessionMillis(), ip, agent == null ? "" : agent.length() > 200 ? agent.substring(0, 200) : agent);
+        Session session = new Session(Secrets.token(9), Secrets.sha256(token), c.player(), c.name(), now, now, now,
+                expiry(now, now), ip, agent == null ? "" : agent.length() > 200 ? agent.substring(0, 200) : agent);
         sessions.put(session.hash(), session);
         List<Session> own = devices(c.player());
         int max = plugin.settings().playerWeb().maxDevices();
@@ -89,7 +121,7 @@ public final class PlayerSessions {
 
     // ------------------------------------------------------------ sessions
 
-    /** The session of a cookie, extended if used (sliding), or null if unknown or run out. */
+    /** The session of a cookie (its use noted), or null if unknown or run out (session-days or idle-days). */
     public synchronized Session session(String token, String ip) {
         if (token == null || token.isBlank()) {
             return null;
@@ -100,13 +132,15 @@ public final class PlayerSessions {
         if (s == null) {
             return null;
         }
-        if (s.expires() < now) {
+        // Again from the settings, so a shorter session-days or idle-days applies to signed-in browsers at once.
+        if (expiry(s.verified(), s.lastSeen()) < now) {
             sessions.remove(hash);
             save();
             return null;
         }
-        if (now - s.lastSeen() >= EXTEND_EVERY || !s.ip().equals(ip)) {
-            s = new Session(s.id(), s.hash(), s.player(), s.name(), s.created(), now, now + sessionMillis(), ip, s.agent());
+        if (now - s.lastSeen() >= SEEN_EVERY || !s.ip().equals(ip)) {
+            s = new Session(s.id(), s.hash(), s.player(), s.name(), s.created(), s.verified(), now,
+                    expiry(s.verified(), now), ip, s.agent());
             sessions.put(hash, s);
             save();
         }
@@ -167,9 +201,10 @@ public final class PlayerSessions {
             ConfigurationSection s = list.getConfigurationSection(hash);
             try {
                 Session session = new Session(s.getString("id"), hash, UUID.fromString(s.getString("player")),
-                        s.getString("name", "?"), s.getLong("created"), s.getLong("last-seen"), s.getLong("expires"),
+                        s.getString("name", "?"), s.getLong("created"), s.getLong("verified", s.getLong("created")),
+                        s.getLong("last-seen"), 0,
                         s.getString("ip", ""), s.getString("agent", ""));
-                if (session.expires() > now) {
+                if (expiry(session.verified(), session.lastSeen()) > now) {
                     sessions.put(hash, session);
                 }
             } catch (RuntimeException ignored) {
@@ -184,7 +219,7 @@ public final class PlayerSessions {
         long now = System.currentTimeMillis();
         for (Iterator<Session> it = sessions.values().iterator(); it.hasNext(); ) {
             Session s = it.next();
-            if (s.expires() < now) {
+            if (expiry(s.verified(), s.lastSeen()) < now) {
                 it.remove();
                 continue;
             }
@@ -193,8 +228,9 @@ public final class PlayerSessions {
             y.set(p + "player", s.player().toString());
             y.set(p + "name", s.name());
             y.set(p + "created", s.created());
+            y.set(p + "verified", s.verified());
             y.set(p + "last-seen", s.lastSeen());
-            y.set(p + "expires", s.expires());
+            y.set(p + "expires", expiry(s.verified(), s.lastSeen()));
             y.set(p + "ip", s.ip());
             y.set(p + "agent", s.agent());
         }

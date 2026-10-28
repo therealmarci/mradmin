@@ -22,7 +22,7 @@ commands:
     usage: /report [player]
     aliases: [melden, ticket, tickets, support]
   web:
-    description: "Your own page in the web interface: a link to sign in, /web devices, /web logout."
+    description: "Your own page in the web interface: its address and a 6-digit code to sign in, /web devices, /web logout."
     usage: /web [devices|logout]
     aliases: [website, me]
   staffchat:
