@@ -24,6 +24,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Behoben & geändert
 - **`/report` nur noch mit Permission:** `mradmin.tickets.create` ist nicht mehr automatisch für alle Spieler - vergib `mradmin.player` an deine Spieler-Gruppe.
+- **`/mradmin version` nur noch mit Permission:** `mradmin.version` (in `mradmin.player`) - bisher durfte das jeder.
+- **LibertyBans-Rechte in den Gruppen:** `mradmin.groups.support` sieht Strafen und die Bann- und Mute-Listen, `mradmin.groups.staff` darf kicken, muten und verwarnen, `mradmin.groups.admin` bannen und entbannen (auch Entbannungsanträge). Gilt im Web und für die LibertyBans-Befehle im Spiel.
 - **Web-Konsole in den Gruppen:** Ansehen (`mradmin.web.console.view`) ist in `mradmin.groups.support`, Befehle ausführen (`mradmin.web.console.execute`) in `mradmin.groups.admin`. Bisher war die Konsole in keinem Paket.
 - **Chunkloader und Schlaf im Web nach den neuen Rechten:** An/aus braucht bei MRchunks jetzt `mrchunks.admin.toggle`, Verknüpfen `mrchunks.admin.link` (ältere MRchunks-Versionen weiter mit `mrchunks.admin.manage`). Bei MRsleep sind Bypass- und Sperr-Zeiten über der eigenen Grenze ausgegraut, „Cooldown zurücksetzen“ braucht `mrsleep.admin.resetcooldown`.
 - **Permission-Übersicht:** [docs/PERMISSIONS.md](docs/PERMISSIONS.md) zeigt für alle MRtechnology-Plugins, was Support, Staff und Admin dürfen, mit fertigen LuckPerms-Befehlen.

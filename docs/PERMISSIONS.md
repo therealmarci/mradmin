@@ -6,7 +6,7 @@ Du entscheidest selbst, wer was bekommt.
 
 | Paket | Für wen |
 |---|---|
-| `<plugin>.player` | Spieler - die normalen Funktionen des Plugins |
+| `<plugin>.player` | Spieler - die normalen Funktionen des Plugins und `/<plugin> version` |
 | `<plugin>.groups.support` | Support - ansehen und helfen |
 | `<plugin>.groups.staff` | Staff - eingreifen |
 | `<plugin>.groups.admin` | Admins - alles, auch Einstellungen |
@@ -62,13 +62,13 @@ Teammitglieder kommen dann einfach in ihre Gruppe: `/lp user Steve parent set st
 
 | | Support | Staff | Admin |
 |---|---|---|---|
-| **MRadmin** | Übersicht, Serverzustand und Health, Tickets komplett, Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen und Web-Konsole ansehen | + Spieler herholen, einfrieren, kicken, Admin-Modus | + Wartung steuern, Ankündigungen, Web-Konten, Updates, Neustart, Reload, **Befehle in der Web-Konsole** |
+| **MRadmin** | Übersicht, Serverzustand und Health, Tickets komplett, Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen und Web-Konsole ansehen, Strafen ansehen (LibertyBans) | + Spieler herholen, einfrieren, kicken, Admin-Modus, mit LibertyBans kicken, muten, verwarnen | + Wartung steuern, Ankündigungen, Web-Konten, Updates, Neustart, Reload, **Befehle in der Web-Konsole**, mit LibertyBans bannen und entbannen |
 | **MRchunks** | Admin-Menü (alle Loader und ihr Status), zu Loadern teleportieren | + fremde Loader an/aus, Einladungen verwalten, Accounts verknüpfen und lösen | + löschen, umbenennen, Dummies, Lag-Sperren aufheben, Limits, Sperren, Webkarte, Reload |
 | **MRpvp** | Admin-Menü, alle Runden ansehen, auffällige Runden prüfen und werten, zusehen, Spieler-Verwaltung | + Kits und Arenen bearbeiten, Duelle abbrechen und Sieger bestimmen, pausieren, sperren | + Statistik zurücksetzen, gesicherte Stände zurückgeben, Standard wiederherstellen, Reload |
 | **MRsleep** | Admin-Menü, Status, Teleport, Bypass bis 30 Min, Sperre bis 1 Tag | + Bypass und Sperre bis 1 Tag, Blockaden aufheben, Cooldown zurücksetzen | + ohne Grenze, dauerhaft sperren, Reload |
 | **MRtoolbar** | Admin-Menü, Gürtel anderer ansehen | + `/mrtoolbar debug` | + Reload |
 
-Die Zeiten bei MRsleep stellst du unter `limits` in dessen `config.yml` ein.
+Die Zeiten bei MRsleep stellst du unter `limits` in dessen `config.yml` ein. Die LibertyBans-Rechte bringen die MRadmin-Gruppen mit (Support: `libertybans.commands`, `libertybans.list.history|banlist|mutelist`; Staff: `libertybans.kick|mute|warn.do.target.uuid`, `mute|warn.undo.target.uuid`; Admin: `libertybans.ban.do|undo.target.uuid`) - sie gelten auch für die LibertyBans-Befehle im Spiel. Sperren in den Plugins (Duelle, `/nosleep`, Chunkloader) sind davon getrennt.
 
 > [!WARNING]
 > `mradmin.groups.admin` enthält das Ausführen von Befehlen in der Web-Konsole - so mächtig wie die Server-Konsole.
@@ -111,4 +111,4 @@ Diese Rechte verändern, wie ein Spieler behandelt wird, und gehören deshalb in
 Bis zu den Versionen von Oktober 2026 hießen die Pakete anders (`mradmin.support`, `mradmin.staff`, `mradmin.admin`,
 `mrchunks.admin`, `mrpvp.admin`, `mrsleep.admin`, `mrtoolbar.admin`). Die gibt es nicht mehr - nach dem Update die
 Gruppen wie oben neu vergeben und die alten Einträge entfernen, z.B. `/lp group admin permission unset mrchunks.admin`.
-Außerdem haben Spieler `/report`, `/duel` und `/nosleep` nicht mehr automatisch: dafür die `.player`-Pakete vergeben.
+Außerdem haben Spieler `/report`, `/duel`, `/nosleep` und die Versionsbefehle (`/<plugin> version`) nicht mehr automatisch: dafür die `.player`-Pakete vergeben.
