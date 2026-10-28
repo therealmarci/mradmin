@@ -19,7 +19,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The game's own statistics of every player (also offline): Minecraft keeps them in {@code <world>/stats/<uuid>.json}.
+ * The game's own statistics of every player (also offline): Minecraft keeps them in
+ * {@code <world>/players/stats/<uuid>.json} (before Minecraft 26: {@code <world>/stats}).
  * Read in the background (never on the server thread) and kept for 10 minutes. Which rankings exist is set in
  * {@code player-web.rankings}.
  */
@@ -99,7 +100,12 @@ public final class VanillaStats {
         for (Kind kind : Kind.values()) {
             result.put(kind, new ArrayList<>());
         }
-        File folder = new File(Bukkit.getWorlds().getFirst().getWorldFolder(), "stats");
+        // Minecraft 26: <world>/players/stats, before: <world>/stats.
+        File world = Bukkit.getWorlds().getFirst().getWorldFolder();
+        File folder = new File(world, "players/stats");
+        if (!folder.isDirectory()) {
+            folder = new File(world, "stats");
+        }
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
         if (files == null) {
             return result;
