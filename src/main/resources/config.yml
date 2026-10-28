@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 24
+config-version: 25
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -692,6 +692,15 @@ player-web:
   link-minutes: 5
   # Browsers per player at most (phone, PC ...). Signing in on one more signs out the one used longest ago.
   max-devices: 5
+  # Statistics page: rankings of the game's own statistics (all players, also offline) and of the plugins (e.g. MRpvp:
+  # duels won). Players can hide themselves from all rankings on the page.
+  rankings:
+    enabled: true
+    # Places shown per ranking (the viewer's own place is shown in addition if it is further down).
+    top: 10
+    # The game's statistics, in this order: play-time, blocks-mined, mob-kills, player-kills, deaths, distance,
+    # fish-caught, jumps, items-crafted. Empty list [] = none (only the plugins' rankings).
+    statistics: [play-time, blocks-mined, mob-kills, player-kills, deaths, distance]
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

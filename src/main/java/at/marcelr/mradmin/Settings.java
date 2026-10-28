@@ -314,9 +314,11 @@ public record Settings(
 
     /**
      * The player area of the web interface (/web): on/off, how long a signed-in browser stays signed in (days, every
-     * use extends it), how long a link from /web works (minutes) and how many browsers a player may have.
+     * use extends it), how long a link from /web works (minutes) and how many browsers a player may have; the
+     * statistics page (rankings: on/off, how many places, which of the game's statistics).
      */
-    public record PlayerWebSettings(boolean enabled, int sessionDays, int linkMinutes, int maxDevices) {
+    public record PlayerWebSettings(boolean enabled, int sessionDays, int linkMinutes, int maxDevices,
+                                    boolean rankings, int rankingTop, List<String> rankingKinds) {
     }
 
     private static PlayerWebSettings playerWeb(FileConfiguration c) {
@@ -324,7 +326,10 @@ public record Settings(
                 c.getBoolean("player-web.enabled", false),
                 Math.clamp(c.getInt("player-web.session-days", 90), 1, 365),
                 Math.clamp(c.getInt("player-web.link-minutes", 5), 1, 60),
-                Math.clamp(c.getInt("player-web.max-devices", 5), 1, 20));
+                Math.clamp(c.getInt("player-web.max-devices", 5), 1, 20),
+                c.getBoolean("player-web.rankings.enabled", true),
+                Math.clamp(c.getInt("player-web.rankings.top", 10), 3, 100),
+                List.copyOf(c.getStringList("player-web.rankings.statistics")));
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {

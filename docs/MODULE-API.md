@@ -195,13 +195,16 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
 - **Sicherheit:** MRadmin prüft vor jedem Aufruf `mradmin.web.self` und LibertyBans-Sperren. Alles andere (Besitz,
   Permissions, Limits) prüft das Plugin in `selfAction` selbst. Aktionen sind pro Spieler auf 60 pro Minute begrenzt.
 - Routen: `GET /api/self` (Bereiche mit Kachel), `GET /api/self/areas/<id>/<bereich>`, `POST .../action`.
+- **Ranglisten (`rankings(lang)`):** Liste von `SelfRanking` (alle Spieler, beste zuerst, Wert als Text). MRadmin zeigt
+  sie auf der Statistik-Seite neben den Minecraft-Statistiken, lässt ausgetragene Spieler weg, zeigt die besten
+  (`player-web.rankings.top`) und den eigenen Platz.
 
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
   Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
   `reportCategories()`, `loadedChunks()`, `isNpc()`), Version 4 = `api-1.3.0` (Spielerseite: `selfAreas`, `selfAction`,
-  `selfPermissions`, `SelfArea`, `SelfBlock`, `SelfViewer`).
+  `selfPermissions`, `rankings`, `SelfArea`, `SelfBlock`, `SelfViewer`, `SelfRanking`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -12,6 +12,7 @@
   import SelfArea from './SelfArea.svelte';
   import SelfTickets from './SelfTickets.svelte';
   import SelfTicket from './SelfTicket.svelte';
+  import SelfStats from './SelfStats.svelte';
 
   // null = not signed in, undefined = still asking, otherwise {uuid, name, areas}
   let player = $state(undefined);
@@ -50,6 +51,7 @@
     { path: '/me', label: t('self.nav.home') },
     ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title })),
     ...(player?.tickets ? [{ path: '/me/tickets', label: t('self.nav.tickets') }] : []),
+    ...(player?.stats ? [{ path: '/me/stats', label: t('self.nav.stats') }] : []),
     { path: '/me/devices', label: t('self.nav.devices') },
   ]);
 </script>
@@ -88,6 +90,8 @@
   <main>
     {#if route.path === '/me/devices'}
       <SelfDevices />
+    {:else if route.path === '/me/stats' && player.stats}
+      <SelfStats />
     {:else if route.path === '/me/tickets' && player.tickets}
       <SelfTickets />
     {:else if ticketId && player.tickets}

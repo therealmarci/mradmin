@@ -26,7 +26,8 @@ public interface MRadminService {
     /**
      * Version of this API (2: {@link #items()}; 3: {@link AdminModule#isNpc}, {@link AdminModule#loadedChunks},
      * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}; 4: the player area -
-     * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions}).
+     * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions},
+     * {@link WebModule#rankings}).
      */
     int API_VERSION = 4;
 

@@ -127,4 +127,13 @@ public interface WebModule {
     default @Nullable String selfAction(SelfViewer viewer, String area, String action, Map<String, String> args) {
         return "?";
     }
+
+    /**
+     * Rankings of the module for the statistics page of the player area, texts in {@code lang} ("de" or "en"). Every
+     * entry best first; MRadmin takes care of hidden players, the top places and the viewer's own place. Main thread -
+     * keep it reasonably cheap (it is asked when a player opens the page).
+     */
+    default List<SelfRanking> rankings(String lang) {
+        return List.of();
+    }
 }
