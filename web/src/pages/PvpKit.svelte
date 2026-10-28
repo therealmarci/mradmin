@@ -6,7 +6,7 @@
   import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText, lang } from '../lib/i18n.js';
   import { go } from '../lib/router.svelte.js';
-  import { typeName } from '../lib/items.svelte.js';
+  import { items, typeName, effectName } from '../lib/items.svelte.js';
   import { miniSpans } from '../lib/minimessage.js';
   import ItemGrid from '../components/ItemGrid.svelte';
   import ItemIcon from '../components/ItemIcon.svelte';
@@ -50,7 +50,8 @@
           descriptions,
           icon: data.icon,
           permission: data.permission,
-          rules: { ...data.rules, arenas: [...data.rules.arenas] },
+          // Older MRpvp versions send no effects / hearts / cooldowns / minutes yet.
+          rules: { effects: [], maxHearts: 0, cooldowns: [], minutes: 0, ...data.rules, arenas: [...data.rules.arenas] },
         };
         const s = {};
         for (const i of data.inventory) s[String(i.slot)] = i;
@@ -66,7 +67,7 @@
           descriptions: { de: '', en: '' },
           icon: 'iron_sword',
           permission: '',
-          rules: { damage: true, hitsToWin: 0, regen: null, hunger: null, arenas: [], build: false },
+          rules: { damage: true, hitsToWin: 0, regen: null, hunger: null, arenas: [], build: false, effects: [], maxHearts: 0, cooldowns: [], minutes: 0 },
         };
         slots = {};
       }
@@ -190,6 +191,9 @@
   const missingArenas = $derived(kit ? kit.rules.arenas.filter((a) => !arenas.some((x) => x.id === a)) : []);
   const nowhere = $derived(kit ? kit.rules.arenas.length > 0 && missingArenas.length === kit.rules.arenas.length : false);
 
+  // Item types in the kit - those can get a cooldown.
+  const kitTypes = $derived([...new Set(Object.values(slots).filter(Boolean).map((i) => i.type))].sort((a, b) => typeName(a).localeCompare(typeName(b))));
+
   const choice = (v) => (v == null ? '' : String(v));
   const fromChoice = (v) => (v === '' ? null : v === 'true');
 
@@ -290,6 +294,54 @@
           </select>
         </div>
         <label class="check"><input type="checkbox" bind:checked={kit.rules.build} onchange={() => (dirty = true)} /> {t('pvp.kits.rule.build')}</label>
+        <div class="row2">
+          <div class="field">
+            <label for="kit-minutes">{t('pvp.kits.rule.minutes')}</label>
+            <input id="kit-minutes" type="number" min="0" max="120" bind:value={kit.rules.minutes} oninput={() => (dirty = true)} />
+            <div class="hint">{t('pvp.kits.rule.minutesHint')}</div>
+          </div>
+          <div class="field">
+            <label for="kit-hearts">{t('pvp.kits.rule.hearts')}</label>
+            <input id="kit-hearts" type="number" min="0" max="100" bind:value={kit.rules.maxHearts} oninput={() => (dirty = true)} />
+            <div class="hint">{t('pvp.kits.rule.heartsHint')}</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">{t('pvp.kits.rule.effects')}</span>
+          <div class="hint">{t('pvp.kits.rule.effectsHint')}</div>
+          {#each kit.rules.effects as e, i}
+            <div class="line">
+              <span class="grow">{effectName(e.type)}</span>
+              <input class="small-num" type="number" min="1" max="10" bind:value={e.level} oninput={() => (dirty = true)} aria-label={t('items.level')} />
+              <button class="danger tiny" onclick={() => { kit.rules.effects = kit.rules.effects.filter((_, j) => j !== i); dirty = true; }} aria-label={t('items.remove')}>✕</button>
+            </div>
+          {/each}
+          <select onchange={(e) => { const v = e.currentTarget.value; if (v) { kit.rules.effects = [...kit.rules.effects, { type: v, level: 1 }]; dirty = true; } e.currentTarget.value = ''; }}>
+            <option value="">{t('items.addEffect')}</option>
+            {#each (items.catalog?.effects ?? []).filter((x) => !kit.rules.effects.some((e) => e.type === x.id)).sort((a, b) => effectName(a.id).localeCompare(effectName(b.id))) as x}
+              <option value={x.id}>{effectName(x.id)}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="field">
+          <span class="label">{t('pvp.kits.rule.cooldowns')}</span>
+          <div class="hint">{t('pvp.kits.rule.cooldownsHint')}</div>
+          {#each kit.rules.cooldowns as c, i}
+            <div class="line">
+              <ItemIcon item={{ type: c.item, amount: 1 }} size={30} />
+              <span class="grow">{typeName(c.item)}</span>
+              <input class="small-num" type="number" min="1" max="3600" bind:value={c.seconds} oninput={() => (dirty = true)} aria-label={t('pvp.kits.rule.seconds')} />
+              <span class="muted small">s</span>
+              <button class="danger tiny" onclick={() => { kit.rules.cooldowns = kit.rules.cooldowns.filter((_, j) => j !== i); dirty = true; }} aria-label={t('items.remove')}>✕</button>
+            </div>
+          {/each}
+          <select onchange={(e) => { const v = e.currentTarget.value; if (v) { kit.rules.cooldowns = [...kit.rules.cooldowns, { item: v, seconds: 5 }]; dirty = true; } e.currentTarget.value = ''; }}>
+            <option value="">{t('pvp.kits.rule.addCooldown')}</option>
+            {#each kitTypes.filter((type) => !kit.rules.cooldowns.some((c) => c.item === type)) as type}
+              <option value={type}>{typeName(type)}</option>
+            {/each}
+          </select>
+        </div>
         <div class="field">
           <span class="label">{t('pvp.kits.rule.arenas')}</span>
           <div class="hint">{t('pvp.kits.rule.arenasHint')}</div>
@@ -421,6 +473,32 @@
 
   .check.missing {
     color: var(--bad);
+  }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  input.small-num {
+    width: 80px;
+    padding: 7px 8px;
+  }
+
+  .tiny {
+    padding: 4px 9px;
+  }
+
+  .field select {
+    margin-top: 6px;
   }
 
   .arenas {

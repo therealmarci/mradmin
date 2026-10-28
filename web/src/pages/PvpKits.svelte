@@ -44,6 +44,10 @@
     if (r.hunger === true) badges.push(t('pvp.kits.badge.hunger'));
     if (r.build) badges.push(t('pvp.kits.badge.build'));
     if (r.arenas?.length) badges.push(t('pvp.kits.badge.arenas', { n: r.arenas.length }));
+    if (r.minutes > 0) badges.push(t('pvp.kits.badge.minutes', { n: r.minutes }));
+    if (r.maxHearts > 0) badges.push(t('pvp.kits.badge.hearts', { n: r.maxHearts }));
+    if (r.effects?.length) badges.push(t('pvp.kits.badge.effects', { n: r.effects.length }));
+    if (r.cooldowns?.length) badges.push(t('pvp.kits.badge.cooldowns', { n: r.cooldowns.length }));
     return badges;
   }
 

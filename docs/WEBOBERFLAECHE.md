@@ -126,7 +126,8 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   neu anlegen. Im Kit-Editor das Inventar wie im Spiel - Klick auf einen Platz öffnet den Item-Editor, mit „Verschieben“
   tauschen zwei Plätze. Dazu ID (eine andere ID benennt um), Name und Beschreibung auf Deutsch und Englisch (gleich =
   für alle Sprachen), Symbol, Permission und die Regeln: kein Schaden, Treffer bis zum Sieg, Regeneration und Hunger
-  (fest an/aus oder Spielerwahl), braucht Bau-Arena, nur bestimmte Arenen. Eine neue Arena erscheint beim nächsten
+  (fest an/aus oder Spielerwahl), braucht Bau-Arena, festes Zeitlimit, Herzen, Effekte beim Start (Effekt + Stufe),
+  Cooldowns für Items des Kits (Sekunden), nur bestimmte Arenen. Eine neue Arena erscheint beim nächsten
   Öffnen; Kits ohne Arena-Auswahl nutzen sie sofort. Gelöschte Arenen, auf die ein Kit noch festgelegt ist, stehen rot
   da und müssen abgehakt werden. Gespeichert wird erst mit „Speichern“, neue Runden bekommen das Kit sofort.
 
