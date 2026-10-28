@@ -192,6 +192,7 @@ Was auf der Seite steht, hängt davon ab, was installiert ist:
 |---|---|---|
 | **Tickets** | eigene Tickets ansehen, neue öffnen, antworten, schließen - wie mit `/report` | `features.tickets` und `mradmin.tickets.create` |
 | **Neuigkeiten** | oben auf der Startseite ein Karussell, das von selbst weiterblättert (am Handy wischen): geplante oder laufende Wartung, ein geplanter Neustart und die Beiträge des Teams - Neuigkeiten und Changelogs. Alle Beiträge in voller Länge auf der Seite **Neuigkeiten**. | `player-web.news.enabled` |
+| **Meine Statistik** | Kachel auf der Startseite neben denen der Plugins: eigene Spielzeit, abgebaute Blöcke, besiegte Mobs, Tode (Auswahl und Reihenfolge unter `player-web.personal-stats`, die erste groß). Führt zur Statistik-Seite. | `player-web.personal-stats` nicht leer |
 | **Statistik** | Ranglisten: Spielzeit, abgebaute Blöcke, besiegte Mobs, Tode, Strecke … aus den Minecraft-Statistiken (Auswahl unter `player-web.rankings`) und von den Plugins; eigener Platz hervorgehoben. Wer nicht in Ranglisten stehen will, trägt sich dort aus. | `player-web.rankings.enabled` |
 | **Chunkloader** | eigene Loader mit Budget, Status und Karte; ein-/ausschalten, umbenennen, Dummy, löschen, einladen (Größe nur im Spiel) | MRchunks |
 | **Duelle** | eigene Duell-Statistik und letzte Runden, Duell-Ranglisten auf der Statistik-Seite | MRpvp |
@@ -316,7 +317,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
-| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten, Karussell mit Neuigkeiten (`news`) |
+| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 

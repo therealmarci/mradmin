@@ -4,7 +4,8 @@
   // plugin gets its own colour from its id, its icon as a large watermark.
   import { t } from '../lib/i18n.js';
 
-  let { area, onclick } = $props();
+  // onclick null = the tile only shows (no page behind it).
+  let { area, onclick = null } = $props();
 
   const stats = $derived(area.summary.filter((b) => b.type === 'stats').flatMap((b) => b.stats));
   const texts = $derived(area.summary.filter((b) => b.type === 'text'));
@@ -24,12 +25,13 @@
   }
 </script>
 
-<button class="tile" style="--hue: {hue}" {onclick}>
+<svelte:element this={onclick ? 'button' : 'div'} class="tile" class:static={!onclick} style="--hue: {hue}" {onclick}
+  role={onclick ? undefined : 'group'}>
   <span class="watermark" aria-hidden="true">{area.icon}</span>
   <span class="head">
     <span class="icon" aria-hidden="true">{area.icon}</span>
     <span class="title">{area.title}</span>
-    <span class="arrow" aria-hidden="true">→</span>
+    {#if onclick}<span class="arrow" aria-hidden="true">→</span>{/if}
   </span>
 
   {#if main}
@@ -57,8 +59,8 @@
     <span class="note {x.tone}-text">{x.text}</span>
   {/each}
 
-  <span class="open">{t('self.open')}</span>
-</button>
+  {#if onclick}<span class="open">{t('self.open')}</span>{/if}
+</svelte:element>
 
 <style>
   .tile {
@@ -84,7 +86,11 @@
     align-items: stretch;
   }
 
-  .tile:hover {
+  .tile.static:hover {
+    transform: none;
+  }
+
+  .tile:not(.static):hover {
     filter: none;
     transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--tint) 60%, var(--border));

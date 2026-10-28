@@ -163,6 +163,8 @@ public final class SelfRoutes {
         result.put("tickets", tickets.available(s.player()));
         result.put("stats", stats.available());
         result.put("news", news.available());
+        String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
+        result.put("personal", stats.personal(s.player(), lang));
         http.json(200, result);
     }
 

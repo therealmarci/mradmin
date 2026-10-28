@@ -50,6 +50,21 @@ public final class SelfStats {
         return plugin.settings().playerWeb().rankings();
     }
 
+    /**
+     * The viewer's own game statistics for the tile on the start page (player-web.personal-stats, in that order):
+     * [{key, value}] with the value formatted for the language; empty = no tile.
+     */
+    List<Map<String, Object>> personal(UUID player, String lang) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (String key : plugin.settings().playerWeb().personalStats()) {
+            VanillaStats.Kind kind = VanillaStats.Kind.byKey(key);
+            if (kind != null) {
+                result.add(Map.of("key", kind.key, "value", VanillaStats.format(kind, vanilla.of(player, kind), lang)));
+            }
+        }
+        return result;
+    }
+
     private void stats(Http http) throws Exception {
         routes.check(http);
         if (!available()) {

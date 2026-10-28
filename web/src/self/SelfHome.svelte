@@ -9,6 +9,15 @@
   import SelfTile from './SelfTile.svelte';
 
   let { player } = $props();
+
+  // MRadmin's own tile next to the plugins': the player's game statistics (player-web.personal-stats).
+  const personal = $derived(player.personal?.length ? {
+    module: 'mradmin',
+    id: 'personal',
+    title: t('self.personal.title'),
+    icon: '📊',
+    summary: [{ type: 'stats', stats: player.personal.map((p) => ({ label: t('self.stats.' + p.key), value: p.value, tone: '' })) }],
+  } : null);
 </script>
 
 <div class="page">
@@ -22,13 +31,16 @@
 
   {#if player.news}<SelfHero />{/if}
 
-  {#if player.areas.length === 0}
+  {#if player.areas.length === 0 && !personal}
     <p class="muted">{t('self.noAreas')}</p>
   {:else}
     <div class="tiles">
       {#each player.areas as a (a.module + '/' + a.id)}
         <SelfTile area={a} onclick={() => go(`/me/${a.module}/${a.id}`)} />
       {/each}
+      {#if personal}
+        <SelfTile area={personal} onclick={player.stats ? () => go('/me/stats') : null} />
+      {/if}
     </div>
   {/if}
 

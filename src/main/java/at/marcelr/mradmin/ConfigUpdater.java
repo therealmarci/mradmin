@@ -33,8 +33,9 @@ public final class ConfigUpdater {
  * 24: player-web (the players' own page, /web).
  * 25: player-web.rankings (statistics page).
  * 26: player-web.news (slideshow with news and changelogs of the team).
+ * 27: player-web.personal-stats (own statistics as a tile on the start page).
      */
-    public static final int CURRENT_VERSION = 26;
+    public static final int CURRENT_VERSION = 27;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

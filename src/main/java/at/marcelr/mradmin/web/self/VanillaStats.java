@@ -78,6 +78,16 @@ public final class VanillaStats {
         return cache.getOrDefault(kind, List.of());
     }
 
+    /** One player's value of a statistic (0 if they have none), from the same cache. Web threads only. */
+    public synchronized double of(UUID player, Kind kind) {
+        for (Entry e : ranking(kind)) {
+            if (e.player().equals(player)) {
+                return e.value();
+            }
+        }
+        return 0;
+    }
+
     private Map<Kind, List<Entry>> read() {
         Map<Kind, List<Entry>> result = new HashMap<>();
         for (Kind kind : Kind.values()) {
