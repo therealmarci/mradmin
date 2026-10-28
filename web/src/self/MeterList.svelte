@@ -80,6 +80,15 @@
     background: var(--bad);
   }
 
+  /* Comparing the viewer with someone else: own violet, the other one amber. */
+  .fill.own {
+    background: #8b5cf6;
+  }
+
+  .fill.other {
+    background: #f59e0b;
+  }
+
   .fill.info {
     background: var(--accent);
   }
@@ -110,6 +119,14 @@
 
   .bad-text {
     color: var(--bad);
+  }
+
+  .own-text {
+    color: #8b5cf6;
+  }
+
+  .other-text {
+    color: #d97706;
   }
 
   .info-text {

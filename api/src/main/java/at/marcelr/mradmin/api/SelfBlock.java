@@ -9,7 +9,9 @@ import java.util.UUID;
 /**
  * The building blocks of a module's area on a player's own page ({@link SelfArea}). The module only describes what to
  * show; MRadmin draws it - the same look for every plugin, and a new feature of a plugin needs no change in MRadmin.
- * Texts are plain text in the viewer's language. {@code tone} is "", "good", "info", "warn" or "bad". Since API 4.
+ * Texts are plain text in the viewer's language. {@code tone} is "", "good", "info", "warn" or "bad"; for comparing
+ * the viewer with someone else also "own" (violet) and "other" (amber), e.g. the bars of both sides of a duel (an
+ * older MRadmin shows those neutral). Since API 4.
  */
 public sealed interface SelfBlock {
 

@@ -226,7 +226,7 @@ final class SelfJson {
     }
 
     private static String tone(String tone) {
-        return tone != null && List.of("good", "info", "warn", "bad").contains(tone) ? tone : "";
+        return tone != null && List.of("good", "info", "warn", "bad", "own", "other").contains(tone) ? tone : "";
     }
 
     /** Only http(s) links - nothing a page could abuse (javascript: and the like). */
