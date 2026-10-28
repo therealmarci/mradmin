@@ -94,9 +94,32 @@ final class MRadminModule implements AdminModule, WebModule {
   Server-Thread gefragt werden).
 - `data` liefert nur einfache Werte (Map, List, String, Zahl, Boolean) oder `null` (→ 404). `action` liefert `null`
   (erledigt) oder einen Fehler-Schlüssel, den die Weboberfläche übersetzt (`error.<schlüssel>` in `web/src/lib/i18n.js`).
+- Aktionen bekommen den JSON-Body als einfache Java-Werte, auch verschachtelt (Map, List; ganze Zahlen als Long). Texte
+  auf oberster Ebene kürzt MRadmin auf 200 Zeichen, verschachtelte prüft das Modul selbst. Body höchstens 64 KB.
 - Jede Aktion landet im Web-Protokoll als `<id>-<action>`.
 - Im Browser: `web/src/lib/modules.js` (`moduleData`, `moduleAction`, `playerPart`, `playerAction`).
 - Eigene Seiten im Web (z.B. Chunkloader, Duelle) bleiben handgemacht; sie nutzen nur noch diese vier Aufrufe.
+
+### Items (`WebItems`, ab API-Version 2)
+Inventare, Kits und andere Gegenstände zeigt die Weboberfläche mit den Bildern und Namen aus dem Spiel. Dafür gibt das
+Modul seine Items nicht selbst als Daten aus, sondern über MRadmin:
+
+```java
+if (service.apiVersion() >= 2) {
+    WebItems items = service.items();
+    Map<String, Object> data = items.describe(stack);   // für data()/player(): Typ, Anzahl, Name, Verzauberungen ...
+    ItemStack back = items.build(dataAusDemEditor);     // IllegalArgumentException("item-enchant" ...) bei Unsinn
+}
+```
+
+- Das Format steht im Javadoc von `WebItems`. `describe` enthält immer `data` (das ganze Item als Base64). `build` startet
+  davon und setzt nur die Felder, die der Editor kennt - alles andere am Item bleibt, wie es war.
+- Namen und Lore sind MiniMessage, aber **nur Farben und Stil** (keine Klick-, Hover- oder andere Tags).
+- Im Browser: `ItemIcon` (ein Platz mit Bild und Tooltip), `ItemGrid` (Spielerinventar wie im Spiel, mit `onslot` auch
+  klickbar), `ItemEditor` (Dialog, prüft beim Übernehmen über `POST /api/items/preview`), Hilfen in
+  `web/src/lib/items.svelte.js`.
+- Mit einem MRadmin vor API 2 fehlt `items()` ganz (`NoSuchMethodError`) - deshalb vorher `apiVersion()` prüfen und
+  sonst wie bisher eigene, einfache Daten liefern (`type`, `amount`, `name`, `enchants`, `damage`, `max`).
 
 ## Zwischen den Plugins
 
@@ -135,6 +158,7 @@ Der Knopf „Objekt öffnen“ im Ticket ruft `openHealth(viewer, key, back)` de
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
+  Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

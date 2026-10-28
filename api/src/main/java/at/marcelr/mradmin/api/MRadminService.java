@@ -23,8 +23,8 @@ import java.util.Map;
  */
 public interface MRadminService {
 
-    /** Version of this API. */
-    int API_VERSION = 1;
+    /** Version of this API (2: {@link #items()}). */
+    int API_VERSION = 2;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -74,4 +74,12 @@ public interface MRadminService {
 
     /** The problem behind {@code key} is solved - MRadmin adds the note to its open ticket (if there is one). */
     void resolve(String moduleId, String key, String note);
+
+    /**
+     * Items as data for the web interface and back (API version 2). Null with an older MRadmin - check
+     * {@link #apiVersion()} first, the method is missing there.
+     */
+    default @Nullable WebItems items() {
+        return null;
+    }
 }

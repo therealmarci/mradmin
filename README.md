@@ -25,11 +25,12 @@
 ## Schnellstart
 1. **[MRadmin herunterladen](https://mrtechnology.marcelr.at/download/mradmin/)** und die JAR in den Ordner `plugins/` legen.
 2. Den Server starten. Dabei entstehen `plugins/MRadmin/config.yml` und die Sprachdateien in `plugins/MRadmin/lang/`.
-3. **Dem Team die Rechte geben** - es gibt fertige Pakete:
+3. **Rechte geben** - es gibt fertige Gruppen (in allen MRtechnology-Plugins gleich aufgebaut):
    ```text
-   /lp group supporter permission set mradmin.support true
-   /lp group staff permission set mradmin.staff true
-   /lp group admin permission set mradmin.admin true
+   /lp group default permission set mradmin.player true
+   /lp group supporter permission set mradmin.groups.support true
+   /lp group staff permission set mradmin.groups.staff true
+   /lp group admin permission set mradmin.groups.admin true
    ```
 4. Fertig: **`/mradmin`** öffnet das Dashboard, Spieler erstellen Tickets mit **`/report`**.
 
@@ -173,6 +174,8 @@ MRadmin vom Handy, Tablet oder PC bedienen: Übersicht mit Live-Werten, Tickets,
 
 Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per Passkey (Fingerabdruck, Face ID, Windows Hello) oder Discord. Alle Funktionen, Sicherheitsdetails, die Web-Konsole, Entbannungsanträge und das Kontaktformular: **[Weboberfläche im Detail](docs/WEBOBERFLAECHE.md)**.
 
+**Items wie im Spiel:** Inventare und Kits zeigt die Weboberfläche mit den echten Item-Bildern und -Namen samt Tooltip. Dafür lädt MRadmin beim ersten Start **einmal** den offiziellen Spiel-Client von Mojang (rund 40 MB) und speichert daraus nur die fertigen Bilder unter `plugins/MRadmin/items/`. Abschalten mit `web.item-icons: false` - dann stehen Kürzel statt Bildern da.
+
 ### Versionen & Updates
 In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Versionen bzw. `/<plugin> version`.
@@ -238,13 +241,21 @@ Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integr
 ---
 
 ## Permissions
-Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Pakete**:
+Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Gruppen**. Sie sind in allen MRtechnology-Plugins gleich aufgebaut (`<plugin>.player` und `<plugin>.groups.support|staff|admin`), jede Gruppe enthält die darunter. Standardmäßig haben sie nur OPs.
 
-| Paket | Enthält |
+| Gruppe | Enthält |
 |---|---|
-| `mradmin.support` | Dashboard, Tickets bearbeiten, Spieler ansehen, Staff-Chat, Weboberfläche |
-| `mradmin.staff` | Support + Ticket-Teleport, Wartung ansehen und joinen, Admin-Modus, Spieler-Werkzeuge (Teleport, Holen, Inventar, Einfrieren, Kicken), Serverzustand |
-| `mradmin.admin` | Alles außer der Web-Konsole: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/mradmin version` |
+| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen, Web-Konsole ansehen |
+| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken, Admin-Modus · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
+| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
+
+Die Gruppen bringen auch die nötigen **LibertyBans**-Rechte mit (falls installiert): Support sieht Strafen, Verlauf und die Bann- und Mute-Listen (`libertybans.commands`, `libertybans.list.*`), Staff darf kicken, muten und verwarnen, nur Admins bannen. Diese Rechte gelten dann auch für die LibertyBans-Befehle im Spiel.
+
+> [!WARNING]
+> `mradmin.groups.admin` enthält das Ausführen von Befehlen in der Web-Konsole - so mächtig wie die Server-Konsole. Gib die Gruppe nur Leuten, denen du den Server anvertraust. Vor dem Öffnen fragt das Web zusätzlich den 2FA-Code ab.
+
+**Alle MRtechnology-Plugins auf einmal einrichten:** [Permission-Übersicht mit fertigen LuckPerms-Gruppen](docs/PERMISSIONS.md) - was Support, Staff und Admin in jedem Plugin dürfen, zum Kopieren.
 
 <details>
 <summary>Alle einzelnen Permissions</summary>
@@ -254,11 +265,11 @@ Standard ist `op`, außer anders angegeben.
 | Bereich | Permissions |
 |---|---|
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
-| Tickets | `mradmin.tickets.create` (**alle**, `/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
+| Tickets | `mradmin.tickets.create` (`/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
 | Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
-| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole in **keinem** Paket, Standard: niemand) |
+| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
 | Versionen & Neustart (Web) | `mradmin.versions.view` (ansehen) · `mradmin.versions.install` (herunterladen) · `mradmin.server.restart` (neu starten) |
 
@@ -266,7 +277,7 @@ Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren
 </details>
 
 > [!TIP]
-> Die Web-Konsole gibst du nur gezielt frei: `/lp user <name> permission set mradmin.web.console.execute true`
+> Einzelnen Leuten gibst du zusätzlich einzelne Rechte, z.B. `/lp user <name> permission set mradmin.announce true`. Aus einer Gruppe nimmst du eins heraus mit z.B. `/lp group staff permission set mradmin.player.kick false`.
 
 ## Konfiguration
 Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst du mit `/mradmin reload`.
@@ -306,10 +317,13 @@ Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integratione
 
 ## Häufige Fragen
 **Ein Teammitglied wird bei der Wartung trotzdem gekickt.**
-Es braucht `mradmin.maintenance.bypass` (in `mradmin.staff` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.
+Es braucht `mradmin.maintenance.bypass` (in `mradmin.groups.support` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.
 
 **Ich war im Admin-Modus, und der Server ist abgestürzt.**
 Nichts verloren - du bist nach dem Neustart einfach noch im Admin-Modus. `/mradmin mode off` stellt alles wieder her. Die Dateien in `plugins/MRadmin/admin-mode/` bitte nicht löschen.
+
+**In der Weboberfläche stehen bei Items nur Kürzel statt Bildern.**
+MRadmin konnte die Bilder nicht von Mojang laden (die Konsole sagt beim Start, warum - meist kein Internet am Server) oder `web.item-icons` steht auf `false`. Nach dem Beheben `/mradmin reload` - geladen wird nur einmal pro Minecraft-Version.
 
 **Wo sehe ich, welche Plugins verbunden sind?**
 In der Konsole beim Start. Ist ein Plugin zu alt für die Verbindung, steht dort eine Warnung - dann alle MRtechnology-Plugins zusammen aktualisieren.

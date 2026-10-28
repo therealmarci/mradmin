@@ -40,7 +40,8 @@ public final class PushService {
             new Kind("ticket-new", Perms.TICKETS_VIEW, Feature.TICKETS, true),
             new Kind("ticket-mine", Perms.TICKETS_VIEW, Feature.TICKETS, true),
             new Kind("ticket-message", Perms.TICKETS_VIEW, Feature.TICKETS, false),
-            new Kind("chunks-locked", "mrchunks.admin.gui", null, true),
+            // Permission of the module (its view permission) - MRadmin does not name another plugin's permissions.
+            new Kind("chunks-locked", null, null, true),
             new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true),
             new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true));
 
@@ -239,8 +240,9 @@ public final class PushService {
         if (kind.feature() != null && !plugin.feature(kind.feature())) {
             return false;
         }
-        if (kind.key().equals("chunks-locked") && plugin.modules().module("mrchunks") == null) {
-            return false;
+        if (kind.key().equals("chunks-locked")) {
+            var module = plugin.modules().module("mrchunks");
+            return module != null && permissions.has(account, module.viewPermission());
         }
         return permissions.has(account, kind.permission());
     }

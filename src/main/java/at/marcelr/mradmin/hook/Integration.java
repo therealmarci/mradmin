@@ -5,24 +5,23 @@ import org.bukkit.Material;
 import java.util.List;
 
 /**
- * Plugins MRadmin works together with out of the box. Each one is detected automatically: while it is installed and
- * enabled, the dashboard shows its button with live information, the player menu its player info, and (MRchunks) the
- * server health its conspicuous chunk loaders. Neither side needs the other - every plugin runs on its own. What the
- * plugin shows comes from the plugin itself (module API, see {@link at.marcelr.mradmin.module.Modules}); this list
- * only gives the dashboard button its command, icon and permission.
+ * The MRtechnology plugins MRadmin knows by name - only for things that happen before or without their module: the
+ * order of their dashboard buttons, the warning about a version from before the module API, the switch from old
+ * configs (v7) and the icon of their tickets while they do not run. Everything else (button, permission, menus,
+ * live information) comes from the plugin's module ({@link at.marcelr.mradmin.module.Modules}) - MRadmin names none
+ * of their permissions.
  *
- * @param id         name under {@code integrations} in config.yml and in the language file (gui-hub-buttons.&lt;id&gt;)
- * @param plugin     plugin name as in its plugin.yml
- * @param command    run as the player when the button is clicked (the plugin checks its own permissions)
- * @param permission the button is only shown with this permission
+ * @param id      name under {@code integrations} in config.yml and the module id
+ * @param plugin  plugin name as in its plugin.yml
+ * @param command what the dashboard button runs for a plugin version whose module opens no menu itself (older ones)
  */
-public record Integration(String id, String plugin, Material material, String command, String permission) {
+public record Integration(String id, String plugin, Material material, String command) {
 
     public static final List<Integration> ALL = List.of(
-            new Integration("mrsleep", "MRsleep", Material.RED_BED, "mrsleep gui", "mrsleep.admin.gui"),
-            new Integration("mrchunks", "MRchunks", Material.EMERALD_BLOCK, "mrchunks gui", "mrchunks.admin.gui"),
-            new Integration("mrtoolbar", "MRtoolbar", Material.IRON_PICKAXE, "mrtoolbar gui", "mrtoolbar.admin.gui"),
-            new Integration("mrpvp", "MRpvp", Material.IRON_SWORD, "duel admin", "mrpvp.admin.gui"));
+            new Integration("mrsleep", "MRsleep", Material.RED_BED, "mrsleep gui"),
+            new Integration("mrchunks", "MRchunks", Material.EMERALD_BLOCK, "mrchunks gui"),
+            new Integration("mrtoolbar", "MRtoolbar", Material.IRON_PICKAXE, "mrtoolbar gui"),
+            new Integration("mrpvp", "MRpvp", Material.IRON_SWORD, "duel admin"));
 
     /** The integration for a plugin name (case-insensitive), or null. */
     public static Integration byPlugin(String plugin) {

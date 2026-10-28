@@ -80,7 +80,7 @@ public final class WebPermissions {
 
     /**
      * "*" grants everything, "mradmin.*" everything below mradmin., otherwise the permission itself or a bundle that
-     * contains it (as in the plugin.yml, e.g. mradmin.support -> mradmin.tickets.reply).
+     * contains it (as in the plugin.yml, e.g. mradmin.groups.support -> mradmin.tickets.reply).
      */
     static boolean matches(List<String> granted, String permission) {
         for (String g : granted) {

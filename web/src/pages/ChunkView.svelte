@@ -87,21 +87,25 @@
           <dd class="bad-text">{t('chunks.lockedBy', { metric: loader.lock.metric, value: Math.round(loader.lock.value), limit: Math.round(loader.lock.limit) })} · {dateTime(loader.lock.since)}</dd>
         {/if}
       </dl>
-      {#if me.may.mrchunksManage}
+      {#if me.may.mrchunksManage || me.may.mrchunksToggle}
         <div class="actions">
           {#if loader.lock}
-            <button onclick={() => act('unlock')} disabled={busy}>{t('chunks.unlock')}</button>
+            {#if me.may.mrchunksManage}
+              <button onclick={() => act('unlock')} disabled={busy}>{t('chunks.unlock')}</button>
+            {/if}
           {:else}
             <button class:secondary={loader.active} onclick={() => act('toggle')} disabled={busy}>
               {loader.active ? t('chunks.switchOff') : t('chunks.switchOn')}
             </button>
           {/if}
-          {#if loader.dummiesEnabled}
-            <button class="secondary" onclick={() => act('dummy')} disabled={busy}>
-              {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
-            </button>
+          {#if me.may.mrchunksManage}
+            {#if loader.dummiesEnabled}
+              <button class="secondary" onclick={() => act('dummy')} disabled={busy}>
+                {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
+              </button>
+            {/if}
+            <button class="danger" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
           {/if}
-          <button class="danger" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
         </div>
       {/if}
     </section>

@@ -6,6 +6,7 @@ import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.api.AdminModule;
 import at.marcelr.mradmin.api.HealthEntry;
 import at.marcelr.mradmin.api.MRadminService;
+import at.marcelr.mradmin.api.WebItems;
 import at.marcelr.mradmin.api.Report;
 import at.marcelr.mradmin.api.WebModule;
 import at.marcelr.mradmin.hook.Integration;
@@ -39,6 +40,7 @@ public final class Modules implements MRadminService {
     private final MRAdmin plugin;
     /** Registered modules by id. */
     private final Map<String, AdminModule> registered = new ConcurrentHashMap<>();
+    private final WebItems items = new at.marcelr.mradmin.items.ItemCodec();
 
     public Modules(MRAdmin plugin) {
         this.plugin = plugin;
@@ -59,6 +61,11 @@ public final class Modules implements MRadminService {
     @Override
     public int apiVersion() {
         return API_VERSION;
+    }
+
+    @Override
+    public WebItems items() {
+        return items;
     }
 
     @Override
@@ -165,21 +172,29 @@ public final class Modules implements MRadminService {
     }
 
     /**
-     * The dashboard buttons: the configured ones (built-in integrations and own buttons, see Settings), followed by
-     * registered modules that have none - at most 6.
+     * The dashboard buttons: one per connected module (MRtechnology plugins in their usual order, then others) with
+     * the module's icon and view permission, followed by the owner's own buttons - at most 6.
      */
     public List<Settings.HubButton> buttons() {
-        List<Settings.HubButton> buttons = new ArrayList<>(plugin.settings().adminMode().buttons());
-        for (AdminModule module : registered.values()) {
-            if (buttons.size() >= 6) {
-                break;
-            }
-            if (enabled(module.id()) && buttons.stream().noneMatch(b -> b.id().equals(module.id()))) {
-                buttons.add(new Settings.HubButton(module.id(), module.plugin().getName(), module.icon(), "",
-                        module.viewPermission()));
+        List<AdminModule> modules = new ArrayList<>(registered.values());
+        modules.removeIf(module -> !enabled(module.id()));
+        modules.sort(java.util.Comparator.comparingInt((AdminModule m) -> {
+            int index = Integration.ALL.stream().map(Integration::id).toList().indexOf(m.id());
+            return index < 0 ? Integer.MAX_VALUE : index;
+        }).thenComparing(AdminModule::id));
+        List<Settings.HubButton> buttons = new ArrayList<>();
+        for (AdminModule module : modules) {
+            // A plugin version whose module opens no menu itself: the button runs its admin command.
+            Integration known = Integration.ALL.stream().filter(i -> i.id().equals(module.id())).findFirst().orElse(null);
+            buttons.add(new Settings.HubButton(module.id(), module.plugin().getName(), module.icon(),
+                    known == null ? "" : known.command(), module.viewPermission()));
+        }
+        for (Settings.HubButton own : plugin.settings().adminMode().buttons()) {
+            if (buttons.stream().noneMatch(b -> b.id().equals(own.id()))) {
+                buttons.add(own);
             }
         }
-        return buttons;
+        return buttons.size() > 6 ? List.copyOf(buttons.subList(0, 6)) : buttons;
     }
 
     /** The module behind a dashboard button, or null if its plugin registered none (or is not running). */

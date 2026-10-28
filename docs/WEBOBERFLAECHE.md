@@ -120,7 +120,21 @@ Permissions: `mrsleep.admin.gui` ansehen, Blockaden aufheben mit `mrsleep.admin.
   einzeln oder alle aufheben. Alles zu einem einzelnen Spieler steht auf seiner Seite unter **Spieler**.
 
 ## Duelle (mit MRpvp)
-Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.pause`, `.ban`, `.reset`, `.restore`, `.review` handeln.
+Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.pause`, `.ban`, `.reset`, `.restore`, `.review` handeln, `.kits` Kits bearbeiten.
+
+- **Kits** (`.kits`, Chip „Kits →“): alle Kits als Karten (Symbol, Schnellleiste, Regeln), Reihenfolge mit ↑/↓, kopieren,
+  neu anlegen. Im Kit-Editor das Inventar wie im Spiel - Klick auf einen Platz öffnet den Item-Editor, mit „Verschieben“
+  tauschen zwei Plätze. Dazu ID (eine andere ID benennt um), Name und Beschreibung auf Deutsch und Englisch (gleich =
+  für alle Sprachen), Symbol, Permission und die Regeln: kein Schaden, Treffer bis zum Sieg, Regeneration und Hunger
+  (fest an/aus oder Spielerwahl), braucht Bau-Arena, festes Zeitlimit, Herzen, Effekte beim Start (Effekt + Stufe),
+  Cooldowns für Items des Kits (Sekunden), nur bestimmte Arenen. Eine neue Arena erscheint beim nächsten
+  Öffnen; Kits ohne Arena-Auswahl nutzen sie sofort. Gelöschte Arenen, auf die ein Kit noch festgelegt ist, stehen rot
+  da und müssen abgehakt werden. Gespeichert wird erst mit „Speichern“, neue Runden bekommen das Kit sofort.
+- **Exportieren / Importieren** (Kit-Liste): Kits auswählen und als `.json` herunterladen - z.B. für einen anderen
+  Server. Beim Import zeigt der Dialog pro Kit, was passiert: neu, oder schon vorhanden (unter neuer ID anlegen oder
+  ersetzen), Arenen, die es hier nicht gibt (einer eigenen zuordnen oder weglassen), und mit welcher Minecraft-Version
+  die Datei erstellt wurde. Gespeichert wird jedes Kit wie im Kit-Editor (gleiche Prüfungen). Dieselbe Datei geht
+  auch im Spiel (MRpvp-Kit-Liste, Ordner `plugins/MRpvp/imports/`).
 
 - Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena. Steuern: pausieren und fortsetzen (`.pause`),
   einen Sieger bestimmen oder abbrechen (`.stop`). Pro Runde eine Seite mit Mini-Karte (der
@@ -130,6 +144,24 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   ihrer Seite nachträglich aus der Wertung nehmen (mit optionalem Grund) und wieder werten (`.review`). Arenen mit ihren Kopien,
   Auffälligkeiten der letzten 24 Stunden. Alles zu einem einzelnen Spieler (Statistik, Runden, Sperre) steht auf
   seiner Seite unter **Spieler**.
+
+## Items: Bilder, Namen und Editor
+Überall, wo die Weboberfläche Gegenstände zeigt (Inventare bei Duellen, Kits), sehen sie aus wie im Spiel: das Bild
+aus dem Inventar, Anzahl, Haltbarkeitsbalken, Verzauberungs-Glanz und beim Darüberfahren (am Handy: Antippen) der
+Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprache des Browsers.
+
+- **Woher die Bilder kommen:** MRadmin lädt beim ersten Start mit eingeschalteter Weboberfläche **einmal** den
+  offiziellen Spiel-Client deiner Minecraft-Version von Mojang (rund 40 MB, mit Prüfsumme kontrolliert), zeichnet daraus
+  alle Items und speichert nur das fertige Bild (rund 1,3 MB) und die Item-Namen unter `plugins/MRadmin/items/<version>/`.
+  Der Client selbst wird nicht gespeichert. In der Plugin-JAR steckt nichts davon - Mojang erlaubt das Weitergeben nicht.
+- **Neue Minecraft-Version:** Die Bilder werden für die neue Version einmal neu geladen, neue Items sind dann dabei.
+- **Ohne Internet oder mit `web.item-icons: false`:** Items zeigen ein Kürzel statt eines Bildes, alles andere geht.
+- **Item-Editor** (z.B. im Kit-Editor von MRpvp): Item suchen (Name oder ID, mit Bild), Anzahl, eigener Name und
+  Beschreibung (MiniMessage: Farben und Stil wie `<red>`, `<#ff8800>`, `<b>`, `<gradient:red:gold>`),
+  Verzauberungen (passende zuerst, auf Wunsch alle, Stufe 1-255, Hinweis bei Kombinationen, die es im Spiel nicht
+  gibt), Glanz an/aus, unzerstörbar, Haltbarkeit, Trank (Grund-Trank, Farbe, eigene Effekte mit Stufe und Dauer),
+  Farbe bei Lederrüstung, Rüstungsbesatz und Flugdauer bei Raketen. Rechts steht live der Tooltip. Beim Übernehmen
+  baut MRadmin das echte Item und prüft alle Werte; was der Editor nicht anzeigt, bleibt am Item erhalten.
 
 ## Wartung & Ankündigungen
 `mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
@@ -174,7 +206,7 @@ Unter **Konto → Benachrichtigungen**.
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
 ## Konsole
-`mradmin.web.console.view` ansehen, `mradmin.web.console.execute` Befehle ausführen - beide in **keinem** Paket, also nur gezielt vergeben.
+`mradmin.web.console.view` ansehen (in `mradmin.groups.support`), `mradmin.web.console.execute` Befehle ausführen (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole).
 
 - Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
   farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).

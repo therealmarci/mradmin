@@ -114,7 +114,7 @@ public final class ModuleRoutes {
         WebModule web = plugin.modules().web(id);
         WebModule checked = require(http, id, web == null ? "view" : web.actions().get(action));
         // Viewing is needed too - an action never works on a page the member cannot see.
-        Map<String, Object> args = limit(http.bodyValues());
+        Map<String, Object> args = limit(http.bodyTree());
         Object error = server.sync(() -> plugin.modules().attempt(plugin.modules().module(id),
                 () -> checked.action(action, args, user(http))));
         fail(error);
@@ -140,7 +140,7 @@ public final class ModuleRoutes {
         requirePlayerView(http);
         WebModule web = plugin.modules().web(id);
         WebModule checked = require(http, id, web == null ? "view" : web.playerActions().get(action));
-        Map<String, Object> args = limit(http.bodyValues());
+        Map<String, Object> args = limit(http.bodyTree());
         Object error = server.sync(() -> plugin.modules().attempt(plugin.modules().module(id),
                 () -> checked.playerAction(player, action, args, user(http))));
         fail(error);

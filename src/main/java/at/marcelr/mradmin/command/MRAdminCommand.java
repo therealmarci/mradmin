@@ -134,7 +134,14 @@ public final class MRAdminCommand implements TabExecutor {
                     storage(sender);
                 }
             }
-            case "version", "ver" -> version(sender);
+            case "version", "ver" -> {
+                // For players too (in mradmin.player).
+                if (sender.hasPermission("mradmin.version")) {
+                    version(sender);
+                } else {
+                    messages().send(sender, "no-permission");
+                }
+            }
             default -> help(sender);
         }
         return true;
@@ -575,7 +582,9 @@ public final class MRAdminCommand implements TabExecutor {
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.add("version");
+            if (sender.hasPermission("mradmin.version")) {
+                options.add("version");
+            }
             addIf(sender, PERM_ANNOUNCE, Feature.ANNOUNCE, options, "announce");
             addIf(sender, AdminModeManager.PERM_USE, Feature.ADMIN_MODE, options, "mode");
             addIf(sender, at.marcelr.mradmin.Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, options, "maintenance");

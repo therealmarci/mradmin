@@ -81,6 +81,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private UpdateChecker updateChecker;
     private at.marcelr.mradmin.versions.VersionManager versions;
     private at.marcelr.mradmin.versions.RestartManager restarts;
+    private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
     private TicketManager tickets;
     private Modules modules;
@@ -112,6 +113,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
+        at.marcelr.mradmin.web.ItemRoutes.register(web);
+        items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
         web.requests().load();
         health = new HealthMonitor(this);
@@ -222,6 +225,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private void startServices() {
         web.permissions().clear();
         web.start();
+        items.start();
         if (feature(Feature.SERVER_STATUS)) {
             health.start();
         } else {
@@ -404,6 +408,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public at.marcelr.mradmin.versions.VersionManager versions() {
         return versions;
+    }
+
+    /** Item pictures and names for the web interface. */
+    public at.marcelr.mradmin.items.ItemAssets items() {
+        return items;
     }
 
     public at.marcelr.mradmin.versions.RestartManager restarts() {

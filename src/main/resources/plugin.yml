@@ -29,43 +29,65 @@ commands:
 # One permission per feature - it applies in game and in the web interface alike. For easy granting there are
 # the packages mradmin.support, mradmin.staff and mradmin.admin. The web console is in no package.
 permissions:
-  # ------------------------------------------------------------------ Packages
-  mradmin.support:
-    description: "Package support: handle tickets, view players, staff chat, web interface."
+  # ------------------------------------------------------------------ Groups
+  # The same in every MRtechnology plugin: <plugin>.player for players, <plugin>.groups.support / staff / admin for
+  # the team - each group contains the one below. The single permissions further down stay usable on their own.
+  mradmin.player:
+    description: "Player: /report - open tickets and view, answer and close your own; /mradmin version."
     default: op
     children:
+      mradmin.version: true
+      mradmin.tickets.create: true
+  mradmin.groups.support:
+    description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, web interface, view maintenance and join during it, view versions and the web console."
+    default: op
+    children:
+      mradmin.player: true
       mradmin.dashboard: true
+      mradmin.status: true
+      mradmin.status.health: true
       mradmin.tickets.notify: true
       mradmin.tickets.view: true
       mradmin.tickets.reply: true
       mradmin.tickets.claim: true
       mradmin.tickets.close: true
       mradmin.tickets.reopen: true
+      mradmin.tickets.teleport: true
       mradmin.player.view: true
+      mradmin.player.teleport: true
+      mradmin.player.inventory: true
       mradmin.staffchat: true
       mradmin.web: true
-  mradmin.staff:
-    description: "Package staff: support + player tools, admin mode, server status, view and join maintenance."
-    default: op
-    children:
-      mradmin.support: true
-      mradmin.tickets.teleport: true
       mradmin.maintenance.view: true
       mradmin.maintenance.bypass: true
       mradmin.maintenance.notify: true
-      mradmin.mode: true
-      mradmin.player.teleport: true
-      mradmin.player.summon: true
-      mradmin.player.inventory: true
-      mradmin.player.freeze: true
-      mradmin.player.kick: true
-      mradmin.status: true
-      mradmin.status.health: true
-  mradmin.admin:
-    description: "All permissions of MRadmin - except the web console (mradmin.web.console.*), which is granted individually on purpose."
+      mradmin.versions.view: true
+      mradmin.web.console.view: true
+      # LibertyBans (if installed): view punishments, history and the ban and mute lists
+      libertybans.commands: true
+      libertybans.list.history: true
+      libertybans.list.banlist: true
+      libertybans.list.mutelist: true
+  mradmin.groups.staff:
+    description: "Group staff: support + summon, freeze and kick players, admin mode; with LibertyBans kick, mute and warn."
     default: op
     children:
-      mradmin.staff: true
+      mradmin.groups.support: true
+      mradmin.player.summon: true
+      mradmin.player.freeze: true
+      mradmin.player.kick: true
+      mradmin.mode: true
+      # LibertyBans: kick, mute and warn players (and lift mutes and warns)
+      libertybans.kick.do.target.uuid: true
+      libertybans.mute.do.target.uuid: true
+      libertybans.mute.undo.target.uuid: true
+      libertybans.warn.do.target.uuid: true
+      libertybans.warn.undo.target.uuid: true
+  mradmin.groups.admin:
+    description: "Group admin: everything of MRadmin - maintenance, announcements, web accounts, updates, restart, running commands in the web console; with LibertyBans ban and unban."
+    default: op
+    children:
+      mradmin.groups.staff: true
       mradmin.maintenance.manage: true
       mradmin.announce: true
       mradmin.mode.others: true
@@ -77,6 +99,15 @@ permissions:
       mradmin.admin.update: true
       mradmin.versions.install: true
       mradmin.server.restart: true
+      mradmin.web.console.execute: true
+      # LibertyBans: ban and unban players (also decide unban requests)
+      libertybans.ban.do.target.uuid: true
+      libertybans.ban.undo.target.uuid: true
+
+  # ------------------------------------------------------------ Version
+  mradmin.version:
+    description: /mradmin version - version, update status and links.
+    default: op
 
   # ------------------------------------------------------------ Dashboard
   mradmin.dashboard:
@@ -92,7 +123,7 @@ permissions:
   # -------------------------------------------------------------- Tickets
   mradmin.tickets.create:
     description: /report - open tickets and view, answer and close your own.
-    default: true
+    default: op
   mradmin.tickets.notify:
     description: Notice about new tickets and replies, on join the number of open tickets.
     default: op
@@ -176,10 +207,10 @@ permissions:
     description: Manage other players' web accounts (/mradmin web invite|logout|remove).
     default: op
   mradmin.web.console.view:
-    description: View the live console in the web interface. Not included in mradmin.admin.
+    description: View the live console in the web interface.
     default: false
   mradmin.web.console.execute:
-    description: Run commands via the web console (as powerful as console access!). Not included in mradmin.admin.
+    description: Run commands via the web console (as powerful as console access!).
     default: false
     children:
       mradmin.web.console.view: true

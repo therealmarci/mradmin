@@ -146,6 +146,9 @@
     {/if}
     <button class:active={tab === 'arenas'} onclick={() => (tab = 'arenas')}>{t('pvp.tab.arenas')}</button>
     <button class:active={tab === 'alerts'} onclick={() => (tab = 'alerts')}>{t('pvp.tab.alerts')}</button>
+    {#if me.may.mrpvpKits}
+      <button onclick={() => go('/pvp/kits')}>{t('pvp.tab.kits')} →</button>
+    {/if}
     {#if me.may.mrpvpReview && overview?.reviews != null}
       <button class:active={tab === 'reviews'} onclick={() => (tab = 'reviews')}>
         {t('pvp.tab.reviews')}{overview.reviews ? ` (${overview.reviews})` : ''}

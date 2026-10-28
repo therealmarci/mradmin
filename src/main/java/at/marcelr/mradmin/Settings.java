@@ -81,7 +81,7 @@ public record Settings(
                               int sessionDays, boolean passkeys, boolean password,
                               java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
                               String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp,
-                              String pushContact) {
+                              String pushContact, boolean itemIcons) {
 
         /** Cookies only over HTTPS when the public address is HTTPS (plain http is only for local tests). */
         public boolean secure() {
@@ -426,7 +426,8 @@ public record Settings(
                 c.getString("web.legal.privacy-url", "").trim(),
                 duration(c, "web.privacy.audit-retention", 90 * 86_400_000L, log),
                 c.getBoolean("web.privacy.mask-ip", false),
-                c.getString("web.push.contact", "").trim());
+                c.getString("web.push.contact", "").trim(),
+                c.getBoolean("web.item-icons", true));
     }
 
     private static StorageSettings storage(FileConfiguration c, Logger log) {
@@ -492,17 +493,11 @@ public record Settings(
     }
 
     /**
-     * The built-in integrations that are switched on (they only show while their plugin runs, see
-     * {@link at.marcelr.mradmin.hook.Integration}), followed by the owner's own buttons - at most 6 together.
+     * The owner's own buttons (admin-mode.menu.buttons). The buttons of connected plugins come from their modules
+     * and are put in front ({@link at.marcelr.mradmin.module.Modules#buttons()}) - at most 6 together.
      */
     private static List<HubButton> hubButtons(FileConfiguration c, Logger log) {
         List<HubButton> buttons = new ArrayList<>();
-        for (var integration : at.marcelr.mradmin.hook.Integration.ALL) {
-            if (c.getBoolean("integrations." + integration.id(), true)) {
-                buttons.add(new HubButton(integration.id(), integration.plugin(), integration.material(),
-                        integration.command(), integration.permission()));
-            }
-        }
         var section = c.getConfigurationSection("admin-mode.menu.buttons");
         if (section == null) {
             return List.copyOf(buttons);

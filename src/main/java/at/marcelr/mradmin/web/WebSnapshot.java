@@ -2,7 +2,6 @@ package at.marcelr.mradmin.web;
 
 import at.marcelr.mradmin.Feature;
 import at.marcelr.mradmin.MRAdmin;
-import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
 import at.marcelr.mradmin.player.Npcs;
