@@ -36,7 +36,8 @@ import static at.marcelr.mradmin.Messages.tag;
  *   not older than {@code max-age-days}). Only for players who may open the page (mradmin.web.self).</li>
  *   <li><b>Warnings</b> written in MRadmin, and Uptime Kuma incidents of style danger: to everyone online in the chat
  *   and as a title, in the chat on every join while they are on. Kuma "warning": the same without the title. Kuma
- *   info, primary, light, dark: a note, once per player in the chat like a news (see {@link KumaIncidents}).</li>
+ *   info, primary, light, dark: a note, once per player in the chat like a news (see {@link KumaIncidents}). Kuma
+ *   incidents also go to the community Discord (posted, edited, marked resolved - discord-announce.kuma).</li>
  * </ul>
  * Who saw which post is kept in the storage file "news-seen" (the highest post id per player, and the notes from
  * Uptime Kuma they got).
@@ -55,7 +56,7 @@ public final class NewsDelivery implements Listener {
     public NewsDelivery(MRAdmin plugin, News news) {
         this.plugin = plugin;
         this.news = news;
-        this.incidents = new KumaIncidents(plugin, this::incident);
+        this.incidents = new KumaIncidents(plugin, this::incident, this::discordIncidents);
     }
 
     public KumaIncidents incidents() {
@@ -136,6 +137,17 @@ public final class NewsDelivery implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             incidentAlert(player, incident, true);
         }
+    }
+
+    /** After every complete poll: the Discord posts of the incidents follow Kuma (posted, edited, resolved). */
+    private void discordIncidents(List<KumaIncidents.Incident> pinned) {
+        DiscordAnnouncer discord = plugin.discordAnnounce();
+        if (discord == null) {
+            return;
+        }
+        String url = plugin.settings().kuma().url();
+        discord.syncKuma(pinned.stream().map(i -> new DiscordAnnouncer.KumaIncident(i.id(), i.key(), i.level(),
+                i.title(), i.content(), url + "/status/" + i.slug())).toList());
     }
 
     // --------------------------------------------------------------------- join

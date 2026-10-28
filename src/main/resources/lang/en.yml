@@ -720,6 +720,12 @@ discord-announce:
   changelog-changed: "🔧 Changed"
   changelog-fixed: "🐞 Fixed"
   changelog-removed: "🗑️ Removed"
+  kuma-critical: "🚨 {title}"
+  kuma-warning: "⚠️ {title}"
+  kuma-info: "ℹ️ {title}"
+  kuma-resolved-title: "✅ Resolved: {title}"
+  kuma-resolved: "This incident is over."
+  kuma-status-link: "To the status page"
 
 # --- Discord -----------------------------------------------------------------
 discord-status-active: "<prefix><green>Discord webhook active <gray>(<white><events></white>/<white><total></white> events enabled)"

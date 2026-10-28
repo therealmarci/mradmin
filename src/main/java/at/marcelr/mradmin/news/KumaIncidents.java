@@ -30,8 +30,11 @@ import java.util.function.Consumer;
  */
 public final class KumaIncidents {
 
-    /** One incident. {@code key} changes when Kuma's text changes (announced again then). */
-    public record Incident(String key, String slug, String title, String content, String style, long created) {
+    /**
+     * One incident. {@code id} stays the same (slug:Kuma id), {@code key} changes when Kuma's text changes (announced
+     * again then).
+     */
+    public record Incident(String key, String id, String slug, String title, String content, String style, long created) {
 
         /**
          * How serious: Kuma's "danger" (red) is critical, "warning" (yellow) a warning, everything else (info, primary,
@@ -55,6 +58,8 @@ public final class KumaIncidents {
 
     private final MRAdmin plugin;
     private final Consumer<Incident> onNew;
+    /** After every poll with all pinned incidents (main thread) - e.g. to keep the Discord posts in step. */
+    private final Consumer<List<Incident>> onPoll;
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
     private volatile List<Incident> current = List.of();
@@ -62,9 +67,10 @@ public final class KumaIncidents {
     private boolean first = true;
     private BukkitTask task;
 
-    public KumaIncidents(MRAdmin plugin, Consumer<Incident> onNew) {
+    public KumaIncidents(MRAdmin plugin, Consumer<Incident> onNew, Consumer<List<Incident>> onPoll) {
         this.plugin = plugin;
         this.onNew = onNew;
+        this.onPoll = onPoll;
     }
 
     public void start() {
@@ -94,6 +100,7 @@ public final class KumaIncidents {
     private void poll() {
         Settings.KumaSettings s = plugin.settings().kuma();
         List<Incident> found = new ArrayList<>();
+        boolean failed = false;
         for (String slug : s.statusPages()) {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(s.url() + "/api/status-page/" + slug))
@@ -101,6 +108,7 @@ public final class KumaIncidents {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     plugin.getLogger().fine("Uptime Kuma status page '" + slug + "': HTTP " + response.statusCode());
+                    failed = true;
                     continue;
                 }
                 JsonObject page = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -126,9 +134,12 @@ public final class KumaIncidents {
                 return;
             } catch (Exception e) {
                 plugin.getLogger().fine("Uptime Kuma status page '" + slug + "' not readable: " + e.getMessage());
+                failed = true;
             }
         }
         current = List.copyOf(found);
+        // A page that could not be read says nothing about what is still pinned - no resolving then.
+        boolean complete = !failed;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             for (Incident i : found) {
                 // Whatever is already there when the server starts is not announced again (only shown).
@@ -137,6 +148,9 @@ public final class KumaIncidents {
                 }
             }
             first = false;
+            if (complete) {
+                onPoll.accept(found);
+            }
         });
     }
 
@@ -144,8 +158,8 @@ public final class KumaIncidents {
         String id = string(o, "id");
         String updated = string(o, "lastUpdatedDate");
         String created = string(o, "createdDate");
-        return new Incident(slug + ":" + id + ":" + (updated.isEmpty() ? created : updated), slug, string(o, "title"),
-                string(o, "content"), string(o, "style"), time(created));
+        return new Incident(slug + ":" + id + ":" + (updated.isEmpty() ? created : updated), slug + ":" + id, slug,
+                string(o, "title"), string(o, "content"), string(o, "style"), time(created));
     }
 
     /** A true/false of Kuma (also 1/0), {@code missing} if it is not there. */

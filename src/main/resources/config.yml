@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 30
+config-version: 31
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -471,6 +471,12 @@ discord-announce:
     ping: false
   alerts:
     # Mention ping-role-id with a critical warning.
+    ping: true
+  # Incidents pinned on the Uptime Kuma status pages (uptime-kuma.status-pages): posted once, edited when they change
+  # in Kuma, marked as resolved when they are no longer pinned.
+  kuma:
+    enabled: true
+    # Mention ping-role-id with a red (danger) incident.
     ping: true
 
   colors:
