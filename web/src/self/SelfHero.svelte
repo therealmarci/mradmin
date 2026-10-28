@@ -24,10 +24,10 @@
     }
   }
 
-  // Again every minute - a maintenance planned meanwhile appears without reloading the page.
+  // Again every 20 seconds - a warning or a maintenance planned meanwhile appears without reloading the page.
   $effect(() => {
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, 20_000);
     const clock = setInterval(() => (now = Date.now()), 1000);
     return () => {
       clearInterval(timer);

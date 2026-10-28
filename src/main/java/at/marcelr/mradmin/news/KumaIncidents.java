@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 /**
  * Incidents ("warnings") pinned on Uptime Kuma status pages - e.g. during an outage. Read from the public status page
  * address ({@code <url>/api/status-page/<slug>}, no login needed - uptime-kuma.url is enough) every
- * {@code uptime-kuma.refresh-seconds} in the
+ * {@code uptime-kuma.incident-seconds} in the
  * background, for the slugs in {@code uptime-kuma.status-pages}. They are shown like the warnings written in MRadmin
  * (player page, in game); a new or changed one is announced once ({@code onNew}, main thread).
  */
@@ -81,7 +81,7 @@ public final class KumaIncidents {
         if (!s.incidents() || s.url().isEmpty() || s.statusPages().isEmpty()) {
             return;
         }
-        long ticks = s.refreshSeconds() * 20L;
+        long ticks = s.incidentSeconds() * 20L;
         task = plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, this::poll, 40L, ticks);
     }
 

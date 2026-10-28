@@ -222,7 +222,10 @@ public final class NewsDelivery implements Listener {
      * title when it is new. A note: once per player in the chat (remembered in news-seen).
      */
     private void incidentAlert(Player player, KumaIncidents.Incident incident, boolean fresh) {
-        String url = plugin.settings().kuma().url() + "/status/" + incident.slug();
+        // To the player page (warnings on top of "News"); who cannot open it gets the Kuma status page.
+        String page = pageLink();
+        String url = page != null && player.hasPermission(Perms.WEB_SELF) ? page
+                : plugin.settings().kuma().url() + "/status/" + incident.slug();
         String text = incident.content().replace('\n', ' ');
         String shortText = text.length() > 160 ? text.substring(0, 159) + "…" : text;
         if ("info".equals(incident.level())) {

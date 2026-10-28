@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 31
+config-version: 32
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -166,6 +166,8 @@ uptime-kuma:
   # without "enabled"). Empty = none.
   status-pages: []
   incidents: true
+  # How often the status pages are read for incidents (seconds).
+  incident-seconds: 15
 
 
 # ------------------------------------------------------------------------------

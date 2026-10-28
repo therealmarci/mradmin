@@ -196,7 +196,8 @@ Neue Neuigkeiten und Changelogs bekommt jeder Spieler mit `mradmin.web.self` **e
 Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`player-web.news.chat-preview`).
 
 **Warnungen aus Uptime Kuma:** Vorfälle, die auf einer Kuma-Statusseite angeheftet sind (`uptime-kuma.status-pages`,
-dafür reicht `uptime-kuma.url`), erscheinen auf der Spielerseite, im Karussell und oben auf dieser Seite. Was im Spiel
+dafür reicht `uptime-kuma.url`; gelesen alle `uptime-kuma.incident-seconds`, Standard 15), erscheinen auf der
+Spielerseite, im Karussell und oben auf dieser Seite. Der Link im Chat führt zur Spielerseite. Was im Spiel
 passiert, hängt vom Stil in Kuma ab:
 
 | Stil in Kuma | Farbe | Im Spiel |

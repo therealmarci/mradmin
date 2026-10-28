@@ -115,12 +115,13 @@ public record Settings(
 
     /**
      * {@code url} without trailing slash; empty id sets mean "every maintenance". {@code statusPages}: slugs of status
-     * pages whose incidents become warnings on the player page and in game ({@code incidents}).
+     * pages whose incidents become warnings on the player page and in game ({@code incidents}, read every
+     * {@code incidentSeconds}).
      */
     public record KumaSettings(boolean enabled, String url, String username, String password, String token,
                                Set<Integer> monitorIds, Set<Integer> maintenanceIds, int refreshSeconds,
                                int reconnectSeconds, boolean keepWhenOffline, List<String> statusPages,
-                               boolean incidents) {
+                               boolean incidents, int incidentSeconds) {
 
         public boolean hasLogin() {
             return !token.isEmpty() || (!username.isEmpty() && !password.isEmpty());
@@ -229,7 +230,8 @@ public record Settings(
                 c.getBoolean("uptime-kuma.keep-schedule-when-offline", true),
                 c.getStringList("uptime-kuma.status-pages").stream().map(String::trim)
                         .filter(s -> s.matches("[A-Za-z0-9_-]{1,64}")).distinct().toList(),
-                c.getBoolean("uptime-kuma.incidents", true));
+                c.getBoolean("uptime-kuma.incidents", true),
+                Math.clamp(c.getInt("uptime-kuma.incident-seconds", 15), 5, 600));
 
         AnnounceSettings announce = new AnnounceSettings(
                 ticks(c.getDouble("announce.fade-in", 0.5)),

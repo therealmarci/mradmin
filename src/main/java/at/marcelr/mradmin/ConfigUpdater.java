@@ -40,8 +40,9 @@ public final class ConfigUpdater {
  * 30: news, changelogs and warnings: uptime-kuma.status-pages/incidents, player-web.news.chat-preview and alerts,
  * discord-announce.news/alerts and colors.news/changelog/alert.
  * 31: discord-announce.kuma (Uptime Kuma incidents in the community Discord).
+ * 32: uptime-kuma.incident-seconds (incidents read more often than the maintenance list).
      */
-    public static final int CURRENT_VERSION = 31;
+    public static final int CURRENT_VERSION = 32;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

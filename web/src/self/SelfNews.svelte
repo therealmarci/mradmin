@@ -30,6 +30,18 @@
   }
   load();
 
+  // Warnings come and go (also from Uptime Kuma): every 30 seconds again, without opening anything.
+  $effect(() => {
+    const timer = setInterval(async () => {
+      try {
+        data = await api('GET', '/self/news?all=1&lang=' + lang);
+      } catch {
+        // keep what is shown
+      }
+    }, 30_000);
+    return () => clearInterval(timer);
+  });
+
   // #post-3: the news opens in the window, a changelog is shown and marked.
   async function openFromHash() {
     const id = Number(location.hash.match(/^#post-(\d+)$/)?.[1]);
