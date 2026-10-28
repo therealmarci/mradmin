@@ -19,7 +19,6 @@
   async function load() {
     try {
       data = await api('GET', '/self/tickets');
-      if (data.tickets.every((x) => !x.open) && data.tickets.length) filter = 'all';
     } catch (e) {
       error = errorText(e);
     }
