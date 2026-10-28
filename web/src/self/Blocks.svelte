@@ -51,7 +51,8 @@
 <div class="blocks">
   {#each blocks as block, i (i)}
     {#if block.type === 'stats'}
-      <div class="stats">
+      <!-- Inside an opened card a quiet list (label left, value right) - long values wrap without breaking the grid. -->
+      <div class="stats" class:facts={nested}>
         {#each block.stats as s}
           <div class="stat"><span class="muted small">{s.label}</span><strong class="{s.tone}-text">{s.value}</strong></div>
         {/each}
@@ -286,6 +287,30 @@
     border: 0;
     box-shadow: none;
     background: transparent;
+  }
+
+  .stats.facts {
+    gap: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    column-gap: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .stats.facts .stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 9px 2px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .stats.facts .stat strong {
+    font-size: 0.95rem;
+    text-align: right;
   }
 
   .group-text {

@@ -12,6 +12,17 @@
   let openId = $state(null);
   const open = $derived(openId === null ? null : block.cards.find((c) => c.id === openId) ?? null);
 
+  // Pages of at most ROWS rows of cards: how many fit in a row follows the width (same as the grid's columns).
+  const ROWS = 5;
+  const MIN = 270;
+  const GAP = 14;
+  let width = $state(0);
+  let page = $state(0);
+  const perPage = $derived(Math.max(1, Math.floor((width + GAP) / (MIN + GAP))) * ROWS);
+  const pages = $derived(Math.max(1, Math.ceil(block.cards.length / perPage)));
+  const current = $derived(Math.min(page, pages - 1));
+  const shown = $derived(block.cards.slice(current * perPage, (current + 1) * perPage));
+
   function press(event, button) {
     event.stopPropagation();
     onButton(button);
@@ -29,8 +40,8 @@
   {#if block.cards.length === 0}
     <p class="muted empty">{block.empty}</p>
   {:else}
-    <div class="grid">
-      {#each block.cards as c (c.id)}
+    <div class="grid" bind:clientWidth={width}>
+      {#each shown as c (c.id)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div class="card-item tone-{c.tone || 'none'}" role="button" tabindex="0" onclick={() => (openId = c.id)}
           onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), (openId = c.id))}>
@@ -57,6 +68,13 @@
         </div>
       {/each}
     </div>
+    {#if pages > 1}
+      <div class="pager">
+        <button class="secondary small" disabled={current === 0} onclick={() => (page = current - 1)}>← {t('self.cards.prev')}</button>
+        <span class="muted small">{t('self.cards.page', { n: current + 1, total: pages })}</span>
+        <button class="secondary small" disabled={current >= pages - 1} onclick={() => (page = current + 1)}>{t('self.cards.next')} →</button>
+      </div>
+    {/if}
   {/if}
 </section>
 
@@ -100,6 +118,14 @@
 
   .cards-block h2 {
     margin-bottom: 14px;
+  }
+
+  .pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
   }
 
   .empty {
