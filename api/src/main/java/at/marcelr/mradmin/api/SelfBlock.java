@@ -145,4 +145,11 @@ public sealed interface SelfBlock {
      */
     record Embed(String title, String url, int height, String linkLabel) implements SelfBlock {
     }
+
+    /**
+     * Several blocks on one tile that belong together, e.g. "invite a player" above the list of invited players.
+     * Inside an opened card it is a framed box. Since API 5 (api-1.4.1).
+     */
+    record Group(String title, String text, List<SelfBlock> blocks) implements SelfBlock {
+    }
 }

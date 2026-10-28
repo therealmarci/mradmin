@@ -1,6 +1,6 @@
 <script>
   // Draws the building blocks of a plugin's area (see the API's SelfBlock): key figures, text, tables with buttons,
-  // rankings, a small map, bars, cards (open with a click), players, forms and embedded pages (API 5).
+  // rankings, a small map, bars, cards (open with a click), players, forms, embedded pages and groups of them (API 5).
   // Everything is text - never HTML from a plugin. A button calls onAction(action, args).
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
@@ -10,6 +10,7 @@
   import PeopleList from './PeopleList.svelte';
   import FormBlock from './FormBlock.svelte';
   import EmbedBlock from './EmbedBlock.svelte';
+  import Blocks from './Blocks.svelte';
 
   // nested: inside an open card (no outer card frames).
   let { blocks, onAction = null, busy = false, nested = false } = $props();
@@ -113,6 +114,13 @@
       <FormBlock {block} onSubmit={(a, args) => onAction?.(a, args)} {busy} flat={nested} />
     {:else if block.type === 'embed'}
       <EmbedBlock {block} />
+    {:else if block.type === 'group'}
+      <!-- Blocks that belong together on one tile; inside an opened card a framed box. -->
+      <section class="card group" class:inset={nested}>
+        {#if block.title}<h2>{block.title}</h2>{/if}
+        {#if block.text}<p class="muted small group-text">{block.text}</p>{/if}
+        <Blocks blocks={block.blocks} {onAction} {busy} nested />
+      </section>
     {/if}
   {/each}
 </div>
@@ -278,6 +286,15 @@
     border: 0;
     box-shadow: none;
     background: transparent;
+  }
+
+  .group-text {
+    margin: -6px 0 4px;
+  }
+
+  .group.inset {
+    padding: 16px;
+    box-shadow: none;
   }
 
   .meters-text {

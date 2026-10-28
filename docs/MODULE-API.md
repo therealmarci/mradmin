@@ -195,7 +195,8 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   Knopf direkt darauf; ein Klick öffnet die Karte mit allen Knöpfen und `details` - weitere Bausteine), `Meters` (Balken
   mit Markierung, z.B. Wert gegen Warn- und Sperrgrenze), `People` (Spieler mit Kopf, Zeile und Knöpfen), `Form`
   (Textfelder und Auswahllisten, abgeschickt als eine Aktion mit jedem Feld als Argument) und `Embed` (eine andere
-  Seite im Rahmen, z.B. die Live-Karte; nur http(s), Link zum Öffnen darunter). Nur senden, wenn
+  Seite im Rahmen, z.B. die Live-Karte; nur http(s), Link zum Öffnen darunter), ab `api-1.4.1` auch `Group` (mehrere
+  Bausteine auf einer Kachel, z.B. Einladen über der Liste; in einer geöffneten Karte ein umrandeter Kasten). Nur senden, wenn
   `MRadminService.apiVersion() >= 5` - ein älteres MRadmin kann sie nicht zeichnen (ab API 5 lässt MRadmin unbekannte
   Bausteine einfach weg, statt die Seite abzubrechen). Der Kopf einer Bereichsseite
   zeigt dieselbe `summary` wie die Kachel auf der Startseite.
@@ -218,7 +219,7 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
   `reportCategories()`, `loadedChunks()`, `isNpc()`), Version 4 = `api-1.3.0` (Spielerseite: `selfAreas`, `selfAction`,
   `selfPermissions`, `rankings`, `SelfArea`, `SelfBlock`, `SelfViewer`, `SelfRanking`), Version 5 = `api-1.4.0`
-  (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`).
+  (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`; `Group` ab `api-1.4.1`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -9,7 +9,8 @@ import java.util.Map;
 
 /**
  * Turns the building blocks of the modules ({@link SelfBlock}) into plain JSON for the player area - each with a
- * "type" the web interface draws (stats, text, table, buttons, ranking, map, meters, cards, people, form, embed).
+ * "type" the web interface draws (stats, text, table, buttons, ranking, map, meters, cards, people, form, embed,
+ * group).
  * Colours of map areas are checked (only "#RRGGBB"), links and frames only http(s), everything else is shown as text,
  * never as HTML.
  */
@@ -156,6 +157,12 @@ final class SelfJson {
                     fields.add(field);
                 }
                 m.put("fields", fields);
+            }
+            case SelfBlock.Group x -> {
+                m.put("type", "group");
+                m.put("title", text(x.title()));
+                m.put("text", text(x.text()));
+                m.put("blocks", blocks(x.blocks()));
             }
             case SelfBlock.Embed x -> {
                 String url = link(x.url());

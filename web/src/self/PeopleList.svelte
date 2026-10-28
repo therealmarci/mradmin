@@ -121,7 +121,7 @@
     flex-shrink: 0;
   }
 
-  /* Inside an opened card: no frame of its own, a line above instead. */
+  /* Inside an opened card or a group: no frame of its own, a line above instead, a smaller heading. */
   .flat {
     padding: 16px 0 0;
     border: 0;
@@ -129,5 +129,9 @@
     border-radius: 0;
     box-shadow: none;
     background: transparent;
+  }
+
+  .flat h2 {
+    font-size: 0.95rem;
   }
 </style>
