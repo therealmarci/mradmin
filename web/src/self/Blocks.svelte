@@ -108,9 +108,9 @@
     {:else if block.type === 'cards'}
       <CardGrid {block} onButton={click} {onAction} {busy} />
     {:else if block.type === 'people'}
-      <PeopleList {block} onButton={click} {busy} />
+      <PeopleList {block} onButton={click} {busy} flat={nested} />
     {:else if block.type === 'form'}
-      <FormBlock {block} onSubmit={(a, args) => onAction?.(a, args)} {busy} />
+      <FormBlock {block} onSubmit={(a, args) => onAction?.(a, args)} {busy} flat={nested} />
     {:else if block.type === 'embed'}
       <EmbedBlock {block} />
     {/if}

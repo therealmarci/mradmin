@@ -2,10 +2,10 @@
   // Players of a plugin (SelfBlock.People), e.g. invited players: head, name, a line about them and their buttons.
   import { head } from '../lib/format.js';
 
-  let { block, onButton, busy = false } = $props();
+  let { block, onButton, busy = false, flat = false } = $props();
 </script>
 
-<section class="card people-block">
+<section class="card people-block" class:flat>
   {#if block.title}<h2>{block.title}</h2>{/if}
   {#if block.text}<p class="muted small intro">{block.text}</p>{/if}
   {#if block.people.length === 0}
@@ -119,5 +119,15 @@
     display: flex;
     gap: 6px;
     flex-shrink: 0;
+  }
+
+  /* Inside an opened card: no frame of its own, a line above instead. */
+  .flat {
+    padding: 16px 0 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
 </style>

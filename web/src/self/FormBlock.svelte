@@ -3,7 +3,7 @@
   // every field as an argument. Text fields are emptied after it went through.
   import { untrack } from 'svelte';
 
-  let { block, onSubmit, busy = false } = $props();
+  let { block, onSubmit, busy = false, flat = false } = $props();
 
   let values = $state({});
 
@@ -31,7 +31,7 @@
   const filled = $derived(block.fields.every((f) => f.type !== 'text' || (values[f.key] ?? '').trim()));
 </script>
 
-<form class="card form-block" onsubmit={submit}>
+<form class="card form-block" class:flat onsubmit={submit}>
   {#if block.title}<h2>{block.title}</h2>{/if}
   {#if block.text}<p class="muted small intro">{block.text}</p>{/if}
   <div class="fields">
@@ -88,5 +88,15 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 10px 12px;
+  }
+
+  /* Inside an opened card: no frame of its own, a line above instead. */
+  .flat {
+    padding: 16px 0 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
 </style>
