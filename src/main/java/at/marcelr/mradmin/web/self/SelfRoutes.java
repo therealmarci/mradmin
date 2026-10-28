@@ -39,6 +39,7 @@ public final class SelfRoutes {
     private final MRAdmin plugin;
     /** player -> [banned 1/0, checked until] */
     private final Map<UUID, long[]> banCache = new ConcurrentHashMap<>();
+    private SelfTickets tickets;
 
     private SelfRoutes(WebServer server) {
         this.server = server;
@@ -54,6 +55,8 @@ public final class SelfRoutes {
         server.self("POST", "/api/self/devices/{id}/revoke", r::revoke);
         server.self("GET", "/api/self/areas/{module}/{area}", r::area);
         server.self("POST", "/api/self/areas/{module}/{area}/action", r::action);
+        r.tickets = new SelfTickets(server, r);
+        r.tickets.register();
     }
 
     private PlayerSessions sessions() {
@@ -149,6 +152,8 @@ public final class SelfRoutes {
             }
         }
         result.put("areas", areas);
+        // Own tickets (MRadmin itself, see SelfTickets) - like /report in game.
+        result.put("tickets", tickets.available(s.player()));
         http.json(200, result);
     }
 

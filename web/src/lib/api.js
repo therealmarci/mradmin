@@ -8,6 +8,8 @@ export class ApiError extends Error {
     this.key = key;
     // A reason a plugin already wrote in the page's language (player area), shown as it is.
     this.text = text;
+    // A number that belongs to the error (e.g. a wait in ms or a maximum length).
+    this.value = undefined;
   }
 }
 
@@ -33,7 +35,9 @@ export async function api(method, path, body) {
     if (res.status === 401) {
       signedOut();
     }
-    throw new ApiError(res.status, data?.error ?? 'server', data?.message);
+    const error = new ApiError(res.status, data?.error ?? 'server', data?.message);
+    error.value = data?.value;
+    throw error;
   }
   return data;
 }

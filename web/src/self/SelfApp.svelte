@@ -10,6 +10,8 @@
   import SelfHome from './SelfHome.svelte';
   import SelfDevices from './SelfDevices.svelte';
   import SelfArea from './SelfArea.svelte';
+  import SelfTickets from './SelfTickets.svelte';
+  import SelfTicket from './SelfTicket.svelte';
 
   // null = not signed in, undefined = still asking, otherwise {uuid, name, areas}
   let player = $state(undefined);
@@ -39,12 +41,15 @@
     }
   }
 
+  const ticketId = $derived(route.path.match(/^\/me\/tickets\/(\d+)$/)?.[1] ?? null);
+
   // /me/<plugin>/<area>, e.g. /me/mrchunks/loaders
   const areaMatch = $derived(route.path.match(/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/));
 
   const nav = $derived([
     { path: '/me', label: t('self.nav.home') },
     ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title })),
+    ...(player?.tickets ? [{ path: '/me/tickets', label: t('self.nav.tickets') }] : []),
     { path: '/me/devices', label: t('self.nav.devices') },
   ]);
 </script>
@@ -72,7 +77,7 @@
     </div>
     <nav>
       {#each nav as item}
-        <button class="link" class:active={route.path === item.path} onclick={() => go(item.path)}>{item.label}</button>
+        <button class="link" class:active={route.path === item.path || (item.path !== '/me' && route.path.startsWith(item.path + '/'))} onclick={() => go(item.path)}>{item.label}</button>
       {/each}
     </nav>
     <div class="right">
@@ -83,6 +88,10 @@
   <main>
     {#if route.path === '/me/devices'}
       <SelfDevices />
+    {:else if route.path === '/me/tickets' && player.tickets}
+      <SelfTickets />
+    {:else if ticketId && player.tickets}
+      {#key ticketId}<SelfTicket id={ticketId} />{/key}
     {:else if areaMatch}
       {#key route.path}<SelfArea module={areaMatch[1]} id={areaMatch[2]} onChanged={load} />{/key}
     {:else}
