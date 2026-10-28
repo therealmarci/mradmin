@@ -5,14 +5,19 @@
   import { t, errorText } from '../lib/i18n.js';
   import { go } from '../lib/router.svelte.js';
   import ItemIcon from '../components/ItemIcon.svelte';
+  import KitTransfer from '../components/KitTransfer.svelte';
 
   let kits = $state(null);
+  let arenas = $state([]);
+  let transfer = $state(null); // 'export' | 'import'
   let error = $state('');
   let busy = $state(false);
 
   async function load() {
     try {
-      kits = (await moduleData('mrpvp', 'kits')).kits;
+      const data = await moduleData('mrpvp', 'kits');
+      kits = data.kits;
+      arenas = data.arenas;
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -61,7 +66,11 @@
       <h1>{t('pvp.kits.title')}</h1>
       <p class="muted small">{t('pvp.kits.subtitle')}</p>
     </div>
-    <button onclick={() => go('/pvp/new-kit')}>{t('pvp.kits.new')}</button>
+    <div class="top-buttons">
+      <button class="secondary" onclick={() => (transfer = 'import')}>{t('pvp.kits.import.button')}</button>
+      <button class="secondary" onclick={() => (transfer = 'export')} disabled={!kits?.length}>{t('pvp.kits.export.button')}</button>
+      <button onclick={() => go('/pvp/new-kit')}>{t('pvp.kits.new')}</button>
+    </div>
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
@@ -104,6 +113,10 @@
   {/if}
 </div>
 
+{#if transfer && kits}
+  <KitTransfer mode={transfer} {kits} {arenas} onclose={() => (transfer = null)} ondone={load} />
+{/if}
+
 <style>
   .back {
     justify-self: start;
@@ -118,6 +131,12 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .top-buttons {
+    display: flex;
+    gap: 8px;
     flex-wrap: wrap;
   }
 

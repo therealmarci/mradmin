@@ -130,6 +130,11 @@ Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.st
   Cooldowns für Items des Kits (Sekunden), nur bestimmte Arenen. Eine neue Arena erscheint beim nächsten
   Öffnen; Kits ohne Arena-Auswahl nutzen sie sofort. Gelöschte Arenen, auf die ein Kit noch festgelegt ist, stehen rot
   da und müssen abgehakt werden. Gespeichert wird erst mit „Speichern“, neue Runden bekommen das Kit sofort.
+- **Exportieren / Importieren** (Kit-Liste): Kits auswählen und als `.json` herunterladen - z.B. für einen anderen
+  Server. Beim Import zeigt der Dialog pro Kit, was passiert: neu, oder schon vorhanden (unter neuer ID anlegen oder
+  ersetzen), Arenen, die es hier nicht gibt (einer eigenen zuordnen oder weglassen), und mit welcher Minecraft-Version
+  die Datei erstellt wurde. Gespeichert wird jedes Kit wie im Kit-Editor (gleiche Prüfungen). Dieselbe Datei geht
+  auch im Spiel (MRpvp-Kit-Liste, Ordner `plugins/MRpvp/imports/`).
 
 - Laufende Duelle live: Herzen beider Spieler, Zeit, Kit, Arena. Steuern: pausieren und fortsetzen (`.pause`),
   einen Sieger bestimmen oder abbrechen (`.stop`). Pro Runde eine Seite mit Mini-Karte (der
