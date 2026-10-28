@@ -1,5 +1,6 @@
 <script>
-  // Cards of a plugin (SelfBlock.Cards), e.g. the chunk loaders: side by side, each with status, key figures, bars and
+  // Cards of a plugin (SelfBlock.Cards), e.g. the chunk loaders: side by side on one background tile, each with status
+  // (its colour: good green, warn yellow, bad red, none grey - also the bar of an open card), key figures, bars and
   // one button right on it. A click opens the card: all its buttons and details. An open card stays open while the
   // page reloads (found again by its id) and closes when it is gone (e.g. deleted).
   import Blocks from './Blocks.svelte';
@@ -23,7 +24,7 @@
 
 <svelte:window onkeydown={open ? key : null} />
 
-<section class="cards-block">
+<section class="card cards-block">
   {#if block.title}<h2>{block.title}</h2>{/if}
   {#if block.cards.length === 0}
     <p class="muted empty">{block.empty}</p>
@@ -97,6 +98,10 @@
     font-size: 1.05rem;
   }
 
+  .cards-block h2 {
+    margin-bottom: 14px;
+  }
+
   .empty {
     margin: 0;
   }
@@ -108,7 +113,6 @@
   }
 
   .card-item {
-    --tone: var(--tint, var(--accent));
     position: relative;
     display: flex;
     flex-direction: column;
@@ -118,8 +122,8 @@
     border: 1px solid var(--border);
     background:
       linear-gradient(160deg, color-mix(in srgb, var(--tone) 9%, transparent), transparent 45%),
-      var(--surface);
-    box-shadow: var(--shadow);
+      var(--surface-2);
+    box-shadow: none;
     cursor: pointer;
     transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
     min-width: 0;
@@ -163,7 +167,7 @@
   }
 
   .tone-none {
-    --tone: color-mix(in srgb, var(--muted) 60%, transparent);
+    --tone: var(--muted);
   }
 
   .top,
@@ -231,7 +235,7 @@
     font-size: 0.82rem;
     padding: 4px 9px;
     border-radius: 8px;
-    background: var(--surface-2);
+    background: var(--surface);
     border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   }
 
@@ -262,7 +266,6 @@
   }
 
   .panel {
-    --tone: var(--tint, var(--accent));
     width: min(100%, 760px);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
