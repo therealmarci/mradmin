@@ -145,9 +145,10 @@ public final class NewsDelivery implements Listener {
         if (discord == null) {
             return;
         }
-        String url = plugin.settings().kuma().url();
+        // The link leads to the player page (warnings on top of "News"), not to Kuma itself.
+        String link = pageLink();
         discord.syncKuma(pinned.stream().map(i -> new DiscordAnnouncer.KumaIncident(i.id(), i.key(), i.level(),
-                i.title(), i.content(), url + "/status/" + i.slug())).toList());
+                i.title(), i.content(), link)).toList());
     }
 
     // --------------------------------------------------------------------- join

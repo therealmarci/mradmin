@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 14
+lang-version: 15
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -725,7 +725,7 @@ discord-announce:
   kuma-info: "ℹ️ {title}"
   kuma-resolved-title: "✅ Resolved: {title}"
   kuma-resolved: "This incident is over."
-  kuma-status-link: "To the status page"
+  kuma-status-link: "More about it"
 
 # --- Discord -----------------------------------------------------------------
 discord-status-active: "<prefix><green>Discord webhook active <gray>(<white><events></white>/<white><total></white> events enabled)"

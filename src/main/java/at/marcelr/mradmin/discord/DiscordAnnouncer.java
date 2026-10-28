@@ -319,7 +319,7 @@ public final class DiscordAnnouncer {
                 case "warning" -> c.colorScheduled();
                 default -> c.colorNews();
             };
-            String text = escape(i.content()) + "\n\n[" + text("kuma-status-link") + "](" + i.link() + ")";
+            String text = escape(i.content()) + kumaLink(i.link());
             JsonObject payload = payload(c, known == null && "critical".equals(i.level()) && c.pingKuma(),
                     embed(text("kuma-" + i.level()).replace("{title}", i.title()), text, color));
             if (known == null) {
@@ -340,7 +340,7 @@ public final class DiscordAnnouncer {
                 continue;
             }
             KumaPost gone = e.getValue();
-            String text = text("kuma-resolved") + "\n\n[" + text("kuma-status-link") + "](" + gone.link + ")";
+            String text = text("kuma-resolved") + kumaLink(gone.link);
             webhook.edit(c.url(), gone.post, payload(c, false,
                     embed(text("kuma-resolved-title").replace("{title}", gone.title), text, c.colorEnded())));
             it.remove();
@@ -350,6 +350,11 @@ public final class DiscordAnnouncer {
             save();
         }
     }
+    /** "[More about it](link)" to the player page, nothing without web.public-url. */
+    private String kumaLink(String link) {
+        return link == null || link.isEmpty() ? "" : "\n\n[" + text("kuma-status-link") + "](" + link + ")";
+    }
+
     /** A text of discord-announce in the server language (for building posts elsewhere). */
     public String label(String key) {
         return text(key);

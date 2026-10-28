@@ -207,7 +207,8 @@ passiert, hängt vom Stil in Kuma ab:
 
 Was beim Serverstart schon angeheftet ist, wird nicht noch einmal an alle angekündigt. Geändert und beendet werden die
 Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce.kuma`) wird jeder Vorfall einmal gepostet
-(rot pingt die Rolle), bei Änderungen in Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
+(rot pingt die Rolle), mit Link „Mehr dazu“ zur Seite Neuigkeiten der Spielerseite (nicht zu Kuma), bei Änderungen in
+Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
 
 **Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
 und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon

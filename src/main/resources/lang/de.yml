@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 14
+lang-version: 15
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -725,7 +725,7 @@ discord-announce:
   kuma-info: "ℹ️ {title}"
   kuma-resolved-title: "✅ Behoben: {title}"
   kuma-resolved: "Dieser Vorfall ist erledigt."
-  kuma-status-link: "Zur Statusseite"
+  kuma-status-link: "Mehr dazu"
 
 # --- Discord -----------------------------------------------------------------
 discord-status-active: "<prefix><green>Discord-Webhook aktiv <gray>(<white><events></white>/<white><total></white> Events eingeschaltet)"
