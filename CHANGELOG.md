@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [0.8.0] - 2026-10-28
+
 > [!WARNING]
 > **Neue Permission-Gruppen:** Die Pakete `mradmin.support`, `mradmin.staff` und `mradmin.admin` gibt es nicht mehr. Stattdessen gibt es in allen MRtechnology-Plugins dieselben Gruppen `<plugin>.player` und `<plugin>.groups.support|staff|admin`. Bitte die LuckPerms-Gruppen umstellen, z.B. `/lp group staff permission unset mradmin.staff` und `/lp group staff permission set mradmin.groups.staff true`. Außerdem ist `/report` nicht mehr automatisch für alle Spieler da: `/lp group default permission set mradmin.player true`.
 
