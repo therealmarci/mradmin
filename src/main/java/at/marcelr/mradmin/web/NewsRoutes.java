@@ -57,7 +57,7 @@ public final class NewsRoutes {
         }
         List<Map<String, Object>> incidents = new ArrayList<>();
         for (KumaIncidents.Incident i : plugin.newsDelivery().incidents().current()) {
-            incidents.add(Map.of("slug", i.slug(), "title", i.title(), "content", i.content(), "style", i.style(),
+            incidents.add(Map.of("key", i.key(), "slug", i.slug(), "title", i.title(), "content", i.content(), "style", i.style(),
                     "created", i.created()));
         }
         Map<String, Object> result = new LinkedHashMap<>();

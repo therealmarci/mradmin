@@ -162,7 +162,8 @@ uptime-kuma:
 
   # Warnings ("incidents") pinned on Uptime Kuma status pages - e.g. during an outage - are shown on the player page
   # and in game like the warnings written in MRadmin. Slugs of the status pages, e.g. "main" for
-  # https://status.yourserver.com/status/main (read from the public page, no login needed). Empty = none.
+  # https://status.yourserver.com/status/main - read from the public page, so only "url" is needed (no login, also
+  # without "enabled"). Empty = none.
   status-pages: []
   incidents: true
 

@@ -23,7 +23,8 @@ import java.util.function.Consumer;
 
 /**
  * Incidents ("warnings") pinned on Uptime Kuma status pages - e.g. during an outage. Read from the public status page
- * address ({@code <url>/api/status-page/<slug>}, no login needed) every {@code uptime-kuma.refresh-seconds} in the
+ * address ({@code <url>/api/status-page/<slug>}, no login needed - uptime-kuma.url is enough) every
+ * {@code uptime-kuma.refresh-seconds} in the
  * background, for the slugs in {@code uptime-kuma.status-pages}. They are shown like the warnings written in MRadmin
  * (player page, in game); a new or changed one is announced once ({@code onNew}, main thread).
  */
@@ -58,7 +59,8 @@ public final class KumaIncidents {
         stop();
         Settings.KumaSettings s = plugin.settings().kuma();
         current = List.of();
-        if (!s.enabled() || !s.incidents() || s.url().isEmpty() || s.statusPages().isEmpty()) {
+        // Only the public status page is read - no login, so uptime-kuma.enabled is not needed for this.
+        if (!s.incidents() || s.url().isEmpty() || s.statusPages().isEmpty()) {
             return;
         }
         long ticks = s.refreshSeconds() * 20L;
@@ -89,9 +91,23 @@ public final class KumaIncidents {
                     plugin.getLogger().fine("Uptime Kuma status page '" + slug + "': HTTP " + response.statusCode());
                     continue;
                 }
-                JsonElement incident = JsonParser.parseString(response.body()).getAsJsonObject().get("incident");
-                if (incident != null && incident.isJsonObject()) {
-                    found.add(parse(slug, incident.getAsJsonObject()));
+                JsonObject page = JsonParser.parseString(response.body()).getAsJsonObject();
+                // Newer Kuma: "incidents" (a list), older: "incident" (one or null). Only pinned, active ones.
+                List<JsonElement> list = new ArrayList<>();
+                if (page.get("incidents") instanceof com.google.gson.JsonArray array) {
+                    array.forEach(list::add);
+                }
+                if (page.get("incident") != null && page.get("incident").isJsonObject()) {
+                    list.add(page.get("incident"));
+                }
+                for (JsonElement e : list) {
+                    if (!e.isJsonObject()) {
+                        continue;
+                    }
+                    JsonObject o = e.getAsJsonObject();
+                    if (flag(o, "pin", true) && flag(o, "active", true)) {
+                        found.add(parse(slug, o));
+                    }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -118,6 +134,16 @@ public final class KumaIncidents {
         String created = string(o, "createdDate");
         return new Incident(slug + ":" + id + ":" + (updated.isEmpty() ? created : updated), slug, string(o, "title"),
                 string(o, "content"), string(o, "style"), time(created));
+    }
+
+    /** A true/false of Kuma (also 1/0), {@code missing} if it is not there. */
+    private static boolean flag(JsonObject o, String key, boolean missing) {
+        JsonElement e = o.get(key);
+        if (e == null || e.isJsonNull()) {
+            return missing;
+        }
+        String v = e.getAsString();
+        return v.equals("true") || v.equals("1");
     }
 
     private static String string(JsonObject o, String key) {

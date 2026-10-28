@@ -71,7 +71,7 @@ public final class SelfNews {
         for (KumaIncidents.Incident i : plugin.newsDelivery().incidents().current()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("type", "incident");
-            m.put("id", "kuma-" + i.slug());
+            m.put("id", "kuma-" + i.key());
             m.put("title", i.title());
             m.put("text", i.content());
             m.put("critical", i.critical());

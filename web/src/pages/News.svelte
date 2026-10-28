@@ -134,7 +134,7 @@
     <section class="card kuma">
       <h2>⚠ {t('news.kumaTitle')}</h2>
       <p class="muted small">{t('news.kumaHint')}</p>
-      {#each data.incidents as i (i.slug)}
+      {#each data.incidents as i (i.key)}
         <div class="incident" class:critical={i.style === 'danger'}>
           <strong>{i.title}</strong>
           <span class="muted tiny">{i.slug} · {dateTime(i.created)}</span>
