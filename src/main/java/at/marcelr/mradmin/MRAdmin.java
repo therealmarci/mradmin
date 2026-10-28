@@ -109,6 +109,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
+        at.marcelr.mradmin.web.NewsRoutes.register(web);
         at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);

@@ -32,8 +32,9 @@ public final class ConfigUpdater {
  * 23: tickets.chunkloader-locks became tickets.plugin-reports (automatic tickets of all plugins).
  * 24: player-web (the players' own page, /web).
  * 25: player-web.rankings (statistics page).
+ * 26: player-web.news (slideshow with news and changelogs of the team).
      */
-    public static final int CURRENT_VERSION = 25;
+    public static final int CURRENT_VERSION = 26;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

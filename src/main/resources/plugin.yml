@@ -89,12 +89,13 @@ permissions:
       libertybans.warn.do.target.uuid: true
       libertybans.warn.undo.target.uuid: true
   mradmin.groups.admin:
-    description: "Group admin: everything of MRadmin - maintenance, announcements, web accounts, updates, restart, running commands in the web console; with LibertyBans ban and unban."
+    description: "Group admin: everything of MRadmin - maintenance, announcements, news for the player page, web accounts, updates, restart, running commands in the web console; with LibertyBans ban and unban."
     default: op
     children:
       mradmin.groups.staff: true
       mradmin.maintenance.manage: true
       mradmin.announce: true
+      mradmin.news: true
       mradmin.mode.others: true
       mradmin.web.audit: true
       mradmin.web.manage: true
@@ -166,6 +167,9 @@ permissions:
     default: op
 
   # ---------------------------------------------- Announcements, mode, chat
+  mradmin.news:
+    description: "Web interface: write news and changelogs for the players' own page (/web)."
+    default: op
   mradmin.announce:
     description: /mradmin announce - announcements on the screen of all players.
     default: op

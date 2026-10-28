@@ -1,10 +1,12 @@
 <script>
-  // Start page of the player area: greeting and one tile per area the installed plugins offer (chunk loaders,
-  // duels ...) with its key figures; a click opens the area.
+  // Start page of the player area: greeting, the slideshow (news, changelogs, maintenance) and one tile per area the
+  // installed plugins offer (chunk loaders, duels ...) with its key figures; a click opens the area. The bookmark tip
+  // is only a quiet line at the end.
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import Blocks from './Blocks.svelte';
+  import SelfHero from './SelfHero.svelte';
 
   let { player } = $props();
 </script>
@@ -17,6 +19,8 @@
       <p class="muted">{t('self.helloSub')}</p>
     </div>
   </section>
+
+  {#if player.news}<SelfHero />{/if}
 
   {#if player.areas.length === 0}
     <p class="muted">{t('self.noAreas')}</p>
@@ -32,10 +36,7 @@
     </div>
   {/if}
 
-  <section class="card tip">
-    <strong>{t('self.bookmarkTitle')}</strong>
-    <p class="muted small">{t('self.bookmarkText')}</p>
-  </section>
+  <p class="tip muted small" title={t('self.bookmarkText')}>🔖 {t('self.bookmarkShort')}</p>
 </div>
 
 <style>
@@ -80,6 +81,13 @@
 
   .label {
     font-weight: 700;
+  }
+
+  .tip {
+    margin: 4px 0 0;
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.8;
   }
 
   .link {

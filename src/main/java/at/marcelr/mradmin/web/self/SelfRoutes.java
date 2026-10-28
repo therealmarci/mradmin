@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/self/devices/{id}/revoke    signs one of them out
  *  GET  /api/self/areas/{module}/{area}?lang=de          one area of a plugin (built from SelfBlocks)
  *  POST /api/self/areas/{module}/{area}/action {action, args, lang}   a button of it -> 400 {message} on refusal
+ *  (tickets: {@link SelfTickets}, rankings: {@link SelfStats}, news slideshow: {@link SelfNews})
  * </pre>
  * Every request checks again that the player still has mradmin.web.self and is not banned (LibertyBans).
  */
@@ -41,6 +42,7 @@ public final class SelfRoutes {
     private final Map<UUID, long[]> banCache = new ConcurrentHashMap<>();
     private SelfTickets tickets;
     private SelfStats stats;
+    private SelfNews news;
 
     private SelfRoutes(WebServer server) {
         this.server = server;
@@ -60,6 +62,8 @@ public final class SelfRoutes {
         r.tickets.register();
         r.stats = new SelfStats(server, r);
         r.stats.register();
+        r.news = new SelfNews(server, r);
+        r.news.register();
     }
 
     private PlayerSessions sessions() {
@@ -158,6 +162,7 @@ public final class SelfRoutes {
         // Own tickets (MRadmin itself, see SelfTickets) - like /report in game.
         result.put("tickets", tickets.available(s.player()));
         result.put("stats", stats.available());
+        result.put("news", news.available());
         http.json(200, result);
     }
 

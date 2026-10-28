@@ -30,6 +30,7 @@ public final class Perms {
 
     // announcements, admin mode, staff chat
     public static final String ANNOUNCE = "mradmin.announce";
+    public static final String NEWS = "mradmin.news";
     public static final String MODE = "mradmin.mode";
     public static final String MODE_OTHERS = "mradmin.mode.others";
     public static final String STAFFCHAT = "mradmin.staffchat";

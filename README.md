@@ -191,11 +191,14 @@ Was auf der Seite steht, hängt davon ab, was installiert ist:
 | Bereich | Was der Spieler sieht und tut | Braucht |
 |---|---|---|
 | **Tickets** | eigene Tickets ansehen, neue öffnen, antworten, schließen - wie mit `/report` | `features.tickets` und `mradmin.tickets.create` |
+| **Neuigkeiten** | oben auf der Startseite ein Karussell, das von selbst weiterblättert (am Handy wischen): geplante oder laufende Wartung, ein geplanter Neustart und die Beiträge des Teams - Neuigkeiten und Changelogs. Alle Beiträge in voller Länge auf der Seite **Neuigkeiten**. | `player-web.news.enabled` |
 | **Statistik** | Ranglisten: Spielzeit, abgebaute Blöcke, besiegte Mobs, Tode, Strecke … aus den Minecraft-Statistiken (Auswahl unter `player-web.rankings`) und von den Plugins; eigener Platz hervorgehoben. Wer nicht in Ranglisten stehen will, trägt sich dort aus. | `player-web.rankings.enabled` |
 | **Chunkloader** | eigene Loader mit Budget, Status und Karte; ein-/ausschalten, umbenennen, Dummy, löschen, einladen (Größe nur im Spiel) | MRchunks |
 | **Duelle** | eigene Duell-Statistik und letzte Runden, Duell-Ranglisten auf der Statistik-Seite | MRpvp |
 
 Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler (LibertyBans) kommen nicht hinein. Jedes Plugin prüft bei jeder Aktion dieselben Permissions und Regeln wie im Spiel.
+
+**Neuigkeiten und Changelogs schreiben (Team):** In der Weboberfläche unter **Neuigkeiten** (Permission `mradmin.news`, in `mradmin.groups.admin`). Pro Beitrag Art (Neuigkeit oder Changelog), Titel und Text auf Deutsch und Englisch - eine leer gelassene Sprache zeigt die andere. Beiträge lassen sich anheften (stehen immer vorne) und mit einem Datum „Sichtbar bis“ versehen. Wie lange eine Folie stehen bleibt und wie viele Beiträge ins Karussell kommen, steht unter `player-web.news` (`seconds` 8, `slides` 5; `show-maintenance` und `show-restart` blenden Wartung und Neustart ein).
 
 ### Versionen & Updates
 In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
@@ -288,7 +291,7 @@ Standard ist `op`, außer anders angegeben.
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
 | Tickets | `mradmin.tickets.create` (`/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
-| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
+| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.news` (Neuigkeiten im Web) · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
@@ -313,7 +316,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
-| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten |
+| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten, Karussell mit Neuigkeiten (`news`) |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 

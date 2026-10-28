@@ -72,6 +72,7 @@ public final class WebServer {
         this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
         this.requests = new PublicRequests(plugin, this);
         this.playerSessions = new at.marcelr.mradmin.web.self.PlayerSessions(plugin);
+        this.news = new at.marcelr.mradmin.news.News(plugin);
     }
 
     private final PublicRequests requests;
@@ -155,6 +156,12 @@ public final class WebServer {
     }
 
     private final at.marcelr.mradmin.web.self.PlayerSessions playerSessions;
+    private final at.marcelr.mradmin.news.News news;
+
+    /** News and changelogs of the team for the players' own page. */
+    public at.marcelr.mradmin.news.News news() {
+        return news;
+    }
 
     public at.marcelr.mradmin.web.self.PlayerSessions playerSessions() {
         return playerSessions;

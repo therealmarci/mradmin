@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 25
+config-version: 26
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -701,6 +701,16 @@ player-web:
     # The game's statistics, in this order: play-time, blocks-mined, mob-kills, player-kills, deaths, distance,
     # fish-caught, jumps, items-crafted. Empty list [] = none (only the plugins' rankings).
     statistics: [play-time, blocks-mined, mob-kills, player-kills, deaths, distance]
+  # Slideshow at the top of the start page: planned maintenance, a planned restart and the posts of the team - news
+  # and changelogs, written in the web interface under "News" (permission mradmin.news), in German and English.
+  news:
+    enabled: true
+    # Seconds per slide before the next one comes (0 = only by hand).
+    seconds: 8
+    # How many of the newest posts are in the slideshow (all of them are on the page "News").
+    slides: 5
+    show-maintenance: true
+    show-restart: true
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

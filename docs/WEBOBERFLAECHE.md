@@ -176,6 +176,16 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 
+## Neuigkeiten (`mradmin.news`)
+Beiträge für die Spielerseite (`/web`): **Neuigkeit** (Ankündigungen, Events) oder **Changelog** (was sich geändert hat).
+Titel und Text getrennt auf Deutsch und Englisch - jeder Spieler sieht seine Sprache, fehlt sie, die andere.
+Zeilenumbrüche bleiben erhalten (z.B. eine Liste mit „- “). **Anheften** stellt einen Beitrag immer nach vorne, **Sichtbar
+bis** blendet ihn nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten und Löschen landen im
+Web-Protokoll.
+
+Auf der Spielerseite erscheinen die neuesten Beiträge (`player-web.news.slides`) im Karussell der Startseite, dazu eine
+geplante oder laufende Wartung und ein geplanter Neustart. Gespeichert wird im Speicher von MRadmin unter `news`.
+
 ## Versionen (`mradmin.versions.view`)
 - Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
   (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
