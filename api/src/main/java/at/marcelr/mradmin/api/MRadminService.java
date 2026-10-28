@@ -25,9 +25,10 @@ public interface MRadminService {
 
     /**
      * Version of this API (2: {@link #items()}; 3: {@link AdminModule#isNpc}, {@link AdminModule#loadedChunks},
-     * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}).
+     * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}; 4: the player area -
+     * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions}).
      */
-    int API_VERSION = 3;
+    int API_VERSION = 4;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

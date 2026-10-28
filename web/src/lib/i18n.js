@@ -45,6 +45,11 @@ const texts = {
     'self.revoke': 'Abmelden',
     'self.browser': 'Browser',
     'self.deviceOn': '{browser} auf {os}',
+    'self.open': 'Öffnen',
+    'self.done': 'Erledigt.',
+    'self.world': 'Welt',
+    'self.mapEmpty': 'Nichts auf der Karte.',
+    'self.mapHint': 'Ohne Gelände - jedes Kästchen ist ein Chunk. Ein Klick auf einen Bereich öffnet ihn auf der großen Karte, falls es eine gibt.',
     'error.code-invalid': 'Der Link ist abgelaufen oder wurde schon benutzt. Gib im Spiel /web ein, um einen neuen zu bekommen.',
     'error.no-self-permission': 'Du darfst die Spielerseite nicht nutzen.',
     'error.player-banned': 'Du bist gesperrt und kannst die Spielerseite gerade nicht nutzen.',
@@ -1337,6 +1342,11 @@ const texts = {
     'self.revoke': 'Sign out',
     'self.browser': 'Browser',
     'self.deviceOn': '{browser} on {os}',
+    'self.open': 'Open',
+    'self.done': 'Done.',
+    'self.world': 'World',
+    'self.mapEmpty': 'Nothing on the map.',
+    'self.mapHint': 'Without terrain - every square is a chunk. A click on an area opens it on the big map, if there is one.',
     'error.code-invalid': 'The link has run out or was used already. Type /web in game to get a new one.',
     'error.no-self-permission': 'You may not use the player page.',
     'error.player-banned': 'You are banned and cannot use the player page right now.',
@@ -2616,5 +2626,5 @@ export function t(key, values = {}) {
 
 /** The text for an API error key. */
 export function errorText(error) {
-  return t('error.' + (error?.key ?? 'server'));
+  return error?.text ?? t('error.' + (error?.key ?? 'server'));
 }

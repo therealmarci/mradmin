@@ -2,6 +2,10 @@ package at.marcelr.mradmin.web.self;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Perms;
+import at.marcelr.mradmin.api.AdminModule;
+import at.marcelr.mradmin.api.SelfArea;
+import at.marcelr.mradmin.api.SelfViewer;
+import at.marcelr.mradmin.api.WebModule;
 import at.marcelr.mradmin.hook.Bans;
 import at.marcelr.mradmin.web.Http;
 import at.marcelr.mradmin.web.WebServer;
@@ -22,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/self/logout                 signs this browser out
  *  GET  /api/self/devices                the player's signed-in browsers
  *  POST /api/self/devices/{id}/revoke    signs one of them out
+ *  GET  /api/self/areas/{module}/{area}?lang=de          one area of a plugin (built from SelfBlocks)
+ *  POST /api/self/areas/{module}/{area}/action {action, args, lang}   a button of it -> 400 {message} on refusal
  * </pre>
  * Every request checks again that the player still has mradmin.web.self and is not banned (LibertyBans).
  */
@@ -46,6 +52,8 @@ public final class SelfRoutes {
         server.self("POST", "/api/self/logout", r::logout);
         server.self("GET", "/api/self/devices", r::devices);
         server.self("POST", "/api/self/devices/{id}/revoke", r::revoke);
+        server.self("GET", "/api/self/areas/{module}/{area}", r::area);
+        server.self("POST", "/api/self/areas/{module}/{area}/action", r::action);
     }
 
     private PlayerSessions sessions() {
@@ -123,9 +131,97 @@ public final class SelfRoutes {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("uuid", s.player().toString());
         result.put("name", s.name());
-        // The areas the installed plugins offer (chunk loaders, duels ...) follow with the module API.
-        result.put("areas", List.of());
+        // The areas the installed plugins offer (chunk loaders, duels ...): title, icon and the start page tile.
+        List<Map<String, Object>> areas = new ArrayList<>();
+        for (var entry : plugin.modules().webModules().entrySet()) {
+            SelfViewer viewer = viewer(http, entry.getKey());
+            AdminModule module = plugin.modules().module(entry.getKey());
+            List<SelfArea> list = server.sync(() -> plugin.modules().call(module,
+                    () -> entry.getValue().selfAreas(viewer), List.<SelfArea>of()));
+            for (SelfArea area : list) {
+                Map<String, Object> a = new LinkedHashMap<>();
+                a.put("module", entry.getKey());
+                a.put("id", area.id());
+                a.put("title", area.title());
+                a.put("icon", area.icon());
+                a.put("summary", SelfJson.blocks(area.summary()));
+                areas.add(a);
+            }
+        }
+        result.put("areas", areas);
         http.json(200, result);
+    }
+
+    /** One area of a module with all its blocks. */
+    private void area(Http http) throws Exception {
+        check(http);
+        WebModule web = web(http);
+        SelfViewer viewer = viewer(http, http.param("module"));
+        AdminModule module = plugin.modules().module(http.param("module"));
+        String id = http.param("area");
+        SelfArea area = server.sync(() -> plugin.modules().call(module, () -> web.selfAreas(viewer), List.<SelfArea>of()))
+                .stream().filter(a -> a.id().equals(id)).findFirst().orElse(null);
+        if (area == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        http.json(200, Map.of("module", module.id(), "id", area.id(), "title", area.title(), "icon", area.icon(),
+                "blocks", SelfJson.blocks(area.blocks())));
+    }
+
+    /** A button of an area: the module checks and does it, or answers with the reason (in the page's language). */
+    private void action(Http http) throws Exception {
+        check(http);
+        if (!server.allow("self-action:" + http.player().player(), 60)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        WebModule web = web(http);
+        SelfViewer viewer = viewer(http, http.param("module"));
+        AdminModule module = plugin.modules().module(http.param("module"));
+        String action = http.string("action");
+        Map<String, String> args = new LinkedHashMap<>();
+        if (http.body().get("args") instanceof com.google.gson.JsonObject o) {
+            o.entrySet().forEach(e -> {
+                if (e.getValue().isJsonPrimitive() && args.size() < 20) {
+                    String v = e.getValue().getAsString();
+                    args.put(e.getKey(), v.length() > 200 ? v.substring(0, 200) : v);
+                }
+            });
+        }
+        if (action == null || action.isBlank()) {
+            throw new Http.WebException(400, "unknown-action");
+        }
+        String area = http.param("area");
+        String refused = server.sync(() -> plugin.modules().attempt(module, () -> web.selfAction(viewer, area, action, args)));
+        if (refused != null) {
+            http.json(400, Map.of("error", "module", "message", refused));
+            return;
+        }
+        plugin.getLogger().info(viewer.name() + " (own page) " + module.id() + "/" + area + ": " + action + ".");
+    }
+
+    private WebModule web(Http http) throws Http.WebException {
+        WebModule web = plugin.modules().web(http.param("module"));
+        if (web == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        return web;
+    }
+
+    /** Who looks, in which language ("lang" of the query or body), with the module's permissions resolved here. */
+    private SelfViewer viewer(Http http, String moduleId) throws java.io.IOException {
+        PlayerSessions.Session s = http.player();
+        String lang = http.query().getOrDefault("lang", http.method().equals("POST") ? http.string("lang") : null);
+        AdminModule module = plugin.modules().module(moduleId);
+        WebModule web = plugin.modules().web(moduleId);
+        java.util.Set<String> granted = new java.util.HashSet<>();
+        if (module != null && web != null) {
+            for (String permission : plugin.modules().call(module, web::selfPermissions, java.util.Set.<String>of())) {
+                if (server.permissions().has(s.player(), permission)) {
+                    granted.add(permission);
+                }
+            }
+        }
+        return new SelfViewer(s.player(), s.name(), "de".equals(lang) ? "de" : "en", java.util.Set.copyOf(granted));
     }
 
     private void logout(Http http) throws Exception {

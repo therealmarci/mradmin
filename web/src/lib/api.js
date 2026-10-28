@@ -2,10 +2,12 @@
 // changes without it, so other websites cannot trigger actions with your sign-in.
 
 export class ApiError extends Error {
-  constructor(status, key) {
+  constructor(status, key, text) {
     super(key);
     this.status = status;
     this.key = key;
+    // A reason a plugin already wrote in the page's language (player area), shown as it is.
+    this.text = text;
   }
 }
 
@@ -31,7 +33,7 @@ export async function api(method, path, body) {
     if (res.status === 401) {
       signedOut();
     }
-    throw new ApiError(res.status, data?.error ?? 'server');
+    throw new ApiError(res.status, data?.error ?? 'server', data?.message);
   }
   return data;
 }

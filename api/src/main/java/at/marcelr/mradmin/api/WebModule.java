@@ -98,4 +98,33 @@ public interface WebModule {
     default Map<String, String> reportCategories() {
         return Map.of();
     }
+
+    // ------------------------------------------------- player area (since API 4)
+
+    /**
+     * Permissions the module wants to know of a player for their own page (e.g. "mrchunks.use"). MRadmin checks them
+     * beforehand - also while the player is offline - and passes the granted ones in {@link SelfViewer#permissions()}.
+     * Asked from any thread - return a fixed set.
+     */
+    default java.util.Set<String> selfPermissions() {
+        return java.util.Set.of();
+    }
+
+    /**
+     * The module's areas on the player's own page (player area, /web), built from {@link SelfBlock}s - only what
+     * belongs to {@code viewer.player()}. Empty = the module shows nothing there (e.g. no permission). Main thread.
+     */
+    default List<SelfArea> selfAreas(SelfViewer viewer) {
+        return List.of();
+    }
+
+    /**
+     * A button of the player's own page was clicked ({@link SelfBlock.Button}): {@code area} and {@code action} as
+     * given there, {@code args} its args (plus "value" from an input). Check everything again - only the player's
+     * own things, the same rules and permissions as in game. Main thread.
+     * @return null if done, otherwise the reason in the viewer's language (shown to the player)
+     */
+    default @Nullable String selfAction(SelfViewer viewer, String area, String action, Map<String, String> args) {
+        return "?";
+    }
 }

@@ -9,6 +9,7 @@
   import SelfLogin from './SelfLogin.svelte';
   import SelfHome from './SelfHome.svelte';
   import SelfDevices from './SelfDevices.svelte';
+  import SelfArea from './SelfArea.svelte';
 
   // null = not signed in, undefined = still asking, otherwise {uuid, name, areas}
   let player = $state(undefined);
@@ -16,7 +17,7 @@
 
   async function load() {
     try {
-      player = await api('GET', '/self');
+      player = await api('GET', '/self?lang=' + lang);
       error = '';
     } catch (e) {
       player = null;
@@ -38,8 +39,12 @@
     }
   }
 
+  // /me/<plugin>/<area>, e.g. /me/mrchunks/loaders
+  const areaMatch = $derived(route.path.match(/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/));
+
   const nav = $derived([
     { path: '/me', label: t('self.nav.home') },
+    ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title })),
     { path: '/me/devices', label: t('self.nav.devices') },
   ]);
 </script>
@@ -78,6 +83,8 @@
   <main>
     {#if route.path === '/me/devices'}
       <SelfDevices />
+    {:else if areaMatch}
+      {#key route.path}<SelfArea module={areaMatch[1]} id={areaMatch[2]} onChanged={load} />{/key}
     {:else}
       <SelfHome {player} />
     {/if}

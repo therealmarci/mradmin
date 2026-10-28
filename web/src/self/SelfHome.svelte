@@ -1,7 +1,10 @@
 <script>
-  // Start page of the player area: greeting and the areas the installed plugins offer (chunk loaders, duels ...).
+  // Start page of the player area: greeting and one tile per area the installed plugins offer (chunk loaders,
+  // duels ...) with its key figures; a click opens the area.
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
+  import { go } from '../lib/router.svelte.js';
+  import Blocks from './Blocks.svelte';
 
   let { player } = $props();
 </script>
@@ -17,6 +20,16 @@
 
   {#if player.areas.length === 0}
     <p class="muted">{t('self.noAreas')}</p>
+  {:else}
+    <div class="tiles">
+      {#each player.areas as a (a.module + '/' + a.id)}
+        <button class="card tile" onclick={() => go(`/me/${a.module}/${a.id}`)}>
+          <span class="label">{a.icon} {a.title}</span>
+          <Blocks blocks={a.summary} />
+          <span class="small link">{t('self.open')} →</span>
+        </button>
+      {/each}
+    </div>
   {/if}
 
   <section class="card tip">
@@ -49,5 +62,27 @@
 
   p {
     margin: 4px 0 0;
+  }
+
+  .tiles {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  }
+
+  .tile {
+    display: grid;
+    gap: 10px;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+  }
+
+  .label {
+    font-weight: 700;
+  }
+
+  .link {
+    color: var(--accent);
   }
 </style>

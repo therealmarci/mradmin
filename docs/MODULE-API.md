@@ -22,6 +22,7 @@ jedes Modul gleich. Eine neue Aktion im Web braucht deshalb **nur** eine Änderu
 | | Namen der Ticket-Kategorien seiner Reports (ab API 3) | `WebModule.reportCategories()` |
 | | geladene Chunks im Serverzustand (ab API 3) | `AdminModule.loadedChunks()` |
 | | eigene NPCs (z.B. Dummies) aus Listen und Zählungen nehmen (ab API 3) | `AdminModule.isNpc(player)` |
+| | Bereiche auf der Spielerseite (/web, ab API 4) | `WebModule.selfAreas(viewer)`, `selfAction`, `selfPermissions` |
 | Plugin ↔ Plugin | Spieler ist beschäftigt (Duell) | `AdminModule.busy` / `MRadminService.busy(player)` |
 | | Welt gehört einem Plugin (Arena) | `AdminModule.ownsWorld` / `MRadminService.worldOwner(world)` |
 | | Gegenstände außerhalb des Inventars (Gürtel) | `AdminModule.storedItems` / `MRadminService.storedItems(player)` |
@@ -165,11 +166,42 @@ kennt keine Kategorie und keine Push-Art eines Plugins fest. Automatische Ticket
 
 
 
+## Spielerseite (`/web`, ab API 4)
+Jeder Spieler hat in der Weboberfläche eine eigene Seite (`/me`, Anmeldung nur über `/web` im Spiel). Was dort steht,
+liefern die Plugins - MRadmin zeichnet es. Ein neues Plugin oder eine neue Funktion braucht dafür **keine** Änderung in
+MRadmin.
+
+```java
+public Set<String> selfPermissions() { return Set.of("mrchunks.use"); }   // fest, MRadmin prüft sie vorher (auch offline)
+
+public List<SelfArea> selfAreas(SelfViewer viewer) {                       // Server-Thread
+    if (!viewer.has("mrchunks.use")) return List.of();
+    return List.of(new SelfArea("loaders", "Chunkloader", "🧱",
+            List.of(new SelfBlock.Stats(...)),                               // Kachel auf der Startseite
+            List.of(new SelfBlock.Stats(...), new SelfBlock.Table(...), new SelfBlock.AreaMap(...))));
+}
+
+public String selfAction(SelfViewer viewer, String area, String action, Map<String, String> args) {
+    // alles neu prüfen - nur eigene Sachen, dieselben Regeln wie im Spiel
+    return null;                                                             // erledigt, sonst der Grund (in viewer.lang())
+}
+```
+
+- **Bausteine (`SelfBlock`):** `Stats` (Kennzahlen), `Text`, `Table` (Zeilen mit eigenen Knöpfen), `Buttons`, `Ranking`
+  (Rangliste, eigener Platz hervorgehoben), `AreaMap` (Bereiche in Blockkoordinaten, je Welt, ohne Gelände; Link auf eine
+  große Karte möglich). Ein `Button` kann nachfragen (`confirm`) oder vorher einen Text abfragen (`input`, kommt als
+  `args.value`).
+- **Sprache:** `viewer.lang()` ist `de` oder `en` - alle Texte darin bauen. Texte sind reiner Text, nie HTML.
+- **Sicherheit:** MRadmin prüft vor jedem Aufruf `mradmin.web.self` und LibertyBans-Sperren. Alles andere (Besitz,
+  Permissions, Limits) prüft das Plugin in `selfAction` selbst. Aktionen sind pro Spieler auf 60 pro Minute begrenzt.
+- Routen: `GET /api/self` (Bereiche mit Kachel), `GET /api/self/areas/<id>/<bereich>`, `POST .../action`.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
   Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
-  `reportCategories()`, `loadedChunks()`, `isNpc()`).
+  `reportCategories()`, `loadedChunks()`, `isNpc()`), Version 4 = `api-1.3.0` (Spielerseite: `selfAreas`, `selfAction`,
+  `selfPermissions`, `SelfArea`, `SelfBlock`, `SelfViewer`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);
