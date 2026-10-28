@@ -35,7 +35,7 @@ public final class VanillaStats {
         PLAY_TIME("play-time"),
         BLOCKS_MINED("blocks-mined"),
         MOB_KILLS("mob-kills"),
-        PLAYER_KILLS("player-kills"),
+        XP_LEVEL("xp-level"),
         DEATHS("deaths"),
         DISTANCE("distance"),
         FISH_CAUGHT("fish-caught"),
@@ -65,6 +65,7 @@ public final class VanillaStats {
     private final MRAdmin plugin;
     private volatile Map<Kind, List<Entry>> cache = Map.of();
     private volatile long cachedAt;
+    private boolean logged;
 
     public VanillaStats(MRAdmin plugin) {
         this.plugin = plugin;
@@ -100,13 +101,22 @@ public final class VanillaStats {
         for (Kind kind : Kind.values()) {
             result.put(kind, new ArrayList<>());
         }
-        // Minecraft 26: <world>/players/stats, before: <world>/stats.
-        File world = Bukkit.getWorlds().getFirst().getWorldFolder();
-        File folder = new File(world, "players/stats");
+        // Minecraft 26: <level>/players/stats (the dimensions sit in <level>/dimensions/...), before: <level>/stats.
+        File level = levelFolder();
+        File folder = new File(level, "players/stats");
         if (!folder.isDirectory()) {
-            folder = new File(world, "stats");
+            folder = new File(level, "stats");
+        }
+        File playerData = new File(level, "players/data");
+        if (!playerData.isDirectory()) {
+            playerData = new File(level, "playerdata");
         }
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
+        if (!logged) {
+            logged = true;
+            plugin.getLogger().info("Player statistics for the web interface: " + folder.getPath() + " ("
+                    + (files == null ? 0 : files.length) + " players).");
+        }
         if (files == null) {
             return result;
         }
@@ -128,7 +138,8 @@ public final class VanillaStats {
                     continue;
                 }
                 for (Kind kind : Kind.values()) {
-                    double value = value(stats, kind);
+                    double value = kind == Kind.XP_LEVEL ? PlayerDataLevel.read(new File(playerData, player + ".dat"))
+                            : value(stats, kind);
                     if (value > 0) {
                         result.get(kind).add(new Entry(player, offline.getName(), value));
                     }
@@ -141,12 +152,26 @@ public final class VanillaStats {
         return result;
     }
 
+    /**
+     * The folder of the main world (the one with level.dat): since Minecraft 26 the world folder the server reports is
+     * the dimension's (<level>/dimensions/minecraft/overworld), the players' files sit in the level folder above it.
+     */
+    private static File levelFolder() {
+        File world = Bukkit.getWorlds().getFirst().getWorldFolder().getAbsoluteFile();
+        for (File dir = world; dir != null; dir = dir.getParentFile()) {
+            if (new File(dir, "level.dat").isFile()) {
+                return dir;
+            }
+        }
+        return world;
+    }
+
     private static double value(JsonObject stats, Kind kind) {
         return switch (kind) {
             case PLAY_TIME -> custom(stats, "minecraft:play_time") / TICKS_PER_HOUR;
             case BLOCKS_MINED -> sum(stats.getAsJsonObject("minecraft:mined"));
             case MOB_KILLS -> custom(stats, "minecraft:mob_kills");
-            case PLAYER_KILLS -> custom(stats, "minecraft:player_kills");
+            case XP_LEVEL -> 0; // from the player data, see read()
             case DEATHS -> custom(stats, "minecraft:deaths");
             case DISTANCE -> (custom(stats, "minecraft:walk_one_cm") + custom(stats, "minecraft:sprint_one_cm")
                     + custom(stats, "minecraft:crouch_one_cm") + custom(stats, "minecraft:swim_one_cm")

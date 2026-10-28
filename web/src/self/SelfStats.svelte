@@ -38,7 +38,7 @@
   }
 
   const ICONS = {
-    'play-time': '⏱️', 'blocks-mined': '⛏️', 'mob-kills': '⚔️', 'player-kills': '🗡️', deaths: '💀',
+    'play-time': '⏱️', 'blocks-mined': '⛏️', 'mob-kills': '⚔️', 'xp-level': '✨', deaths: '💀',
     distance: '🧭', 'fish-caught': '🎣', jumps: '🦘', 'items-crafted': '🛠️',
   };
   // The game's statistics are named by the page ("game:play-time"), the plugins' bring their own title.

@@ -41,8 +41,9 @@ public final class ConfigUpdater {
  * discord-announce.news/alerts and colors.news/changelog/alert.
  * 31: discord-announce.kuma (Uptime Kuma incidents in the community Discord).
  * 32: uptime-kuma.incident-seconds (incidents read more often than the maintenance list).
+ * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
      */
-    public static final int CURRENT_VERSION = 32;
+    public static final int CURRENT_VERSION = 33;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -146,6 +147,16 @@ public final class ConfigUpdater {
             // v29: the player page asks for a new code from /web after at most 14 days - the old default of 90 goes.
             if (version < 29 && existing.getInt("player-web.session-days", 90) == 90) {
                 template.set("player-web.session-days", 14);
+            }
+            // v33: the statistic "player-kills" is gone - "xp-level" takes its place in the list.
+            if (version < 33) {
+                java.util.List<String> list = new java.util.ArrayList<>(template.getStringList("player-web.rankings.statistics"));
+                int index = list.indexOf("player-kills");
+                if (index >= 0) {
+                    list.set(index, list.contains("xp-level") ? null : "xp-level");
+                    list.removeIf(java.util.Objects::isNull);
+                    template.set("player-web.rankings.statistics", list);
+                }
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.
