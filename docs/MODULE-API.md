@@ -191,6 +191,14 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   (Rangliste, eigener Platz hervorgehoben), `AreaMap` (Bereiche in Blockkoordinaten, je Welt, ohne Gelände; Link auf eine
   große Karte möglich). Ein `Button` kann nachfragen (`confirm`) oder vorher einen Text abfragen (`input`, kommt als
   `args.value`).
+- **Weitere Bausteine ab API 5 (`api-1.4.0`):** `Cards` (Karten nebeneinander mit Status, Kennzahlen, Balken und einem
+  Knopf direkt darauf; ein Klick öffnet die Karte mit allen Knöpfen und `details` - weitere Bausteine), `Meters` (Balken
+  mit Markierung, z.B. Wert gegen Warn- und Sperrgrenze), `People` (Spieler mit Kopf, Zeile und Knöpfen), `Form`
+  (Textfelder und Auswahllisten, abgeschickt als eine Aktion mit jedem Feld als Argument) und `Embed` (eine andere
+  Seite im Rahmen, z.B. die Live-Karte; nur http(s), Link zum Öffnen darunter). Nur senden, wenn
+  `MRadminService.apiVersion() >= 5` - ein älteres MRadmin kann sie nicht zeichnen (ab API 5 lässt MRadmin unbekannte
+  Bausteine einfach weg, statt die Seite abzubrechen). Der Kopf einer Bereichsseite
+  zeigt dieselbe `summary` wie die Kachel auf der Startseite.
 - **Kachel auf der Startseite (`summary`):** Die erste Kennzahl aus `Stats` steht groß, die weiteren darunter; ein Wert
   der Form „a / b“ (z.B. `120 / 245 Chunks`) wird zusätzlich als Balken gezeigt (Ton `warn`/`bad` färbt ihn), `Text`
   erscheint als kurze Zeile (z.B. eine Sperre). Farbe und großes Symbol kommen aus der Plugin-ID bzw. dem `icon`.
@@ -209,7 +217,8 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
   Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
   `reportCategories()`, `loadedChunks()`, `isNpc()`), Version 4 = `api-1.3.0` (Spielerseite: `selfAreas`, `selfAction`,
-  `selfPermissions`, `rankings`, `SelfArea`, `SelfBlock`, `SelfViewer`, `SelfRanking`).
+  `selfPermissions`, `rankings`, `SelfArea`, `SelfBlock`, `SelfViewer`, `SelfRanking`), Version 5 = `api-1.4.0`
+  (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -39,7 +39,9 @@ public final class WebServer {
     public static final String PLAYER_COOKIE = "mradmin_player";
     private static final String CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
             + "img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; "
-            + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+            + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'; "
+            // Frames only for the Embed block of the player area (e.g. a live map of a plugin), http(s) only.
+            + "frame-src http: https:";
 
     /** A route handler; throw {@link Http.WebException} to answer with an error. */
     public interface Handler {

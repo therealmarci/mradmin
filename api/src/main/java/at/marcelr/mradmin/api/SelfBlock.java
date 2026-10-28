@@ -69,4 +69,80 @@ public sealed interface SelfBlock {
     record Rect(String world, int minX, int minZ, int maxX, int maxZ, String label, String color,
                 @Nullable String link) {
     }
+
+    // ------------------------------------------------------------------ since API 5
+    // Only send these if MRadminService#apiVersion() is at least 5 - an older MRadmin cannot draw them.
+
+    /**
+     * A bar, e.g. an activity against its limit.
+     * @param value text next to the label, e.g. "12.4/s"
+     * @param fill  how full the bar is, 0..1
+     * @param mark  a line on the bar, 0..1 (e.g. where the warning starts), or -1 for none
+     * @param hint  small text under the bar, e.g. "warning from 20 · lock from 40" ("" = none)
+     */
+    record Meter(String label, String value, double fill, double mark, String hint, String tone) {
+    }
+
+    /** Bars under a title, e.g. the limits of a loader. {@code text}: a line above them ("" = none). Since API 5. */
+    record Meters(String title, String text, List<Meter> meters) implements SelfBlock {
+    }
+
+    /**
+     * Things as cards side by side (e.g. the loaders). A click on a card opens it with its buttons and details.
+     * @param empty shown when there are no cards
+     */
+    record Cards(String title, List<Card> cards, String empty) implements SelfBlock {
+    }
+
+    /**
+     * One card.
+     * @param id       stable id - an open card stays open when the page reloads after an action
+     * @param subtitle e.g. the place ("" = none)
+     * @param badge    short status on the card, e.g. "on" or "locked", coloured by {@code tone} ("" = none)
+     * @param stats    key figures on the card
+     * @param meters   bars on the card (keep it to one or two - the rest belongs into the details)
+     * @param primary  the one button right on the card (e.g. on/off), or null
+     * @param buttons  shown when the card is open
+     * @param details  shown when the card is open (Meters, Text, Embed ...)
+     */
+    record Card(String id, String title, String subtitle, String badge, String tone, List<Stat> stats,
+                List<Meter> meters, @Nullable Button primary, List<Button> buttons, List<SelfBlock> details) {
+    }
+
+    /** Players with their heads, each with their own buttons (e.g. invited players). Since API 5. */
+    record People(String title, String text, List<Person> people, String empty) implements SelfBlock {
+    }
+
+    /**
+     * @param detail e.g. "all loaders · until 12.11." ("" = none)
+     * @param badge  short label next to the name ("" = none), coloured by {@code tone}
+     */
+    record Person(UUID player, String name, String detail, String badge, String tone, List<Button> buttons) {
+    }
+
+    /**
+     * A small form: sending it calls {@code action} with {@code args} plus every field as key -> value
+     * ({@link WebModule#selfAction}). Since API 5.
+     */
+    record Form(String title, String text, List<Field> fields, String submit, String action,
+                Map<String, String> args) implements SelfBlock {
+    }
+
+    /**
+     * A field of a form: {@code type} "text" (up to {@code maxLength} characters) or "select" (one of {@code options},
+     * {@code value} preselected).
+     */
+    record Field(String key, String label, String type, String value, List<Option> options, int maxLength) {
+    }
+
+    record Option(String value, String label) {
+    }
+
+    /**
+     * Another web page shown in a frame, e.g. a live map (only http(s)). If the browser cannot show it (e.g. an http
+     * page inside an https panel), the link below still opens it. Since API 5.
+     * @param height in pixels (200..900)
+     */
+    record Embed(String title, String url, int height, String linkLabel) implements SelfBlock {
+    }
 }

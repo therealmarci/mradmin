@@ -1,11 +1,18 @@
 <script>
   // Draws the building blocks of a plugin's area (see the API's SelfBlock): key figures, text, tables with buttons,
-  // rankings and a small map. Everything is text - never HTML from a plugin. A button calls onAction(action, args).
+  // rankings, a small map, bars, cards (open with a click), players, forms and embedded pages (API 5).
+  // Everything is text - never HTML from a plugin. A button calls onAction(action, args).
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
   import AreaMap from './AreaMap.svelte';
+  import MeterList from './MeterList.svelte';
+  import CardGrid from './CardGrid.svelte';
+  import PeopleList from './PeopleList.svelte';
+  import FormBlock from './FormBlock.svelte';
+  import EmbedBlock from './EmbedBlock.svelte';
 
-  let { blocks, onAction = null, busy = false } = $props();
+  // nested: inside an open card (no outer card frames).
+  let { blocks, onAction = null, busy = false, nested = false } = $props();
 
   // The button whose text field is open, and what is typed there.
   let editing = $state(null);
@@ -92,6 +99,20 @@
       </section>
     {:else if block.type === 'map'}
       <AreaMap {block} />
+    {:else if block.type === 'meters'}
+      <section class="card" class:flat={nested}>
+        {#if block.title}<h2>{block.title}</h2>{/if}
+        {#if block.text}<p class="muted small meters-text">{block.text}</p>{/if}
+        <MeterList meters={block.meters} />
+      </section>
+    {:else if block.type === 'cards'}
+      <CardGrid {block} onButton={click} {onAction} {busy} />
+    {:else if block.type === 'people'}
+      <PeopleList {block} onButton={click} {busy} />
+    {:else if block.type === 'form'}
+      <FormBlock {block} onSubmit={(a, args) => onAction?.(a, args)} {busy} />
+    {:else if block.type === 'embed'}
+      <EmbedBlock {block} />
     {/if}
   {/each}
 </div>
@@ -250,6 +271,17 @@
   .rank {
     color: var(--muted);
     text-align: right;
+  }
+
+  .card.flat {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .meters-text {
+    margin: -6px 0 12px;
   }
 
   .overlay {

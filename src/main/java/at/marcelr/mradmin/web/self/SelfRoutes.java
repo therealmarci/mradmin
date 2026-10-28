@@ -181,7 +181,7 @@ public final class SelfRoutes {
             throw new Http.WebException(404, "not-found");
         }
         http.json(200, Map.of("module", module.id(), "id", area.id(), "title", area.title(), "icon", area.icon(),
-                "blocks", SelfJson.blocks(area.blocks())));
+                "summary", SelfJson.blocks(area.summary()), "blocks", SelfJson.blocks(area.blocks())));
     }
 
     /** A button of an area: the module checks and does it, or answers with the reason (in the page's language). */
