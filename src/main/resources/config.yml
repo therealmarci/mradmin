@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 27
+config-version: 28
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -714,6 +714,11 @@ player-web:
     slides: 5
     show-maintenance: true
     show-restart: true
+    # Warnings of the plugins about the player's own things, e.g. MRchunks: loaders locked for lag, close to the lag
+    # limit or over the budget.
+    show-plugin-notices: true
+    # Own tickets with a new answer of the team (or closed) that the player has not read yet.
+    show-tickets: true
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

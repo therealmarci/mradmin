@@ -194,6 +194,8 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
 - **Kachel auf der Startseite (`summary`):** Die erste Kennzahl aus `Stats` steht groß, die weiteren darunter; ein Wert
   der Form „a / b“ (z.B. `120 / 245 Chunks`) wird zusätzlich als Balken gezeigt (Ton `warn`/`bad` färbt ihn), `Text`
   erscheint als kurze Zeile (z.B. eine Sperre). Farbe und großes Symbol kommen aus der Plugin-ID bzw. dem `icon`.
+  `Text` mit Ton `bad` oder `warn` zeigt MRadmin zusätzlich als eigene Folie im Karussell der Startseite (mit Link zum
+  Bereich) - für Dinge, die der Spieler sofort sehen soll (z.B. MRchunks: Loader wegen Lag gesperrt).
 - **Sprache:** `viewer.lang()` ist `de` oder `en` - alle Texte darin bauen. Texte sind reiner Text, nie HTML.
 - **Sicherheit:** MRadmin prüft vor jedem Aufruf `mradmin.web.self` und LibertyBans-Sperren. Alles andere (Besitz,
   Permissions, Limits) prüft das Plugin in `selfAction` selbst. Aktionen sind pro Spieler auf 60 pro Minute begrenzt.

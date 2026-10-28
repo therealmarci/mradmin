@@ -62,7 +62,7 @@ public final class SelfRoutes {
         r.tickets.register();
         r.stats = new SelfStats(server, r);
         r.stats.register();
-        r.news = new SelfNews(server, r);
+        r.news = new SelfNews(server, r, r.tickets);
         r.news.register();
     }
 
@@ -224,7 +224,7 @@ public final class SelfRoutes {
     }
 
     /** Who looks, in which language ("lang" of the query or body), with the module's permissions resolved here. */
-    private SelfViewer viewer(Http http, String moduleId) throws java.io.IOException {
+    SelfViewer viewer(Http http, String moduleId) throws java.io.IOException {
         PlayerSessions.Session s = http.player();
         String lang = http.query().getOrDefault("lang", http.method().equals("POST") ? http.string("lang") : null);
         AdminModule module = plugin.modules().module(moduleId);

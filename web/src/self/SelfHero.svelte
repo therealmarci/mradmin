@@ -1,7 +1,8 @@
 <script>
-  // Slideshow on the start page of the player area: planned or running maintenance, a planned restart and the
-  // team's posts (news, changelogs). Moves on by itself (player-web.news.seconds), stops while the pointer or the
-  // keyboard is on it, can be swiped on the phone. Nothing to show = not shown at all.
+  // Slideshow on the start page of the player area: planned or running maintenance, a planned restart, warnings of
+  // the plugins (e.g. chunk loaders locked for lag), new answers in own tickets and the team's posts (news,
+  // changelogs). Moves on by itself (player-web.news.seconds) - a bar between the arrows runs down until the next one -,
+  // stops while the pointer or the keyboard is on it, can be swiped on the phone. Nothing to show = not shown at all.
   import { api } from '../lib/api.js';
   import { t, lang } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
@@ -37,13 +38,9 @@
   const slides = $derived(data?.slides ?? []);
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  $effect(() => {
-    if (!data?.seconds || slides.length < 2 || paused || reduced) return;
-    const timer = setInterval(() => {
-      if (!document.hidden) index = (index + 1) % slides.length;
-    }, data.seconds * 1000);
-    return () => clearInterval(timer);
-  });
+  // Moving on is driven by the bar between the arrows: when the current segment has filled up, the next slide comes.
+  // Pausing (pointer or keyboard on it, swiping) simply holds the animation.
+  const auto = $derived(!!data?.seconds && slides.length > 1 && !reduced);
 
   const show = (i) => (index = (i + slides.length) % slides.length);
 
@@ -76,8 +73,8 @@
     return h ? t('self.hero.inHours', { h, m: m % 60 }) : t('self.hero.inMinutes', { m });
   }
 
-  const tone = { maintenance: 'warn', restart: 'warn', news: 'accent', changelog: 'good' };
-  const icon = { maintenance: '🛠️', restart: '🔄', news: '📣', changelog: '📝' };
+  const tone = { maintenance: 'warn', restart: 'warn', news: 'accent', changelog: 'good', ticket: 'accent' };
+  const icon = { maintenance: '🛠️', restart: '🔄', news: '📣', changelog: '📝', ticket: '🎫' };
 </script>
 
 {#if slides.length}
@@ -87,14 +84,14 @@
     <div class="viewport" bind:this={track} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}
       onkeydown={key} tabindex="-1" role="presentation">
       <div class="track" class:dragging={startX !== null} style="transform: translateX(calc({-index * 100}% + {drag}px))">
-        {#each slides as s, i (s.type + (s.id ?? ''))}
+        {#each slides as s, i (s.type + ':' + (s.id ?? s.page + s.text))}
           {@const kind = s.type === 'maintenance' ? 'maintenance-' + s.phase : s.type}
-          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : tone[s.type]}"
+          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : s.type === 'notice' ? s.tone : tone[s.type]}"
             aria-roledescription="slide" aria-label={t('self.hero.of', { n: i + 1, total: slides.length })} aria-hidden={i !== index}
             inert={i !== index}>
             <div class="kind">
-              <span aria-hidden="true">{icon[s.type]}</span>
-              {t('self.hero.kind.' + kind)}
+              <span aria-hidden="true">{s.icon ?? icon[s.type]}</span>
+              {s.type === 'notice' ? s.title : t('self.hero.kind.' + kind)}
               {#if s.pinned}<span class="pin" title={t('self.hero.pinned')}>📌</span>{/if}
               {#if s.created}<span class="when">{dateTime(s.created)}</span>{/if}
             </div>
@@ -111,6 +108,13 @@
             {:else if s.type === 'restart'}
               <h2>{t('self.hero.restartTitle')}</h2>
               <p>{t('self.hero.restartText', { time: dateTime(s.time), in: until(s.time) })}</p>
+            {:else if s.type === 'notice'}
+              <h2>{s.text}</h2>
+              <button class="more" tabindex={i === index ? 0 : -1} onclick={() => go(s.page)}>{t('self.hero.toArea', { area: s.title })} →</button>
+            {:else if s.type === 'ticket'}
+              <h2>{s.title}</h2>
+              <p>{t(s.open ? 'self.hero.ticketAnswer' : 'self.hero.ticketClosed', { time: dateTime(s.time) })}</p>
+              <button class="more" tabindex={i === index ? 0 : -1} onclick={() => go('/me/tickets/' + s.id)}>{t('self.hero.toTicket')} →</button>
             {:else}
               <h2>{s.title}</h2>
               <p class="text">{s.text}</p>
@@ -123,10 +127,17 @@
     {#if slides.length > 1}
       <div class="controls">
         <button class="arrow" aria-label={t('self.hero.prev')} onclick={() => show(index - 1)}>‹</button>
-        <div class="dots">
+        <div class="segments">
           {#each slides as _, i}
-            <button class="dot" class:active={i === index} aria-label={t('self.hero.of', { n: i + 1, total: slides.length })}
-              aria-current={i === index} onclick={() => show(i)}></button>
+            <button class="segment" class:done={i < index} aria-label={t('self.hero.of', { n: i + 1, total: slides.length })}
+              aria-current={i === index} onclick={() => show(i)}>
+              {#if i === index}
+                {#key index}
+                  <span class="fill" class:running={auto} class:held={paused || startX !== null}
+                    style="animation-duration: {data.seconds}s" onanimationend={() => show(index + 1)}></span>
+                {/key}
+              {/if}
+            </button>
           {/each}
         </div>
         <button class="arrow" aria-label={t('self.hero.next')} onclick={() => show(index + 1)}>›</button>
@@ -261,31 +272,67 @@
     line-height: 1;
   }
 
-  .dots {
+  /* One segment per slide between the arrows: earlier ones full, the current one fills up until the next slide
+     comes (the animation's end switches), later ones empty. A click jumps there. */
+  .segments {
     display: flex;
-    gap: 2px;
+    gap: 4px;
+    align-items: center;
   }
 
-  .dot {
-    width: 18px;
+  .segment {
+    position: relative;
+    width: 26px;
     height: 18px;
     padding: 0;
     background: transparent;
-    position: relative;
+    border: 0;
   }
 
-  .dot::after {
+  .segment::before {
     content: '';
     position: absolute;
-    inset: 6px;
-    border-radius: 50%;
-    background: var(--border);
-    transition: background 0.2s, transform 0.2s;
+    left: 0;
+    right: 0;
+    top: 7px;
+    height: 4px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--border) 85%, transparent);
   }
 
-  .dot.active::after {
+  .segment.done::before {
+    background: color-mix(in srgb, var(--text) 45%, transparent);
+  }
+
+  .fill {
+    position: absolute;
+    left: 0;
+    top: 7px;
+    height: 4px;
+    width: 100%;
+    border-radius: 2px;
     background: var(--text);
-    transform: scale(1.25);
+  }
+
+  .fill.running {
+    width: 0;
+    animation-name: run;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  .fill.held {
+    animation-play-state: paused;
+  }
+
+  @keyframes run {
+    from {
+      width: 0;
+    }
+
+    to {
+      width: 100%;
+    }
   }
 
   @media (max-width: 560px) {

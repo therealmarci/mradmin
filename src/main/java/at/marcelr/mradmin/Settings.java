@@ -316,13 +316,14 @@ public record Settings(
      * The player area of the web interface (/web): on/off, how long a signed-in browser stays signed in (days, every
      * use extends it), how long a link from /web works (minutes) and how many browsers a player may have; the
      * statistics page (rankings: on/off, how many places, which of the game's statistics); the slideshow of the start
-     * page (news: on/off, seconds per slide, how many posts, planned maintenance and restarts in it); the own statistics
-     * on the start page (personal-stats).
+     * page (news: on/off, seconds per slide, how many posts, maintenance, restarts, plugin warnings and ticket answers in
+     * it); the own statistics on the start page (personal-stats).
      */
     public record PlayerWebSettings(boolean enabled, int sessionDays, int linkMinutes, int maxDevices,
                                     boolean rankings, int rankingTop, List<String> rankingKinds,
                                     boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
-                                    boolean newsRestart, List<String> personalStats) {
+                                    boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
+                                    List<String> personalStats) {
     }
 
     private static PlayerWebSettings playerWeb(FileConfiguration c) {
@@ -339,6 +340,8 @@ public record Settings(
                 Math.clamp(c.getInt("player-web.news.slides", 5), 0, 30),
                 c.getBoolean("player-web.news.show-maintenance", true),
                 c.getBoolean("player-web.news.show-restart", true),
+                c.getBoolean("player-web.news.show-plugin-notices", true),
+                c.getBoolean("player-web.news.show-tickets", true),
                 List.copyOf(c.getStringList("player-web.personal-stats")));
     }
 
