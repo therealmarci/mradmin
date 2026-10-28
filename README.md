@@ -19,6 +19,7 @@
 - **Ankündigungen** auf dem Bildschirm aller Spieler, mit Vorlagen (z.B. fürs Restart-Script) und auf Wunsch im Community-Discord.
 - **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
 - **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
+- **Spielerseite im Web (`/web`):** Jeder Spieler bekommt seine eigene Seite - eigene Tickets, Ranglisten und alles, was die anderen Plugins anbieten (z.B. Chunkloader verwalten, Duell-Statistik). Als Lesezeichen speicherbar, Deutsch und Englisch.
 - **Versionen & Updates:** alle MRtechnology-Plugins mit ihren Updates im Web, Updates per Klick herunterladen (Installation beim nächsten Neustart) und den Server mit Countdown neu starten.
 - **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
@@ -176,6 +177,26 @@ Anmeldung immer mit Passwort **und** Code aus der Authenticator-App - oder per P
 
 **Items wie im Spiel:** Inventare und Kits zeigt die Weboberfläche mit den echten Item-Bildern und -Namen samt Tooltip. Dafür lädt MRadmin beim ersten Start **einmal** den offiziellen Spiel-Client von Mojang (rund 40 MB) und speichert daraus nur die fertigen Bilder unter `plugins/MRadmin/items/`. Abschalten mit `web.item-icons: false` - dann stehen Kürzel statt Bildern da.
 
+### Spielerseite (`/web`)
+Neben dem Team-Bereich hat jeder **Spieler** seine eigene Seite in der Weboberfläche. Standardmäßig ist sie aus.
+
+1. Die Weboberfläche muss laufen (`web.enabled`, `web.public-url`, siehe oben).
+2. In der Config `player-web.enabled: true`, dann `/mradmin reload`.
+3. Spieler brauchen `mradmin.web.self` - das steckt in `mradmin.player`.
+
+**Für Spieler:** `/web` im Spiel eingeben und auf den Link im Chat klicken. Der Link gilt nur einmal und ein paar Minuten, meldet das Gerät aber dauerhaft an - danach die Seite (`<deine Adresse>/me`) als **Lesezeichen** speichern. Wer die Seite regelmäßig öffnet, bleibt angemeldet (`player-web.session-days`, Standard 90 Tage). `/web devices` zeigt, auf wie vielen Geräten man angemeldet ist, `/web logout` meldet alle ab - einzelne Geräte gehen auch auf der Seite unter **Geräte**.
+
+Was auf der Seite steht, hängt davon ab, was installiert ist:
+
+| Bereich | Was der Spieler sieht und tut | Braucht |
+|---|---|---|
+| **Tickets** | eigene Tickets ansehen, neue öffnen, antworten, schließen - wie mit `/report` | `features.tickets` und `mradmin.tickets.create` |
+| **Statistik** | Ranglisten: Spielzeit, abgebaute Blöcke, besiegte Mobs, Tode, Strecke … aus den Minecraft-Statistiken (Auswahl unter `player-web.rankings`) und von den Plugins; eigener Platz hervorgehoben. Wer nicht in Ranglisten stehen will, trägt sich dort aus. | `player-web.rankings.enabled` |
+| **Chunkloader** | eigene Loader mit Budget, Status und Karte; ein-/ausschalten, umbenennen, Dummy, löschen, einladen (Größe nur im Spiel) | MRchunks |
+| **Duelle** | eigene Duell-Statistik und letzte Runden, Duell-Ranglisten auf der Statistik-Seite | MRpvp |
+
+Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler (LibertyBans) kommen nicht hinein. Jedes Plugin prüft bei jeder Aktion dieselben Permissions und Regeln wie im Spiel.
+
 ### Versionen & Updates
 In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Versionen bzw. `/<plugin> version`.
@@ -223,7 +244,7 @@ MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. 
 - **Dashboard:** ein Knopf je Plugin mit Live-Infos.
 - **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
 - **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
-- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle**.
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader** und **Duelle** für die Spieler selbst.
 
 **MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
 
@@ -245,7 +266,7 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 
 | Gruppe | Enthält |
 |---|---|
-| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/mradmin version` |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin version` |
 | `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen, Web-Konsole ansehen |
 | `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken, Admin-Modus · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
 | `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
@@ -292,6 +313,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
+| `player-web` | Spielerseite (`/web`): an/aus, wie lange Geräte angemeldet bleiben, Ranglisten |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 
@@ -299,7 +321,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 - **Jeder Spieler bekommt seine Sprache:** Mit `language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
 - **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
 - Die Konsole ist immer Englisch.
-- Ankündigungen, Wartungs-Countdown, Bossbars und Titel sieht jeder Spieler in seiner Sprache. Die Weboberfläche richtet sich nach der Sprache des Browsers.
+- Ankündigungen, Wartungs-Countdown, Bossbars und Titel sieht jeder Spieler in seiner Sprache. Die Weboberfläche richtet sich nach der Sprache des Browsers - oder nach der Sprache, die man dort umgeschaltet hat.
 
 ### Speicher: YAML, SQLite oder MySQL
 | `storage.type` | Wo | Wofür |
