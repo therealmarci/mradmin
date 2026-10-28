@@ -34,7 +34,8 @@ public record Settings(
         HealthSettings health,
         MailSettings mail,
         RequestSettings requests,
-        VersionsSettings versions
+        VersionsSettings versions,
+        PlayerWebSettings playerWeb
 ) {
 
     /**
@@ -308,7 +309,22 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c));
+    }
+
+    /**
+     * The player area of the web interface (/web): on/off, how long a signed-in browser stays signed in (days, every
+     * use extends it), how long a link from /web works (minutes) and how many browsers a player may have.
+     */
+    public record PlayerWebSettings(boolean enabled, int sessionDays, int linkMinutes, int maxDevices) {
+    }
+
+    private static PlayerWebSettings playerWeb(FileConfiguration c) {
+        return new PlayerWebSettings(
+                c.getBoolean("player-web.enabled", false),
+                Math.clamp(c.getInt("player-web.session-days", 90), 1, 365),
+                Math.clamp(c.getInt("player-web.link-minutes", 5), 1, 60),
+                Math.clamp(c.getInt("player-web.max-devices", 5), 1, 20));
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {

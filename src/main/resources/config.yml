@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 23
+config-version: 24
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -679,6 +679,19 @@ web:
       max-open-contact: 50
       # Difficulty of the calculation (0 = off, 16 = about one second on a phone, every +1 doubles the time).
       proof-of-work: 16
+
+# Player area of the web interface: every player gets their own page - their chunk loaders, duel statistics, tickets,
+# rankings ... (whatever the installed MRtechnology plugins offer). Players open it only with /web in game: the link
+# signs that browser in, afterwards the page can be bookmarked. Needs the web interface (web.enabled) and
+# web.public-url. Permission for /web: mradmin.web.self (in mradmin.player).
+player-web:
+  enabled: false
+  # How long a browser stays signed in without being used (days). Every visit starts the time again.
+  session-days: 90
+  # How long the link from /web works (minutes). It works only once.
+  link-minutes: 5
+  # Browsers per player at most (phone, PC ...). Signing in on one more signs out the one used longest ago.
+  max-devices: 5
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

@@ -21,6 +21,10 @@ commands:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
     usage: /report [player]
     aliases: [melden, ticket, tickets, support]
+  web:
+    description: "Your own page in the web interface: a link to sign in, /web devices, /web logout."
+    usage: /web [devices|logout]
+    aliases: [website, me]
   staffchat:
     description: Chat for the team only (without a message it toggles).
     usage: /sc [message]
@@ -33,11 +37,12 @@ permissions:
   # The same in every MRtechnology plugin: <plugin>.player for players, <plugin>.groups.support / staff / admin for
   # the team - each group contains the one below. The single permissions further down stay usable on their own.
   mradmin.player:
-    description: "Player: /report - open tickets and view, answer and close your own; /mradmin version."
+    description: "Player: /report - open tickets and view, answer and close your own; /web - own page in the web interface; /mradmin version."
     default: op
     children:
       mradmin.version: true
       mradmin.tickets.create: true
+      mradmin.web.self: true
   mradmin.groups.support:
     description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, web interface, view maintenance and join during it, view versions and the web console."
     default: op

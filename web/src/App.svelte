@@ -30,6 +30,7 @@
   import Contact from './pages/Contact.svelte';
   import Unban from './pages/Unban.svelte';
   import RequestStatus from './pages/RequestStatus.svelte';
+  import SelfApp from './self/SelfApp.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -59,10 +60,12 @@
     }
   }
 
-  // Public pages work without signing in: setup, imprint, privacy, contact, unban request, request status.
+  // Public pages work without signing in: setup, imprint, privacy, contact, unban request, request status - and the
+  // player area (/me) with its own sign-in.
+  const selfPage = $derived(route.path === '/me' || route.path.startsWith('/me/'));
   const requestToken = $derived(route.path.match(/^\/anfrage\/([A-Za-z0-9_-]{16,64})$/)?.[1] ?? null);
   const publicPage = $derived(
-    ['/setup', '/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung'].includes(route.path) || requestToken !== null,
+    ['/setup', '/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung'].includes(route.path) || requestToken !== null || selfPage,
   );
 
   // Ask who is signed in as soon as a page needs it.
@@ -123,7 +126,10 @@
   };
 </script>
 
-{#if route.path === '/impressum' || route.path === '/datenschutz'}
+{#if selfPage}
+  <SelfApp />
+  <Footer />
+{:else if route.path === '/impressum' || route.path === '/datenschutz'}
   <Legal page={route.path === '/impressum' ? 'imprint' : 'privacy'} />
   <Footer />
 {:else if route.path === '/kontakt'}

@@ -114,6 +114,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
         at.marcelr.mradmin.web.ItemRoutes.register(web);
+        at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        web.playerSessions().load();
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
         web.requests().load();
@@ -151,6 +153,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         command.setExecutor(executor);
         command.setTabCompleter(executor);
         register("report", new ReportCommand(this));
+        register("web", new at.marcelr.mradmin.command.SelfWebCommand(this));
         register("staffchat", staffChat);
 
         startServices();

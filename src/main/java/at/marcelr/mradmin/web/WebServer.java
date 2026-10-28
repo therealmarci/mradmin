@@ -35,6 +35,8 @@ public final class WebServer {
 
     /** Name of the session cookie. */
     public static final String COOKIE = "mradmin_session";
+    /** Name of the cookie of the player area (/web) - separate from the team's session. */
+    public static final String PLAYER_COOKIE = "mradmin_player";
     private static final String CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
             + "img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; "
             + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
@@ -44,7 +46,7 @@ public final class WebServer {
         void handle(Http http) throws Exception;
     }
 
-    private record Route(String method, String[] parts, Handler handler, boolean open) {
+    private record Route(String method, String[] parts, Handler handler, boolean open, boolean self) {
     }
 
     private final MRAdmin plugin;
@@ -69,6 +71,7 @@ public final class WebServer {
         this.push = new at.marcelr.mradmin.web.push.PushService(plugin, auth, permissions);
         this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
         this.requests = new PublicRequests(plugin, this);
+        this.playerSessions = new at.marcelr.mradmin.web.self.PlayerSessions(plugin);
     }
 
     private final PublicRequests requests;
@@ -135,12 +138,26 @@ public final class WebServer {
 
     /** A route that needs a session; {@code path} may contain {name} parts. */
     public void route(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false));
+        routes.add(new Route(method, path.split("/"), handler, false, false));
     }
 
     /** A route anyone may call (sign-in, setup). */
     public void open(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, true));
+        routes.add(new Route(method, path.split("/"), handler, true, false));
+    }
+
+    /**
+     * A route of the player area: needs a player session (cookie {@link #PLAYER_COOKIE}, see
+     * {@link at.marcelr.mradmin.web.self.PlayerSessions}) and player-web.enabled. {@link Http#player()} is the player.
+     */
+    public void self(String method, String path, Handler handler) {
+        routes.add(new Route(method, path.split("/"), handler, false, true));
+    }
+
+    private final at.marcelr.mradmin.web.self.PlayerSessions playerSessions;
+
+    public at.marcelr.mradmin.web.self.PlayerSessions playerSessions() {
+        return playerSessions;
     }
 
     public boolean running() {
@@ -270,7 +287,16 @@ public final class WebServer {
                 continue;
             }
             http.params(params);
-            if (!route.open()) {
+            if (route.self()) {
+                if (!plugin.settings().playerWeb().enabled()) {
+                    throw new Http.WebException(404, "player-web-off");
+                }
+                var player = playerSessions.session(http.cookie(PLAYER_COOKIE), http.storedIp());
+                if (player == null) {
+                    throw new Http.WebException(401, "player-signed-out");
+                }
+                http.player = player;
+            } else if (!route.open()) {
                 WebAuth.Session session = auth.session(http.cookie(COOKIE), http.storedIp());
                 if (session == null) {
                     throw new Http.WebException(401, "signed-out");

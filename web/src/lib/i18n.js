@@ -1,10 +1,55 @@
-// Texts of the web interface - German or English, depending on the browser.
+// Texts of the web interface - German or English: the language chosen on the page (stored in the browser),
+// otherwise the browser's language.
 
-export const lang = (navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en';
+const chosen = (() => {
+  try {
+    return localStorage.getItem('mradmin.lang');
+  } catch {
+    return null;
+  }
+})();
+
+export const lang = chosen === 'de' || chosen === 'en' ? chosen : (navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en';
+
+/** Switches the language for this browser (the page loads again). */
+export function setLang(next) {
+  try {
+    localStorage.setItem('mradmin.lang', next);
+  } catch {
+    // private mode: only for this visit
+  }
+  location.reload();
+}
 
 const texts = {
   de: {
     'nav.home': 'Übersicht',
+    'self.title': 'Deine Spielerseite',
+    'self.howTo': 'Gib im Spiel /web ein und klick auf den Link im Chat - dann bist du hier angemeldet.',
+    'self.howToBookmark': 'Danach kannst du diese Seite als Lesezeichen speichern und bleibst angemeldet.',
+    'self.signingIn': 'Du wirst angemeldet …',
+    'self.noCode': 'Der Link ist unvollständig.',
+    'self.nav.home': 'Übersicht',
+    'self.nav.devices': 'Geräte',
+    'self.language': 'Sprache',
+    'self.hello': 'Hallo {name}!',
+    'self.helloSub': 'Hier siehst du alles, was dir auf dem Server gehört.',
+    'self.noAreas': 'Auf diesem Server gibt es hier noch nichts zu sehen.',
+    'self.bookmarkTitle': 'Tipp: Lesezeichen setzen',
+    'self.bookmarkText': 'Speichere diese Seite als Lesezeichen. Du bleibst angemeldet, solange du sie ab und zu öffnest. Ist die Anmeldung abgelaufen, hilft /web im Spiel.',
+    'self.devicesTitle': 'Angemeldete Geräte',
+    'self.devicesHint': 'Hier bist du angemeldet. Ein Gerät, das du nicht kennst? Abmelden - oder /web logout im Spiel meldet alle ab.',
+    'self.thisDevice': 'dieses Gerät',
+    'self.lastSeen': 'zuletzt {time}',
+    'self.since': 'seit {time}',
+    'self.revoke': 'Abmelden',
+    'self.browser': 'Browser',
+    'self.deviceOn': '{browser} auf {os}',
+    'error.code-invalid': 'Der Link ist abgelaufen oder wurde schon benutzt. Gib im Spiel /web ein, um einen neuen zu bekommen.',
+    'error.no-self-permission': 'Du darfst die Spielerseite nicht nutzen.',
+    'error.player-banned': 'Du bist gesperrt und kannst die Spielerseite gerade nicht nutzen.',
+    'error.player-web-off': 'Die Spielerseite ist auf diesem Server ausgeschaltet.',
+    'error.player-signed-out': 'Du bist nicht mehr angemeldet. Gib im Spiel /web ein.',
     'nav.account': 'Konto',
     'nav.audit': 'Protokoll',
     'nav.logout': 'Abmelden',
@@ -1271,6 +1316,32 @@ const texts = {
   },
   en: {
     'nav.home': 'Overview',
+    'self.title': 'Your player page',
+    'self.howTo': 'Type /web in game and click the link in the chat - that signs you in here.',
+    'self.howToBookmark': 'Afterwards you can bookmark this page and stay signed in.',
+    'self.signingIn': 'Signing you in …',
+    'self.noCode': 'The link is incomplete.',
+    'self.nav.home': 'Overview',
+    'self.nav.devices': 'Devices',
+    'self.language': 'Language',
+    'self.hello': 'Hello {name}!',
+    'self.helloSub': 'Here you see everything that belongs to you on the server.',
+    'self.noAreas': 'There is nothing to see here on this server yet.',
+    'self.bookmarkTitle': 'Tip: bookmark this page',
+    'self.bookmarkText': 'Bookmark this page. You stay signed in as long as you open it now and then. If it has run out, /web in game helps.',
+    'self.devicesTitle': 'Signed-in devices',
+    'self.devicesHint': 'You are signed in here. A device you do not know? Sign it out - or /web logout in game signs out all.',
+    'self.thisDevice': 'this device',
+    'self.lastSeen': 'last {time}',
+    'self.since': 'since {time}',
+    'self.revoke': 'Sign out',
+    'self.browser': 'Browser',
+    'self.deviceOn': '{browser} on {os}',
+    'error.code-invalid': 'The link has run out or was used already. Type /web in game to get a new one.',
+    'error.no-self-permission': 'You may not use the player page.',
+    'error.player-banned': 'You are banned and cannot use the player page right now.',
+    'error.player-web-off': 'The player page is switched off on this server.',
+    'error.player-signed-out': 'You are no longer signed in. Type /web in game.',
     'nav.account': 'Account',
     'nav.audit': 'Log',
     'nav.logout': 'Sign out',

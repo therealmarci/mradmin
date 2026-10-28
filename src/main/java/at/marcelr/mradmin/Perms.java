@@ -44,6 +44,8 @@ public final class Perms {
 
     // web interface
     public static final String WEB = "mradmin.web";
+    /** /web: the player's own page in the web interface (player area). */
+    public static final String WEB_SELF = "mradmin.web.self";
     public static final String WEB_AUDIT = "mradmin.web.audit";
     public static final String WEB_CONSOLE_VIEW = "mradmin.web.console.view";
     public static final String WEB_CONSOLE_EXECUTE = "mradmin.web.console.execute";

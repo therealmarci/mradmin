@@ -30,8 +30,9 @@ public final class ConfigUpdater {
      * 10: web.legal (imprint, privacy policy), web.privacy (retention, shortened IPs); 11: health (history, alert);
  * 22: web.item-icons (item pictures from the game client).
  * 23: tickets.chunkloader-locks became tickets.plugin-reports (automatic tickets of all plugins).
+ * 24: player-web (the players' own page, /web).
      */
-    public static final int CURRENT_VERSION = 23;
+    public static final int CURRENT_VERSION = 24;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
