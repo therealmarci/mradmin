@@ -69,7 +69,7 @@
         <div class="sub">{t('chunks.owners', { n: overview.owners })}</div></div>
       <div class="card kpi"><div class="label">{t('chunks.active')}</div><div class="value">{overview.active}</div></div>
       <div class="card kpi"><div class="label">{t('chunks.chunks')}</div><div class="value">{overview.chunks}</div>
-        <div class="sub">{t('chunks.size', { n: overview.size })}</div></div>
+        <div class="sub">{overview.defaultBudget != null ? t('chunks.overviewBudget', { n: overview.defaultBudget }) : t('chunks.size', { n: overview.size })}</div></div>
       {#if overview.dummiesEnabled}
         <div class="card kpi"><div class="label">{t('chunks.dummies')}</div><div class="value">{overview.dummies}</div>
           <div class="sub">{t('chunks.dummiesSub', { n: overview.links })}</div></div>
@@ -104,6 +104,7 @@
           <div class="body">
             <div class="top">
               <strong>{l.name}</strong>
+              {#if l.width}<span class="tag">{l.width}×{l.length}</span>{/if}
               {#if l.dummyPresent}<span class="tag" title={t('chunks.dummySits')}>🧍 {t('chunks.dummyBadge')}</span>{/if}
               <span class="badge-status {STATUS[l.status].tone}">{STATUS[l.status].icon} {t('chunks.status.' + l.status)}</span>
             </div>

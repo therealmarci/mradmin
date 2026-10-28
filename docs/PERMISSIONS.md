@@ -63,7 +63,7 @@ Teammitglieder kommen dann einfach in ihre Gruppe: `/lp user Steve parent set st
 | | Support | Staff | Admin |
 |---|---|---|---|
 | **MRadmin** | Übersicht, Serverzustand und Health, Tickets komplett, Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen und Web-Konsole ansehen, Strafen ansehen (LibertyBans) | + Spieler herholen, einfrieren, kicken, Admin-Modus, mit LibertyBans kicken, muten, verwarnen | + Wartung steuern, Ankündigungen, Web-Konten, Updates, Neustart, Reload, **Befehle in der Web-Konsole**, mit LibertyBans bannen und entbannen |
-| **MRchunks** | Admin-Menü (alle Loader und ihr Status), zu Loadern teleportieren | + fremde Loader an/aus, Einladungen verwalten, Accounts verknüpfen und lösen | + löschen, umbenennen, Dummies, Lag-Sperren aufheben, Limits, Sperren, Webkarte, Reload |
+| **MRchunks** | Admin-Menü (alle Loader und ihr Status), zu Loadern teleportieren | + fremde Loader an/aus, Einladungen verwalten, Accounts verknüpfen und lösen | + löschen, umbenennen, Größe fremder Loader ändern, Dummies, Lag-Sperren aufheben, Chunk-Budget und Dummy-Limit, Sperren, Webkarte, Reload |
 | **MRpvp** | Admin-Menü, alle Runden ansehen, auffällige Runden prüfen und werten, zusehen, Spieler-Verwaltung | + Kits und Arenen bearbeiten, Duelle abbrechen und Sieger bestimmen, pausieren, sperren | + Statistik zurücksetzen, gesicherte Stände zurückgeben, Standard wiederherstellen, Reload |
 | **MRsleep** | Admin-Menü, Status, Teleport, Bypass bis 30 Min, Sperre bis 1 Tag | + Bypass und Sperre bis 1 Tag, Blockaden aufheben, Cooldown zurücksetzen | + ohne Grenze, dauerhaft sperren, Reload |
 | **MRtoolbar** | Admin-Menü, Gürtel anderer ansehen | + `/mrtoolbar debug` | + Reload |
@@ -80,7 +80,7 @@ Diese Rechte verändern, wie ein Spieler behandelt wird, und gehören deshalb in
 | Permission | Wofür |
 |---|---|
 | `mrchunks.exempt` | Komplett von Chunkloadern ausgeschlossen - vorhandene Loader werden gelöscht |
-| `mrchunks.limit.<n>` · `active.<n>` · `dummies.<n>` (bzw. `.unlimited`) | Wie viele Chunkloader, aktive Loader und Dummies |
+| `mrchunks.budget.<n>` · `dummies.<n>` (bzw. `.unlimited`) | Chunk-Budget (wie viele Chunks alle aktiven Loader zusammen laden) und Anzahl Dummies |
 | `mrsleep.exempt` | Zählt nicht zur Schlafquote (Bots, Cam-Accounts) |
 | `mrsleep.nosleep.nocooldown` | `/nosleep` ohne Cooldown |
 | `mrpvp.bypass.commands` | Alle Befehle auch im Duell |
@@ -102,8 +102,8 @@ Diese Rechte verändern, wie ein Spieler behandelt wird, und gehören deshalb in
 # Staff ohne Kicken
 /lp group staff permission set mradmin.player.kick false
 
-# VIPs: 10 Chunkloader und ein VIP-Kit
-/lp group vip permission set mrchunks.limit.10 true
+# VIPs: 300 Chunks Budget (z.B. sechs 7x7-Loader) und ein VIP-Kit
+/lp group vip permission set mrchunks.budget.300 true
 /lp group vip permission set mrpvp.kit.vip true      # wenn das Kit in kits.yml permission: mrpvp.kit.vip hat
 ```
 

@@ -30,13 +30,13 @@
     return () => clearInterval(timer);
   });
 
-  async function act(action) {
+  async function act(action, extra = {}) {
     if (action === 'delete' && !confirm(t('chunks.deleteConfirm', { name: loader.name }))) return;
     busy = true;
     error = '';
     message = '';
     try {
-      await moduleAction('mrchunks', { action, id });
+      await moduleAction('mrchunks', { action, id, ...extra });
       if (action === 'delete') {
         go('/chunks');
         return;
@@ -54,6 +54,11 @@
   const share = (m) => (m.lock > 0 ? Math.min(100, (m.value / m.lock) * 100) : 0);
   const tone = (m) => (m.lock > 0 && m.value >= m.lock ? 'bad' : m.warn > 0 && m.value >= m.warn ? 'warn' : 'good');
   const value = (m) => (m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
+  // MRchunks before the chunk budget sends no size.
+  const sized = $derived(loader?.reach != null);
+  // With a dummy on, the size only changes evenly (a dummy needs a centred square).
+  const evenOnly = $derived(loader?.dummy && loader?.dummiesEnabled);
+  const DIRECTIONS = ['north', 'south', 'west', 'east'];
 </script>
 
 <div class="page">
@@ -78,6 +83,10 @@
       <dl class="facts">
         <dt>{t('ticket.location')}</dt><dd class="mono coords"><span>{loader.world}</span><span>X {loader.x}</span><span>Y {loader.y}</span><span>Z {loader.z}</span></dd>
         <dt>{t('chunks.created')}</dt><dd>{dateTime(loader.created)}</dd>
+        {#if sized}
+          <dt>{t('chunks.sizeLabel')}</dt><dd>{t('chunks.sizeValue', { width: loader.width, length: loader.length, chunks: loader.chunks })}</dd>
+          <dt>{t('chunks.ownerBudget')}</dt><dd>{t('chunks.budgetValue', { used: loader.budgetUsed, budget: loader.budget < 0 ? '∞' : loader.budget })}</dd>
+        {/if}
         {#if loader.dummiesEnabled}
           <dt>{t('chunks.dummy')}</dt>
           <dd class:good-text={loader.dummyPresent}>{loader.dummyPresent ? '🧍 ' + t('chunks.dummySits') : loader.dummy ? t('chunks.dummyWaiting') : t('chunks.dummyNone')}</dd>
@@ -100,7 +109,8 @@
           {/if}
           {#if me.may.mrchunksManage}
             {#if loader.dummiesEnabled}
-              <button class="secondary" onclick={() => act('dummy')} disabled={busy}>
+              <button class="secondary" onclick={() => act('dummy')} disabled={busy || (!loader.dummy && loader.dummyFits === false)}
+                title={!loader.dummy && loader.dummyFits === false ? t('chunks.dummyNeedsSquare') : ''}>
                 {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
               </button>
             {/if}
@@ -110,12 +120,34 @@
       {/if}
     </section>
 
+    {#if sized && me.may.mrchunksResize}
+      <section class="card">
+        <h2>{t('chunks.resize')}</h2>
+        <p class="muted small">{evenOnly ? t('chunks.resizeDummy') : t('chunks.resizeHint', { max: loader.maxReach * 2 + 1 })}</p>
+        <div class="resize">
+          {#each evenOnly ? ['all'] : [...DIRECTIONS, 'all'] as d (d)}
+            <div class="rrow">
+              <span>{t('chunks.dir.' + d)}</span>
+              <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '-1' })} aria-label="-1">−</button>
+              <strong class="mono">{d === 'all' ? loader.width + '×' + loader.length : loader.reach[d]}</strong>
+              <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '1' })} aria-label="+1">+</button>
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
     <section class="card">
       <h2>{t('chunks.activity')}</h2>
       {#if loader.metrics}
         <p class="muted small">
           {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
         </p>
+        {#if loader.pool && !loader.lock}
+          <p class="small" class:warn-text={loader.pool.warnRatio >= 1} class:bad-text={loader.pool.lockRatio >= 1}>
+            {t('chunks.pool', { percent: Math.round(loader.pool.warnRatio * 100), chunks: loader.pool.chunks })}
+          </p>
+        {/if}
         <div class="metrics">
           {#each loader.metrics as m (m.key)}
             <div class="metric">
@@ -227,6 +259,23 @@
     gap: 8px;
     flex-wrap: wrap;
     margin-top: 16px;
+  }
+
+  .resize {
+    display: grid;
+    gap: 8px;
+    max-width: 360px;
+  }
+
+  .rrow {
+    display: grid;
+    grid-template-columns: 1fr 40px 64px 40px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .rrow strong {
+    text-align: center;
   }
 
   .metrics {

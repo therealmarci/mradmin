@@ -9,6 +9,12 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Chunkloader mit Chunk-Budget (MRchunks):** Die Weboberfläche zeigt bei jedem Chunkloader seine Größe (z.B. 5×9 Chunks) und das Budget des Owners. Mit der MRchunks-Permission `mrchunks.admin.resize` lässt sich die Größe dort pro Richtung oder in alle Richtungen ändern. Auf der Spielerseite steht statt Setz- und Aktiv-Limit das Chunk-Budget (genutzt / verfügbar, mit `mrchunks.admin.limit` änderbar), dazu die feste Höchstzahl an Loadern. Die Aktivität eines Loaders zeigt zusätzlich, wie ausgelastet alle aktiven Loader des Owners zusammen sind. Braucht MRchunks ab der Version mit Chunk-Budget; ältere MRchunks-Versionen werden weiter wie bisher angezeigt.
+
+### Behoben & geändert
+- **Permissions-Übersicht:** `docs/PERMISSIONS.md` nennt für MRchunks `mrchunks.budget.<n>` statt `mrchunks.limit.<n>` / `mrchunks.active.<n>`.
+
 ## [0.8.0] - 2026-10-28
 
 > [!WARNING]
