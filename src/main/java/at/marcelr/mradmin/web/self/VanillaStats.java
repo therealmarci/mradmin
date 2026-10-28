@@ -71,13 +71,92 @@ public final class VanillaStats {
         this.plugin = plugin;
     }
 
-    /** All players with this statistic, best first (cached, read again after 10 minutes). Web threads only. */
+    /** An online player's values, read right from the server. */
+    public record Live(String name, Map<Kind, Double> values) {
+    }
+
+    /** Online players' values (see {@link #live(Map)}) - they replace the saved ones, which may be minutes old. */
+    private volatile Map<UUID, Live> live = Map.of();
+
+    /**
+     * All players with this statistic, best first: the saved files (cached, read again after 10 minutes), online players
+     * with their current values. Web threads only.
+     */
     public synchronized List<Entry> ranking(Kind kind) {
         if (System.currentTimeMillis() - cachedAt > CACHE_MILLIS) {
             cache = read();
             cachedAt = System.currentTimeMillis();
         }
-        return cache.getOrDefault(kind, List.of());
+        List<Entry> saved = cache.getOrDefault(kind, List.of());
+        Map<UUID, Live> now = live;
+        if (now.isEmpty()) {
+            return saved;
+        }
+        List<Entry> merged = new ArrayList<>();
+        for (Entry e : saved) {
+            if (!now.containsKey(e.player())) {
+                merged.add(e);
+            }
+        }
+        now.forEach((uuid, l) -> {
+            double value = l.values().getOrDefault(kind, 0.0);
+            if (value > 0) {
+                merged.add(new Entry(uuid, l.name(), value));
+            }
+        });
+        merged.sort(Comparator.comparingDouble(Entry::value).reversed());
+        return merged;
+    }
+
+    /** Sets the current values of the online players (from {@link #readLive()}, before answering a request). */
+    public void live(Map<UUID, Live> values) {
+        live = Map.copyOf(values);
+    }
+
+    /**
+     * The current values of every online player, straight from the server - Minecraft only writes them to the files
+     * when it saves. Main thread only.
+     */
+    public static Map<UUID, Live> readLive() {
+        Map<UUID, Live> result = new HashMap<>();
+        for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers()) {
+            Map<Kind, Double> v = new java.util.EnumMap<>(Kind.class);
+            v.put(Kind.PLAY_TIME, p.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / TICKS_PER_HOUR);
+            v.put(Kind.BLOCKS_MINED, perMaterial(p, org.bukkit.Statistic.MINE_BLOCK, true));
+            v.put(Kind.MOB_KILLS, (double) p.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+            v.put(Kind.XP_LEVEL, (double) p.getLevel());
+            v.put(Kind.DEATHS, (double) p.getStatistic(org.bukkit.Statistic.DEATHS));
+            double cm = 0;
+            for (org.bukkit.Statistic s : List.of(org.bukkit.Statistic.WALK_ONE_CM, org.bukkit.Statistic.SPRINT_ONE_CM,
+                    org.bukkit.Statistic.CROUCH_ONE_CM, org.bukkit.Statistic.SWIM_ONE_CM,
+                    org.bukkit.Statistic.WALK_UNDER_WATER_ONE_CM, org.bukkit.Statistic.WALK_ON_WATER_ONE_CM,
+                    org.bukkit.Statistic.AVIATE_ONE_CM, org.bukkit.Statistic.HORSE_ONE_CM,
+                    org.bukkit.Statistic.BOAT_ONE_CM, org.bukkit.Statistic.MINECART_ONE_CM)) {
+                cm += p.getStatistic(s);
+            }
+            v.put(Kind.DISTANCE, cm / CM_PER_KM);
+            v.put(Kind.FISH_CAUGHT, (double) p.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
+            v.put(Kind.JUMPS, (double) p.getStatistic(org.bukkit.Statistic.JUMP));
+            v.put(Kind.ITEMS_CRAFTED, perMaterial(p, org.bukkit.Statistic.CRAFT_ITEM, false));
+            result.put(p.getUniqueId(), new Live(p.getName(), v));
+        }
+        return result;
+    }
+
+    /** A statistic per block (mined) or per item (crafted) added up over all of them. */
+    private static double perMaterial(org.bukkit.entity.Player p, org.bukkit.Statistic statistic, boolean blocks) {
+        double sum = 0;
+        for (org.bukkit.Material m : org.bukkit.Material.values()) {
+            if (blocks ? !m.isBlock() : !m.isItem()) {
+                continue;
+            }
+            try {
+                sum += p.getStatistic(statistic, m);
+            } catch (IllegalArgumentException ignored) {
+                // not counted for this one (e.g. air)
+            }
+        }
+        return sum;
     }
 
     /** How many players there are statistics of (the ones with a name). Web threads only. */

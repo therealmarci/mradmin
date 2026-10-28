@@ -55,7 +55,8 @@ public final class SelfStats {
      * The viewer's own game statistics for the tile on the start page (player-web.personal-stats, in that order):
      * [{key, value}] with the value formatted for the language; empty = no tile.
      */
-    List<Map<String, Object>> personal(UUID player, String lang) {
+    List<Map<String, Object>> personal(UUID player, String lang) throws Exception {
+        vanilla.live(server.sync(VanillaStats::readLive));
         List<Map<String, Object>> result = new ArrayList<>();
         for (String key : plugin.settings().playerWeb().personalStats()) {
             VanillaStats.Kind kind = VanillaStats.Kind.byKey(key);
@@ -79,6 +80,8 @@ public final class SelfStats {
         List<Map<String, Object>> personal = new ArrayList<>();
         List<Map<String, Object>> totals = new ArrayList<>();
         List<String> shown = plugin.settings().playerWeb().rankingKinds();
+        // Online players with their values right now (the files are only written when the server saves).
+        vanilla.live(server.sync(VanillaStats::readLive));
         // The game's statistics: the viewer's own value and place for every kind, rankings and totals for the
         // configured ones (player-web.rankings.statistics).
         for (VanillaStats.Kind kind : VanillaStats.Kind.values()) {
