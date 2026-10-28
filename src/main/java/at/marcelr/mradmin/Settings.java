@@ -113,10 +113,14 @@ public record Settings(
                                       boolean replaceVersion) {
     }
 
-    /** {@code url} without trailing slash; empty id sets mean "every maintenance". */
+    /**
+     * {@code url} without trailing slash; empty id sets mean "every maintenance". {@code statusPages}: slugs of status
+     * pages whose incidents become warnings on the player page and in game ({@code incidents}).
+     */
     public record KumaSettings(boolean enabled, String url, String username, String password, String token,
                                Set<Integer> monitorIds, Set<Integer> maintenanceIds, int refreshSeconds,
-                               int reconnectSeconds, boolean keepWhenOffline) {
+                               int reconnectSeconds, boolean keepWhenOffline, List<String> statusPages,
+                               boolean incidents) {
 
         public boolean hasLogin() {
             return !token.isEmpty() || (!username.isEmpty() && !password.isEmpty());
@@ -222,7 +226,10 @@ public record Settings(
                 ids(c.getStringList("uptime-kuma.maintenance-ids"), "uptime-kuma.maintenance-ids", log),
                 Math.clamp(c.getInt("uptime-kuma.refresh-seconds", 60), 10, 3600),
                 Math.clamp(c.getInt("uptime-kuma.reconnect-seconds", 30), 5, 3600),
-                c.getBoolean("uptime-kuma.keep-schedule-when-offline", true));
+                c.getBoolean("uptime-kuma.keep-schedule-when-offline", true),
+                c.getStringList("uptime-kuma.status-pages").stream().map(String::trim)
+                        .filter(s -> s.matches("[A-Za-z0-9_-]{1,64}")).distinct().toList(),
+                c.getBoolean("uptime-kuma.incidents", true));
 
         AnnounceSettings announce = new AnnounceSettings(
                 ticks(c.getDouble("announce.fade-in", 0.5)),
@@ -317,13 +324,15 @@ public record Settings(
      * (days at most, and days without use), how long that code works (seconds) and how many browsers a player may have; the
      * statistics page (rankings: on/off, how many places, which of the game's statistics); the slideshow of the start
      * page (news: on/off, seconds per slide, how many posts, maintenance, restarts, plugin warnings and ticket answers in
-     * it); the own statistics on the start page (personal-stats).
+     * it); the own statistics on the start page (personal-stats); new posts once as a preview in the chat
+     * (chat-preview: on/off, at most how many, not older than days) and warnings in game (chat, title).
      */
     public record PlayerWebSettings(boolean enabled, int sessionDays, int idleDays, int codeSeconds, int maxDevices,
                                     boolean rankings, int rankingTop, List<String> rankingKinds,
                                     boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
                                     boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
-                                    List<String> personalStats) {
+                                    List<String> personalStats, boolean chatPreview, int chatPreviewMax,
+                                    int chatPreviewDays, boolean alertChat, boolean alertTitle) {
     }
 
     private static PlayerWebSettings playerWeb(FileConfiguration c) {
@@ -343,7 +352,12 @@ public record Settings(
                 c.getBoolean("player-web.news.show-restart", true),
                 c.getBoolean("player-web.news.show-plugin-notices", true),
                 c.getBoolean("player-web.news.show-tickets", true),
-                List.copyOf(c.getStringList("player-web.personal-stats")));
+                List.copyOf(c.getStringList("player-web.personal-stats")),
+                c.getBoolean("player-web.news.chat-preview.enabled", true),
+                Math.clamp(c.getInt("player-web.news.chat-preview.max", 3), 1, 10),
+                Math.clamp(c.getInt("player-web.news.chat-preview.max-age-days", 14), 1, 365),
+                c.getBoolean("player-web.news.alerts.chat", true),
+                c.getBoolean("player-web.news.alerts.title", true));
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {

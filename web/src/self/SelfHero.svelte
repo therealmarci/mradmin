@@ -73,8 +73,8 @@
     return h ? t('self.hero.inHours', { h, m: m % 60 }) : t('self.hero.inMinutes', { m });
   }
 
-  const tone = { maintenance: 'warn', restart: 'warn', news: 'accent', changelog: 'good', ticket: 'accent' };
-  const icon = { maintenance: '🛠️', restart: '🔄', news: '📣', changelog: '📝', ticket: '🎫' };
+  const tone = { maintenance: 'warn', restart: 'warn', news: 'accent', changelog: 'good', ticket: 'accent', alert: 'bad', incident: 'bad' };
+  const icon = { maintenance: '🛠️', restart: '🔄', news: '📣', changelog: '📝', ticket: '🎫', alert: '⚠️', incident: '⚠️' };
 </script>
 
 {#if slides.length}
@@ -86,7 +86,7 @@
       <div class="track" class:dragging={startX !== null} style="transform: translateX(calc({-index * 100}% + {drag}px))">
         {#each slides as s, i (s.type + ':' + (s.id ?? s.page + s.text))}
           {@const kind = s.type === 'maintenance' ? 'maintenance-' + s.phase : s.type}
-          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : s.type === 'notice' ? s.tone : tone[s.type]}"
+          <article class="slide tone-{s.type === 'maintenance' && s.phase === 'active' ? 'bad' : s.type === 'notice' ? s.tone : s.type === 'incident' && !s.critical ? 'warn' : tone[s.type]}"
             aria-roledescription="slide" aria-label={t('self.hero.of', { n: i + 1, total: slides.length })} aria-hidden={i !== index}
             inert={i !== index}>
             <div class="kind">
@@ -111,6 +111,14 @@
             {:else if s.type === 'notice'}
               <h2>{s.text}</h2>
               <button class="more" tabindex={i === index ? 0 : -1} onclick={() => go(s.page)}>{t('self.hero.toArea', { area: s.title })} →</button>
+            {:else if s.type === 'alert' || s.type === 'incident'}
+              <h2>{s.title}</h2>
+              {#if s.text}<p class="text">{s.text}</p>{/if}
+              {#if s.type === 'incident'}
+                <a class="more" tabindex={i === index ? 0 : -1} href={s.link} target="_blank" rel="noopener noreferrer">{t('self.hero.toStatus')} ↗</a>
+              {:else}
+                <button class="more" tabindex={i === index ? 0 : -1} onclick={() => go('/me/news')}>{t('self.hero.readMore')} →</button>
+              {/if}
             {:else if s.type === 'ticket'}
               <h2>{s.title}</h2>
               <p>{t(s.open ? 'self.hero.ticketAnswer' : 'self.hero.ticketClosed', { time: dateTime(s.time) })}</p>
@@ -249,6 +257,11 @@
     background: transparent;
     color: var(--tone);
     padding: 4px 0;
+  }
+
+  a.more {
+    font-weight: 600;
+    text-decoration: none;
   }
 
   .controls {

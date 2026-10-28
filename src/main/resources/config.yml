@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 29
+config-version: 30
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -159,6 +159,12 @@ uptime-kuma:
   reconnect-seconds: 30
   # If Kuma cannot be reached, the last known schedule stays valid (true) or is discarded (false).
   keep-schedule-when-offline: true
+
+  # Warnings ("incidents") pinned on Uptime Kuma status pages - e.g. during an outage - are shown on the player page
+  # and in game like the warnings written in MRadmin. Slugs of the status pages, e.g. "main" for
+  # https://status.yourserver.com/status/main (read from the public page, no login needed). Empty = none.
+  status-pages: []
+  incidents: true
 
 
 # ------------------------------------------------------------------------------
@@ -459,12 +465,22 @@ discord-announce:
     cooldown: "10m"
     ping: false
 
+  # News, changelogs and warnings from the web interface ("News") - only those where "Post to Discord" is ticked.
+  news:
+    ping: false
+  alerts:
+    # Mention ping-role-id with a critical warning.
+    ping: true
+
   colors:
     scheduled: "#F1C40F"
     started: "#E74C3C"
     ended: "#2ECC71"
     cancelled: "#95A5A6"
     announce: "#9B59B6"
+    news: "#3498DB"
+    changelog: "#2ECC71"
+    alert: "#E74C3C"
 
 
 # ------------------------------------------------------------------------------
@@ -723,6 +739,18 @@ player-web:
     show-plugin-notices: true
     # Own tickets with a new answer of the team (or closed) that the player has not read yet.
     show-tickets: true
+    # New news and changelogs once per player as a short preview in the chat, with a link to the whole post: to
+    # everyone online when published, otherwise on the next join (at most "max", not older than "max-age-days").
+    # Only for players who may open the player page (mradmin.web.self).
+    chat-preview:
+      enabled: true
+      max: 3
+      max-age-days: 14
+    # Critical warnings (written in MRadmin or pinned in Uptime Kuma): to everyone online in the chat and as a title
+    # on the screen; whoever joins while one is on gets it in the chat.
+    alerts:
+      chat: true
+      title: true
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

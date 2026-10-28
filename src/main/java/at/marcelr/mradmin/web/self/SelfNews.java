@@ -9,6 +9,7 @@ import at.marcelr.mradmin.api.SelfBlock;
 import at.marcelr.mradmin.api.SelfViewer;
 import at.marcelr.mradmin.maintenance.MaintenanceManager;
 import at.marcelr.mradmin.maintenance.Window;
+import at.marcelr.mradmin.news.KumaIncidents;
 import at.marcelr.mradmin.news.News;
 import at.marcelr.mradmin.ticket.Ticket;
 import at.marcelr.mradmin.ticket.TicketManager;
@@ -29,7 +30,7 @@ import java.util.UUID;
  * and the posts of the team (news, changelogs) in the viewer's language - the most urgent first.
  * <pre>
  *  GET /api/self/news?lang=de         the slideshow: {seconds, slides: [...]}
- *  GET /api/self/news?lang=de&amp;all=1   every visible post (page "News")
+ *  GET /api/self/news?lang=de&amp;all=1   page "News": {alerts, news, changelog}
  * </pre>
  */
 public final class SelfNews {
@@ -61,45 +62,83 @@ public final class SelfNews {
         }
         Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
-        boolean all = "1".equals(http.query().get("all"));
-        List<Map<String, Object>> slides = new ArrayList<>();
-        if (!all) {
-            if (settings.newsMaintenance() && plugin.feature(Feature.MAINTENANCE)) {
-                Map<String, Object> maintenance = server.sync(this::maintenance);
-                if (maintenance != null) {
-                    slides.add(maintenance);
-                }
-            }
-            if (settings.newsRestart()) {
-                long restartAt = server.sync(() -> plugin.restarts().endsAt());
-                if (restartAt > 0) {
-                    slides.add(Map.of("type", "restart", "time", restartAt));
-                }
-            }
-            if (settings.newsPluginNotices()) {
-                slides.addAll(notices(http));
-            }
-            if (settings.newsTickets() && tickets.available(http.player().player())) {
-                slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
-            }
-        }
         List<News.Post> posts = server.news().visible();
-        for (News.Post p : all ? posts : posts.subList(0, Math.min(posts.size(), settings.newsSlides()))) {
+        // Warnings: written in MRadmin, or pinned on an Uptime Kuma status page.
+        List<Map<String, Object>> alerts = new ArrayList<>();
+        for (News.Post p : server.news().activeAlerts()) {
+            alerts.add(post(p, lang));
+        }
+        for (KumaIncidents.Incident i : plugin.newsDelivery().incidents().current()) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("type", p.kind());
-            m.put("id", p.id());
-            m.put("title", p.in(p.title(), lang));
-            m.put("text", p.in(p.text(), lang));
-            m.put("pinned", p.pinned());
-            m.put("created", p.created());
-            m.put("updated", p.updated());
-            slides.add(m);
+            m.put("type", "incident");
+            m.put("id", "kuma-" + i.slug());
+            m.put("title", i.title());
+            m.put("text", i.content());
+            m.put("critical", i.critical());
+            m.put("created", i.created());
+            m.put("link", plugin.settings().kuma().url() + "/status/" + i.slug());
+            alerts.add(m);
         }
         Map<String, Object> result = new LinkedHashMap<>();
+        if ("1".equals(http.query().get("all"))) {
+            // The page "News": warnings on top, news and changelogs separately.
+            result.put("alerts", alerts);
+            result.put("news", posts.stream().filter(p -> "news".equals(p.kind())).map(p -> post(p, lang)).toList());
+            result.put("changelog", posts.stream().filter(p -> "changelog".equals(p.kind()))
+                    .sorted(java.util.Comparator.comparingLong(News.Post::created).reversed()).map(p -> post(p, lang)).toList());
+            http.json(200, result);
+            return;
+        }
+        // The slideshow: the most urgent first.
+        List<Map<String, Object>> slides = new ArrayList<>(alerts);
+        if (settings.newsMaintenance() && plugin.feature(Feature.MAINTENANCE)) {
+            Map<String, Object> maintenance = server.sync(this::maintenance);
+            if (maintenance != null) {
+                slides.add(maintenance);
+            }
+        }
+        if (settings.newsRestart()) {
+            long restartAt = server.sync(() -> plugin.restarts().endsAt());
+            if (restartAt > 0) {
+                slides.add(Map.of("type", "restart", "time", restartAt));
+            }
+        }
+        if (settings.newsPluginNotices()) {
+            slides.addAll(notices(http));
+        }
+        if (settings.newsTickets() && tickets.available(http.player().player())) {
+            slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
+        }
+        List<News.Post> shown = posts.stream().filter(p -> !p.alert()).toList();
+        for (News.Post p : shown.subList(0, Math.min(shown.size(), settings.newsSlides()))) {
+            Map<String, Object> m = post(p, lang);
+            m.put("text", p.preview(lang, 400));
+            slides.add(m);
+        }
         result.put("seconds", settings.newsSeconds());
-        result.put("more", posts.size() > settings.newsSlides());
+        result.put("more", shown.size() > settings.newsSlides());
         result.put("slides", slides);
         http.json(200, result);
+    }
+
+    /** A post in the viewer's language; a changelog with its entries. */
+    private static Map<String, Object> post(News.Post p, String lang) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("type", p.kind());
+        m.put("id", p.id());
+        m.put("title", p.heading(lang));
+        m.put("text", p.in(p.text(), lang));
+        m.put("version", p.version());
+        List<Map<String, Object>> entries = new ArrayList<>();
+        for (News.Entry e : p.entries()) {
+            entries.add(Map.of("type", e.type(), "text", p.in(e.text(), lang)));
+        }
+        m.put("entries", entries);
+        m.put("pinned", p.pinned());
+        m.put("created", p.created());
+        m.put("updated", p.updated());
+        m.put("expires", p.expires());
+        return m;
     }
 
     /** Warnings of the plugins: Text blocks with tone bad (first) or warn in the summary of their areas. */

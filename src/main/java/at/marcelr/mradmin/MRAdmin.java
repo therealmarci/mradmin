@@ -76,6 +76,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             Map.entry(14, Set.of("web-self-link"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
+    private at.marcelr.mradmin.news.NewsDelivery newsDelivery;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
@@ -118,6 +119,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.ItemRoutes.register(web);
         at.marcelr.mradmin.web.self.SelfRoutes.register(web);
         web.playerSessions().load();
+        newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
         web.requests().load();
@@ -149,6 +151,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(new FreezeListener(this), this);
         pm.registerEvents(staffChat, this);
         pm.registerEvents(web.requests(), this);
+        pm.registerEvents(newsDelivery, this);
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);
@@ -186,6 +189,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (updateChecker != null) {
             updateChecker.stop();
+        }
+        if (newsDelivery != null) {
+            newsDelivery.incidents().stop();
         }
         discord.shutdown();
         if (discordAnnounce != null) {
@@ -242,6 +248,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         updateChecker.start();
         versions.start();
         menuListener.start();
+        newsDelivery.incidents().start();
     }
 
     private void loadConfiguration() {
@@ -340,6 +347,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public DiscordWebhook discord() {
         return discord;
+    }
+
+    /** Brings news, changelogs and warnings to the players (Discord, chat, title). */
+    public at.marcelr.mradmin.news.NewsDelivery newsDelivery() {
+        return newsDelivery;
     }
 
     public DiscordAnnouncer discordAnnounce() {

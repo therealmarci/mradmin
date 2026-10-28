@@ -37,8 +37,10 @@ public final class ConfigUpdater {
  * 28: player-web.news.show-plugin-notices and show-tickets (warnings and ticket answers in the slideshow).
  * 29: player-web sign-in with a 6-digit code: session-days 90 -> 14 (only the old default), idle-days, code-seconds
  * instead of link-minutes.
+ * 30: news, changelogs and warnings: uptime-kuma.status-pages/incidents, player-web.news.chat-preview and alerts,
+ * discord-announce.news/alerts and colors.news/changelog/alert.
      */
-    public static final int CURRENT_VERSION = 29;
+    public static final int CURRENT_VERSION = 30;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

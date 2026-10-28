@@ -34,9 +34,10 @@ public final class DiscordAnnouncer {
     private record Config(boolean enabled, URI url, String username, String avatar, String pingRole, String footer,
                           boolean maintenance, MaintenanceBoard.Rules rules, boolean pingMaintenance,
                           boolean announcements, long cooldown, boolean pingAnnouncements,
-                          int colorScheduled, int colorStarted, int colorEnded, int colorCancelled, int colorAnnounce) {
+                          int colorScheduled, int colorStarted, int colorEnded, int colorCancelled, int colorAnnounce,
+                          boolean pingNews, boolean pingAlerts, int colorNews, int colorChangelog, int colorAlert) {
         static final Config DISABLED = new Config(false, null, "", "", null, "", false, null, false,
-                false, 0, false, 0, 0, 0, 0, 0);
+                false, 0, false, 0, 0, 0, 0, 0, false, false, 0, 0, 0);
     }
 
     private final MRAdmin plugin;
@@ -100,7 +101,10 @@ public final class DiscordAnnouncer {
                 s.getBoolean("announcements.ping", false),
                 color(s.getString("colors.scheduled"), 0xF1C40F), color(s.getString("colors.started"), 0xE74C3C),
                 color(s.getString("colors.ended"), 0x2ECC71), color(s.getString("colors.cancelled"), 0x95A5A6),
-                color(s.getString("colors.announce"), 0x9B59B6));
+                color(s.getString("colors.announce"), 0x9B59B6),
+                s.getBoolean("news.ping", false), s.getBoolean("alerts.ping", true),
+                color(s.getString("colors.news"), 0x3498DB), color(s.getString("colors.changelog"), 0x2ECC71),
+                color(s.getString("colors.alert"), 0xE74C3C));
         disabledReason = null;
         plugin.getLogger().info("Discord announcement webhook active.");
     }
@@ -244,6 +248,42 @@ public final class DiscordAnnouncer {
         return true;
     }
 
+
+    // -------------------------------------------------------- news, changelogs, warnings
+
+    /**
+     * A post of the team (see {@link at.marcelr.mradmin.news.News}) - only if its author asked for it. News and
+     * changelogs ping with {@code news.ping}, warnings with {@code alerts.ping}.
+     *
+     * @param kind  news, changelog or alert (colour)
+     * @param title plain title
+     * @param body  Discord markdown (escaped where it comes from the post)
+     * @param link  the whole post on the player page, or null
+     * @return whether it was posted
+     */
+    public boolean postNews(String kind, String title, String body, String link) {
+        Config c = config;
+        if (!c.enabled()) {
+            return false;
+        }
+        int color = switch (kind) {
+            case "changelog" -> c.colorChangelog();
+            case "alert" -> c.colorAlert();
+            default -> c.colorNews();
+        };
+        String text = body;
+        if (link != null) {
+            text += "\n\n[" + text("news-read-more") + "](" + link + ")";
+        }
+        boolean ping = "alert".equals(kind) ? c.pingAlerts() : c.pingNews();
+        webhook.post(c.url(), payload(c, ping, embed(title, text.length() > 4000 ? text.substring(0, 3999) : text, color)));
+        return true;
+    }
+
+    /** A text of discord-announce in the server language (for building posts elsewhere). */
+    public String label(String key) {
+        return text(key);
+    }
     public CompletableFuture<String> test(CommandSender sender) {
         Config c = config;
         if (!c.enabled()) {

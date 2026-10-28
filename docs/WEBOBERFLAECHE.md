@@ -177,14 +177,31 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 
 ## Neuigkeiten (`mradmin.news`)
-Beiträge für die Spielerseite (`/web`): **Neuigkeit** (Ankündigungen, Events) oder **Changelog** (was sich geändert hat).
-Titel und Text getrennt auf Deutsch und Englisch - jeder Spieler sieht seine Sprache, fehlt sie, die andere.
-Zeilenumbrüche bleiben erhalten (z.B. eine Liste mit „- “). **Anheften** stellt einen Beitrag immer nach vorne, **Sichtbar
-bis** blendet ihn nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten und Löschen landen im
-Web-Protokoll.
+Drei Arten von Beiträgen für die Spieler, Texte getrennt auf Deutsch und Englisch (jeder sieht seine Sprache, fehlt sie,
+die andere):
 
-Auf der Spielerseite erscheinen die neuesten Beiträge (`player-web.news.slides`) im Karussell der Startseite, dazu eine
-geplante oder laufende Wartung und ein geplanter Neustart. Gespeichert wird im Speicher von MRadmin unter `news`.
+- **Neuigkeit** (Ankündigungen, Events): Titel und Text, **Anheften** stellt sie immer nach vorne.
+- **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) -
+  hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste mit farbigen Abschnitten.
+- **Kritische Warnung**: Titel und Text. Beim Senden bekommen alle Spieler, die online sind, die Warnung im Chat und als
+  Titel auf dem Bildschirm (`player-web.news.alerts`); wer später joint, sieht sie im Chat, solange sie aktiv ist. Sie
+  läuft bis „Aktiv bis“ oder bis **Beenden**.
+
+**Auch im Discord posten** (pro Beitrag): in den Kanal des Ankündigungs-Webhooks (`discord-announce`, wo auch die
+Wartungen stehen), mit Link zur ganzen Nachricht auf der Spielerseite. Warnungen erwähnen `ping-role-id`
+(`discord-announce.alerts.ping`), Neuigkeiten und Changelogs nicht (`discord-announce.news.ping`). Bei einem
+bestehenden Beitrag lässt sich das einmal nachholen.
+
+Neue Neuigkeiten und Changelogs bekommt jeder Spieler mit `mradmin.web.self` **einmal als Vorschau im Chat** mit einem
+Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`player-web.news.chat-preview`).
+
+**Warnungen aus Uptime Kuma:** Ein auf einer Kuma-Statusseite angehefteter Vorfall (`uptime-kuma.status-pages`) wird wie
+eine Warnung gezeigt - auf der Spielerseite, im Spiel (Chat und Titel, wenn er neu ist) und oben auf dieser Seite. Geändert
+und beendet wird er in Uptime Kuma.
+
+**Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
+und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon
+bekommen hat: `news-seen`).
 
 ## Versionen (`mradmin.versions.view`)
 - Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
