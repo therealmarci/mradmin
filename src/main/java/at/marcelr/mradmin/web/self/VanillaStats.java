@@ -78,6 +78,12 @@ public final class VanillaStats {
         return cache.getOrDefault(kind, List.of());
     }
 
+    /** How many players there are statistics of (the ones with a name). Web threads only. */
+    public synchronized int players() {
+        ranking(Kind.PLAY_TIME);
+        return cache.values().stream().mapToInt(List::size).max().orElse(0);
+    }
+
     /** One player's value of a statistic (0 if they have none), from the same cache. Web threads only. */
     public synchronized double of(UUID player, Kind kind) {
         for (Entry e : ranking(kind)) {

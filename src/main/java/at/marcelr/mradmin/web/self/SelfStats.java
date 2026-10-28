@@ -19,7 +19,8 @@ import java.util.UUID;
  * The statistics page of the player area: rankings of the game's own statistics ({@link VanillaStats}) and of the
  * plugins ({@link at.marcelr.mradmin.api.WebModule#rankings}). Players can hide themselves from every ranking.
  * <pre>
- *  GET  /api/self/stats?lang=de          the rankings: top places plus the viewer's own place
+ *  GET  /api/self/stats?lang=de          personal (own values and places), totals of the server, the rankings (top
+ *                                        places plus the viewer's own place)
  *  POST /api/self/stats/hide  {hidden}   hide from (or show again in) all rankings
  * </pre>
  */
@@ -75,17 +76,28 @@ public final class SelfStats {
         int top = plugin.settings().playerWeb().rankingTop();
         Set<UUID> hiddenNow = hidden();
         List<Map<String, Object>> rankings = new ArrayList<>();
-        for (String key : plugin.settings().playerWeb().rankingKinds()) {
-            VanillaStats.Kind kind = VanillaStats.Kind.byKey(key);
-            if (kind == null) {
-                continue;
-            }
+        List<Map<String, Object>> personal = new ArrayList<>();
+        List<Map<String, Object>> totals = new ArrayList<>();
+        List<String> shown = plugin.settings().playerWeb().rankingKinds();
+        // The game's statistics: the viewer's own value and place for every kind, rankings and totals for the
+        // configured ones (player-web.rankings.statistics).
+        for (VanillaStats.Kind kind : VanillaStats.Kind.values()) {
+            List<VanillaStats.Entry> all = vanilla.ranking(kind);
             List<Place> places = new ArrayList<>();
-            for (VanillaStats.Entry e : vanilla.ranking(kind)) {
-                places.add(new Place(e.player(), e.name(), VanillaStats.format(kind, e.value(), lang)));
+            double sum = 0;
+            for (VanillaStats.Entry e : all) {
+                places.add(new Place(e.player(), e.name(), VanillaStats.format(kind, e.value(), lang), e.value()));
+                sum += e.value();
             }
-            rankings.add(ranking("game:" + kind.key, null, places, viewer, hiddenNow, top));
+            String id = "game:" + kind.key;
+            personal.add(own(id, null, places, viewer, hiddenNow,
+                    VanillaStats.format(kind, vanilla.of(viewer, kind), lang), vanilla.of(viewer, kind)));
+            if (shown.stream().anyMatch(k -> kind.key.equalsIgnoreCase(k.trim()))) {
+                rankings.add(ranking(id, null, places, viewer, hiddenNow, top));
+                totals.add(Map.of("id", id, "value", VanillaStats.format(kind, sum, lang)));
+            }
         }
+        // The plugins' rankings (e.g. duels won).
         for (var entry : plugin.modules().webModules().entrySet()) {
             AdminModule module = plugin.modules().module(entry.getKey());
             List<SelfRanking> list = server.sync(() -> plugin.modules().call(module,
@@ -93,18 +105,62 @@ public final class SelfStats {
             for (SelfRanking r : list) {
                 List<Place> places = new ArrayList<>();
                 for (SelfRanking.Entry e : r.entries()) {
-                    places.add(new Place(e.player(), e.name(), e.value()));
+                    places.add(new Place(e.player(), e.name(), e.value(), Double.NaN));
                 }
-                rankings.add(ranking(entry.getKey() + ":" + r.id(), r.title(), places, viewer, hiddenNow, top));
+                String id = entry.getKey() + ":" + r.id();
+                rankings.add(ranking(id, r.title(), places, viewer, hiddenNow, top));
+                Place mine = places.stream().filter(p -> p.player().equals(viewer)).findFirst().orElse(null);
+                if (mine != null) {
+                    personal.add(own(id, r.title(), places, viewer, hiddenNow, mine.value(), Double.NaN));
+                }
             }
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("hidden", hiddenNow.contains(viewer));
+        result.put("players", vanilla.players());
+        result.put("personal", personal);
+        result.put("totals", totals);
         result.put("rankings", rankings);
         http.json(200, result);
     }
 
-    private record Place(UUID player, String name, String value) {
+    /** One value and amount for sorting (NaN for the plugins' rankings, which only give text). */
+    private record Place(UUID player, String name, String value, double amount) {
+    }
+
+    /**
+     * The viewer's own value with their place among the players shown in the ranking (the viewer counts even if they
+     * hid themselves), how many there are, the best value and - for the game's statistics - the share of the best.
+     */
+    private static Map<String, Object> own(String id, String title, List<Place> all, UUID viewer, Set<UUID> hidden,
+                                           String value, double amount) {
+        int rank = 0;
+        int total = 0;
+        Place best = null;
+        for (Place p : all) {
+            boolean self = p.player().equals(viewer);
+            if (hidden.contains(p.player()) && !self) {
+                continue;
+            }
+            total++;
+            if (best == null) {
+                best = p;
+            }
+            if (self) {
+                rank = total;
+            }
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("title", title);
+        m.put("value", value);
+        m.put("rank", rank);
+        m.put("total", rank == 0 ? total + 1 : total);
+        m.put("best", best == null ? null : best.value());
+        m.put("bestName", best == null ? null : best.name());
+        boolean measurable = !Double.isNaN(amount) && best != null && best.amount() > 0;
+        m.put("share", measurable ? Math.min(1, amount / best.amount()) : null);
+        return m;
     }
 
     /** Top places without hidden players, numbered again, plus the viewer's own place if it is further down. */
