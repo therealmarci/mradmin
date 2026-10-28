@@ -29,8 +29,9 @@ public final class ConfigUpdater {
      * 8: storage (yaml, sqlite, mysql); 9: web interface (web, Discord events web-login/web-setup);
      * 10: web.legal (imprint, privacy policy), web.privacy (retention, shortened IPs); 11: health (history, alert);
  * 22: web.item-icons (item pictures from the game client).
+ * 23: tickets.chunkloader-locks became tickets.plugin-reports (automatic tickets of all plugins).
      */
-    public static final int CURRENT_VERSION = 22;
+    public static final int CURRENT_VERSION = 23;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -43,7 +44,9 @@ public final class ConfigUpdater {
             Map.entry("discord.events.report.enabled", "discord.events.ticket.enabled"),
             Map.entry("discord.events.report.color", "discord.events.ticket.color"),
             Map.entry("discord.events.report-closed.enabled", "discord.events.ticket-closed.enabled"),
-            Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"));
+            Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"),
+            // v23: automatic tickets of all plugins, not only MRchunks' lag locks
+            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"));
 
     /**
      * Sections whose entries are made by the server owner (own menu buttons, ticket categories): their entries are

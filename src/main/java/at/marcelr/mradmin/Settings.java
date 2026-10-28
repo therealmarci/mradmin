@@ -154,13 +154,14 @@ public record Settings(
      *
      * @param icon       item of every ticket in the menus
      * @param categories the categories offered when creating a ticket, in config order (never empty)
-     * @param chunkloaderLocks open a ticket for the owner when MRchunks locks a chunk loader
+     * @param moduleReports open a ticket when a plugin reports a problem of a player (e.g. MRchunks: a loader locked
+     *                      because of lag), see tickets.plugin-reports
      */
     public record TicketSettings(long cooldown, long replyCooldown, int maxOpenPerPlayer,
                                  int minSubjectLength, int maxSubjectLength, int minTextLength, int maxTextLength,
                                  boolean notifyCreator, boolean showStaffNames, boolean autoClaim, int shownMessages,
                                  long keepClosed, Key sound, Material icon, Material teamIcon,
-                                 List<TicketCategory> categories, boolean chunkloaderLocks) {
+                                 List<TicketCategory> categories, boolean moduleReports) {
 
         /** The category with this id, or null if it is not (or no longer) configured. */
         public TicketCategory category(String id) {
@@ -297,7 +298,7 @@ public record Settings(
                 item(c, "tickets.icon", Material.NAME_TAG, log),
                 item(c, "tickets.team-icon", Material.NETHER_STAR, log),
                 ticketCategories(c, log),
-                c.getBoolean("tickets.chunkloader-locks", true));
+                c.getBoolean("tickets.plugin-reports", true));
 
         Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
         for (Feature feature : Feature.values()) {

@@ -99,6 +99,22 @@ public interface AdminModule {
         return List.of();
     }
 
+    /**
+     * Whether the player is no real player but one of the module's NPCs (e.g. MRchunks' dummy players). MRadmin leaves
+     * them out of player lists, counts and maintenance kicks. Cheap, asked often. Since API 3.
+     */
+    default boolean isNpc(Player player) {
+        return false;
+    }
+
+    /**
+     * Chunks the module keeps loaded itself (e.g. MRchunks' chunk loaders), shown in the server health; -1 = none.
+     * Main thread, asked every second - keep it cheap. Since API 3.
+     */
+    default int loadedChunks() {
+        return -1;
+    }
+
     // ---------------------------------------------------------------- web
 
     /**

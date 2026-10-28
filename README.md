@@ -91,7 +91,7 @@ Fehlt eine Permission, fehlt einfach der Knopf. Alle Befehle zeigt `/mradmin hel
 - **Kategorien** legst du unter `tickets.categories` an. Standard: Cheating, Chat, Griefing, Betrug, Bug, Frage/Sonstiges.
 - Im Ticket steht der Verlauf wie in einem Chat. Wer offline ist, erfährt beim nächsten Join von neuen Antworten.
 - Das **Team** bekommt neue Tickets mit **[Öffnen] [Teleport] [Alle Tickets]**. Unter Dashboard → Tickets oder `/mradmin tickets`: filtern, antworten, **übernehmen**, schließen, wieder öffnen. Wer zuerst antwortet, übernimmt das Ticket automatisch.
-- **Mit MRchunks** bekommt der Owner automatisch ein Ticket, wenn sein Chunkloader wegen Lag gesperrt wird - mit allen Messwerten. Schließen kann es nur das Team.
+- **Automatische Tickets von Plugins:** Meldet ein Plugin ein Problem eines Spielers, bekommt er automatisch ein Ticket - z.B. **mit MRchunks**, wenn sein Chunkloader wegen Lag gesperrt wird, mit allen Messwerten. Schließen kann es nur das Team. Abschalten mit `tickets.plugin-reports: false`.
 
 ## Staff-Chat
 `/sc <nachricht>` schreibt an alle mit `mradmin.staffchat`, auch aus der Konsole. `/sc` ohne Text schaltet um: Dann geht dein normaler Chat ans Team. Spiegeln in den Admin-Discord ist optional (Event `staff-chat`).

@@ -17,6 +17,11 @@ jedes Modul gleich. Eine neue Aktion im Web braucht deshalb **nur** eine Änderu
 | | Serverzustand (Auffälliges) | `health`, `openHealth` |
 | | Weboberfläche | `AdminModule.web()` → `WebModule` |
 | | Hinweise auf der Startseite im Web | `WebModule.alerts()` |
+| | Kachel auf der Startseite im Web (ab API 3) | `WebModule.tile()` → `WebTile` |
+| | eigene Web-Push-Arten (ab API 3) | `WebModule.pushKinds()` → `WebPushKind` |
+| | Namen der Ticket-Kategorien seiner Reports (ab API 3) | `WebModule.reportCategories()` |
+| | geladene Chunks im Serverzustand (ab API 3) | `AdminModule.loadedChunks()` |
+| | eigene NPCs (z.B. Dummies) aus Listen und Zählungen nehmen (ab API 3) | `AdminModule.isNpc(player)` |
 | Plugin ↔ Plugin | Spieler ist beschäftigt (Duell) | `AdminModule.busy` / `MRadminService.busy(player)` |
 | | Welt gehört einem Plugin (Arena) | `AdminModule.ownsWorld` / `MRadminService.worldOwner(world)` |
 | | Gegenstände außerhalb des Inventars (Gürtel) | `AdminModule.storedItems` / `MRadminService.storedItems(player)` |
@@ -31,7 +36,7 @@ Alle Typen liegen im Paket `at.marcelr.mradmin.api` (Teilprojekt `api/`).
 
 **`gradle.properties`**
 ```properties
-mradminApi=api-1.0.0
+mradminApi=api-1.2.0
 ```
 
 **`build.gradle.kts`**
@@ -145,7 +150,7 @@ dafür braucht es MRadmin nicht.
 ```java
 service.report("mrchunks", new Report(
         "17",                 // key: eigene Id des Problems - ein zweiter Report mit demselben key geht ins offene Ticket
-        "chunkloader-lock",   // Ticket-Kategorie (Name aus MRadmins Sprachdatei ticket-categories.<kind>)
+        "chunkloader-lock",   // Ticket-Kategorie (Name aus reportCategories() des Moduls)
         owner, ownerName,
         "Farm gesperrt",      // Betreff (max. 100 Zeichen)
         details,              // Text, mehrzeilig
@@ -153,12 +158,18 @@ service.report("mrchunks", new Report(
         "chunks-locked"));    // Web-Push-Art, oder null
 service.resolve("mrchunks", "17", "Die Sperre wurde von Marci aufgehoben.");
 ```
-Der Knopf „Objekt öffnen“ im Ticket ruft `openHealth(viewer, key, back)` des Moduls auf.
+Der Knopf „Objekt öffnen“ im Ticket ruft `openHealth(viewer, key, back)` des Moduls auf. Den Namen der Kategorie liefert das
+Modul über `reportCategories()` (in seiner Server-Sprache), die Web-Push-Art meldet es über `pushKinds()` an - MRadmin
+kennt keine Kategorie und keine Push-Art eines Plugins fest. Automatische Tickets schaltet der Server-Betreiber mit
+`tickets.plugin-reports` in MRadmins Config ab.
+
+
 
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
-  Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`).
+  Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
+  `reportCategories()`, `loadedChunks()`, `isNpc()`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

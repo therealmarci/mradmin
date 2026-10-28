@@ -464,7 +464,6 @@ ticket-categories:
   bug: "Bug / Fehler"
   other: "Frage / Sonstiges"
   # Wird automatisch geöffnet, wenn MRchunks einen Chunkloader wegen Lag sperrt (nicht zum Erstellen wählbar).
-  chunkloader-lock: "Chunkloader-Sperre"
   # Aus den öffentlichen Formularen der Weboberfläche (nicht zum Erstellen wählbar). Kontaktanfragen gibt es nur im Web.
   unban: "Entbannungsantrag"
   contact: "Kontaktanfrage"

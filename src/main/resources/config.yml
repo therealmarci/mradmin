@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 22
+config-version: 23
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -267,10 +267,11 @@ tickets:
   sound: "BLOCK_NOTE_BLOCK_PLING"
   # Keep closed tickets this long (also visible to the player), afterwards they are deleted.
   keep-closed: "7d"
-  # With MRchunks: if a chunk loader is locked because of lag, its owner automatically gets a ticket with all
-  # details of the lock (link in the chat). There they can explain what happened. Only the team can close it, and
-  # the team can unlock the loader via "Chunk loader menu" in the ticket. If it is locked or unlocked again, that is noted in the same ticket.
-  chunkloader-locks: true
+  # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
+  # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
+  # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader
+  # menu" in the ticket. If it happens again, that is noted in the same ticket. false = no automatic tickets.
+  plugin-reports: true
   # Icon of all tickets in the menus (item name).
   icon: "NAME_TAG"
   # Categories offered when creating a ticket (in this order). Simply add your own, delete the ones you do not

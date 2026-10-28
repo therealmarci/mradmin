@@ -18,7 +18,7 @@
   let endpoint = $state(null);
   let permission = $state(supported ? Notification.permission : 'denied');
 
-  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', 'chunks-locked': '🔒', lag: '🐢', maintenance: '🔧' };
+  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', lag: '🐢', maintenance: '🔧' };
 
   async function load() {
     try {
@@ -149,10 +149,10 @@
         {#each Object.entries(data.kinds) as [kind, on] (kind)}
           <li>
             <label>
-              <span class="kicon" aria-hidden="true">{ICON[kind] ?? '•'}</span>
+              <span class="kicon" aria-hidden="true">{data.labels?.[kind]?.icon ?? ICON[kind] ?? '•'}</span>
               <span class="ktext">
-                <strong>{t('push.kind.' + kind)}</strong>
-                <span class="muted small">{t('push.kindHint.' + kind)}</span>
+                <strong>{data.labels?.[kind]?.label ?? t('push.kind.' + kind)}</strong>
+                <span class="muted small">{data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}</span>
               </span>
               <input type="checkbox" class="switch" checked={on} onchange={(e) => choose(kind, e.currentTarget.checked)} />
             </label>

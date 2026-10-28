@@ -12,8 +12,12 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 ### Neu
 - **Chunkloader mit Chunk-Budget (MRchunks):** Die Weboberfläche zeigt bei jedem Chunkloader seine Größe (z.B. 5×9 Chunks) und das Budget des Owners. Mit der MRchunks-Permission `mrchunks.admin.resize` lässt sich die Größe dort pro Richtung oder in alle Richtungen ändern. Auf der Spielerseite steht statt Setz- und Aktiv-Limit das Chunk-Budget (genutzt / verfügbar, mit `mrchunks.admin.limit` änderbar), dazu die feste Höchstzahl an Loadern. Die Aktivität eines Loaders zeigt zusätzlich, wie ausgelastet alle aktiven Loader des Owners zusammen sind. Braucht MRchunks ab der Version mit Chunk-Budget; ältere MRchunks-Versionen werden weiter wie bisher angezeigt.
 
+- **Modul-API 1.2.0 (API-Version 3):** Plugins liefern jetzt selbst ihre Kachel auf der Startseite der Weboberfläche (`WebModule.tile()`), ihre Push-Benachrichtigungen (`pushKinds()`), die Namen ihrer Ticket-Kategorien (`reportCategories()`), die von ihnen geladenen Chunks für den Serverzustand (`AdminModule.loadedChunks()`) und ihre Kunstspieler (`isNpc()`). Nur Ergänzungen - Plugins für ältere API-Versionen laufen weiter. Details in `docs/MODULE-API.md`.
+
 ### Behoben & geändert
 - **Permissions-Übersicht:** `docs/PERMISSIONS.md` nennt für MRchunks `mrchunks.budget.<n>` statt `mrchunks.limit.<n>` / `mrchunks.active.<n>`.
+- **MRadmin kennt MRchunks nicht mehr fest:** Kachel auf der Startseite, Push-Art „Gesperrte Chunkloader“, Ticket-Kategorie „Chunkloader-Sperre“, die Kurve der Chunkloader im Serverzustand und das Erkennen der Dummies kommen jetzt über die Modul-API von MRchunks. Dafür braucht es MRchunks ab der Version mit Chunk-Budget - mit älteren MRchunks fehlen Kachel, Push-Art und Kurve. Deine Wahl bei der Push-Art bleibt erhalten.
+- **Config:** `tickets.chunkloader-locks` heißt jetzt `tickets.plugin-reports` und schaltet automatische Tickets aller Plugins ab (Wert wird übernommen, config-version 23). Die Kurve im Serverzustand heißt „davon von Plugins geladen“.
 
 ## [0.8.0] - 2026-10-28
 

@@ -96,7 +96,7 @@
           <div class="body">
             <div class="top">
               <span class="id">#{x.id}</span>
-              <span class="cat" class:lock={x.source === 'mrchunks'}>{x.categoryName}</span>
+              <span class="cat" class:lock={!!x.source}>{x.categoryName}</span>
               {#if x.unread}<span class="new">{t('tickets.unread')}</span>{/if}
               <span class="time muted small">{ago(x.lastActivity)}</span>
             </div>

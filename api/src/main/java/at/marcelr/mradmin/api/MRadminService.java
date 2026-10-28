@@ -23,8 +23,11 @@ import java.util.Map;
  */
 public interface MRadminService {
 
-    /** Version of this API (2: {@link #items()}). */
-    int API_VERSION = 2;
+    /**
+     * Version of this API (2: {@link #items()}; 3: {@link AdminModule#isNpc}, {@link AdminModule#loadedChunks},
+     * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}).
+     */
+    int API_VERSION = 3;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

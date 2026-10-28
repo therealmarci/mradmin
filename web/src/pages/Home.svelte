@@ -3,7 +3,6 @@
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, tpsTone, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
-  import { STATUS } from '../lib/chunks.js';
 
   let { me } = $props();
 
@@ -116,10 +115,10 @@
             <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
           {/if}
           {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
-          {#if data.mrchunks}<span><b>{data.mrchunks.active}</b> {t('home.loadersActive')}</span>{/if}
+          {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
           {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
         </div>
-        {#if !data.server && !data.tickets && !data.mrchunks && !data.maintenance}
+        {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
           <p class="muted small">{t('home.nothing')}</p>
         {/if}
       {/if}
@@ -167,22 +166,19 @@
         </button>
       {/if}
 
-      {#if data.mrchunks}
-        {@const c = data.mrchunks}
-        <button class="card tile" onclick={() => go('/chunks')}>
-          <div class="label">{t('nav.chunks')}</div>
-          <div class="big {c.paused ? 'info' : c.locked > 0 ? 'bad' : c.warn > 0 ? 'warn' : 'good'}">
-            {c.active} <span class="unit">/ {c.loaders} {t('home.active')}</span>
-          </div>
+      <!-- Tiles of the modules (MRchunks ...): label, value and facts come from the plugin itself. -->
+      {#each data.tiles ?? [] as m (m.id)}
+        <button class="card tile" onclick={() => m.page && go(m.page)} disabled={!m.page}>
+          <div class="label">{m.label}</div>
+          <div class="big {m.tone}">{m.value} {#if m.unit}<span class="unit">{m.unit}</span>{/if}</div>
           <div class="facts">
-            {#if c.paused}<div class="info">{STATUS.paused.icon} {t('chunks.status.paused')}</div>{/if}
-            <div><span class="muted">{STATUS.locked.icon} {t('chunks.status.locked')}</span> {c.locked}</div>
-            <div><span class="muted">{STATUS.warn.icon} {t('chunks.status.warn')}</span> {c.warn}</div>
-            <div><span class="muted">{t('chunks.chunks')}</span> {c.chunks}</div>
+            {#each m.facts as f}
+              <div class={f.tone}><span class="muted">{f.label}</span> {f.value}</div>
+            {/each}
           </div>
-          <div class="small link">{t('home.toChunks')} →</div>
+          <div class="small link">{#if m.link}{m.link} →{/if}</div>
         </button>
-      {/if}
+      {/each}
 
       {#if data.mrsleep}
         {@const sl = data.mrsleep}

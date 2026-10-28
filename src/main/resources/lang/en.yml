@@ -464,7 +464,6 @@ ticket-categories:
   bug: "Bug / error"
   other: "Question / other"
   # Opened automatically when MRchunks locks a chunk loader because of lag (cannot be chosen when creating).
-  chunkloader-lock: "Chunk loader lock"
   # From the public forms of the web interface (not selectable). Contact requests exist only in the web.
   unban: "Unban request"
   contact: "Contact request"

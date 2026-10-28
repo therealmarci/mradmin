@@ -26,22 +26,30 @@ import java.util.stream.Collectors;
 
 /**
  * Push notifications of the web interface: each member chooses per device whether to get them and per kind which
- * ones (tickets, lag, chunk loaders, maintenance) - only kinds they have the permission for. A subscription belongs
- * to the browser session it was made in: signing that device out (or removing the account) stops its pushes.
- * Sending happens on virtual threads, never on the server thread.
+ * ones (tickets, lag, maintenance and the kinds of the modules, e.g. MRchunks' locked loaders) - only kinds they have
+ * the permission for. A subscription belongs to the browser session it was made in: signing that device out (or
+ * removing the account) stops its pushes. Sending happens on virtual threads, never on the server thread.
  */
 public final class PushService {
 
-    /** A kind of notification: who may get it (permission, feature) and whether it is on until changed. */
-    public record Kind(String key, String permission, Feature feature, boolean byDefault) {
+    /**
+     * A kind of notification: who may get it (permission, feature) and whether it is on until changed. Kinds of a
+     * module ({@code module} set) need its view permission - MRadmin does not name another plugin's permissions - and
+     * bring their own texts ({@code info}).
+     */
+    public record Kind(String key, String permission, Feature feature, boolean byDefault, String module,
+                       at.marcelr.mradmin.api.WebPushKind info) {
+
+        Kind(String key, String permission, Feature feature, boolean byDefault) {
+            this(key, permission, feature, byDefault, null, null);
+        }
     }
 
+    /** MRadmin's own kinds; the modules' kinds come from {@link #kinds()}. */
     public static final List<Kind> KINDS = List.of(
             new Kind("ticket-new", Perms.TICKETS_VIEW, Feature.TICKETS, true),
             new Kind("ticket-mine", Perms.TICKETS_VIEW, Feature.TICKETS, true),
             new Kind("ticket-message", Perms.TICKETS_VIEW, Feature.TICKETS, false),
-            // Permission of the module (its view permission) - MRadmin does not name another plugin's permissions.
-            new Kind("chunks-locked", null, null, true),
             new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true),
             new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true));
 
@@ -214,14 +222,32 @@ public final class PushService {
         return valid;
     }
 
+    /** MRadmin's kinds and those of the connected modules ({@link at.marcelr.mradmin.api.WebModule#pushKinds}). */
+    public List<Kind> kinds() {
+        List<Kind> result = new ArrayList<>(KINDS);
+        plugin.modules().webModules().forEach((id, web) -> {
+            var module = plugin.modules().module(id);
+            for (var info : plugin.modules().call(module, web::pushKinds, List.<at.marcelr.mradmin.api.WebPushKind>of())) {
+                if (result.stream().noneMatch(k -> k.key().equals(info.key()))) {
+                    result.add(new Kind(info.key(), null, null, info.byDefault(), id, info));
+                }
+            }
+        });
+        return result;
+    }
+
     /** The kinds this member may get, with their choice (or the default). */
     public Map<String, Boolean> choices(UUID account) {
+        return choices(account, kinds());
+    }
+
+    private Map<String, Boolean> choices(UUID account, List<Kind> kinds) {
         Map<String, Boolean> own;
         synchronized (this) {
             own = Map.copyOf(prefs.getOrDefault(account, Map.of()));
         }
         Map<String, Boolean> result = new LinkedHashMap<>();
-        for (Kind kind : KINDS) {
+        for (Kind kind : kinds) {
             if (allowed(account, kind)) {
                 result.put(kind.key(), own.getOrDefault(kind.key(), kind.byDefault()));
             }
@@ -229,8 +255,20 @@ public final class PushService {
         return result;
     }
 
+    /** Texts of the modules' kinds this member may get: key -> label, hint, icon (MRadmin's own are in the web UI). */
+    public Map<String, Map<String, String>> labels(UUID account) {
+        Map<String, Map<String, String>> result = new LinkedHashMap<>();
+        for (Kind kind : kinds()) {
+            if (kind.info() != null && allowed(account, kind)) {
+                result.put(kind.key(), Map.of("label", kind.info().label(), "hint", kind.info().hint(),
+                        "icon", kind.info().icon()));
+            }
+        }
+        return result;
+    }
+
     public synchronized void choose(UUID account, String kind, boolean on) {
-        if (KINDS.stream().anyMatch(k -> k.key().equals(kind))) {
+        if (kinds().stream().anyMatch(k -> k.key().equals(kind))) {
             prefs.computeIfAbsent(account, k -> new HashMap<>()).put(kind, on);
             save();
         }
@@ -240,8 +278,8 @@ public final class PushService {
         if (kind.feature() != null && !plugin.feature(kind.feature())) {
             return false;
         }
-        if (kind.key().equals("chunks-locked")) {
-            var module = plugin.modules().module("mrchunks");
+        if (kind.module() != null) {
+            var module = plugin.modules().module(kind.module());
             return module != null && permissions.has(account, module.viewPermission());
         }
         return permissions.has(account, kind.permission());
@@ -258,7 +296,8 @@ public final class PushService {
         if (push == null || !plugin.settings().web().enabled()) {
             return;
         }
-        Kind k = KINDS.stream().filter(x -> x.key().equals(kind)).findFirst().orElse(null);
+        List<Kind> kinds = kinds();
+        Kind k = kinds.stream().filter(x -> x.key().equals(kind)).findFirst().orElse(null);
         if (k == null) {
             return;
         }
@@ -272,7 +311,7 @@ public final class PushService {
                 if (who != null && !who.test(account)) {
                     continue;
                 }
-                if (!Boolean.TRUE.equals(choices(account).get(kind))) {
+                if (!Boolean.TRUE.equals(choices(account, kinds).get(kind))) {
                     continue;
                 }
                 for (Subscription s : devices(account)) {

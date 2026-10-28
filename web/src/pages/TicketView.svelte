@@ -151,7 +151,7 @@
           <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
         </div>
       </div>
-      {#if ticket.source === 'mrchunks'}
+      {#if ticket.source}
         <div class="notice small">{t('ticket.lockHint')}</div>
       {/if}
       {#if request?.kind === 'unban'}

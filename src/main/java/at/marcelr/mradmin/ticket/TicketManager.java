@@ -44,8 +44,6 @@ public final class TicketManager {
     public static final int PREVIEW = 60;
     /** Author of the messages a plugin writes into a ticket (shown with that plugin's icon and name). */
     public static final UUID SYSTEM = new UUID(0L, 0L);
-    /** Category of the tickets opened when MRchunks locks a chunk loader (not offered when creating tickets). */
-    public static final String LOCK_CATEGORY = "chunkloader-lock";
 
     private final MRAdmin plugin;
     private final Map<Integer, Ticket> tickets = new HashMap<>();
@@ -78,6 +76,11 @@ public final class TicketManager {
         Settings.TicketCategory configured = settings().category(category);
         if (configured != null && !configured.name().isEmpty()) {
             return configured.name();
+        }
+        // Categories of plugin reports (e.g. MRchunks' lag locks) are named by the plugin itself.
+        String fromModule = plugin.modules().reportCategories().get(category);
+        if (fromModule != null) {
+            return fromModule;
         }
         String key = "ticket-categories." + category;
         return messages().has(key) ? messages().plain(key) : category;
@@ -227,7 +230,7 @@ public final class TicketManager {
      * if one is still open for the same key, the text as a note in it. The player is told in chat with a link.
      */
     public void report(String source, at.marcelr.mradmin.api.Report report) {
-        if (report.kind().equals(LOCK_CATEGORY) && !settings().chunkloaderLocks()) {
+        if (!settings().moduleReports()) {
             return;
         }
         Ticket open = bySource(source, report.key());

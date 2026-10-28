@@ -1,27 +1,30 @@
 package at.marcelr.mradmin.player;
 
+import at.marcelr.mradmin.MRAdmin;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Players that are no real players: MRchunks' dummy players (they sit on chunk loaders) and NPCs of other plugins
- * (Citizens and others mark them with the metadata "NPC"). The server counts them as online players; MRadmin leaves
- * them out of player lists, counts, maintenance kicks and the like.
+ * Players that are no real players: NPCs of the modules (e.g. MRchunks' dummy players, see
+ * {@link at.marcelr.mradmin.api.AdminModule#isNpc}) and of other plugins (Citizens and others mark them with the
+ * metadata "NPC"). The server counts them as online players; MRadmin leaves them out of player lists, counts,
+ * maintenance kicks and the like.
  */
 public final class Npcs {
-
-    /** MRchunks marks its dummies with this key in the player's data container. */
-    private static final NamespacedKey MRCHUNKS_DUMMY = new NamespacedKey("mrchunks", "dummy");
 
     private Npcs() {
     }
 
     public static boolean is(Player player) {
-        return player.hasMetadata("NPC") || player.getPersistentDataContainer().has(MRCHUNKS_DUMMY);
+        if (player.hasMetadata("NPC")) {
+            return true;
+        }
+        MRAdmin plugin = JavaPlugin.getPlugin(MRAdmin.class);
+        return plugin.modules() != null && plugin.modules().npc(player);
     }
 
     /** Online players without NPCs. */

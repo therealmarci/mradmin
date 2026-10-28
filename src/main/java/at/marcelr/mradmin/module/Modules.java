@@ -296,6 +296,40 @@ public final class Modules implements MRadminService {
         }
     }
 
+    /** Ticket categories of all modules' reports (kind -> name in the module's language), see {@link WebModule#reportCategories}. */
+    public Map<String, String> reportCategories() {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (AdminModule module : all()) {
+            WebModule web = call(module, module::web, null);
+            if (web != null) {
+                result.putAll(call(module, web::reportCategories, Map.of()));
+            }
+        }
+        return result;
+    }
+
+    /** Whether one of the modules calls the player its NPC (e.g. MRchunks' dummies), see {@link AdminModule#isNpc}. */
+    public boolean npc(org.bukkit.entity.Player player) {
+        for (AdminModule module : registered.values()) {
+            if (call(module, () -> module.isNpc(player), false)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Chunks the modules keep loaded themselves (e.g. chunk loaders) together, -1 if none does. */
+    public int loadedChunks() {
+        int sum = -1;
+        for (AdminModule module : registered.values()) {
+            int chunks = call(module, module::loadedChunks, -1);
+            if (chunks >= 0) {
+                sum = Math.max(sum, 0) + chunks;
+            }
+        }
+        return sum;
+    }
+
     /** Runs a call into another plugin that answers with a value; if it throws or answers null, {@code fallback}. */
     public <T> T call(AdminModule module, Supplier<T> call, T fallback) {
         try {

@@ -98,9 +98,16 @@ public final class PanelRoutes {
                 alerts.add(alert("info", "ticketsMine", "tickets-mine", Map.of("n", mine)));
             }
         }
-        if (snapshot.get("mrchunks") instanceof Map<?, ?> c && ModuleRoutes.may(server, http.account().id(), "mrchunks", "view")) {
-            result.put("mrchunks", c);
+        // Tiles of the modules, for those who may see the module.
+        List<Object> tiles = new ArrayList<>();
+        if (snapshot.get("tiles") instanceof Map<?, ?> all) {
+            all.forEach((id, tile) -> {
+                if (ModuleRoutes.may(server, http.account().id(), String.valueOf(id), "view")) {
+                    tiles.add(tile);
+                }
+            });
         }
+        result.put("tiles", tiles);
         if (snapshot.get("mrsleep") instanceof Map<?, ?> s && ModuleRoutes.may(server, http.account().id(), "mrsleep", "view")) {
             result.put("mrsleep", s);
         }
@@ -241,8 +248,8 @@ public final class PanelRoutes {
             for (Settings.TicketCategory c : plugin.settings().tickets().categories()) {
                 result.add(Map.of("id", c.id(), "name", plugin.tickets().categoryName(c.id()), "player", c.player()));
             }
-            result.add(Map.of("id", TicketManager.LOCK_CATEGORY,
-                    "name", plugin.tickets().categoryName(TicketManager.LOCK_CATEGORY), "player", false));
+            // Categories of plugin reports (e.g. MRchunks' lag locks) - only as a filter, not offered for new tickets.
+            plugin.modules().reportCategories().forEach((id, name) -> result.add(Map.of("id", id, "name", name, "player", false)));
             for (String kind : List.of(at.marcelr.mradmin.ticket.WebRequest.UNBAN, at.marcelr.mradmin.ticket.WebRequest.CONTACT)) {
                 result.add(Map.of("id", kind, "name", plugin.tickets().categoryName(kind), "player", false));
             }

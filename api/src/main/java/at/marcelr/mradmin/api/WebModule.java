@@ -73,4 +73,29 @@ public interface WebModule {
     default Map<UUID, List<String>> flags() {
         return Map.of();
     }
+
+    /**
+     * The module's tile on the start page of the web interface (e.g. MRchunks: active loaders, locks), or null for
+     * none. Only members who may see the module get it. Main thread, asked every few seconds - keep it cheap.
+     * Since API 3.
+     */
+    default @Nullable WebTile tile() {
+        return null;
+    }
+
+    /**
+     * Kinds of web push notifications the module sends through {@link Report#push()} (e.g. "chunks-locked"). Members
+     * who may see the module can switch them on and off. Asked from any thread - return a fixed list. Since API 3.
+     */
+    default List<WebPushKind> pushKinds() {
+        return List.of();
+    }
+
+    /**
+     * Names of the ticket categories of the module's reports ({@link Report#kind()} -> name in the module's language),
+     * shown in tickets and as a filter. Asked from any thread - return fixed names. Since API 3.
+     */
+    default Map<String, String> reportCategories() {
+        return Map.of();
+    }
 }
