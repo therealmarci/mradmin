@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.0.0] - 2026-10-29
+
 ### Neu
 - **Eigene Ankündigungs-Vorlagen im Web:** Unter **Kommunikation → Ankündigungen** legt das Team Vorlagen an, ändert und löscht sie (neue Permission **`mradmin.announce.templates`**, in `mradmin.groups.admin`). Einstellbar: Titel, Untertitel, Chat und Actionbar je Deutsch und Englisch (MiniMessage, Platzhalter `<args>`, `<arg1>` …) mit Vorschau des Bildschirms, Discord an/aus mit eigenem Text, Ein-/Anzeige-/Ausblendzeit des Titels, Ton (wie in der Config, keiner oder eigener mit Lautstärke und Tonhöhe) und die **Zielgruppe** Spieler / Bots / Support / Staff / Admin - jede Gruppe bekommt auch, was für die darunter gedacht ist („Spieler“ = alle). Die Vorlagen gehen im Web, im Ankündigungs-Menü im Spiel und mit `/mradmin announce <name>`.
 - **Changelogs mit Überschriften:** Neben den Einträgen (Neu, Geändert, Behoben, Entfernt) lassen sich Überschriften in drei Ebenen setzen - 1 Hauptüberschrift (z.B. „Plugins“), 2 Zwischenüberschrift (z.B. „MRpvp“), 3 eine weitere Gliederung. Die Einträge gehören zur Überschrift darüber und werden eingerückt, unter jeder Ebene sind alle Arten möglich. So erscheinen sie auf der Spielerseite, in der Vorschau im Team-Bereich und im Discord. Bestehende Changelogs bleiben unverändert.

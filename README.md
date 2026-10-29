@@ -9,7 +9,7 @@
 | Server | Paper 26.3 (oder ein Fork wie Purpur), Java 25 |
 | Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma und LibertyBans optional |
 | Sprachen | Deutsch, Englisch - jeder Spieler automatisch in der Sprache seines Minecraft-Clients |
-| Status | Vorabversion (0.x) - Config, Befehle und Permissions können sich bis 1.0.0 noch ändern |
+| Status | stabil (1.x) |
 
 ## Was kann MRadmin?
 - **Wartungsarbeiten:** Während einer Wartung kommt nur das Team auf den Server. Geplante Wartungen kommen auf Wunsch live aus **Uptime Kuma**, vorher läuft eine **Bossbar mit Countdown**.
