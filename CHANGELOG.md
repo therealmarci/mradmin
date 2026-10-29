@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Chunkloader: Steuerung für das Team:** Auf der Chunkloader-Seite gibt es die Kachel **Steuerung**: alle Chunkloader vorübergehend pausieren bzw. die Pause aufheben (`mrchunks.admin.pause`) und die gestaffelte Abschaltung mit harter Grenze aus- und einschalten (`mrchunks.admin.monitoring`), jeweils mit Hinweis, wer es seit wann geändert hat. Braucht MRchunks ab der nächsten Version.
+
 ### Behoben & geändert
 - **Chunkloader: Zustand „Durch Lags deaktiviert“:** Die Chunkloader-Seiten zeigen Loader, die die gestaffelte Abschaltung von MRchunks vorübergehend abgeschaltet hat (eigener Filter, gelb, mit Zeitpunkt und frühester Rückkehr), dazu einen Hinweis bei hoher Serverlast. Braucht MRchunks ab der nächsten Version.
 - **Kit-Editor (Duelle) zeigt, warum ein Kit nicht in `/duel` erscheint:** Bei jeder Arena steht rot der Grund, wenn sie das Kit so nicht nimmt („braucht Elytra im Kit“, „nur andere Kits“, „kein Bauen“), Arenen mit „nur Elytra“ sind gekennzeichnet. Passt das Kit in keine eingeschaltete Arena, warnt der Editor, und die Kit-Liste zeigt „nicht in /duel“. Braucht MRpvp ab der nächsten Version (ältere Versionen: keine Warnung).

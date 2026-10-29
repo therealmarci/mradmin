@@ -150,7 +150,7 @@
     {:else if chunkId && me.may.mrchunks}
       {#key chunkId}<ChunkView id={chunkId} {me} />{/key}
     {:else if route.path === '/chunks' && me.may.mrchunks}
-      <Chunks />
+      <Chunks {me} />
     {:else if playerId && me.may.players}
       {#key playerId}<PlayerView uuid={playerId} section={playerSection} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}

@@ -1,12 +1,33 @@
 <script>
-  import { moduleData } from '../lib/modules.js';
+  import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
-  import { ago, head } from '../lib/format.js';
+  import { ago, dateTime, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { STATUS } from '../lib/chunks.js';
   import { ICONS } from '../lib/icons.js';
+  import Toast from '../components/Toast.svelte';
+
+  let { me } = $props();
 
   let overview = $state(null);
+  let message = $state('');
+  let busy = $state(false);
+
+  // Server-wide switches: pause all loaders, staged shutdown (with hard cap) on/off.
+  async function control(action, on, confirmText) {
+    if (confirmText && !confirm(confirmText)) return;
+    busy = true;
+    try {
+      await moduleAction('mrchunks', { action, on });
+      message = t(`chunks.control.${action}.${on ? 'on' : 'off'}.done`);
+      error = '';
+      await load();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
   let loaders = $state(null);
   let error = $state('');
   let filter = $state(sessionStorage.getItem('mradmin.chunks.filter') ?? 'all');
@@ -77,6 +98,7 @@
   </header>
 
   {#if error}<div class="error">{error}</div>{/if}
+  <Toast text={message} />
 
   {#if overview}
     {#if overview.paused}
@@ -86,6 +108,53 @@
       <div class="notice warn">{t('chunks.shedNotice', { n: overview.shed, mspt: overview.mspt })}</div>
     {:else if overview.msptWarning}
       <div class="notice warn">{t('chunks.msptNotice', { mspt: overview.mspt })}</div>
+    {/if}
+    {#if overview.adminPause}
+      <div class="notice warn">⏸ {t('chunks.adminPaused', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })}</div>
+    {/if}
+
+    {#if me?.may?.mrchunksPause || me?.may?.mrchunksMonitoring}
+      {@const mon = overview.monitoring}
+      <!-- Server-wide switches for the team (each with its own permission). -->
+      <section class="card tile controls">
+        <h2>{t('chunks.control.title')}</h2>
+        <div class="control-grid">
+          {#if me.may.mrchunksPause}
+            <div class="control" class:on={overview.adminPause}>
+              <div class="c-text">
+                <b>{t('chunks.control.pauseAll.title')}</b>
+                <span class="muted small">{overview.adminPause
+                  ? t('chunks.control.pauseAll.active', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })
+                  : t('chunks.control.pauseAll.hint')}</span>
+              </div>
+              {#if overview.adminPause}
+                <button onclick={() => control('pauseAll', false)} disabled={busy}>{t('chunks.control.pauseAll.lift')}</button>
+              {:else}
+                <button class="danger" onclick={() => control('pauseAll', true, t('chunks.control.pauseAll.confirm', { n: overview.active }))} disabled={busy}>{t('chunks.control.pauseAll.start')}</button>
+              {/if}
+            </div>
+          {/if}
+          {#if me.may.mrchunksMonitoring && mon}
+            <div class="control" class:on={mon.active}>
+              <div class="c-text">
+                <b>{t('chunks.control.monitoring.title')}</b>
+                <span class="muted small">
+                  {#if !mon.configured}{t('chunks.control.monitoring.config')}
+                  {:else if mon.active}{t('chunks.control.monitoring.activeHint', { warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–', mspt: overview.mspt })}
+                  {:else}{t('chunks.control.monitoring.offHint', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' })}{/if}
+                </span>
+              </div>
+              {#if mon.configured}
+                {#if mon.active}
+                  <button class="secondary" onclick={() => control('monitoring', false, t('chunks.control.monitoring.confirm'))} disabled={busy}>{t('chunks.control.monitoring.disable')}</button>
+                {:else}
+                  <button onclick={() => control('monitoring', true)} disabled={busy}>{t('chunks.control.monitoring.enable')}</button>
+                {/if}
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </section>
     {/if}
     <div class="kpis">
       <div class="kpi"><div class="label">{t('chunks.loaders')}</div><div class="value">{overview.loaders}</div>
@@ -248,6 +317,42 @@
   }
 
   /* Key figures, like on the health page */
+  .controls h2 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+  }
+
+  .control-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+
+  .control {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .control.on {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
+
+  .c-text {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .control button {
+    flex-shrink: 0;
+  }
+
   .kpis {
     display: grid;
     gap: 12px;
