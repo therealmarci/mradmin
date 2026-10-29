@@ -37,8 +37,10 @@
   $effect(() => {
     if (!canvas || !map || !background) return;
     scale = Math.max(2, Math.floor(Math.min(480, canvas.parentElement.clientWidth || 480) / Math.max(map.sizeX, map.sizeZ)));
+    // Only when the size changes: setting it empties a canvas - the effects layer would be wiped every frame
+    // while the replay plays.
     for (const c of [canvas, overlay]) {
-      if (!c) continue;
+      if (!c || (c.width === map.sizeX * scale && c.height === map.sizeZ * scale)) continue;
       c.width = map.sizeX * scale;
       c.height = map.sizeZ * scale;
     }
