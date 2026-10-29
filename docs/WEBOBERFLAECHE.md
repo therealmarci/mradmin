@@ -19,7 +19,11 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
 **Passwort vergessen oder Handy weg?** Einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu und meldet alle Geräte ab.
 
 ## Sicherheit
-- Anmeldung immer mit Passwort **und** Code aus der Authenticator-App (oder einem Wiederherstellungscode).
+- **Startseite:** Wer nicht angemeldet ist, wählt zuerst „Ich bin Spieler“ (→ Spielerseite, Anmeldung mit dem Code aus
+  `/web`) oder „Ich bin im Team“ (→ Team-Anmeldung). Ist die Spielerseite aus (`player-web.enabled: false`), geht es
+  direkt zur Team-Anmeldung.
+- Anmeldung in zwei Schritten: erst Minecraft-Name und Passwort, dann der Code aus der Authenticator-App (oder ein
+  Wiederherstellungscode) - geprüft wird alles zusammen. Passkey und Discord stehen im ersten Schritt als Alternative.
   Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
 - **Passkeys** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): unter **Konto** hinzufügen - zur Sicherheit
   mit einem frischen Code aus der App. Danach geht die Anmeldung ohne Name, Passwort und Code; die Prüfung des Geräts
@@ -33,7 +37,8 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   Abschalten: `web.login.passkeys: false`.
 - **Mit Discord anmelden** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung
   `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config. Jeder verknüpft sein Discord
-  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt). Danach Anmeldung mit
+  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt; ohne Einrichtung steht dort,
+  was in der Config fehlt). Danach Anmeldung mit
   einem Klick; zählt wie ein Passkey - 2FA lässt sich ausschalten, Bestätigungen (Konsole, 2FA, Passkey hinzufügen)
   gehen auch per Discord. Abgefragt wird nur `identify` (ID, Name, Avatar).
 - Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
@@ -87,7 +92,7 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   (`mradmin.tickets.view`) und ein Bereich pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt
   die Kachel:
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
-  - **MRchunks:** seine Loader, Limit und Aktiv-Limit mit Herkunft (Standard, Permission, Admin), Limits setzen
+  - **MRchunks:** seine Loader (mit Größe), Chunk-Budget und Dummy-Limit mit Herkunft (Standard, Permission, Admin), Budget setzen; auf der Seite eines Loaders seine Größe ändern (`mrchunks.admin.resize`)
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
     (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`). Verknüpfte Accounts
     ansehen, lösen und neu verknüpfen - per Spielername als Zweit- oder Haupt-Account, ohne Zustimmung der Spieler
@@ -163,32 +168,103 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
   Farbe bei Lederrüstung, Rüstungsbesatz und Flugdauer bei Raketen. Rechts steht live der Tooltip. Beim Übernehmen
   baut MRadmin das echte Item und prüft alle Werte; was der Editor nicht anzeigt, bleibt am Item erhalten.
 
-## Wartung & Ankündigungen
-`mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
+## Wartung
+`mradmin.maintenance.view` ansehen, `.manage` ändern. Ankündigungen stehen unter [Kommunikation](#kommunikation-mradminnews-mradminannounce).
 
-- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - Liste der
-  Wartungen dieses Servers mit Status (läuft, geplant, pausiert, vorbei), neue anlegen (jetzt bis zum Beenden, jetzt
-  mit Dauer oder geplant), verlängern, pausieren/fortsetzen, löschen. Neue Wartungen hängt MRadmin an
-  `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren Status-Seiten erscheinen); geändert
-  werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden angezeigt, bearbeitet in Kuma.
+- Oben steht die **aktuelle Wartung** groß: läuft sie, mit Restzeit und Fortschrittsbalken, ist sie geplant, mit dem
+  Countdown bis zum Start; darunter verlängern/kürzen und beenden bzw. absagen.
+- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - neue anlegen
+  (jetzt bis zum Beenden, jetzt mit Dauer oder geplant), die aktuelle verlängern, pausieren/fortsetzen, löschen. Neue
+  Wartungen hängt MRadmin an `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren
+  Status-Seiten erscheinen); geändert werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden in
+  Kuma bearbeitet (Link „In Uptime Kuma öffnen“).
 - **Ohne Uptime Kuma**: die eigene Wartung von MRadmin wie `/mradmin maintenance` - jetzt starten oder mit Countdown
-  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
-- Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
-  Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen. Eine Vorschau zeigt vorher, wann sie
+  beginnt und endet.
+- **Kommende Wartungen**: die nächsten drei nach der aktuellen, ebenfalls aus Uptime Kuma und lokal gemischt mit
+  Herkunft, Start, Ende und Dauer.
+- **Letzte Wartungen**: die drei zuletzt beendeten oder abgesagten Wartungen, egal ob aus Uptime Kuma oder lokal
+  (die Herkunft steht dabei), mit Zeitraum und Dauer. MRadmin merkt sich die letzten zehn.
+
+## Kommunikation (`mradmin.news`, `mradmin.announce`)
+Zwei Bereiche: **Beiträge** für die Spielerseite (`mradmin.news`) und **Ankündigungen** auf dem Bildschirm im Spiel
+(`mradmin.announce`, siehe unten). Wer nur eins der beiden Rechte hat, sieht nur diesen Bereich.
+
+### Beiträge
+Drei Arten von Beiträgen für die Spieler, Texte getrennt auf Deutsch und Englisch (jeder sieht seine Sprache, fehlt sie,
+die andere):
+
+- **Neuigkeit** (Ankündigungen, Events): Titel und Text, **Anheften** stellt sie immer nach vorne.
+- **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) und
+  **Überschriften** in drei Ebenen (1 Hauptüberschrift, z.B. „Plugins“; 2 Zwischenüberschrift, z.B. „MRpvp“; 3 eine
+  weitere Gliederung). Einträge gehören zur Überschrift darüber und werden darunter eingerückt, unter jeder Ebene sind
+  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste, im Discord die
+  Abschnitte der Reihe nach.
+- **Kritische Warnung**: Titel und Text. Beim Senden bekommen alle Spieler, die online sind, die Warnung im Chat und als
+  Titel auf dem Bildschirm (`player-web.news.alerts`); wer später joint, sieht sie im Chat, solange sie aktiv ist. Sie
+  läuft bis „Aktiv bis“ oder bis **Beenden**.
+
+**Auch im Discord posten** (pro Beitrag): in den Kanal des Ankündigungs-Webhooks (`discord-announce`, wo auch die
+Wartungen stehen), mit Link zur ganzen Nachricht auf der Spielerseite. Warnungen erwähnen `ping-role-id`
+(`discord-announce.alerts.ping`), Neuigkeiten und Changelogs nicht (`discord-announce.news.ping`). Bei einem
+bestehenden Beitrag lässt sich das einmal nachholen.
+
+Neue Neuigkeiten und Changelogs bekommt jeder Spieler mit `mradmin.web.self` **einmal als Vorschau im Chat** mit einem
+Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`player-web.news.chat-preview`).
+
+**Warnungen aus Uptime Kuma:** Vorfälle, die auf einer Kuma-Statusseite angeheftet sind (`uptime-kuma.status-pages`,
+dafür reicht `uptime-kuma.url`; gelesen alle `uptime-kuma.incident-seconds`, Standard 15), erscheinen auf der
+Spielerseite, im Karussell und oben auf dieser Seite. Der Link im Chat führt zur Spielerseite. Was im Spiel
+passiert, hängt vom Stil in Kuma ab:
+
+| Stil in Kuma | Farbe | Im Spiel |
+|---|---|---|
+| danger | rot | neu: Chat + Titel an alle; beim Join im Chat, solange angeheftet |
+| warning | gelb | neu: Chat an alle (kein Titel); beim Join im Chat, solange angeheftet |
+| info, primary, light, dark | blau | einmal pro Spieler im Chat, wie eine Neuigkeit |
+
+Was beim Serverstart schon angeheftet ist, wird nicht noch einmal an alle angekündigt. Geändert und beendet werden die
+Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce.kuma`) wird jeder Vorfall einmal gepostet
+(rot pingt die Rolle), mit Link „Mehr dazu“ zur Seite Neuigkeiten der Spielerseite (nicht zu Kuma), bei Änderungen in
+Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
+
+**Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
+und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon
+bekommen hat: `news-seen`).
+
+### Ankündigungen
+**Senden** (`mradmin.announce`): eine eigene Vorlage (mit Werten, wenn sie Platzhalter hat) oder ein eigener Text
+(„Titel | Untertitel“) auf dem Bildschirm, auf Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+
+**Vorlagen** (`mradmin.announce.templates`): neu anlegen, bearbeiten, löschen - nutzbar im Web, im Ankündigungs-Menü
+im Spiel und mit `/mradmin announce <name>`.
+- **Texte** je Deutsch und Englisch: Titel, Untertitel, Chat, Actionbar (MiniMessage, Platzhalter `<args>`, `<arg1>` …),
+  mit einer **Vorschau** des Bildschirms. Leere Felder werden nicht gezeigt.
+- **Discord**: an/aus und eigener Text (Markdown, `{args}`).
+- **Anzeige**: Ein-, Anzeige- und Ausblendzeit des Titels in Sekunden.
+- **Ton**: wie in der Config, keiner oder ein eigener (alle Sounds des Spiels zur Auswahl) mit Lautstärke und Tonhöhe.
+- **Zielgruppe**: Spieler, Bots, Support, Staff oder Admin. Jede Gruppe bekommt auch, was für die darunter gedacht ist -
+  „Spieler“ erreicht alle, „Support“ Support, Staff und Admin (nach `mradmin.groups.*`), „Bots“ zusätzlich die NPCs.
+
+Die eingebauten Vorlagen der Sprachdatei (`restart`, `restart-now`, `update`, `event`) stehen hier und im Spiel-Menü
+nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten gehen sie weiter. Gespeichert wird im
+Speicher von MRadmin unter `announce-templates`.
 
 ## Versionen (`mradmin.versions.view`)
 - Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
   (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
   auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
 - Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
-  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (höchstens einmal pro
+  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit
+  `mradmin.versions.install`, höchstens einmal pro
   Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
   der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
-- **Server neu starten** (`mradmin.server.restart`): nur, wenn `versions.restart-method` eingestellt ist (Standard
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen, aber noch nicht installiert ist,
+  und `versions.restart-method` eingestellt ist (Standard
   `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
   den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
   Schleife, ein Wächter oder das Panel startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu

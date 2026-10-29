@@ -42,7 +42,7 @@ public final class HealthMonitor {
     /**
      * One measurement. CPU in percent (-1 = unknown), memory in MB, gc = milliseconds spent in GC per second (gcMax = the
      * highest second of a combined point - an average hides short GC pauses), ping = average
-     * of the online players in ms (-1 = nobody online), loaderChunks = chunks MRchunks keeps loaded (-1 = no MRchunks).
+     * of the online players in ms (-1 = nobody online), loaderChunks = chunks plugins keep loaded (-1 = none).
      */
     public record Point(long time, double tps, double mspt, double msptP95, double msptMax, double cpu, double cpuSystem,
                         long heapUsed, long heapMax, double gc, double gcMax, int players, int chunks, int entities, int tiles,
@@ -316,11 +316,9 @@ public final class HealthMonitor {
         return round(points.stream().mapToDouble(f).filter(v -> v >= 0).average().orElse(-1));
     }
 
-    /** Chunks the loaders of MRchunks keep loaded - only if MRchunks runs and offers web data, else -1. */
+    /** Chunks plugins keep loaded themselves (e.g. MRchunks' loaders, see AdminModule#loadedChunks), else -1. */
     private int loaderChunks() {
-        var web = plugin.modules().web("mrchunks");
-        return web != null && plugin.modules().call(plugin.modules().module("mrchunks"), () -> web.data("chunks", java.util.Map.of()), null)
-                instanceof Number n ? n.intValue() : -1;
+        return plugin.modules().loadedChunks();
     }
 
     private static double maxOf(List<Point> points, ToDoubleFunction<Point> f) {

@@ -50,10 +50,27 @@ final class WebSnapshot {
         server.put("diskTotal", root.getTotalSpace() / 1_048_576);
         result.put("server", server);
 
-        // MRchunks (optional): counts and server pause - cheap, the plugin keeps them anyway.
-        if (overview(plugin, "mrchunks") instanceof Map<?, ?> overview) {
-            result.put("mrchunks", overview);
-        }
+        // Tiles of the modules (e.g. MRchunks: active loaders, locks) - texts from the module itself.
+        Map<String, Object> tiles = new LinkedHashMap<>();
+        plugin.modules().webModules().forEach((id, web) -> {
+            var tile = plugin.modules().call(plugin.modules().module(id), web::tile, null);
+            if (tile != null) {
+                List<Map<String, Object>> facts = new ArrayList<>();
+                tile.facts().forEach(f -> facts.add(Map.of("label", f.label(), "value", f.value(), "tone", f.tone())));
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("id", id);
+                entry.put("label", tile.label());
+                entry.put("value", tile.value());
+                entry.put("unit", tile.unit());
+                entry.put("tone", tile.tone());
+                entry.put("facts", facts);
+                entry.put("headline", tile.headline());
+                entry.put("page", tile.page());
+                entry.put("link", tile.link());
+                tiles.put(id, entry);
+            }
+        });
+        result.put("tiles", tiles);
         // MRsleep (optional): sleep status per world and /nosleep blocks.
         if (overview(plugin, "mrsleep") instanceof Map<?, ?> overview) {
             result.put("mrsleep", overview);

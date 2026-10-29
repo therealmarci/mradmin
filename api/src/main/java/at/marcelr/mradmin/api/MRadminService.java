@@ -23,8 +23,14 @@ import java.util.Map;
  */
 public interface MRadminService {
 
-    /** Version of this API (2: {@link #items()}). */
-    int API_VERSION = 2;
+    /**
+     * Version of this API (2: {@link #items()}; 3: {@link AdminModule#isNpc}, {@link AdminModule#loadedChunks},
+     * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}; 4: the player area -
+     * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions},
+     * {@link WebModule#rankings}; 5: more building blocks for it - {@link SelfBlock.Cards}, {@link SelfBlock.Meters},
+     * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}).
+     */
+    int API_VERSION = 5;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

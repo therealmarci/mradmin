@@ -60,6 +60,8 @@ public final class PushRoutes {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("key", push.publicKey());
         result.put("kinds", push.choices(http.account().id()));
+        // Names of the modules' kinds (MRadmin's own come from the web interface's texts).
+        result.put("labels", push.labels(http.account().id()));
         result.put("devices", devices);
         http.json(200, result);
     }

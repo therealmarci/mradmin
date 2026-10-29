@@ -3,6 +3,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
+  import Toast from './Toast.svelte';
 
   let { me } = $props();
 
@@ -18,7 +19,7 @@
   let endpoint = $state(null);
   let permission = $state(supported ? Notification.permission : 'denied');
 
-  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', 'chunks-locked': '🔒', lag: '🐢', maintenance: '🔧' };
+  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', lag: '🐢', maintenance: '🔧' };
 
   async function load() {
     try {
@@ -114,12 +115,12 @@
 
 <section class="card stack">
   <div class="row">
-    <h2>🔔 {t('push.title')}</h2>
+    <h2>{t('push.title')}</h2>
     {#if endpoint}<span class="tag on">✓ {t('push.thisOn')}</span>{:else}<span class="tag">○ {t('push.thisOff')}</span>{/if}
   </div>
   <p class="muted small">{t('push.hint')}</p>
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if !supported}
     <p class="warn small">{ios && !installed ? t('push.iosInstall') : t('push.unsupported')}</p>
@@ -149,10 +150,10 @@
         {#each Object.entries(data.kinds) as [kind, on] (kind)}
           <li>
             <label>
-              <span class="kicon" aria-hidden="true">{ICON[kind] ?? '•'}</span>
+              <span class="kicon" aria-hidden="true">{data.labels?.[kind]?.icon ?? ICON[kind] ?? '•'}</span>
               <span class="ktext">
-                <strong>{t('push.kind.' + kind)}</strong>
-                <span class="muted small">{t('push.kindHint.' + kind)}</span>
+                <strong>{data.labels?.[kind]?.label ?? t('push.kind.' + kind)}</strong>
+                <span class="muted small">{data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}</span>
               </span>
               <input type="checkbox" class="switch" checked={on} onchange={(e) => choose(kind, e.currentTarget.checked)} />
             </label>

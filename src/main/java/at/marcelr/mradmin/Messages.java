@@ -150,6 +150,11 @@ public final class Messages {
         return loaded;
     }
 
+    /** Language code for texts without a single player (Discord, mails ...): server-language. */
+    public String serverLanguage() {
+        return fixed != null ? fixed : serverCode;
+    }
+
     /**
      * The language a player gets: the fixed one from the config, or the language of their game ("de_at" -> de.yml,
      * a language without file -> the fallback).

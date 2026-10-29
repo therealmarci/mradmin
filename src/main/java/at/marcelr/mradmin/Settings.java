@@ -34,7 +34,8 @@ public record Settings(
         HealthSettings health,
         MailSettings mail,
         RequestSettings requests,
-        VersionsSettings versions
+        VersionsSettings versions,
+        PlayerWebSettings playerWeb
 ) {
 
     /**
@@ -112,10 +113,15 @@ public record Settings(
                                       boolean replaceVersion) {
     }
 
-    /** {@code url} without trailing slash; empty id sets mean "every maintenance". */
+    /**
+     * {@code url} without trailing slash; empty id sets mean "every maintenance". {@code statusPages}: slugs of status
+     * pages whose incidents become warnings on the player page and in game ({@code incidents}, read every
+     * {@code incidentSeconds}).
+     */
     public record KumaSettings(boolean enabled, String url, String username, String password, String token,
                                Set<Integer> monitorIds, Set<Integer> maintenanceIds, int refreshSeconds,
-                               int reconnectSeconds, boolean keepWhenOffline) {
+                               int reconnectSeconds, boolean keepWhenOffline, List<String> statusPages,
+                               boolean incidents, int incidentSeconds) {
 
         public boolean hasLogin() {
             return !token.isEmpty() || (!username.isEmpty() && !password.isEmpty());
@@ -154,13 +160,14 @@ public record Settings(
      *
      * @param icon       item of every ticket in the menus
      * @param categories the categories offered when creating a ticket, in config order (never empty)
-     * @param chunkloaderLocks open a ticket for the owner when MRchunks locks a chunk loader
+     * @param moduleReports open a ticket when a plugin reports a problem of a player (e.g. MRchunks: a loader locked
+     *                      because of lag), see tickets.plugin-reports
      */
     public record TicketSettings(long cooldown, long replyCooldown, int maxOpenPerPlayer,
                                  int minSubjectLength, int maxSubjectLength, int minTextLength, int maxTextLength,
                                  boolean notifyCreator, boolean showStaffNames, boolean autoClaim, int shownMessages,
                                  long keepClosed, Key sound, Material icon, Material teamIcon,
-                                 List<TicketCategory> categories, boolean chunkloaderLocks) {
+                                 List<TicketCategory> categories, boolean moduleReports) {
 
         /** The category with this id, or null if it is not (or no longer) configured. */
         public TicketCategory category(String id) {
@@ -220,7 +227,11 @@ public record Settings(
                 ids(c.getStringList("uptime-kuma.maintenance-ids"), "uptime-kuma.maintenance-ids", log),
                 Math.clamp(c.getInt("uptime-kuma.refresh-seconds", 60), 10, 3600),
                 Math.clamp(c.getInt("uptime-kuma.reconnect-seconds", 30), 5, 3600),
-                c.getBoolean("uptime-kuma.keep-schedule-when-offline", true));
+                c.getBoolean("uptime-kuma.keep-schedule-when-offline", true),
+                c.getStringList("uptime-kuma.status-pages").stream().map(String::trim)
+                        .filter(s -> s.matches("[A-Za-z0-9_-]{1,64}")).distinct().toList(),
+                c.getBoolean("uptime-kuma.incidents", true),
+                Math.clamp(c.getInt("uptime-kuma.incident-seconds", 15), 5, 600));
 
         AnnounceSettings announce = new AnnounceSettings(
                 ticks(c.getDouble("announce.fade-in", 0.5)),
@@ -297,7 +308,7 @@ public record Settings(
                 item(c, "tickets.icon", Material.NAME_TAG, log),
                 item(c, "tickets.team-icon", Material.NETHER_STAR, log),
                 ticketCategories(c, log),
-                c.getBoolean("tickets.chunkloader-locks", true));
+                c.getBoolean("tickets.plugin-reports", true));
 
         Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
         for (Feature feature : Feature.values()) {
@@ -307,7 +318,48 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c));
+    }
+
+    /**
+     * The player area of the web interface (/web): on/off, how long a browser stays signed in after the code from /web
+     * (days at most, and days without use), how long that code works (seconds) and how many browsers a player may have; the
+     * statistics page (rankings: on/off, how many places, which of the game's statistics); the slideshow of the start
+     * page (news: on/off, seconds per slide, how many posts, maintenance, restarts, plugin warnings and ticket answers in
+     * it); the own statistics on the start page (personal-stats); new posts once as a preview in the chat
+     * (chat-preview: on/off, at most how many, not older than days) and warnings in game (chat, title).
+     */
+    public record PlayerWebSettings(boolean enabled, int sessionDays, int idleDays, int codeSeconds, int maxDevices,
+                                    boolean rankings, int rankingTop, List<String> rankingKinds,
+                                    boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
+                                    boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
+                                    List<String> personalStats, boolean chatPreview, int chatPreviewMax,
+                                    int chatPreviewDays, boolean alertChat, boolean alertTitle) {
+    }
+
+    private static PlayerWebSettings playerWeb(FileConfiguration c) {
+        return new PlayerWebSettings(
+                c.getBoolean("player-web.enabled", false),
+                Math.clamp(c.getInt("player-web.session-days", 14), 1, 365),
+                Math.clamp(c.getInt("player-web.idle-days", 7), 1, 365),
+                Math.clamp(c.getInt("player-web.code-seconds", 120), 30, 600),
+                Math.clamp(c.getInt("player-web.max-devices", 5), 1, 20),
+                c.getBoolean("player-web.rankings.enabled", true),
+                Math.clamp(c.getInt("player-web.rankings.top", 10), 3, 100),
+                List.copyOf(c.getStringList("player-web.rankings.statistics")),
+                c.getBoolean("player-web.news.enabled", true),
+                Math.clamp(c.getInt("player-web.news.seconds", 8), 0, 120),
+                Math.clamp(c.getInt("player-web.news.slides", 5), 0, 30),
+                c.getBoolean("player-web.news.show-maintenance", true),
+                c.getBoolean("player-web.news.show-restart", true),
+                c.getBoolean("player-web.news.show-plugin-notices", true),
+                c.getBoolean("player-web.news.show-tickets", true),
+                List.copyOf(c.getStringList("player-web.personal-stats")),
+                c.getBoolean("player-web.news.chat-preview.enabled", true),
+                Math.clamp(c.getInt("player-web.news.chat-preview.max", 3), 1, 10),
+                Math.clamp(c.getInt("player-web.news.chat-preview.max-age-days", 14), 1, 365),
+                c.getBoolean("player-web.news.alerts.chat", true),
+                c.getBoolean("player-web.news.alerts.title", true));
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {

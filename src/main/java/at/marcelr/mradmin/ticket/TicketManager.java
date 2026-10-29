@@ -44,8 +44,6 @@ public final class TicketManager {
     public static final int PREVIEW = 60;
     /** Author of the messages a plugin writes into a ticket (shown with that plugin's icon and name). */
     public static final UUID SYSTEM = new UUID(0L, 0L);
-    /** Category of the tickets opened when MRchunks locks a chunk loader (not offered when creating tickets). */
-    public static final String LOCK_CATEGORY = "chunkloader-lock";
 
     private final MRAdmin plugin;
     private final Map<Integer, Ticket> tickets = new HashMap<>();
@@ -78,6 +76,11 @@ public final class TicketManager {
         Settings.TicketCategory configured = settings().category(category);
         if (configured != null && !configured.name().isEmpty()) {
             return configured.name();
+        }
+        // Categories of plugin reports (e.g. MRchunks' lag locks) are named by the plugin itself.
+        String fromModule = plugin.modules().reportCategories().get(category);
+        if (fromModule != null) {
+            return fromModule;
         }
         String key = "ticket-categories." + category;
         return messages().has(key) ? messages().plain(key) : category;
@@ -227,7 +230,7 @@ public final class TicketManager {
      * if one is still open for the same key, the text as a note in it. The player is told in chat with a link.
      */
     public void report(String source, at.marcelr.mradmin.api.Report report) {
-        if (report.kind().equals(LOCK_CATEGORY) && !settings().chunkloaderLocks()) {
+        if (!settings().moduleReports()) {
             return;
         }
         Ticket open = bySource(source, report.key());
@@ -615,6 +618,84 @@ public final class TicketManager {
             requestChanged(ticket, clean);
         }
         return null;
+    }
+
+    // ------------------------------------------------- player area (/web, own tickets)
+
+    /** A ticket the player opened on their own page, or why not (error key for the web interface and its number - a wait in ms, a maximum or a minimum length). */
+    public record SelfResult(Ticket ticket, String error, long value) {
+    }
+
+    /**
+     * Opens a ticket from the player's own page - the same rules as the form in game (cooldown, open tickets, lengths,
+     * player reports need a target), but the player may be offline: the ticket gets the place of the reported player
+     * or of the creator if online, otherwise none. Permissions were checked by the web interface. Server thread.
+     */
+    public SelfResult selfCreate(UUID creator, String name, Settings.TicketCategory category, OfflinePlayer target,
+                                 String subject, String text) {
+        Settings.TicketSettings s = settings();
+        Instant last = lastTicket.get(creator);
+        if (last != null && Instant.now().isBefore(last.plusMillis(s.cooldown()))) {
+            return new SelfResult(null, "ticket-cooldown", last.plusMillis(s.cooldown()).toEpochMilli() - System.currentTimeMillis());
+        }
+        long open = tickets.values().stream().filter(t -> t.open() && t.isCreator(creator) && !t.teamCloseOnly()).count();
+        if (open >= s.maxOpenPerPlayer()) {
+            return new SelfResult(null, "ticket-too-many", s.maxOpenPerPlayer());
+        }
+        String cleanSubject = TicketText.limit(TicketText.clean(subject).replace('\n', ' '), s.maxSubjectLength());
+        String cleanText = TicketText.limit(TicketText.clean(text), s.maxTextLength());
+        if (category.player()) {
+            if (target == null) {
+                return new SelfResult(null, "ticket-no-target", 0);
+            }
+            if (target.getUniqueId().equals(creator)) {
+                return new SelfResult(null, "ticket-self", 0);
+            }
+            cleanSubject = "";
+        } else {
+            target = null;
+            if (cleanSubject.length() < s.minSubjectLength()) {
+                return new SelfResult(null, "ticket-subject-short", s.minSubjectLength());
+            }
+        }
+        if (cleanText.length() < Math.max(1, s.minTextLength())) {
+            return new SelfResult(null, "ticket-text-short", Math.max(1, s.minTextLength()));
+        }
+        lastTicket.put(creator, Instant.now());
+        Player online = target == null ? null : target.getPlayer();
+        Player self = Bukkit.getPlayer(creator);
+        Location where = online != null ? online.getLocation() : self != null ? self.getLocation() : null;
+        String targetName = target == null ? null : target.getName() == null ? target.getUniqueId().toString() : target.getName();
+        Ticket ticket = new Ticket(nextId++, creator, name, target == null ? null : target.getUniqueId(), targetName,
+                category.id(), cleanSubject, Instant.now(), where == null ? "" : where.getWorld().getName(),
+                where == null ? 0 : where.getX(), where == null ? 0 : where.getY(), where == null ? 0 : where.getZ());
+        ticket.add(new Ticket.Message(creator, name, false, cleanText, Instant.now()));
+        tickets.put(ticket.id(), ticket);
+        save(ticket);
+        notifyNew(ticket);
+        String categoryName = categoryName(category.id());
+        plugin.getLogger().info("Ticket #" + ticket.id() + " (" + category.id() + ") by " + name + " (web): "
+                + summary(ticket) + " - " + TicketText.preview(cleanText, 200));
+        plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName, "creator", name,
+                "summary", summary(ticket), "text", TicketText.preview(cleanText, 300),
+                "world", ticket.world(), "x", ticket.blockX(), "y", ticket.blockY(), "z", ticket.blockZ());
+        return new SelfResult(ticket, null, 0);
+    }
+
+    /**
+     * The creator answers on their own page: the reply cooldown of the game applies too.
+     * @return null if sent, otherwise an error key
+     */
+    public String selfReply(UUID creator, String name, Ticket ticket, String text) {
+        Instant last = lastReply.get(creator);
+        if (last != null && Instant.now().isBefore(last.plusMillis(settings().replyCooldown()))) {
+            return "ticket-reply-cooldown";
+        }
+        String error = webReply(creator, name, ticket, text);
+        if (error == null) {
+            lastReply.put(creator, Instant.now());
+        }
+        return error;
     }
 
     public String webClose(UUID who, String name, Ticket ticket) {

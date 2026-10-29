@@ -2,9 +2,11 @@ package at.marcelr.mradmin.gui;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
+import at.marcelr.mradmin.announce.AnnounceTemplates;
 import at.marcelr.mradmin.announce.Announcer;
 import at.marcelr.mradmin.util.Layout;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -40,7 +42,9 @@ public final class AnnounceMenu extends Menu {
     protected void draw() {
         Messages messages = plugin.messages();
         Announcer announcer = plugin.announcer();
-        List<String> presets = announcer.presets().stream().limit(MAX).toList();
+        // Only the own templates - the built-in presets of the language file stay for commands and scripts.
+        List<String> presets = announcer.menuPresets().stream().limit(MAX).toList();
+        String lang = messages.languageOf(viewer);
         // Placeholders are shown as "…" in the preview.
         TagResolver[] preview = new TagResolver[10];
         preview[0] = tag("args", "…");
@@ -53,14 +57,14 @@ public final class AnnounceMenu extends Menu {
             int[] slots = Layout.centered(row + 1, inRow.size());
             for (int i = 0; i < inRow.size(); i++) {
                 String preset = inRow.get(i);
-                String base = Announcer.PRESETS + "." + preset + ".";
+                AnnounceTemplates.Template template = announcer.templates().get(preset);
                 boolean values = announcer.needsValues(preset);
                 boolean discord = announcer.postsToDiscord(preset);
                 Items item = Items.of(values ? Material.WRITABLE_BOOK : Material.PAPER)
-                        .name(messages.item(base + "title", preview))
+                        .name(text(template, "title", lang, preview, preset))
                         .lore(messages.item("gui-announce-preset-id", tag("preset", preset)));
-                if (messages.has(base + "subtitle")) {
-                    item.lore(messages.item(base + "subtitle", preview));
+                if (!template.text("subtitle", lang).isBlank()) {
+                    item.lore(text(template, "subtitle", lang, preview, preset));
                 }
                 item.lore(Component.empty())
                         .lore(messages.item(values ? "gui-announce-values-yes" : "gui-announce-values-no"))
@@ -107,6 +111,15 @@ public final class AnnounceMenu extends Menu {
                 }
             }
         }
+    }
+
+    /** A text of a template for the item (not italic); the name if it has no title. */
+    private Component text(AnnounceTemplates.Template template, String part, String lang, TagResolver[] preview, String name) {
+        String raw = template.text(part, lang);
+        if (raw.isBlank() && part.equals("title")) {
+            raw = template.text("chat", lang).isBlank() ? name : template.text("chat", lang);
+        }
+        return plugin.messages().parse(raw, preview).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
     }
 
     private void reopen() {

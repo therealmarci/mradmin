@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 13
+lang-version: 15
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -57,6 +57,26 @@ web-setup-console: "<prefix><gray>Für die Konsole: /mradmin web invite <spieler
 web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nicht weitergeben!)"
 web-setup-link-other: "<prefix><green>Einrichtungslink für <white><player></white>:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nur an <player> geben!)"
 web-link-label: "<aqua><u>[Einrichtung öffnen]</u></aqua>"
+# Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
+web-self-link: "<prefix><green>Deine Seite im Web: <link> <gray>· Code zum Anmelden: <code> <dark_gray>(gilt <seconds> Sekunden und nur einmal)"
+web-self-code: "<yellow><b><code></b></yellow>"
+web-self-code-hover: "<gray>Klicken zum Kopieren"
+web-self-link-label: "<aqua><u>[Meine Seite öffnen]</u></aqua>"
+web-self-disabled: "<prefix><gray>Die Spielerseite im Web ist auf diesem Server nicht eingeschaltet."
+web-self-no-url: "<prefix><red>Die Adresse der Weboberfläche fehlt (web.public-url) - bitte melde das dem Team."
+web-self-devices: "<prefix><gray>Du bist auf <white><count></white> Geräten in deiner Seite angemeldet. <button>"
+web-self-logout-button: "<red><u>[Alle abmelden]</u></red>"
+web-self-logout: "<prefix><green>Alle Geräte abgemeldet <gray>(<count>). Mit /web meldest du dich wieder an."
+news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"
+news-preview-changelog: "<prefix><green>📝 <b><title></b></green> <gray><preview></gray> <link>"
+news-preview-more: "<prefix><gray>... und <white><count></white> weitere Neuigkeiten. <link>"
+news-preview-link: "<yellow><u>[Lesen]</u></yellow>"
+news-preview-hover: "<gray>Öffnet die ganze Nachricht im Browser"
+alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
+alert-title: "<red><b>⚠ <title>"
+alert-subtitle: "<white><text>"
+warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
+incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
 web-no-public-url: "<prefix><yellow>web.public-url ist nicht gesetzt - der Link nutzt die lokale Adresse und funktioniert nur auf diesem Rechner."
 web-target-no-permission: "<prefix><yellow><player> hat die Permission mradmin.web nicht - die Anmeldung klappt erst damit."
 web-sessions-header: "<prefix><gray>Angemeldete Geräte von <white><player></white>:"
@@ -464,7 +484,6 @@ ticket-categories:
   bug: "Bug / Fehler"
   other: "Frage / Sonstiges"
   # Wird automatisch geöffnet, wenn MRchunks einen Chunkloader wegen Lag sperrt (nicht zum Erstellen wählbar).
-  chunkloader-lock: "Chunkloader-Sperre"
   # Aus den öffentlichen Formularen der Weboberfläche (nicht zum Erstellen wählbar). Kontaktanfragen gibt es nur im Web.
   unban: "Entbannungsantrag"
   contact: "Kontaktanfrage"
@@ -696,6 +715,17 @@ discord-announce:
   maintenance-cancelled-title: "❎ Wartung abgesagt"
   maintenance-cancelled: "~~Geplant ab {start}~~ - die Wartung findet nicht statt."
   maintenance-changed-note: "✏️ *Die Zeiten wurden aktualisiert.*"
+  news-read-more: "Ganze Nachricht lesen"
+  changelog-new: "✨ Neu"
+  changelog-changed: "🔧 Geändert"
+  changelog-fixed: "🐞 Behoben"
+  changelog-removed: "🗑️ Entfernt"
+  kuma-critical: "🚨 {title}"
+  kuma-warning: "⚠️ {title}"
+  kuma-info: "ℹ️ {title}"
+  kuma-resolved-title: "✅ Behoben: {title}"
+  kuma-resolved: "Dieser Vorfall ist erledigt."
+  kuma-status-link: "Mehr dazu"
 
 # --- Discord -----------------------------------------------------------------
 discord-status-active: "<prefix><green>Discord-Webhook aktiv <gray>(<white><events></white>/<white><total></white> Events eingeschaltet)"

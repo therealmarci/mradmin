@@ -65,6 +65,10 @@ dependencies {
         implementation("org.apache.httpcomponents.client5:httpclient5") { version { strictly("5.6.4") } }
         implementation("com.google.guava:guava") { version { strictly("33.7.2-jre") } }
         implementation("com.upokecenter:cbor") { version { strictly("4.5.6") } }
+        // Socket.IO bringt alte Versionen mit bekannten Lücken mit (OSV-Audit 2026-10-29): org.json 20090211 (DoS),
+        // OkHttp 3.12 (Zertifikatsprüfung), Okio 1.15. Neuere Versionen sind zu Socket.IO kompatibel.
+        implementation("org.json:json") { version { strictly("20250517") } }
+        implementation("com.squareup.okhttp3:okhttp") { version { strictly("4.12.0") } }
     }
 
     // Für die Tests des Uptime-Kuma-Parsers (auf dem Server bringt Paper Gson mit).
@@ -118,6 +122,7 @@ tasks.shadowJar {
     relocate("io.socket", "$lib.socketio")
     relocate("okhttp3", "$lib.okhttp3")
     relocate("okio", "$lib.okio")
+    relocate("kotlin", "$lib.kotlin") // OkHttp 4 ist in Kotlin geschrieben
     relocate("org.json", "$lib.json")
     relocate("com.yubico", "$lib.yubico")
     relocate("com.fasterxml.jackson", "$lib.jackson")

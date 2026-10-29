@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Messages;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.discord.DiscordAnnouncer;
+import at.marcelr.mradmin.player.Npcs;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -30,6 +31,10 @@ import static at.marcelr.mradmin.Messages.tag;
  * Presets live in the language file under {@code announce-presets.<name>} with the texts {@code title},
  * {@code subtitle} and {@code chat}. Values given after the preset name fill {@code <arg1>}, {@code <arg2>} ...
  * and all of them together {@code <args>}, e.g. {@code /mradmin announce restart 5m}.
+ * <p>
+ * Besides them the team makes its own templates in the web interface ({@link AnnounceTemplates}): texts per language,
+ * Discord, times, sound and who gets it. Commands and scripts know both; the menus (web, game) only show the own
+ * templates - the built-in presets are partly used by MRadmin itself (restart countdown).
  */
 public final class Announcer {
 
@@ -37,18 +42,45 @@ public final class Announcer {
     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
     private final MRAdmin plugin;
+    private final AnnounceTemplates templates;
 
     public Announcer(MRAdmin plugin) {
         this.plugin = plugin;
+        this.templates = new AnnounceTemplates(plugin);
     }
 
-    /** Names of all presets in the language file. */
+    public AnnounceTemplates templates() {
+        return templates;
+    }
+
+    /** Names of all presets: the built-in ones of the language file and the own templates (for commands and scripts). */
     public List<String> presets() {
+        List<String> names = new ArrayList<>(builtIn());
+        for (AnnounceTemplates.Template t : templates.all()) {
+            if (!names.contains(t.name())) {
+                names.add(t.name());
+            }
+        }
+        return names;
+    }
+
+    /** The presets of the language file (partly used by MRadmin itself, e.g. the restart countdown). */
+    public List<String> builtIn() {
         return new ArrayList<>(plugin.messages().keys(PRESETS));
+    }
+
+    /** What the menus offer (web and game): only the own templates - the built-in presets stay for commands and scripts. */
+    public List<String> menuPresets() {
+        return templates.all().stream().map(AnnounceTemplates.Template::name).toList();
     }
 
     /** Whether a preset uses values (<args>, <arg1> ... or {args} in its Discord text), e.g. "restart 5 Minuten". */
     public boolean needsValues(String preset) {
+        AnnounceTemplates.Template template = templates.get(preset);
+        if (template != null) {
+            return template.texts().values().stream().flatMap(byLang -> byLang.values().stream())
+                    .anyMatch(raw -> raw.contains("<args>") || raw.contains("<arg") || raw.contains("{arg"));
+        }
         String base = PRESETS + "." + preset + ".";
         for (String part : List.of("title", "subtitle", "chat", "discord")) {
             String raw = plugin.messages().optional(base + part);
@@ -61,12 +93,25 @@ public final class Announcer {
 
     /** Whether a preset also posts to the community Discord (it has a discord text). */
     public boolean postsToDiscord(String preset) {
+        AnnounceTemplates.Template template = templates.get(preset);
+        if (template != null) {
+            return template.discord() && template.has("discord");
+        }
         return plugin.messages().has(PRESETS + "." + preset + ".discord");
     }
 
     /** The preset's title and subtitle as plain text (for the web interface's list). */
     public String preview(String preset) {
         Messages messages = plugin.messages();
+        AnnounceTemplates.Template template = templates.get(preset);
+        if (template != null) {
+            String lang = messages.serverLanguage();
+            String title = PLAIN.serialize(messages.parse(template.text("title", lang)));
+            String subtitle = PLAIN.serialize(messages.parse(template.text("subtitle", lang)));
+            String chat = PLAIN.serialize(messages.parse(template.text("chat", lang)));
+            String main = title.isBlank() ? chat : title;
+            return subtitle.isBlank() ? main : main + " - " + subtitle;
+        }
         String base = PRESETS + "." + preset + ".";
         String title = PLAIN.serialize(messages.get(base + "title"));
         String subtitle = messages.has(base + "subtitle") ? PLAIN.serialize(messages.get(base + "subtitle")) : "";
@@ -88,6 +133,11 @@ public final class Announcer {
      * ({@code time="5m"} fills {@code <time>} and {@code {time}} in the Discord text).
      */
     public void announcePreset(String preset, List<String> args, Map<String, String> named, String by, boolean toDiscord) {
+        AnnounceTemplates.Template template = templates.get(preset);
+        if (template != null) {
+            announceTemplate(template, args, named, by, toDiscord);
+            return;
+        }
         Messages messages = plugin.messages();
         TagResolver[] resolvers = argResolvers(args, named);
         String base = PRESETS + "." + preset + ".";
@@ -99,15 +149,104 @@ public final class Announcer {
         // Only presets with a "discord" text go to the community Discord (with a cooldown per preset).
         String discordText = messages.server(() -> messages.optional(base + "discord"));
         if (toDiscord && !discordText.isEmpty()) {
-            String filled = discordText.replace("{args}", DiscordAnnouncer.escape(String.join(" ", args)));
-            for (int i = 1; i <= 9; i++) {
-                filled = filled.replace("{arg" + i + "}", i <= args.size() ? DiscordAnnouncer.escape(args.get(i - 1)) : "");
-            }
-            for (Map.Entry<String, String> value : named.entrySet()) {
-                filled = filled.replace("{" + value.getKey() + "}", DiscordAnnouncer.escape(value.getValue()));
-            }
-            plugin.discordAnnounce().announce(preset, PLAIN.serialize(title), filled);
+            plugin.discordAnnounce().announce(preset, PLAIN.serialize(title), fillDiscord(discordText, args, named));
         }
+    }
+
+    /** {args}, {arg1} ... and the named values in a Discord text, escaped. */
+    private static String fillDiscord(String text, List<String> args, Map<String, String> named) {
+        String filled = text.replace("{args}", DiscordAnnouncer.escape(String.join(" ", args)));
+        for (int i = 1; i <= 9; i++) {
+            filled = filled.replace("{arg" + i + "}", i <= args.size() ? DiscordAnnouncer.escape(args.get(i - 1)) : "");
+        }
+        for (Map.Entry<String, String> value : named.entrySet()) {
+            filled = filled.replace("{" + value.getKey() + "}", DiscordAnnouncer.escape(value.getValue()));
+        }
+        return filled;
+    }
+
+    /**
+     * Announces an own template: to the players of its audience (everyone, bots and up, support and up, staff and up,
+     * admins), each in their language, with the template's times and sound; to Discord if the template wants that.
+     */
+    public void announceTemplate(AnnounceTemplates.Template t, List<String> args, Map<String, String> named, String by,
+                                 boolean toDiscord) {
+        Messages messages = plugin.messages();
+        TagResolver[] resolvers = argResolvers(args, named);
+        Title.Times times = Title.Times.times(Duration.ofMillis(Math.round(t.fadeIn() * 1000)),
+                Duration.ofMillis(Math.round(t.stay() * 1000)), Duration.ofMillis(Math.round(t.fadeOut() * 1000)));
+        Sound sound = sound(t);
+        int reached = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (rank(player) < t.level()) {
+                continue;
+            }
+            reached++;
+            String lang = messages.languageOf(player);
+            messages.run(player, () -> {
+                Component title = templatePart(t, "title", lang, resolvers);
+                Component subtitle = templatePart(t, "subtitle", lang, resolvers);
+                if (title != null || subtitle != null) {
+                    player.showTitle(Title.title(title == null ? Component.empty() : title,
+                            subtitle == null ? Component.empty() : subtitle, times));
+                }
+                Component chat = templatePart(t, "chat", lang, resolvers);
+                if (chat != null) {
+                    player.sendMessage(chat);
+                }
+                Component actionbar = templatePart(t, "actionbar", lang, resolvers);
+                if (actionbar != null) {
+                    player.sendActionBar(actionbar);
+                }
+            });
+            if (sound != null) {
+                player.playSound(sound, Sound.Emitter.self());
+            }
+        }
+        String lang = messages.serverLanguage();
+        Component title = messages.server(() -> templatePart(t, "title", lang, resolvers));
+        String text = messages.server(() -> String.join(" - ", Stream.of("title", "subtitle", "chat", "actionbar")
+                .map(part -> templatePart(t, part, lang, resolvers)).filter(Objects::nonNull).map(PLAIN::serialize)
+                .filter(x -> !x.isBlank()).toList()));
+        plugin.getLogger().info("Announcement " + t.name() + " by " + by + " (" + reached + " players): " + text);
+        plugin.discord().log("announce", "admin", by, "text", text);
+        if (toDiscord && t.discord() && t.has("discord")) {
+            plugin.discordAnnounce().announce(t.name(), title == null ? "" : PLAIN.serialize(title),
+                    fillDiscord(t.text("discord", lang), args, named));
+        }
+    }
+
+    /** A text of a template in a language with the values filled in, null if it has none. */
+    private Component templatePart(AnnounceTemplates.Template t, String part, String lang, TagResolver[] resolvers) {
+        String raw = t.text(part, lang);
+        return raw.isBlank() ? null : plugin.messages().parse(raw, resolvers);
+    }
+
+    /** The template's sound: the one of the config, none, or its own key. */
+    private Sound sound(AnnounceTemplates.Template t) {
+        Settings.AnnounceSettings s = plugin.settings().announce();
+        if (AnnounceTemplates.SOUND_NONE.equals(t.sound())) {
+            return null;
+        }
+        if (AnnounceTemplates.SOUND_DEFAULT.equals(t.sound()) || t.sound().isBlank()) {
+            return s.sound() == null ? null : Sound.sound(s.sound(), Sound.Source.MASTER, s.volume(), s.pitch());
+        }
+        Key key = Settings.sound(t.sound(), "sound", plugin.getLogger());
+        return key == null ? null : Sound.sound(key, Sound.Source.MASTER, t.volume(), t.pitch());
+    }
+
+    /** Where a player stands for the audience of a template: 0 player, 1 bot, 2 support, 3 staff, 4 admin. */
+    public static int rank(Player player) {
+        if (player.hasPermission("mradmin.groups.admin")) {
+            return 4;
+        }
+        if (player.hasPermission("mradmin.groups.staff")) {
+            return 3;
+        }
+        if (player.hasPermission("mradmin.groups.support")) {
+            return 2;
+        }
+        return Npcs.is(player) ? 1 : 0;
     }
 
     /**

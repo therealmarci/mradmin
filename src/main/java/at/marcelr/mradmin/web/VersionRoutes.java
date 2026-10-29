@@ -15,7 +15,7 @@ import java.util.Map;
  * The page Versions: installed MRtechnology plugins, their updates and the restart button.
  * <pre>
  *  GET  /api/versions                    plugins, last check, restart countdown, choices    mradmin.versions.view
- *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.view
+ *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.install
  *  POST /api/versions/{name}/download    newest version into plugins/update/               mradmin.versions.install
  *  POST /api/restart       {delay}       restart after delay ms (0 = now)                  mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
@@ -109,7 +109,7 @@ public final class VersionRoutes {
     }
 
     private void check(Http http) throws Exception {
-        require(http, mayView(server, http.account().id()));
+        require(http, may(http, Perms.VERSIONS_INSTALL));
         server.sync(() -> {
             plugin.versions().discover();
             return null;

@@ -29,8 +29,23 @@ public final class ConfigUpdater {
      * 8: storage (yaml, sqlite, mysql); 9: web interface (web, Discord events web-login/web-setup);
      * 10: web.legal (imprint, privacy policy), web.privacy (retention, shortened IPs); 11: health (history, alert);
  * 22: web.item-icons (item pictures from the game client).
+ * 23: tickets.chunkloader-locks became tickets.plugin-reports (automatic tickets of all plugins).
+ * 24: player-web (the players' own page, /web).
+ * 25: player-web.rankings (statistics page).
+ * 26: player-web.news (slideshow with news and changelogs of the team).
+ * 27: player-web.personal-stats (own statistics as a tile on the start page).
+ * 28: player-web.news.show-plugin-notices and show-tickets (warnings and ticket answers in the slideshow).
+ * 29: player-web sign-in with a 6-digit code: session-days 90 -> 14 (only the old default), idle-days, code-seconds
+ * instead of link-minutes.
+ * 30: news, changelogs and warnings: uptime-kuma.status-pages/incidents, player-web.news.chat-preview and alerts,
+ * discord-announce.news/alerts and colors.news/changelog/alert.
+ * 31: discord-announce.kuma (Uptime Kuma incidents in the community Discord).
+ * 32: uptime-kuma.incident-seconds (incidents read more often than the maintenance list).
+ * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
+ * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
+ * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
      */
-    public static final int CURRENT_VERSION = 22;
+    public static final int CURRENT_VERSION = 35;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -43,7 +58,9 @@ public final class ConfigUpdater {
             Map.entry("discord.events.report.enabled", "discord.events.ticket.enabled"),
             Map.entry("discord.events.report.color", "discord.events.ticket.color"),
             Map.entry("discord.events.report-closed.enabled", "discord.events.ticket-closed.enabled"),
-            Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"));
+            Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"),
+            // v23: automatic tickets of all plugins, not only MRchunks' lag locks
+            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"));
 
     /**
      * Sections whose entries are made by the server owner (own menu buttons, ticket categories): their entries are
@@ -128,6 +145,34 @@ public final class ConfigUpdater {
                     template.set("server-language", old);
                 }
                 template.set("language", "auto");
+            }
+            // v29: the player page asks for a new code from /web after at most 14 days - the old default of 90 goes.
+            if (version < 29 && existing.getInt("player-web.session-days", 90) == 90) {
+                template.set("player-web.session-days", 14);
+            }
+            // v33: the statistic "player-kills" is gone - "xp-level" takes its place in the list.
+            if (version < 33) {
+                java.util.List<String> list = new java.util.ArrayList<>(template.getStringList("player-web.rankings.statistics"));
+                int index = list.indexOf("player-kills");
+                if (index >= 0) {
+                    list.set(index, list.contains("xp-level") ? null : "xp-level");
+                    list.removeIf(java.util.Objects::isNull);
+                    template.set("player-web.rankings.statistics", list);
+                }
+            }
+            // v34/35: the new statistics and every one of the personal tab also go into existing ranking lists (an empty
+            // list stays empty = none wanted).
+            if (version < 35) {
+                java.util.List<String> list = new java.util.ArrayList<>(template.getStringList("player-web.rankings.statistics"));
+                if (!list.isEmpty()) {
+                    for (String added : java.util.List.of("blocks-placed", "totems", "times-slept", "distance-swum",
+                            "distance-flown", "items-crafted", "jumps", "fish-caught")) {
+                        if (!list.contains(added)) {
+                            list.add(added);
+                        }
+                    }
+                    template.set("player-web.rankings.statistics", list);
+                }
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

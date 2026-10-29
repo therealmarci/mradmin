@@ -35,6 +35,8 @@ public final class Http {
     /** Set by the server for requests with a valid session. */
     WebAuth.Session session;
     WebAuth.Account account;
+    /** Set by the server for requests of the player area (/web) with a valid player session. */
+    at.marcelr.mradmin.web.self.PlayerSessions.Session player;
 
     Http(HttpExchange exchange, Set<String> trustedProxies, boolean maskIp) {
         this.exchange = exchange;
@@ -99,6 +101,11 @@ public final class Http {
 
     public WebAuth.Session session() {
         return session;
+    }
+
+    /** The signed-in player of a player-area route (see {@link WebServer#self}). */
+    public at.marcelr.mradmin.web.self.PlayerSessions.Session player() {
+        return player;
     }
 
     public WebAuth.Account account() {

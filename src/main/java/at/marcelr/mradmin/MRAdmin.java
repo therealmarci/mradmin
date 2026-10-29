@@ -39,6 +39,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Main class of MRadmin: loads config and texts, starts the features (maintenance, tickets, admin mode, web
+ * interface ...) and offers the module API other plugins use through the Bukkit ServicesManager.
+ */
 public final class MRAdmin extends JavaPlugin implements Listener {
 
     private FileConfiguration config;
@@ -51,7 +55,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(13, Map.ofEntries(
+    private final Messages messages = new Messages(15, Map.ofEntries(
             Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
                     "maintenance-motd")),
             Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
@@ -72,9 +76,12 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             // 12: "Website | GitHub" in /mradmin version.
             Map.entry(12, Set.of("version-links")),
             // 13: one Discord message per maintenance with the actual begin and end.
-            Map.entry(13, Set.of("discord-announce.maintenance-started", "discord-announce.maintenance-ended"))));
+            Map.entry(13, Set.of("discord-announce.maintenance-started", "discord-announce.maintenance-ended")),
+            Map.entry(14, Set.of("web-self-link")),
+            Map.entry(15, Set.of("discord-announce.kuma-status-link"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
+    private at.marcelr.mradmin.news.NewsDelivery newsDelivery;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
@@ -109,11 +116,15 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PlayerRoutes.register(web);
         at.marcelr.mradmin.web.ConsoleRoutes.register(web);
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
+        at.marcelr.mradmin.web.NewsRoutes.register(web);
         at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
         at.marcelr.mradmin.web.ItemRoutes.register(web);
+        at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        web.playerSessions().load();
+        newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
         web.requests().load();
@@ -145,12 +156,14 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(new FreezeListener(this), this);
         pm.registerEvents(staffChat, this);
         pm.registerEvents(web.requests(), this);
+        pm.registerEvents(newsDelivery, this);
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
         register("report", new ReportCommand(this));
+        register("web", new at.marcelr.mradmin.command.SelfWebCommand(this));
         register("staffchat", staffChat);
 
         startServices();
@@ -181,6 +194,12 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (updateChecker != null) {
             updateChecker.stop();
+        }
+        if (newsDelivery != null) {
+            newsDelivery.incidents().stop();
+        }
+        if (web != null) {
+            web.playerSessions().flush();
         }
         discord.shutdown();
         if (discordAnnounce != null) {
@@ -237,6 +256,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         updateChecker.start();
         versions.start();
         menuListener.start();
+        newsDelivery.incidents().start();
     }
 
     private void loadConfiguration() {
@@ -335,6 +355,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public DiscordWebhook discord() {
         return discord;
+    }
+
+    /** Brings news, changelogs and warnings to the players (Discord, chat, title). */
+    public at.marcelr.mradmin.news.NewsDelivery newsDelivery() {
+        return newsDelivery;
     }
 
     public DiscordAnnouncer discordAnnounce() {

@@ -63,9 +63,17 @@
 
   const limitText = (l) => (l.value < 0 ? '∞' : String(l.value));
   const time = (ms) => (ms === -1 ? t('sleep.permanent') : duration(ms));
+  // MRchunks with chunk budget: loaders placed (fixed maximum for everyone) and the budget in chunks.
+  // Older MRchunks: place and active limit, both editable.
+  const budget = $derived(c?.budget != null);
   const limits = $derived(c ? [
-    { kind: 'place', label: t('chunks.limitPlace'), used: c.loaders.length, limit: c.limit },
-    { kind: 'active', label: t('chunks.limitActive'), used: c.active, limit: c.activeLimit },
+    ...(budget ? [
+      { kind: 'place', label: t('chunks.limitPlace'), used: c.loaders.length, limit: { value: c.maxLoaders, source: 'fixed', custom: null }, fixed: true },
+      { kind: 'budget', label: t('chunks.limitBudget'), used: c.budgetUsed, limit: c.budget, unit: t('chunks.chunksUnit') },
+    ] : [
+      { kind: 'place', label: t('chunks.limitPlace'), used: c.loaders.length, limit: c.limit },
+      { kind: 'active', label: t('chunks.limitActive'), used: c.active, limit: c.activeLimit },
+    ]),
     ...(c.dummiesEnabled ? [{ kind: 'dummy', label: t('chunks.limitDummy'), used: c.dummies, limit: c.dummyLimit }] : []),
   ] : []);
   const chips = $derived(c ? [
@@ -74,10 +82,12 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile label={t('nav.chunks')} loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
+  <PartTile label={t('nav.chunks')} icon="grid" loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
     value={c ? String(c.loaders.length) : ''} unit={c ? t('chunks.tileUnit', { max: limitText(c.limit) }) : ''}
     facts={c ? [
-      { label: t('chunks.tileActive'), value: c.active + ' / ' + limitText(c.activeLimit) },
+      budget
+        ? { label: t('chunks.tileBudget'), value: c.budgetUsed + ' / ' + limitText(c.budget) }
+        : { label: t('chunks.tileActive'), value: c.active + ' / ' + limitText(c.activeLimit) },
       { label: t('chunks.tileInvited'), value: String(c.shared.length) },
       { label: t('player.banFact'), value: !c.ban ? (c.exempt ? t('chunks.exempt') : '–') : c.ban.permanent ? t('sleep.permanent') : dateTime(c.ban.until), tone: c.ban ? 'bad' : '' },
     ] : []} />
@@ -98,12 +108,12 @@
       {#each limits as l (l.kind)}
         <div class="fact">
           <div class="flabel">{l.label}</div>
-          <div class="fvalue">{l.used} / {limitText(l.limit)}</div>
+          <div class="fvalue">{l.used} / {limitText(l.limit)}{#if l.unit} <span class="muted tiny">{l.unit}</span>{/if}</div>
           <div class="muted tiny">{t('chunks.source.' + l.limit.source)}</div>
-          {#if me.may.mrchunksLimit}
+          {#if me.may.mrchunksLimit && !l.fixed}
             {#if editing === l.kind}
               <div class="edit">
-                <input type="number" min="0" max="1000" bind:value aria-label={l.label} />
+                <input type="number" min="0" max={l.kind === 'budget' ? 100000 : 1000} bind:value aria-label={l.label} />
                 <button disabled={busy || value === '' || value == null} onclick={() => act({ action: 'limit', kind: l.kind, value: String(value) })}>{t('chunks.limitSave')}</button>
               </div>
               <div class="edit-links">
@@ -120,7 +130,7 @@
       {/each}
     </div>
     {#if !c.online}
-      <p class="muted tiny">{t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
+      <p class="muted tiny">{budget ? t('chunks.budgetOffline', { budget: c.defaultBudget }) : t('chunks.limitOffline', { place: c.defaultLimit, active: c.defaultActiveLimit })}</p>
     {/if}
 
     {@const canLink = (me.may.mrchunksLink || me.may.mrchunksManage) && c.linksEnabled && !c.main && c.secondAccounts.length < c.maxLinks}
@@ -172,9 +182,10 @@
           {@const st = STATUS[l.status]}
           <li>
             <button class="link-row" onclick={() => go('/chunks/' + l.id)} disabled={!me.may.mrchunks}>
-              <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + l.status)}</span>
+              <span class="badge-status {st.tone}">{#if st.icon}{st.icon} {/if}{t('chunks.status.' + l.status)}</span>
               <strong>{l.name}</strong>
               <span class="muted small mono">{l.world} {l.x} {l.y} {l.z}</span>
+              {#if l.width}<span class="tag">{l.width}×{l.length}</span>{/if}
               {#if l.dummyPresent}<span class="tag">🧍 {t('chunks.dummyBadge')}</span>{/if}
             </button>
           </li>

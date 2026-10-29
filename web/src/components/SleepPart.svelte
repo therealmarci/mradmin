@@ -68,7 +68,7 @@
 
 {#if view === 'tile'}
   {@const state = !p ? null : p.ban ? ['banned', 'bad'] : p.blocking.length ? ['blocked', 'warn'] : p.sleeping ? ['sleeping', 'good'] : ['ok', 'good']}
-  <PartTile label={t('nav.sleep')} loading={!p} {error} {onOpen} small
+  <PartTile label={t('nav.sleep')} icon="moon" loading={!p} {error} {onOpen} small
     value={state ? t('sleep.tile.' + state[0]) : ''} tone={state?.[1]}
     facts={p ? [
       { label: t('sleep.section.cooldown'), value: p.cooldown ? duration(p.cooldown) : '–' },

@@ -34,9 +34,11 @@ public final class DiscordAnnouncer {
     private record Config(boolean enabled, URI url, String username, String avatar, String pingRole, String footer,
                           boolean maintenance, MaintenanceBoard.Rules rules, boolean pingMaintenance,
                           boolean announcements, long cooldown, boolean pingAnnouncements,
-                          int colorScheduled, int colorStarted, int colorEnded, int colorCancelled, int colorAnnounce) {
+                          int colorScheduled, int colorStarted, int colorEnded, int colorCancelled, int colorAnnounce,
+                          boolean pingNews, boolean pingAlerts, int colorNews, int colorChangelog, int colorAlert,
+                          boolean kuma, boolean pingKuma) {
         static final Config DISABLED = new Config(false, null, "", "", null, "", false, null, false,
-                false, 0, false, 0, 0, 0, 0, 0);
+                false, 0, false, 0, 0, 0, 0, 0, false, false, 0, 0, 0, false, false);
     }
 
     private final MRAdmin plugin;
@@ -45,6 +47,15 @@ public final class DiscordAnnouncer {
     private Config config = Config.DISABLED;
     private String disabledReason = "discord-reason-disabled";
     private final Map<String, Instant> lastAnnounce = new HashMap<>();
+    /** Uptime Kuma incidents posted: stable id (slug:id) -> [last key, message]. */
+    private final Map<String, KumaPost> kumaPosts = new java.util.LinkedHashMap<>();
+
+    private static final class KumaPost {
+        String key;
+        String title;
+        String link;
+        AnnounceWebhook.Post post;
+    }
 
     public DiscordAnnouncer(MRAdmin plugin) {
         this.plugin = plugin;
@@ -100,7 +111,11 @@ public final class DiscordAnnouncer {
                 s.getBoolean("announcements.ping", false),
                 color(s.getString("colors.scheduled"), 0xF1C40F), color(s.getString("colors.started"), 0xE74C3C),
                 color(s.getString("colors.ended"), 0x2ECC71), color(s.getString("colors.cancelled"), 0x95A5A6),
-                color(s.getString("colors.announce"), 0x9B59B6));
+                color(s.getString("colors.announce"), 0x9B59B6),
+                s.getBoolean("news.ping", false), s.getBoolean("alerts.ping", true),
+                color(s.getString("colors.news"), 0x3498DB), color(s.getString("colors.changelog"), 0x2ECC71),
+                color(s.getString("colors.alert"), 0xE74C3C),
+                s.getBoolean("kuma.enabled", true), s.getBoolean("kuma.ping", true));
         disabledReason = null;
         plugin.getLogger().info("Discord announcement webhook active.");
     }
@@ -244,6 +259,106 @@ public final class DiscordAnnouncer {
         return true;
     }
 
+
+    // -------------------------------------------------------- news, changelogs, warnings
+
+    /**
+     * A post of the team (see {@link at.marcelr.mradmin.news.News}) - only if its author asked for it. News and
+     * changelogs ping with {@code news.ping}, warnings with {@code alerts.ping}.
+     *
+     * @param kind  news, changelog or alert (colour)
+     * @param title plain title
+     * @param body  Discord markdown (escaped where it comes from the post)
+     * @param link  the whole post on the player page, or null
+     * @return whether it was posted
+     */
+    public boolean postNews(String kind, String title, String body, String link) {
+        Config c = config;
+        if (!c.enabled()) {
+            return false;
+        }
+        int color = switch (kind) {
+            case "changelog" -> c.colorChangelog();
+            case "alert" -> c.colorAlert();
+            default -> c.colorNews();
+        };
+        String text = body;
+        if (link != null) {
+            text += "\n\n[" + text("news-read-more") + "](" + link + ")";
+        }
+        boolean ping = "alert".equals(kind) ? c.pingAlerts() : c.pingNews();
+        webhook.post(c.url(), payload(c, ping, embed(title, text.length() > 4000 ? text.substring(0, 3999) : text, color)));
+        return true;
+    }
+
+
+    /** One pinned Uptime Kuma incident as the announcer needs it (see {@link #syncKuma}). */
+    public record KumaIncident(String id, String key, String level, String title, String content, String link) {
+    }
+
+    /**
+     * Keeps the Discord posts in step with the incidents pinned on the Uptime Kuma status pages (kuma.enabled): a new one
+     * is posted (danger pings with kuma.ping), a changed one edited, one that is no longer pinned edited to "resolved".
+     * Called after every complete poll, main thread.
+     */
+    public void syncKuma(List<KumaIncident> pinned) {
+        Config c = config;
+        if (!c.enabled() || !c.kuma()) {
+            return;
+        }
+        boolean changed = false;
+        java.util.Set<String> still = new java.util.HashSet<>();
+        for (KumaIncident i : pinned) {
+            still.add(i.id());
+            KumaPost known = kumaPosts.get(i.id());
+            if (known != null && i.key().equals(known.key)) {
+                continue;
+            }
+            int color = switch (i.level()) {
+                case "critical" -> c.colorAlert();
+                case "warning" -> c.colorScheduled();
+                default -> c.colorNews();
+            };
+            String text = escape(i.content()) + kumaLink(i.link());
+            JsonObject payload = payload(c, known == null && "critical".equals(i.level()) && c.pingKuma(),
+                    embed(text("kuma-" + i.level()).replace("{title}", i.title()), text, color));
+            if (known == null) {
+                known = new KumaPost();
+                known.post = webhook.post(c.url(), payload);
+                kumaPosts.put(i.id(), known);
+            } else {
+                webhook.edit(c.url(), known.post, payload);
+            }
+            known.key = i.key();
+            known.title = i.title();
+            known.link = i.link();
+            changed = true;
+        }
+        for (var it = kumaPosts.entrySet().iterator(); it.hasNext(); ) {
+            var e = it.next();
+            if (still.contains(e.getKey())) {
+                continue;
+            }
+            KumaPost gone = e.getValue();
+            String text = text("kuma-resolved") + kumaLink(gone.link);
+            webhook.edit(c.url(), gone.post, payload(c, false,
+                    embed(text("kuma-resolved-title").replace("{title}", gone.title), text, c.colorEnded())));
+            it.remove();
+            changed = true;
+        }
+        if (changed) {
+            save();
+        }
+    }
+    /** "[More about it](link)" to the player page, nothing without web.public-url. */
+    private String kumaLink(String link) {
+        return link == null || link.isEmpty() ? "" : "\n\n[" + text("kuma-status-link") + "](" + link + ")";
+    }
+
+    /** A text of discord-announce in the server language (for building posts elsewhere). */
+    public String label(String key) {
+        return text(key);
+    }
     public CompletableFuture<String> test(CommandSender sender) {
         Config c = config;
         if (!c.enabled()) {
@@ -257,6 +372,22 @@ public final class DiscordAnnouncer {
 
     public void loadState() {
         YamlConfiguration y = plugin.storage().loadYaml("discord-announce", plugin.getLogger());
+        ConfigurationSection kuma = y.getConfigurationSection("kuma");
+        if (kuma != null) {
+            for (String k : kuma.getKeys(false)) {
+                ConfigurationSection s = kuma.getConfigurationSection(k);
+                String message = s == null ? "" : s.getString("message", "");
+                if (s == null || message.isEmpty()) {
+                    continue;
+                }
+                KumaPost p = new KumaPost();
+                p.key = s.getString("key", "");
+                p.title = s.getString("title", "");
+                p.link = s.getString("link", "");
+                p.post = new AnnounceWebhook.Post(message);
+                kumaPosts.put(s.getString("id", k), p);
+            }
+        }
         try {
             if (y.contains("key")) {
                 // Up to 0.6.0: one maintenance with a "scheduled" and a "started" post. Go on with the newer one.
@@ -305,7 +436,8 @@ public final class DiscordAnnouncer {
 
     private void saveNow() {
         YamlConfiguration y = new YamlConfiguration();
-        y.options().setHeader(List.of("MRadmin - maintenance posted to the announcement webhook (managed by the plugin)."));
+        y.options().setHeader(List.of("MRadmin - maintenance and Uptime Kuma incidents posted to the announcement webhook",
+                "(managed by the plugin)."));
         int i = 0;
         for (MaintenanceBoard.Entry e : board.entries()) {
             String path = "maintenances.m" + i++ + ".";
@@ -317,6 +449,15 @@ public final class DiscordAnnouncer {
             y.set(path + "started-at", e.startedAt == null ? "" : e.startedAt.toString());
             y.set(path + "changed", e.changed);
             y.set(path + "message", e.post == null || e.post.id == null ? "" : e.post.id);
+        }
+        int k = 0;
+        for (var e : kumaPosts.entrySet()) {
+            String path = "kuma.k" + k++ + ".";
+            y.set(path + "id", e.getKey());
+            y.set(path + "key", e.getValue().key);
+            y.set(path + "title", e.getValue().title);
+            y.set(path + "link", e.getValue().link);
+            y.set(path + "message", e.getValue().post == null || e.getValue().post.id == null ? "" : e.getValue().post.id);
         }
         plugin.storage().saveYaml("discord-announce", y);
     }

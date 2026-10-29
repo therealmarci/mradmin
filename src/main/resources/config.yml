@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 22
+config-version: 35
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -160,6 +160,15 @@ uptime-kuma:
   # If Kuma cannot be reached, the last known schedule stays valid (true) or is discarded (false).
   keep-schedule-when-offline: true
 
+  # Warnings ("incidents") pinned on Uptime Kuma status pages - e.g. during an outage - are shown on the player page
+  # and in game like the warnings written in MRadmin. Slugs of the status pages, e.g. "main" for
+  # https://status.yourserver.com/status/main - read from the public page, so only "url" is needed (no login, also
+  # without "enabled"). Empty = none.
+  status-pages: []
+  incidents: true
+  # How often the status pages are read for incidents (seconds).
+  incident-seconds: 15
+
 
 # ------------------------------------------------------------------------------
 #   3) ANNOUNCEMENTS
@@ -267,10 +276,11 @@ tickets:
   sound: "BLOCK_NOTE_BLOCK_PLING"
   # Keep closed tickets this long (also visible to the player), afterwards they are deleted.
   keep-closed: "7d"
-  # With MRchunks: if a chunk loader is locked because of lag, its owner automatically gets a ticket with all
-  # details of the lock (link in the chat). There they can explain what happened. Only the team can close it, and
-  # the team can unlock the loader via "Chunk loader menu" in the ticket. If it is locked or unlocked again, that is noted in the same ticket.
-  chunkloader-locks: true
+  # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
+  # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
+  # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader
+  # menu" in the ticket. If it happens again, that is noted in the same ticket. false = no automatic tickets.
+  plugin-reports: true
   # Icon of all tickets in the menus (item name).
   icon: "NAME_TAG"
   # Categories offered when creating a ticket (in this order). Simply add your own, delete the ones you do not
@@ -458,12 +468,28 @@ discord-announce:
     cooldown: "10m"
     ping: false
 
+  # News, changelogs and warnings from the web interface ("News") - only those where "Post to Discord" is ticked.
+  news:
+    ping: false
+  alerts:
+    # Mention ping-role-id with a critical warning.
+    ping: true
+  # Incidents pinned on the Uptime Kuma status pages (uptime-kuma.status-pages): posted once, edited when they change
+  # in Kuma, marked as resolved when they are no longer pinned.
+  kuma:
+    enabled: true
+    # Mention ping-role-id with a red (danger) incident.
+    ping: true
+
   colors:
     scheduled: "#F1C40F"
     started: "#E74C3C"
     ended: "#2ECC71"
     cancelled: "#95A5A6"
     announce: "#9B59B6"
+    news: "#3498DB"
+    changelog: "#2ECC71"
+    alert: "#E74C3C"
 
 
 # ------------------------------------------------------------------------------
@@ -678,6 +704,64 @@ web:
       max-open-contact: 50
       # Difficulty of the calculation (0 = off, 16 = about one second on a phone, every +1 doubles the time).
       proof-of-work: 16
+
+# Player area of the web interface: every player gets their own page - their chunk loaders, duel statistics, tickets,
+# rankings ... (whatever the installed MRtechnology plugins offer). The address is always <web.public-url>/me (can be
+# bookmarked); to sign in, the page asks for a 6-digit code that players get with /web in game - again after
+# session-days, or after idle-days without use. Needs the web interface (web.enabled) and
+# web.public-url. Permission for /web: mradmin.web.self (in mradmin.player).
+player-web:
+  enabled: false
+  # A browser stays signed in at most this many days after the code from /web was entered - then the page asks for a
+  # new code (the address stays the same, a bookmark keeps working).
+  session-days: 14
+  # ... and is signed out earlier if the page was not opened for this many days.
+  idle-days: 7
+  # How long the 6-digit code from /web works (seconds). It works only once.
+  code-seconds: 120
+  # Browsers per player at most (phone, PC ...). Signing in on one more signs out the one used longest ago.
+  max-devices: 5
+  # Statistics page: rankings of the game's own statistics (all players, also offline) and of the plugins (e.g. MRpvp:
+  # duels won). Players can hide themselves from all rankings on the page.
+  rankings:
+    enabled: true
+    # Places shown per ranking (the viewer's own place is shown in addition if it is further down).
+    top: 10
+    # The game's statistics, in this order: play-time, xp-level, blocks-mined, blocks-placed, items-crafted, mob-kills,
+    # deaths, totems, distance, distance-swum, distance-flown, jumps, fish-caught, times-slept. Empty list [] = none
+    # (only the plugins' rankings).
+    statistics: [play-time, xp-level, blocks-mined, blocks-placed, items-crafted, mob-kills, deaths, totems, distance,
+      distance-swum, distance-flown, jumps, fish-caught, times-slept]
+  # Own statistics as a tile on the start page, in this order (the first one big). Same names as under
+  # rankings.statistics. Empty list [] = no tile.
+  personal-stats: [play-time, blocks-mined, mob-kills, deaths]
+  # Slideshow at the top of the start page: planned maintenance, a planned restart and the posts of the team - news
+  # and changelogs, written in the web interface under "News" (permission mradmin.news), in German and English.
+  news:
+    enabled: true
+    # Seconds per slide before the next one comes (0 = only by hand).
+    seconds: 8
+    # How many of the newest posts are in the slideshow (all of them are on the page "News").
+    slides: 5
+    show-maintenance: true
+    show-restart: true
+    # Warnings of the plugins about the player's own things, e.g. MRchunks: loaders locked for lag, close to the lag
+    # limit or over the budget.
+    show-plugin-notices: true
+    # Own tickets with a new answer of the team (or closed) that the player has not read yet.
+    show-tickets: true
+    # New news and changelogs once per player as a short preview in the chat, with a link to the whole post: to
+    # everyone online when published, otherwise on the next join (at most "max", not older than "max-age-days").
+    # Only for players who may open the player page (mradmin.web.self).
+    chat-preview:
+      enabled: true
+      max: 3
+      max-age-days: 14
+    # Critical warnings (written in MRadmin or pinned in Uptime Kuma): to everyone online in the chat and as a title
+    # on the screen; whoever joins while one is on gets it in the chat.
+    alerts:
+      chat: true
+      title: true
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens
