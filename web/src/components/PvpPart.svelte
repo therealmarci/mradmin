@@ -77,7 +77,7 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile label={t('nav.pvp')} loading={!p} {error} {onOpen} tone={p?.ban ? 'bad' : p?.game ? 'info' : ''}
+  <PartTile label={t('nav.pvp')} icon="swords" loading={!p} {error} {onOpen} tone={p?.ban ? 'bad' : p?.game ? 'info' : ''}
     value={p ? String(p.stats.games) : ''} unit={t('pvp.tileUnit')}
     facts={p ? [
       ...(p.game ? [{ label: t('pvp.tileLive'), value: '#' + p.game, tone: 'info' }] : []),

@@ -82,7 +82,7 @@
 </script>
 
 {#if view === 'tile'}
-  <PartTile label={t('nav.chunks')} loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
+  <PartTile label={t('nav.chunks')} icon="grid" loading={!c} {error} {onOpen} tone={c?.ban ? 'bad' : ''}
     value={c ? String(c.loaders.length) : ''} unit={c ? t('chunks.tileUnit', { max: limitText(c.limit) }) : ''}
     facts={c ? [
       budget

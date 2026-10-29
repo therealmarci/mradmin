@@ -81,7 +81,7 @@
   });
 </script>
 
-<div class="stack">
+<div class="page">
   {#if section && player}
     <button class="back" onclick={() => go(`/players/${uuid}`)}>← {t('player.backTo', { name: player.name })}</button>
   {:else}
@@ -91,23 +91,24 @@
   {#if message}<div class="notice">{message}</div>{/if}
 
   {#if player && section}
-    <div class="mini">
-      <img src={head(player.uuid)} alt="" width="32" height="32" />
+    <!-- One section of the player: a small head, then the section itself. -->
+    <header class="mini">
+      <img src={head(player.uuid)} alt="" width="36" height="36" />
       <strong>{player.name}</strong>
       <span class="state" class:on={player.online}>
         {player.online ? '● ' + t('players.online') : t('player.lastSeen', { time: ago(player.lastSeen) })}
       </span>
-    </div>
+    </header>
     {#if section === 'tickets'}
       <section class="card">
-        <h2>🎫 {t('player.tickets')}</h2>
+        <h2>{t('player.tickets')}</h2>
         {#if player.tickets.length === 0}
           <p class="muted small">{t('player.noTickets')}</p>
         {:else}
           <ul class="tickets">
             {#each player.tickets as tk (tk.id)}
               <li>
-                <button class="link-row" onclick={() => go('/tickets/' + tk.id)}>
+                <button class="ticket" class:closed={!tk.open} onclick={() => go('/tickets/' + tk.id)}>
                   <span class="id">#{tk.id}</span>
                   <span class="tsum">{tk.summary || tk.category}</span>
                   <span class="muted small">{t('player.role.' + tk.role)} · {tk.open ? t('ticket.statusOpen') : t('ticket.statusClosed')} · {ago(tk.lastActivity)}</span>
@@ -122,19 +123,22 @@
       <Part {uuid} {me} name={player.name} onDone={done} />
     {/if}
   {:else if player}
-    <section class="card">
-      <div class="title">
-        <img src={head(player.uuid)} alt="" width="52" height="52" />
+    <section class="head" class:online={player.online}>
+      <div class="who">
+        <img src={head(player.uuid)} alt="" width="72" height="72" />
         <div>
           <h1>{player.name}</h1>
-          <div class="state" class:on={player.online}>
-            {player.online ? '● ' + t('players.online') : t('player.lastSeen', { time: ago(player.lastSeen) })}
-            {#if player.frozen} · <span class="info-text">❄ {t('flag.frozen')}</span>{/if}
-            {#if player.adminMode} · <span class="warn-text">{t('overview.admin')}</span>{/if}
+          <div class="badges">
+            <span class="badge" class:on={player.online}>
+              {player.online ? '● ' + t('players.online') : t('player.lastSeen', { time: ago(player.lastSeen) })}
+            </span>
+            {#if player.frozen}<span class="badge info">❄ {t('flag.frozen')}</span>{/if}
+            {#if player.adminMode}<span class="badge warn">{t('overview.admin')}</span>{/if}
           </div>
         </div>
       </div>
 
+      <!-- The facts as small tiles: label on top, value below. -->
       <div class="facts">
         {#if player.online}
           <div class="fact"><div class="flabel">{t('ticket.location')}</div>
@@ -172,7 +176,7 @@
       <div class="tiles">
         {#each sections as id (id)}
           {#if id === 'tickets'}
-            <PartTile label={t('player.tickets')} onOpen={() => open('tickets')}
+            <PartTile label={t('player.tickets')} icon="ticket" onOpen={() => open('tickets')}
               value={String(openTickets)} unit={t('player.ticketsUnit')} tone={openTickets ? 'warn' : 'good'}
               facts={[
                 { label: t('player.total'), value: String(player.tickets.length) },
@@ -192,109 +196,143 @@
 </div>
 
 <style>
+  .page {
+    --pl: var(--accent);
+    display: grid;
+    gap: 16px;
+  }
+
   .back {
     justify-self: start;
     background: transparent;
-    color: var(--accent);
+    color: var(--pl);
     padding: 4px 0;
   }
 
-  /* Like the home page: the tiles' four rows are subgrid rows, so a row of tiles lines up. */
-  .tiles {
+  /* Head of the player: big head, name and state, the facts and the actions. */
+  .head {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    padding: 20px 22px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--pl) 28%, var(--border));
+    border-left: 4px solid var(--muted);
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--pl) 18%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  /* In a section: who it is about, small above the section. */
-  .mini {
+  .head.online {
+    border-left-color: var(--good);
+  }
+
+  .who {
     display: flex;
-    gap: 10px;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 16px;
   }
 
-  .mini img {
-    border-radius: 6px;
+  .who img {
+    border-radius: 12px;
     image-rendering: pixelated;
+    flex-shrink: 0;
   }
 
-  .title {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-  }
-
-  .title img {
-    border-radius: 8px;
-    image-rendering: pixelated;
-  }
-
-  .title h1 {
+  h1 {
     margin: 0;
+    font-size: 1.5rem;
+    overflow-wrap: anywhere;
   }
 
-  .state {
+  h2 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
     color: var(--muted);
-    font-size: 0.9rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
   }
 
-  .state.on {
+  .badge.on {
     color: var(--good);
-    font-weight: 600;
+    border-color: color-mix(in srgb, var(--good) 40%, var(--border));
   }
 
-  .info-text {
+  .badge.info {
     color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
 
-  .warn-text {
+  .badge.warn {
     color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
   }
 
   .facts {
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-    margin: 14px 0 0;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
   }
 
   .fact {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    display: grid;
+    gap: 3px;
+    align-content: start;
     padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
     min-width: 0;
   }
 
   .flabel {
-    color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 600;
-    margin-bottom: 4px;
+    color: var(--muted);
   }
 
   .fvalue {
+    font-weight: 700;
     font-size: 0.92rem;
-    font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
   .coords {
     display: flex;
     flex-wrap: wrap;
-    gap: 0 10px;
+    gap: 0 8px;
   }
 
   .coords span {
     white-space: nowrap;
   }
 
+  .mono {
+    font-family: ui-monospace, monospace;
+    font-size: 0.85rem;
+  }
+
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
     align-items: center;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
   }
 
   .kick {
@@ -306,11 +344,42 @@
 
   .kick input {
     flex: 1;
+    min-width: 0;
   }
 
-  h2 {
-    font-size: 1.05rem;
-    margin: 0 0 10px;
+  .tiles {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+
+  /* A section: small head */
+  .mini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--pl) 25%, var(--border));
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--pl) 14%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .mini img {
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+
+  .state {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .state.on {
+    color: var(--good);
   }
 
   .tickets {
@@ -318,28 +387,55 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 6px;
+    gap: 8px;
   }
 
-  .link-row {
+  .ticket {
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 10px;
     align-items: baseline;
     justify-content: flex-start;
-    width: 100%;
+    gap: 4px 10px;
+    padding: 10px 14px;
     text-align: left;
-    background: var(--surface-2);
-    color: var(--text);
+    font: inherit;
     font-weight: 400;
-    padding: 8px 12px;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--warn);
+    border-radius: 10px;
+  }
+
+  .ticket:hover {
+    filter: none;
+    border-color: color-mix(in srgb, var(--pl) 45%, var(--border));
+  }
+
+  .ticket.closed {
+    border-left-color: var(--muted);
   }
 
   .id {
     font-weight: 800;
+    color: var(--muted);
   }
 
   .tsum {
-    font-weight: 600;
+    font-weight: 700;
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (max-width: 640px) {
+    .head {
+      padding: 16px;
+    }
+
+    .who img {
+      width: 56px;
+      height: 56px;
+    }
   }
 </style>

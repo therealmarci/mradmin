@@ -74,7 +74,7 @@
 
 {#if view === 'tile'}
   {@const until = (type) => { const e = active.find((x) => x.type === type); return !e ? '–' : e.end ? dateTime(e.end) : t('sleep.permanent'); }}
-  <PartTile label={t('lb.tileLabel')} loading={!data} {error} {onOpen}
+  <PartTile label={t('lb.tileLabel')} icon="shield" loading={!data} {error} {onOpen}
     value={!data ? '' : active.length ? String(active.length) : t('lb.tileNone')} small={data && !active.length}
     unit={data && active.length ? t('lb.tileActiveUnit') : ''} tone={data ? (active.length ? 'bad' : 'good') : ''}
     facts={data ? [
