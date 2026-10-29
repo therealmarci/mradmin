@@ -85,9 +85,6 @@
   const icon = { bad: '✕', warn: '!', info: 'i', good: '✓' };
   const alerts = $derived(data?.alerts ?? []);
   const worst = $derived(alerts[0]?.tone ?? 'good');
-  const avgPing = $derived(
-    data?.server?.players.length ? Math.round(data.server.players.reduce((s, p) => s + p.ping, 0) / data.server.players.length) : null,
-  );
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
@@ -151,13 +148,6 @@
               tone: share(s.ramUsed, s.ramMax) > 0.9 ? 'warn' : '' },
           ]}
           link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
-
-        <DashTile icon="users" hue={150} title={t('overview.players')} value={s.online} unit={'/ ' + s.max}
-          rows={[
-            { label: t('home.avgPing'), value: avgPing === null ? '–' : avgPing + ' ms' },
-            { label: t('home.upFor'), value: uptime(s.uptime) },
-            { label: t('health.disk'), value: `${mb(s.diskFree)} ${t('health.free')}` },
-          ]} />
       {/if}
 
       {#if data.tickets}
