@@ -7,7 +7,7 @@
   import { dateTime, tpsTone, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
-  import { MODULE_ICONS, moduleHue } from '../lib/icons.js';
+  import { MODULE_ICONS } from '../lib/icons.js';
   import DashTile from '../components/DashTile.svelte';
   import Carousel from '../components/Carousel.svelte';
   import Sparkline from '../components/Sparkline.svelte';
@@ -139,12 +139,29 @@
   const healthTone = $derived(tpsTone(now.tps ?? 20));
 
 
-  // The slides: the health monitor first, then one banner per warning.
+  // The slides: the health monitor first (with its own warnings), then one slide per area that has something to do -
+  // all warnings of an area (e.g. unanswered and own tickets) together. The alerts come most serious first.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
-  const slides = $derived([
-    ...(me.may.health && health ? [{ key: 'health', kind: 'health', tone: slideTone(healthTone) }] : []),
-    ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a })),
-  ]);
+  const areaKey = (a) => (a.module ? 'module:' + a.module : a.key.startsWith('tickets') ? 'tickets'
+    : a.key.startsWith('maintenance') ? 'maintenance' : a.key.startsWith('versions') || a.key === 'restartSoon' ? 'versions' : 'health');
+  const slides = $derived.by(() => {
+    const areas = new Map();
+    for (const a of alerts) {
+      const key = areaKey(a);
+      if (!areas.has(key)) areas.set(key, []);
+      areas.get(key).push(a);
+    }
+    const withHealth = me.may.health && health;
+    const healthAlerts = areas.get('health') ?? [];
+    if (withHealth) areas.delete('health');
+    // The health slide takes the worse of the TPS state and its warnings.
+    const rank = ['bad', 'warn', 'info', 'good'];
+    const healthSlide = healthAlerts.reduce((w, a) => (rank.indexOf(a.tone) < rank.indexOf(w) ? a.tone : w), healthTone);
+    return [
+      ...(withHealth ? [{ key: 'health', kind: 'health', tone: slideTone(healthSlide), alerts: healthAlerts }] : []),
+      ...[...areas].map(([key, list]) => ({ key: 'area:' + key, kind: 'area', tone: slideTone(list[0].tone), alerts: list })),
+    ];
+  });
 
   // Which part of the server a warning is about.
   function areaOf(a) {
@@ -219,6 +236,7 @@
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
+            <span class="when">{t('home.h.lastHour')}</span>
           </div>
           <div class="h-body">
             <div class="h-main">
@@ -230,7 +248,6 @@
               </div>
             </div>
             <div class="h-chart">
-              <span class="muted small">{t('home.h.lastHour')}</span>
               <div class="sparks">
                 {#each charts as c (c.key)}
                   <div class="spark-card" style="--c: {c.color}">
@@ -243,14 +260,22 @@
               </div>
             </div>
           </div>
+          {#if s.alerts.length}
+            <!-- The health monitor's own warnings (TPS, RAM, disk ...) belong to this slide. -->
+            <ul class="lines">
+              {#each s.alerts as a (a.key)}
+                <li><span class="badge small {a.tone}">{icon[a.tone]}</span>{alertText(a)}</li>
+              {/each}
+            </ul>
+          {/if}
           <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/health')}>{t('home.toHealth')} →</button>
         {:else}
-          {@const a = s.alert}
+          <!-- One slide per area: its first (most serious) warning as the heading, further ones as lines. -->
+          {@const a = s.alerts[0]}
           {@const d = detail(a)}
           <div class="kind">
             <span class="badge small {a.tone}">{icon[a.tone]}</span>
             {t('home.sev.' + a.tone)} · {areaOf(a)}
-            <span class="when">{i} / {alerts.length}</span>
           </div>
           <h2>{alertText(a)}</h2>
           {#if d.line}<p>{d.line}</p>{/if}
@@ -258,6 +283,14 @@
             <div class="chips">
               {#each d.facts as f}<span class={f.tone ? 'sev ' + f.tone : ''}>{f.label} <b>{f.value}</b></span>{/each}
             </div>
+          {/if}
+          {#if s.alerts.length > 1}
+            <ul class="lines">
+              {#each s.alerts.slice(1) as b (b.key)}
+                {@const e = detail(b)}
+                <li><span class="badge small {b.tone}">{icon[b.tone]}</span><span>{alertText(b)}{#if e.line}<small> · {e.line}</small>{/if}</span></li>
+              {/each}
+            </ul>
           {/if}
           {#if target(a)}
             <button class="more" tabindex={active ? 0 : -1} onclick={() => open(a)}>{t('home.show')} →</button>
@@ -281,7 +314,7 @@
 
       {#if data.tickets}
         {@const tk = data.tickets}
-        <DashTile icon="ticket" hue={270} title={t('overview.tickets')} value={tk.open} unit={t('overview.openTickets')}
+        <DashTile icon="ticket" hue={210} title={t('overview.tickets')} value={tk.open} unit={t('overview.openTickets')}
           tone={tk.unread > 0 ? 'bad' : tk.open > 0 ? 'warn' : 'good'}
           rows={[
             { label: t('overview.unread'), value: tk.unread, tone: tk.unread > 0 ? 'bad' : '' },
@@ -292,7 +325,7 @@
 
       <!-- Tiles of the modules (MRchunks ...): label, value and facts come from the plugin itself. -->
       {#each data.tiles ?? [] as m (m.id)}
-        <DashTile icon={MODULE_ICONS[m.id] ?? 'box'} hue={moduleHue(m.id)} title={m.label} value={m.value} unit={m.unit} tone={m.tone}
+        <DashTile icon={MODULE_ICONS[m.id] ?? 'box'} hue={210} title={m.label} value={m.value} unit={m.unit} tone={m.tone}
           rows={m.facts.map((f) => ({ label: f.label, value: f.value, tone: f.tone, fill: meter(f.value) }))}
           link={m.link} onclick={m.page ? () => go(m.page) : null} />
       {/each}
@@ -300,7 +333,7 @@
       {#if data.mrsleep}
         {@const sl = data.mrsleep}
         {@const managed = sl.worlds.filter((w) => w.managed)}
-        <DashTile icon="moon" hue={235} title={t('nav.sleep')} small
+        <DashTile icon="moon" hue={210} title={t('nav.sleep')} small
           value={sl.blocked > 0 ? '⛔ ' + t('home.sleepBlocked', { n: sl.blocked }) : t('home.sleepFree')}
           tone={sl.blocked > 0 ? 'warn' : 'good'}
           rows={[
@@ -313,7 +346,7 @@
 
       {#if data.maintenance}
         {@const m = data.maintenance}
-        <DashTile icon="tool" hue={28} title={t('overview.maintenance')} small value={t('overview.phase.' + m.phase)} tone={phaseTone[m.phase]}
+        <DashTile icon="tool" hue={210} title={t('overview.maintenance')} small value={t('overview.phase.' + m.phase)} tone={phaseTone[m.phase]}
           rows={m.phase === 'none' ? [] : [
             ...(m.title ? [{ label: t('overview.what'), value: m.title }] : []),
             { label: t('overview.from'), value: dateTime(m.start) },
@@ -324,7 +357,7 @@
 
       {#if data.versions}
         {@const v = data.versions}
-        <DashTile icon="box" hue={190} title={t('nav.versions')} small
+        <DashTile icon="box" hue={210} title={t('nav.versions')} small
           value={v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : v.updates ? t('home.versionsUpdates', { n: v.updates }) : t('home.versionsCurrent')}
           tone={v.restartAt ? 'bad' : v.staged ? 'info' : v.updates ? 'warn' : 'good'}
           rows={[
@@ -507,6 +540,26 @@
 
   .spark-box {
     position: relative;
+  }
+
+  /* Further warnings of the same area as small lines. */
+  .lines {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    font-size: 0.88rem;
+  }
+
+  .lines li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .lines small {
+    color: var(--muted);
   }
 
   .good-text {
