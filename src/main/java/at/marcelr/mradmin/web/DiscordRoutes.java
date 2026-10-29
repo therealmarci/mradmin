@@ -13,7 +13,8 @@ import java.util.Set;
 /**
  * Discord in the web interface: sign in, link to the own account, confirm a sensitive step.
  * <pre>
- *  GET  /api/login/options                 open: which sign-in methods there are (Discord, passkeys)
+ *  GET  /api/login/options                 open: which sign-in methods there are (Discord, passkeys, password) and
+ *                                          whether the player page is on
  *  POST /api/discord/start {mode, returnTo}  login (open) | link | confirm (signed in) -> {url}
  *  GET  /api/discord/callback              open: Discord comes back here -> on to /discord (the page finishes)
  *  POST /api/discord/finish {state, code}  open: exchanges the code; login sets the cookie
@@ -54,7 +55,9 @@ public final class DiscordRoutes {
     }
 
     private void options(Http http) throws Exception {
-        http.json(200, Map.of("discord", server.discord().enabled(), "passkeys", plugin.settings().web().passkeys()));
+        // playerWeb: the start page offers the player page only when it is on.
+        http.json(200, Map.of("discord", server.discord().enabled(), "passkeys", plugin.settings().web().passkeys(),
+                "password", plugin.settings().web().password(), "playerWeb", plugin.settings().playerWeb().enabled()));
     }
 
     /** The signed-in session of this browser (open routes read the cookie themselves), or null. */

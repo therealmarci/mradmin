@@ -19,7 +19,11 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
 **Passwort vergessen oder Handy weg?** Einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu und meldet alle Geräte ab.
 
 ## Sicherheit
-- Anmeldung immer mit Passwort **und** Code aus der Authenticator-App (oder einem Wiederherstellungscode).
+- **Startseite:** Wer nicht angemeldet ist, wählt zuerst „Ich bin Spieler“ (→ Spielerseite, Anmeldung mit dem Code aus
+  `/web`) oder „Ich bin im Team“ (→ Team-Anmeldung). Ist die Spielerseite aus (`player-web.enabled: false`), geht es
+  direkt zur Team-Anmeldung.
+- Anmeldung in zwei Schritten: erst Minecraft-Name und Passwort, dann der Code aus der Authenticator-App (oder ein
+  Wiederherstellungscode) - geprüft wird alles zusammen. Passkey und Discord stehen im ersten Schritt als Alternative.
   Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
 - **Passkeys** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): unter **Konto** hinzufügen - zur Sicherheit
   mit einem frischen Code aus der App. Danach geht die Anmeldung ohne Name, Passwort und Code; die Prüfung des Geräts
@@ -33,7 +37,8 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   Abschalten: `web.login.passkeys: false`.
 - **Mit Discord anmelden** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung
   `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config. Jeder verknüpft sein Discord
-  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt). Danach Anmeldung mit
+  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt; ohne Einrichtung steht dort,
+  was in der Config fehlt). Danach Anmeldung mit
   einem Klick; zählt wie ein Passkey - 2FA lässt sich ausschalten, Bestätigungen (Konsole, 2FA, Passkey hinzufügen)
   gehen auch per Discord. Abgefragt wird nur `identify` (ID, Name, Avatar).
 - Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.

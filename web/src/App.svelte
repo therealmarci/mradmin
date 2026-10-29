@@ -6,6 +6,7 @@
   import { connect, disconnect, live } from './lib/live.svelte.js';
   import TopBar from './components/TopBar.svelte';
   import Login from './pages/Login.svelte';
+  import Landing from './pages/Landing.svelte';
   import Setup from './pages/Setup.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
@@ -126,6 +127,8 @@
   <Setup onDone={() => { loadMe(); go('/', true); }} />
 {:else if me === undefined}
   <div class="center muted">{t('common.loading')}</div>
+{:else if me === null && route.path === '/'}
+  <Landing />
 {:else if me === null}
   <Login onSignedIn={loadMe} />
 {:else}
