@@ -5,7 +5,10 @@
   // The texts inside a slide use the classes kind, when, text and more for the common look.
   import { t } from '../lib/i18n.js';
 
-  /** slides: [{key, tone, ...}]; seconds: 0 = no moving on; index can be bound (to jump to a slide from outside). */
+  /**
+   * slides: [{key, tone, plain?, ...}] - plain: the page draws the whole slide itself (no padding, no colour);
+   * seconds: 0 = no moving on; index can be bound (to jump to a slide from outside).
+   */
   let { slides, seconds = 0, label = '', index = $bindable(0), slide } = $props();
 
   let paused = $state(false);
@@ -56,7 +59,7 @@
       onkeydown={key} tabindex="-1" role="presentation">
       <div class="track" class:dragging={startX !== null} style="transform: translateX(calc({-index * 100}% + {drag}px))">
         {#each slides as s, i (s.key)}
-          <article class="slide tone-{s.tone}" aria-roledescription="slide" aria-label={t('self.hero.of', { n: i + 1, total: slides.length })}
+          <article class="slide tone-{s.tone}" class:plain={s.plain} aria-roledescription="slide" aria-label={t('self.hero.of', { n: i + 1, total: slides.length })}
             aria-hidden={i !== index} inert={i !== index}>
             {@render slide(s, i, i === index)}
           </article>
@@ -126,6 +129,12 @@
       radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tone) 22%, transparent), transparent 60%),
       linear-gradient(135deg, color-mix(in srgb, var(--tone) 10%, var(--surface)), var(--surface));
     border-left: 4px solid var(--tone);
+  }
+
+  .slide.plain {
+    padding: 0;
+    background: none;
+    border-left: 0;
   }
 
   .slide.tone-good {

@@ -90,10 +90,10 @@
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The situation as slides: the server status first (with or without warnings), then one slide per warning.
+  // The situation as slides: the situation tile first (it draws itself), then one slide per warning.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
   const slides = $derived([
-    { key: 'status', kind: 'status', tone: slideTone(worst) },
+    { key: 'status', kind: 'status', tone: slideTone(worst), plain: true },
     ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a })),
   ]);
 
@@ -161,27 +161,44 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The situation as a slideshow: with warnings an overview first, then one slide per warning with its details -
-         otherwise "everything runs smoothly" with the key facts. -->
+    <!-- The situation as a slideshow: first the situation tile (what needs attention right now - or, if nothing does,
+         the most important facts), then one slide per warning with its details. -->
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'status'}
-          <div class="s-head"><span class="badge big {worst}">{icon[worst]}</span>
-            <h2>{alerts.length ? t('home.status') : t('home.allGood')}</h2>
-          </div>
-          <div class="chips">
-            {#if data.server}
-              <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
-              <span><b>{data.server.online}</b> {t('home.online')}</span>
-              <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
+          <section class="situation tone-{worst}" aria-live="polite">
+            <div class="s-head">
+              <span class="badge {worst}">{icon[worst]}</span>
+              <h2>{alerts.length ? t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length }) : t('home.allGood')}</h2>
+            </div>
+            {#if alerts.length}
+              <ul class="alerts">
+                {#each alerts as a (a.key)}
+                  <li class="tone-{a.tone}">
+                    <span class="badge small {a.tone}">{icon[a.tone]}</span>
+                    <span class="text">{alertText(a)}</span>
+                    {#if target(a)}
+                      <button class="secondary mini" tabindex={active ? 0 : -1} onclick={() => open(a)}>{t('home.show')} →</button>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <div class="chips">
+                {#if data.server}
+                  <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
+                  <span><b>{data.server.online}</b> {t('home.online')}</span>
+                  <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
+                {/if}
+                {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
+                {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
+                {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
+              </div>
+              {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
+                <p class="muted small">{t('home.nothing')}</p>
+              {/if}
             {/if}
-            {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
-            {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
-            {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
-          </div>
-          {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
-            <p class="small">{t('home.nothing')}</p>
-          {/if}
+          </section>
         {:else}
           {@const a = s.alert}
           {@const d = detail(a)}
@@ -376,18 +393,101 @@
     background: var(--accent);
   }
 
-  /* Server status: the big round mark next to the heading, like the situation tile before. */
+  /* The situation tile as the first slide, tinted in the tone of its worst entry (the frame is the carousel's). */
+  .situation {
+    --tn: var(--good);
+    flex: 1;
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    padding: 18px 20px 46px;
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tn) 16%, transparent), transparent 60%),
+      var(--surface);
+  }
+
+  .situation.tone-warn {
+    --tn: var(--warn);
+  }
+
+  .situation.tone-bad {
+    --tn: var(--bad);
+  }
+
+  .situation.tone-info {
+    --tn: var(--accent);
+  }
+
   .s-head {
     display: flex;
     gap: 12px;
     align-items: center;
-    margin-bottom: 6px;
   }
 
-  .badge.big {
+  .situation h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .situation .badge {
     width: 32px;
     height: 32px;
     font-size: 1rem;
+  }
+
+  .situation .badge.small {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+  }
+
+  .alerts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .alerts li {
+    --tn: var(--accent);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-left: 3px solid var(--tn);
+  }
+
+  .alerts li.tone-warn {
+    --tn: var(--warn);
+  }
+
+  .alerts li.tone-bad {
+    --tn: var(--bad);
+  }
+
+  .alerts .text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mini {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .situation .chips > span {
+    background: var(--surface-2);
+  }
+
+  @media (max-width: 560px) {
+    .situation {
+      padding: 18px 16px 48px;
+    }
   }
 
   .badge.small {
