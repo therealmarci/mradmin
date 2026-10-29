@@ -139,11 +139,7 @@
           <p class="muted small">
             {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
           </p>
-          {#if loader.pool && !loader.lock}
-            <p class="small" class:warn-text={loader.pool.warnRatio >= 1} class:bad-text={loader.pool.lockRatio >= 1}>
-              {t('chunks.pool', { percent: Math.round(loader.pool.warnRatio * 100), chunks: loader.pool.chunks })}
-            </p>
-          {/if}
+          <p class="muted small">{t('chunks.ownLimits')}</p>
           <div class="metrics">
             {#each loader.metrics as m (m.key)}
               <div class="metric {tone(m)}">
