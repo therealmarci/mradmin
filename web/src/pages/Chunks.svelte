@@ -37,8 +37,8 @@
     }
   }
 
-  // Problems first: locked, conspicuous, paused, then the rest by owner and number.
-  const order = { locked: 0, warn: 1, paused: 2, ok: 3, inactive: 4 };
+  // Problems first: locked, conspicuous, disabled by lag, paused, then the rest by owner and number.
+  const order = { locked: 0, warn: 1, shed: 2, paused: 3, ok: 4, inactive: 5 };
   const shown = $derived(
     (loaders ?? [])
       .filter((l) => filter === 'all' || l.status === filter)
@@ -82,6 +82,11 @@
     {#if overview.paused}
       <div class="notice">⏸ {t('chunks.paused', { tps: overview.tps, resume: overview.resumeTps })}</div>
     {/if}
+    {#if overview.shed}
+      <div class="notice warn">{t('chunks.shedNotice', { n: overview.shed, mspt: overview.mspt })}</div>
+    {:else if overview.msptWarning}
+      <div class="notice warn">{t('chunks.msptNotice', { mspt: overview.mspt })}</div>
+    {/if}
     <div class="kpis">
       <div class="kpi"><div class="label">{t('chunks.loaders')}</div><div class="value">{overview.loaders}</div>
         <div class="sub">{t('chunks.owners', { n: overview.owners })}</div></div>
@@ -92,9 +97,9 @@
       {#if overview.dummiesEnabled}
         <div class="kpi"><div class="label">{t('chunks.dummies')}</div><div class="value">{overview.dummies}</div></div>
       {/if}
-      <div class="kpi {overview.locked ? 'bad' : overview.warn ? 'warn' : ''}"><div class="label">{t('chunks.problems')}</div>
-        <div class="value">{overview.locked + overview.warn}</div>
-        <div class="sub">{overview.locked} {t('chunks.status.locked')} · {overview.warn} {t('chunks.status.warn')}</div></div>
+      <div class="kpi {overview.locked ? 'bad' : overview.warn || overview.shed ? 'warn' : ''}"><div class="label">{t('chunks.problems')}</div>
+        <div class="value">{overview.locked + overview.warn + (overview.shed ?? 0)}</div>
+        <div class="sub">{overview.locked} {t('chunks.status.locked')} · {overview.warn} {t('chunks.status.warn')}{#if overview.shed} · {overview.shed} {t('chunks.status.shed')}{/if}</div></div>
     </div>
   {/if}
 
@@ -154,6 +159,11 @@
 </div>
 
 <style>
+  .notice.warn {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+  }
+
   .page {
     --cl: var(--accent);
     display: grid;

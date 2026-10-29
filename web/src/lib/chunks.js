@@ -3,6 +3,7 @@
 export const STATUS = {
   locked: { icon: '', tone: 'bad' },
   warn: { icon: '', tone: 'warn' },
+  shed: { icon: '', tone: 'warn' },
   paused: { icon: '⏸', tone: 'info' },
   ok: { icon: '✓', tone: 'good' },
   inactive: { icon: '○', tone: 'muted' },
