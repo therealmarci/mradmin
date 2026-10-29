@@ -1,7 +1,7 @@
 <script>
-  // Start page of the team panel, in the look of the player area: greeting, the situation as a slideshow (what needs
-  // attention, one slide each - or the key facts), one tile per area (server, players, tickets, the plugins, sleep, maintenance, versions) and the
-  // players online.
+  // Start page of the team panel, in the look of the player area: greeting, a slideshow (the health monitor's last
+  // hour, then one banner per warning), one tile per area (server, tickets, the plugins, sleep, maintenance,
+  // versions) and the players online.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, tpsTone, head } from '../lib/format.js';
@@ -10,6 +10,8 @@
   import { MODULE_ICONS, moduleHue } from '../lib/icons.js';
   import DashTile from '../components/DashTile.svelte';
   import Carousel from '../components/Carousel.svelte';
+  import Sparkline from '../components/Sparkline.svelte';
+  import { poll } from '../lib/poll.js';
 
   let { me } = $props();
 
@@ -85,15 +87,66 @@
 
   const icon = { bad: '✕', warn: '!', info: 'i', good: '✓' };
   const alerts = $derived(data?.alerts ?? []);
-  const worst = $derived(alerts[0]?.tone ?? 'good');
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The situation as slides: the situation tile first (it draws itself), then one slide per warning.
+  // The health monitor's last hour for the first slide (only with the right to see it): every 30 seconds while the
+  // tab is visible, thinned out to about 90 points (each the average of its seconds, the peaks as maximum).
+  let health = $state(null);
+  async function loadHealth() {
+    try {
+      health = await api('GET', '/health?range=1h');
+    } catch {
+      health = null;
+    }
+  }
+  $effect(() => {
+    if (!me.may.health) return;
+    loadHealth();
+    return poll(loadHealth, 30_000);
+  });
+
+  const BUCKETS = 90;
+  const PEAKS = new Set(['msptMax', 'gcMax']);
+  const series = $derived.by(() => {
+    const points = health?.points ?? [];
+    if (points.length <= BUCKETS) return points;
+    const size = points.length / BUCKETS;
+    const out = [];
+    for (let b = 0; b < BUCKETS; b++) {
+      const part = points.slice(Math.floor(b * size), Math.floor((b + 1) * size));
+      const avg = { time: part.at(-1).time };
+      for (const key of Object.keys(part[0])) {
+        if (key === 'time') continue;
+        const vals = part.map((x) => x[key]).filter((v) => typeof v === 'number' && v >= 0);
+        avg[key] = vals.length ? (PEAKS.has(key) ? Math.max(...vals) : vals.reduce((a, c) => a + c, 0) / vals.length) : null;
+      }
+      out.push(avg);
+    }
+    return out;
+  });
+  // The latest values: the newest point of the monitor, TPS/MSPT/RAM from the overview (every 2 seconds).
+  const now = $derived({
+    ...(health?.points?.at(-1) ?? {}),
+    ...(data?.server ? { tps: data.server.tps[0], mspt: data.server.mspt } : {}),
+  });
+  const healthTone = $derived(tpsTone(now.tps ?? 20));
+
+  const pct = (v) => (v == null || v < 0 ? '–' : Math.round(v) + ' %');
+  const num = (v) => (v == null ? '–' : v >= 10000 ? (v / 1000).toFixed(1) + 'K' : String(Math.round(v)));
+  const charts = [
+    { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
+    { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
+    { key: 'cpu', label: t('health.cpu'), color: 'var(--series-3)', max: 100, format: pct },
+    { key: 'heapUsed', label: t('overview.ram'), color: 'var(--series-4, #a855f7)', format: (v) => mb(v) },
+    { key: 'players', label: t('health.players'), color: 'var(--series-5, #eab308)', format: (v) => num(v) },
+  ];
+
+  // The slides: the health monitor first, then one banner per warning.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
   const slides = $derived([
-    { key: 'status', kind: 'status', tone: slideTone(worst), plain: true },
+    ...(me.may.health && health ? [{ key: 'health', kind: 'health', tone: slideTone(healthTone) }] : []),
     ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a })),
   ]);
 
@@ -161,44 +214,49 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The situation as a slideshow: first the situation tile (what needs attention right now - or, if nothing does,
-         the most important facts), then one slide per warning with its details. -->
+    <!-- The slideshow: the health monitor first (the last hour as small charts and the key figures), then one banner
+         per area that has something to do (each warning with its details). -->
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
-        {#if s.kind === 'status'}
-          <section class="situation tone-{worst}" aria-live="polite">
-            <div class="s-head">
-              <span class="badge {worst}">{icon[worst]}</span>
-              <h2>{alerts.length ? t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length }) : t('home.allGood')}</h2>
-            </div>
-            {#if alerts.length}
-              <ul class="alerts">
-                {#each alerts as a (a.key)}
-                  <li class="tone-{a.tone}">
-                    <span class="badge small {a.tone}">{icon[a.tone]}</span>
-                    <span class="text">{alertText(a)}</span>
-                    {#if target(a)}
-                      <button class="secondary mini" tabindex={active ? 0 : -1} onclick={() => open(a)}>{t('home.show')} →</button>
-                    {/if}
-                  </li>
-                {/each}
+        {#if s.kind === 'health'}
+          {@const p = now}
+          <div class="kind">
+            <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
+            {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
+            <span class="when">{t('home.h.lastHour')}</span>
+          </div>
+          <div class="h-body">
+            <div class="h-main">
+              <div class="h-big"><strong class="{healthTone}-text">{(p.tps ?? 0).toFixed(1)}</strong><span>TPS</span></div>
+              <ul class="bullets">
+                <li><span>{t('overview.mspt')}</span><b>{(p.mspt ?? 0).toFixed(1)} ms</b>
+                  {#if p.msptP95 != null}<small>{t('home.h.p95', { v: (p.msptP95 ?? 0).toFixed(1) + ' ms' })}</small>{/if}</li>
+                <li><span>{t('health.cpu')}</span><b>{pct(p.cpu)}</b></li>
+                <li><span>{t('overview.ram')}</span><b>{mb(p.heapUsed)} / {mb(p.heapMax)}</b></li>
+                <li><span>{t('health.players')}</span><b>{p.players ?? data.server?.online ?? 0}</b></li>
+                <li><span>{t('health.ping')}</span><b>{p.ping == null || p.ping < 0 ? '–' : Math.round(p.ping) + ' ms'}</b></li>
+                <li><span>{t('health.chart.chunks')}</span><b>{num(p.chunks)}</b></li>
+                <li><span>{t('health.chart.entities')}</span><b>{num(p.entities)}</b></li>
+                {#if data.server}<li><span>{t('home.h.uptime')}</span><b>{uptime(data.server.uptime)}</b></li>{/if}
               </ul>
-            {:else}
-              <div class="chips">
-                {#if data.server}
-                  <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
-                  <span><b>{data.server.online}</b> {t('home.online')}</span>
-                  <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
-                {/if}
-                {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
-                {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
-                {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
-              </div>
-              {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
-                <p class="muted small">{t('home.nothing')}</p>
-              {/if}
-            {/if}
-          </section>
+            </div>
+            <div class="sparks">
+              {#each charts as c (c.key)}
+                {@const values = series.map((x) => x[c.key])}
+                {@const known = values.filter((v) => v != null && v >= 0)}
+                <div class="spark-card" style="--c: {c.color}">
+                  <div class="sc-head"><span>{c.label}</span><b>{c.format(p[c.key])}</b></div>
+                  <div class="spark-box">
+                    <Sparkline {values} color={c.color} max={c.max} limit={c.limit} height={46} label={c.label} />
+                  </div>
+                  {#if known.length}
+                    <div class="sc-range">{t('home.h.range', { min: c.format(Math.min(...known)), max: c.format(Math.max(...known)) })}</div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+          <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/health')}>{t('home.toHealth')} →</button>
         {:else}
           {@const a = s.alert}
           {@const d = detail(a)}
@@ -393,100 +451,122 @@
     background: var(--accent);
   }
 
-  /* The situation tile as the first slide, tinted in the tone of its worst entry (the frame is the carousel's). */
-  .situation {
-    --tn: var(--good);
-    flex: 1;
+  /* The health slide: TPS big with the key figures beside the charts of the last hour. */
+  .h-body {
     display: grid;
-    gap: 14px;
-    align-content: start;
-    padding: 18px 20px 46px;
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tn) 16%, transparent), transparent 60%),
-      var(--surface);
+    gap: 16px 22px;
+    grid-template-columns: minmax(220px, 300px) 1fr;
+    align-items: start;
+    margin-top: 4px;
   }
 
-  .situation.tone-warn {
-    --tn: var(--warn);
-  }
-
-  .situation.tone-bad {
-    --tn: var(--bad);
-  }
-
-  .situation.tone-info {
-    --tn: var(--accent);
-  }
-
-  .s-head {
+  .h-big {
     display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .situation h2 {
-    margin: 0;
-    font-size: 1.15rem;
-  }
-
-  .situation .badge {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
-  }
-
-  .situation .badge.small {
-    width: 22px;
-    height: 22px;
-    font-size: 0.75rem;
-  }
-
-  .alerts {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
+    align-items: baseline;
     gap: 8px;
   }
 
-  .alerts li {
-    --tn: var(--accent);
+  .h-big strong {
+    font-size: 2.6rem;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .h-big span {
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .bullets {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 5px;
+    font-size: 0.88rem;
+  }
+
+  .bullets li {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--tn);
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
   }
 
-  .alerts li.tone-warn {
-    --tn: var(--warn);
+  .bullets li:last-child {
+    border-bottom: 0;
   }
 
-  .alerts li.tone-bad {
-    --tn: var(--bad);
-  }
-
-  .alerts .text {
+  .bullets li > span {
+    color: var(--muted);
     flex: 1;
-    min-width: 0;
   }
 
-  .mini {
-    padding: 4px 10px;
-    font-size: 0.8rem;
-    flex-shrink: 0;
+  .bullets small {
+    flex-basis: 100%;
+    text-align: right;
+    color: var(--muted);
+    font-size: 0.76rem;
   }
 
-  .situation .chips > span {
-    background: var(--surface-2);
+  .sparks {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
   }
 
-  @media (max-width: 560px) {
-    .situation {
-      padding: 18px 16px 48px;
+  .spark-card {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px 8px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-top: 3px solid var(--c);
+  }
+
+  .sc-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .sc-head span {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .spark-box {
+    position: relative;
+  }
+
+  .sc-range {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .good-text {
+    color: var(--good);
+  }
+
+  .warn-text {
+    color: var(--warn);
+  }
+
+  .bad-text {
+    color: var(--bad);
+  }
+
+  @media (max-width: 760px) {
+    .h-body {
+      grid-template-columns: 1fr;
     }
   }
 
