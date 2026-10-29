@@ -256,6 +256,11 @@ public final class SelfRoutes {
             d.put("agent", s.agent());
             d.put("created", s.created());
             d.put("lastSeen", s.lastSeen());
+            d.put("verified", s.verified());
+            long[] limits = sessions().limits(s);
+            d.put("maxUntil", limits[0]);
+            d.put("idleUntil", limits[1]);
+            d.put("expires", Math.min(limits[0], limits[1]));
             d.put("current", s.id().equals(http.player().id()));
             list.add(d);
         }

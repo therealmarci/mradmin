@@ -3,7 +3,8 @@
   // never changes, so a bookmark keeps working - after player-web.session-days (or idle-days without use) the page
   // simply asks for a new code.
   import { api } from '../lib/api.js';
-  import { t, lang, setLang, errorText } from '../lib/i18n.js';
+  import { t, errorText } from '../lib/i18n.js';
+  import LangFlags from './LangFlags.svelte';
 
   let { onSignedIn, error: outer = '' } = $props();
 
@@ -45,7 +46,7 @@
     {#if error}<div class="error">{error}</div>{/if}
     <button type="submit" class="block" disabled={busy || digits.length !== 6}>{t('self.signIn')}</button>
     <p id="code-hint" class="muted small">{t('self.howToBookmark')}</p>
-    <button type="button" class="linkish small" onclick={() => setLang(lang === 'de' ? 'en' : 'de')}>{lang === 'de' ? 'English' : 'Deutsch'}</button>
+    <LangFlags />
   </form>
 </div>
 
@@ -95,12 +96,6 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
-  }
-
-  .linkish {
-    background: transparent;
-    color: var(--accent);
-    padding: 0;
   }
 
   .error {

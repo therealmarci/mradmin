@@ -69,6 +69,12 @@ public final class PlayerSessions {
         return Math.min(verified + s.sessionDays() * 86_400_000L, lastSeen + s.idleDays() * 86_400_000L);
     }
 
+    /** When the session runs out at the latest (code + session-days) and when without use (last use + idle-days). */
+    public long[] limits(Session s) {
+        var settings = plugin.settings().playerWeb();
+        return new long[] {s.verified() + settings.sessionDays() * 86_400_000L, s.lastSeen() + settings.idleDays() * 86_400_000L};
+    }
+
     /** Seconds a signed-in browser may keep its cookie at most (session-days). */
     public long cookieSeconds() {
         return plugin.settings().playerWeb().sessionDays() * 86_400L;
