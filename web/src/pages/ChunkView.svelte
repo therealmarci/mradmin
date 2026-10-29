@@ -78,7 +78,7 @@
             · Nr. {loader.number}
           </div>
         </div>
-        <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + loader.status)}</span>
+        <span class="badge-status {st.tone}">{#if st.icon}{st.icon} {/if}{t('chunks.status.' + loader.status)}</span>
       </div>
       <dl class="facts">
         <dt>{t('ticket.location')}</dt><dd class="mono coords"><span>{loader.world}</span><span>X {loader.x}</span><span>Y {loader.y}</span><span>Z {loader.z}</span></dd>

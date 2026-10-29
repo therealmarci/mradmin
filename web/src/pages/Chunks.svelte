@@ -85,7 +85,7 @@
       <button class:active={filter === 'all'} onclick={() => setFilter('all')}>{t('tickets.all')} {loaders ? `(${loaders.length})` : ''}</button>
       {#each Object.keys(STATUS) as s}
         {#if counts[s]}
-          <button class:active={filter === s} onclick={() => setFilter(s)}>{STATUS[s].icon} {t('chunks.status.' + s)} ({counts[s]})</button>
+          <button class:active={filter === s} onclick={() => setFilter(s)}>{#if STATUS[s].icon}{STATUS[s].icon} {/if}{t('chunks.status.' + s)} ({counts[s]})</button>
         {/if}
       {/each}
     </div>
@@ -106,7 +106,7 @@
               <strong>{l.name}</strong>
               {#if l.width}<span class="tag">{l.width}×{l.length}</span>{/if}
               {#if l.dummyPresent}<span class="tag" title={t('chunks.dummySits')}>🧍 {t('chunks.dummyBadge')}</span>{/if}
-              <span class="badge-status {STATUS[l.status].tone}">{STATUS[l.status].icon} {t('chunks.status.' + l.status)}</span>
+              <span class="badge-status {STATUS[l.status].tone}">{#if STATUS[l.status].icon}{STATUS[l.status].icon} {/if}{t('chunks.status.' + l.status)}</span>
             </div>
             <div class="muted small">{l.ownerName} · <span class="mono">{l.world} {l.x} {l.y} {l.z}</span></div>
             {#if l.lock}

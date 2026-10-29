@@ -182,7 +182,7 @@
           {@const st = STATUS[l.status]}
           <li>
             <button class="link-row" onclick={() => go('/chunks/' + l.id)} disabled={!me.may.mrchunks}>
-              <span class="badge-status {st.tone}">{st.icon} {t('chunks.status.' + l.status)}</span>
+              <span class="badge-status {st.tone}">{#if st.icon}{st.icon} {/if}{t('chunks.status.' + l.status)}</span>
               <strong>{l.name}</strong>
               <span class="muted small mono">{l.world} {l.x} {l.y} {l.z}</span>
               {#if l.width}<span class="tag">{l.width}×{l.length}</span>{/if}

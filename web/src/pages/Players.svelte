@@ -91,7 +91,7 @@
               <div class="flags">
                 {#each p.flags as f}
                   {@const fl = FLAGS[f] ?? { icon: '•', tone: '' }}
-                  <span class="tag {fl.tone}">{fl.icon} {t('flag.' + f)}</span>
+                  <span class="tag {fl.tone}">{#if fl.icon}{fl.icon} {/if}{t('flag.' + f)}</span>
                 {/each}
               </div>
             {/if}
