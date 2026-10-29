@@ -93,7 +93,7 @@
   // The situation as slides: the server status first (with or without warnings), then one slide per warning.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
   const slides = $derived([
-    { key: 'status', kind: 'status', tone: alerts.length ? 'accent' : 'good' },
+    { key: 'status', kind: 'status', tone: slideTone(worst) },
     ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a })),
   ]);
 
@@ -166,8 +166,9 @@
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'status'}
-          <div class="kind"><span class="badge {worst}">{icon[worst]}</span>{t('home.slides')}</div>
-          <h2>{alerts.length ? t('home.status') : t('home.allGood')}</h2>
+          <div class="s-head"><span class="badge big {worst}">{icon[worst]}</span>
+            <h2>{alerts.length ? t('home.status') : t('home.allGood')}</h2>
+          </div>
           <div class="chips">
             {#if data.server}
               <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
@@ -373,6 +374,20 @@
     font-size: 0.8rem;
     letter-spacing: 0;
     background: var(--accent);
+  }
+
+  /* Server status: the big round mark next to the heading, like the situation tile before. */
+  .s-head {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .badge.big {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
   }
 
   .badge.small {
