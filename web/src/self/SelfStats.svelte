@@ -1,7 +1,8 @@
 <script>
   // The statistics page of the player area in two tabs: "Personal" - every own value with the place among all players
   // and how far it is from the best - and "Server" - what all players did together, the rankings with a podium for the
-  // first three, and hiding oneself from them. /me/stats#server opens the second tab.
+  // first three (or as a table, chosen per ranking), and hiding oneself from them. /me/stats#server opens the second
+  // tab.
   import { api } from '../lib/api.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
@@ -53,6 +54,29 @@
   const podiums = $derived(
     (data?.rankings ?? []).map((r) => ({ ...r, podium: r.places.slice(0, 3), rest: r.places.slice(3) })),
   );
+
+  // Server tab: every ranking as a podium or as a table, chosen per ranking (remembered in the browser).
+  const MODES_KEY = 'mradmin.stats.modes';
+  let modes = $state(storedModes());
+
+  function storedModes() {
+    try {
+      return JSON.parse(localStorage.getItem(MODES_KEY) ?? '{}') ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  const mode = (id) => (modes[id] === 'table' ? 'table' : 'podium');
+
+  function setMode(id, which) {
+    modes = { ...modes, [id]: which };
+    try {
+      localStorage.setItem(MODES_KEY, JSON.stringify(modes));
+    } catch {
+      // only for this visit then
+    }
+  }
 </script>
 
 {#snippet statCard(p)}
@@ -148,9 +172,43 @@
       <div class="rankings">
         {#each podiums as r (r.id)}
           <section class="card ranking">
-            <h2><span aria-hidden="true">{icon(r)}</span> {title(r)}</h2>
+            <div class="r-head">
+              <h2><span aria-hidden="true">{icon(r)}</span> {title(r)}</h2>
+              {#if r.places.length}
+                <div class="mode" role="group" aria-label={t('self.stats.view')}>
+                  <button class:active={mode(r.id) === 'podium'} aria-pressed={mode(r.id) === 'podium'}
+                    onclick={() => setMode(r.id, 'podium')}>{t('self.stats.viewPodium')}</button>
+                  <button class:active={mode(r.id) === 'table'} aria-pressed={mode(r.id) === 'table'}
+                    onclick={() => setMode(r.id, 'table')}>{t('self.stats.viewTable')}</button>
+                </div>
+              {/if}
+            </div>
             {#if r.places.length === 0}
               <p class="muted small">{t('self.stats.empty')}</p>
+            {:else if mode(r.id) === 'table'}
+              <table class="r-table">
+                <thead>
+                  <tr><th class="num">{t('self.stats.colPlace')}</th><th>{t('self.stats.colPlayer')}</th><th class="num">{t('self.stats.colValue')}</th></tr>
+                </thead>
+                <tbody>
+                  {#each r.places as p (p.uuid)}
+                    <tr class:self={p.self}>
+                      <td class="num">{medal(p.rank) ?? p.rank}</td>
+                      <td><span class="who"><img src={head(p.uuid)} alt="" width="20" height="20" /> {p.name}</span></td>
+                      <td class="num strong">{p.value}</td>
+                    </tr>
+                  {/each}
+                  {#if r.own}
+                    <tr class="gap-row" aria-hidden="true"><td colspan="3">⋯</td></tr>
+                    <tr class="self">
+                      <td class="num">{r.own.rank}</td>
+                      <td><span class="who"><img src={head(r.own.uuid)} alt="" width="20" height="20" /> {r.own.name}</span></td>
+                      <td class="num strong">{r.own.value}</td>
+                    </tr>
+                  {/if}
+                </tbody>
+              </table>
+            {:else}
             {:else}
               <div class="podium">
                 {#each [1, 0, 2] as i}
@@ -582,5 +640,94 @@
     .switch button {
       flex: 1;
     }
+  }
+
+  .r-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mode {
+    display: inline-flex;
+    padding: 3px;
+    gap: 3px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .mode button {
+    background: transparent;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+  }
+
+  .mode button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  .r-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .r-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .r-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+
+  .r-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .r-table th.num:first-child,
+  .r-table td.num:first-child {
+    text-align: center;
+    width: 3.5em;
+  }
+
+  .r-table .strong {
+    font-weight: 800;
+  }
+
+  .r-table tr.self td {
+    background: color-mix(in srgb, var(--st) 14%, transparent);
+    font-weight: 700;
+  }
+
+  .r-table .gap-row td {
+    text-align: center;
+    color: var(--muted);
+    padding: 0;
+    border: 0;
+  }
+
+  .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .who img {
+    border-radius: 4px;
+    image-rendering: pixelated;
   }
 </style>
