@@ -396,6 +396,7 @@
     grid-row: 1;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 12px;
     min-width: 0;
     padding: 0;
@@ -488,6 +489,7 @@
     grid-row: 1;
     display: flex;
     gap: 6px;
+    justify-content: flex-end;
   }
 
   .mini {
