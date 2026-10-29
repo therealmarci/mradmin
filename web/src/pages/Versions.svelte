@@ -120,7 +120,7 @@
       </button>
     </div>
 
-    <!-- Restart: running countdown, needed after downloads, or just the button -->
+    <!-- Restart: a running countdown, or - only after an update was downloaded - the restart buttons -->
     {#if data.restart.endsAt > 0}
       <section class="restart bad">
         <div class="r-main">
@@ -139,10 +139,10 @@
           </div>
         {/if}
       </section>
-    {:else if data.may.restart}
-      <section class="restart" class:warn={staged.length}>
+    {:else if data.may.restart && staged.length}
+      <section class="restart warn">
         <div class="r-text">
-          <span class="status">{staged.length ? t('versions.restartNeeded', { n: staged.length }) : t('versions.restartTitle')}</span>
+          <span class="status">{t('versions.restartNeeded', { n: staged.length })}</span>
           <span class="muted small">{t('versions.restartHint.' + data.restart.method)}</span>
         </div>
         <div class="r-actions">

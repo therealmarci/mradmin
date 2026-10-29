@@ -257,7 +257,8 @@ Speicher von MRadmin unter `announce-templates`.
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
   der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
-- **Server neu starten** (`mradmin.server.restart`): nur, wenn `versions.restart-method` eingestellt ist (Standard
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen, aber noch nicht installiert ist,
+  und `versions.restart-method` eingestellt ist (Standard
   `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
   den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
   Schleife, ein Wächter oder das Panel startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu
