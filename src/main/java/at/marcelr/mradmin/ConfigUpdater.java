@@ -43,8 +43,9 @@ public final class ConfigUpdater {
  * 32: uptime-kuma.incident-seconds (incidents read more often than the maintenance list).
  * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
  * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
+ * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
      */
-    public static final int CURRENT_VERSION = 34;
+    public static final int CURRENT_VERSION = 35;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -159,12 +160,13 @@ public final class ConfigUpdater {
                     template.set("player-web.rankings.statistics", list);
                 }
             }
-            // v34: the new statistics also go into existing ranking lists (an empty list stays empty = none wanted).
-            if (version < 34) {
+            // v34/35: the new statistics and every one of the personal tab also go into existing ranking lists (an empty
+            // list stays empty = none wanted).
+            if (version < 35) {
                 java.util.List<String> list = new java.util.ArrayList<>(template.getStringList("player-web.rankings.statistics"));
                 if (!list.isEmpty()) {
                     for (String added : java.util.List.of("blocks-placed", "totems", "times-slept", "distance-swum",
-                            "distance-flown")) {
+                            "distance-flown", "items-crafted", "jumps", "fish-caught")) {
                         if (!list.contains(added)) {
                             list.add(added);
                         }

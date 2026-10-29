@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 34
+config-version: 35
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -730,8 +730,8 @@ player-web:
     # The game's statistics, in this order: play-time, xp-level, blocks-mined, blocks-placed, items-crafted, mob-kills,
     # deaths, totems, distance, distance-swum, distance-flown, jumps, fish-caught, times-slept. Empty list [] = none
     # (only the plugins' rankings).
-    statistics: [play-time, xp-level, blocks-mined, blocks-placed, mob-kills, deaths, totems, distance, distance-swum,
-      distance-flown, times-slept]
+    statistics: [play-time, xp-level, blocks-mined, blocks-placed, items-crafted, mob-kills, deaths, totems, distance,
+      distance-swum, distance-flown, jumps, fish-caught, times-slept]
   # Own statistics as a tile on the start page, in this order (the first one big). Same names as under
   # rankings.statistics. Empty list [] = no tile.
   personal-stats: [play-time, blocks-mined, mob-kills, deaths]
