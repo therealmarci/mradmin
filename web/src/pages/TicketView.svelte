@@ -96,6 +96,10 @@
   });
 
   const mineClaimed = $derived(ticket?.claimedBy === me.name);
+
+  // A day line whenever the day changes.
+  const day = (ms) => new Date(ms).toDateString();
+  const time = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
 
 <div class="page">
@@ -106,122 +110,144 @@
   {#if !ticket}
     {#if !error}<p class="muted">{t('common.loading')}</p>{/if}
   {:else}
-    <section class="card header">
-      <div class="title-row">
-        <h1>#{ticket.id} · {ticket.summary || ticket.categoryName}</h1>
-        <span class="status" class:closed={!ticket.open}>{ticket.open ? t('ticket.statusOpen') : t('ticket.statusClosed')}</span>
+    <header class="head" class:closed={!ticket.open} class:claimed={ticket.open && ticket.claimedBy}>
+      <div class="h-main">
+        <span class="h-top">
+          <span class="id">#{ticket.id}</span>
+          <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
+          <span class="status">
+            {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen')) : t('ticket.statusClosed')}
+          </span>
+        </span>
+        <h1>{ticket.summary || ticket.categoryName}</h1>
       </div>
-      <!-- The facts as small tiles: label on top, value below. -->
-      <div class="facts">
-        <div class="fact">
-          <div class="flabel">{t('ticket.by')}</div>
-          {#if request?.kind === 'contact'}
-            <div class="fvalue">{ticket.creator}</div>
-          {:else}
-            <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
-              <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
-          {/if}
-        </div>
-        {#if request?.email}
-          <div class="fact">
-            <div class="flabel">{t('request.email')}</div>
-            <a class="fvalue" href={mailto}>{request.email}</a>
-          </div>
-        {/if}
-        {#if ticket.report}
-          <div class="fact">
-            <div class="flabel">{t('ticket.reported')}</div>
-            <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.targetUuid)}>
-              <img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</button>
-          </div>
-        {/if}
-        <div class="fact">
-          <div class="flabel">{t('ticket.created')}</div>
-          <div class="fvalue">{dateTime(ticket.created)}</div>
-        </div>
-        {#if !request}
-          <div class="fact">
-            <div class="flabel">{t('ticket.location')}</div>
-            <!-- Wrapped only between the values - never inside one. -->
-            <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
-          </div>
-        {/if}
-        <div class="fact">
-          <div class="flabel">{t('ticket.claimedBy')}</div>
-          <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
-        </div>
-      </div>
-      {#if ticket.source}
-        <div class="notice small">{t('ticket.lockHint')}</div>
+      {#if ticket.open && me.may.ticketsClaim}
+        <button class="secondary small" onclick={() => action('claim')} disabled={busy}>
+          {mineClaimed ? t('ticket.release') : t('ticket.claim')}
+        </button>
       {/if}
-      {#if request?.kind === 'unban'}
-        <div class="ban">
-          <div class="ban-top">
-            <span class="muted small">{t('request.ban', { id: request.banId })}</span>
-            <span class="tag">{request.stage === 'appeal' ? t('request.stageAppeal') : t('request.stageRequest')}</span>
-            {#if request.decision}<span class="tag {request.decision}">{t('request.decision.' + request.decision)}</span>{/if}
-          </div>
-          <div class="reason">{request.banReason}</div>
-          <div class="muted small">{t('request.banFacts', { by: request.banOperator, since: dateTime(request.banStart),
-            until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
-        </div>
-        <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
-      {:else if request?.kind === 'contact'}
-        <div class="notice small">
-          {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
-          {#if !me.may.mail && mailto}<a href={mailto}>{t('request.writeMail')}</a>{/if}
+    </header>
+
+    <!-- The facts as small tiles: label on top, value below. -->
+    <section class="card facts">
+      <div class="fact">
+        <div class="flabel">{t('ticket.by')}</div>
+        {#if request?.kind === 'contact'}
+          <div class="fvalue">{ticket.creator}</div>
+        {:else}
+          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
+            <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
+        {/if}
+      </div>
+      {#if request?.email}
+        <div class="fact">
+          <div class="flabel">{t('request.email')}</div>
+          <a class="fvalue" href={mailto}>{request.email}</a>
         </div>
       {/if}
+      {#if ticket.report}
+        <div class="fact">
+          <div class="flabel">{t('ticket.reported')}</div>
+          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.targetUuid)}>
+            <img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</button>
+        </div>
+      {/if}
+      <div class="fact">
+        <div class="flabel">{t('ticket.created')}</div>
+        <div class="fvalue">{dateTime(ticket.created)}</div>
+      </div>
+      {#if !request}
+        <div class="fact">
+          <div class="flabel">{t('ticket.location')}</div>
+          <!-- Wrapped only between the values - never inside one. -->
+          <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
+        </div>
+      {/if}
+      <div class="fact">
+        <div class="flabel">{t('ticket.claimedBy')}</div>
+        <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
+      </div>
     </section>
 
-    <section class="chat" bind:this={chat}>
-      {#each groups as g}
-        {#if g.system}
-          <div class="system">
-            <div class="who small">{g.name} · {t('ticket.system')} · {ago(g.messages[0].time)}</div>
-            {#each g.messages as m}<div class="text">{m.text}</div>{/each}
-          </div>
-        {:else}
-          <div class="row" class:staff={g.staff}>
-            <img src={head(g.uuid, 48)} alt="" width="32" height="32" />
-            <div class="bubble">
-              <div class="who small"><strong>{g.name}</strong> · <span title={dateTime(g.messages[0].time)}>{ago(g.messages[0].time)}</span></div>
-              {#each g.messages as m}<div class="text">{m.text}</div>{/each}
+    {#if ticket.source}
+      <div class="notice small">{t('ticket.lockHint')}</div>
+    {/if}
+    {#if request?.kind === 'unban'}
+      <section class="card ban">
+        <div class="ban-top">
+          <span class="muted small">{t('request.ban', { id: request.banId })}</span>
+          <span class="tag">{request.stage === 'appeal' ? t('request.stageAppeal') : t('request.stageRequest')}</span>
+          {#if request.decision}<span class="tag {request.decision}">{t('request.decision.' + request.decision)}</span>{/if}
+        </div>
+        <div class="reason">{request.banReason}</div>
+        <div class="muted small">{t('request.banFacts', { by: request.banOperator, since: dateTime(request.banStart),
+          until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
+        <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
+      </section>
+    {:else if request?.kind === 'contact'}
+      <div class="notice small">
+        {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
+        {#if !me.may.mail && mailto}<a href={mailto}>{t('request.writeMail')}</a>{/if}
+      </div>
+    {/if}
+
+    <section class="card conversation">
+      <ol class="messages" bind:this={chat}>
+        {#each groups as g, i}
+          {#if i === 0 || day(g.messages[0].time) !== day(groups[i - 1].messages[0].time)}
+            <li class="day"><span>{new Date(g.messages[0].time).toLocaleDateString()}</span></li>
+          {/if}
+          {#if g.system}
+            <li class="system">
+              <span>
+                <b>{g.name}</b> · {time(g.messages[0].time)}
+                {#each g.messages as m}<span class="s-text">{m.text}</span>{/each}
+              </span>
+            </li>
+          {:else}
+            <li class="msg" class:staff={g.staff}>
+              <img class="avatar" src={head(g.uuid, 48)} alt="" width="32" height="32" />
+              <div class="bubble">
+                <div class="meta">
+                  <strong>{g.name}</strong>
+                  {#if g.staff}<span class="team">{t('ticket.team')}</span>{/if}
+                  <span class="muted" title={dateTime(g.messages[0].time)}>{time(g.messages[0].time)} · {ago(g.messages[0].time)}</span>
+                </div>
+                {#each g.messages as m}<div class="text">{m.text}</div>{/each}
+              </div>
+            </li>
+          {/if}
+        {/each}
+      </ol>
+
+      {#if !ticket.open}
+        <div class="closed-note">{t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
+      {/if}
+
+      {#if ticket.open && me.may.ticketsReply}
+        <div class="composer">
+          <textarea bind:value={text} rows="3" placeholder={t('ticket.reply')} onkeydown={keys} maxlength="2000"></textarea>
+          <div class="c-foot">
+            <span class="muted small">{t('ticket.sendHint')}</span>
+            <div class="actions">
+              {#if me.may.ticketsClose && request?.kind === 'unban'}
+                {#if me.may.unban}
+                  <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
+                {/if}
+                <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
+              {:else if me.may.ticketsClose}
+                <button class="danger" onclick={close} disabled={busy}>
+                  {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
+                </button>
+              {/if}
+              <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')} ➤</button>
             </div>
           </div>
-        {/if}
-      {/each}
-      {#if !ticket.open}
-        <div class="closed-note muted small">{t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
-      {/if}
-    </section>
-
-    <section class="card composer">
-      {#if ticket.open && me.may.ticketsReply}
-        <textarea bind:value={text} rows="3" placeholder={t('ticket.reply')} onkeydown={keys} maxlength="2000"></textarea>
-        <div class="actions">
-          <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')}</button>
-          {#if me.may.ticketsClaim}
-            <button class="secondary" onclick={() => action('claim')} disabled={busy}>
-              {mineClaimed ? t('ticket.release') : t('ticket.claim')}
-            </button>
-          {/if}
-          {#if me.may.ticketsClose && request?.kind === 'unban'}
-            {#if me.may.unban}
-              <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
-            {/if}
-            <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
-          {:else if me.may.ticketsClose}
-            <button class="danger" onclick={close} disabled={busy}>
-              {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
-            </button>
-          {/if}
-          <span class="hint keys">{t('ticket.sendHint')}</span>
         </div>
       {:else if ticket.open && me.may.ticketsClose}
-        <button class="danger" onclick={close} disabled={busy}>{t('ticket.close')}</button>
+        <div class="composer"><button class="danger" onclick={close} disabled={busy}>{t('ticket.close')}</button></div>
       {:else if !ticket.open && me.may.ticketsReopen}
-        <button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button>
+        <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
       {/if}
     </section>
   {/if}
@@ -229,210 +255,200 @@
 
 <style>
   .page {
+    --tk: var(--accent);
     display: grid;
-    gap: 16px;
+    gap: 14px;
+    max-width: 960px;
   }
 
   .back {
     justify-self: start;
     background: transparent;
-    color: var(--accent);
+    color: var(--tk);
     padding: 4px 0;
   }
 
-  .title-row {
+  /* Head: number, category, status and title; the colour on the left as in the list. */
+  .head {
+    --st: var(--warn);
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 18px 22px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--tk) 25%, var(--border));
+    border-left: 4px solid var(--st);
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tk) 16%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .title-row h1 {
-    font-size: 1.25rem;
-    word-break: break-word;
+  .head.claimed {
+    --st: var(--good);
   }
 
-  .status {
-    flex-shrink: 0;
-    font-size: 0.8rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--good) 15%, transparent);
-    color: var(--good);
+  .head.closed {
+    --st: var(--muted);
   }
 
-  .status.closed {
-    background: var(--surface-2);
+  .h-main {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .h-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .id {
+    font-weight: 800;
     color: var(--muted);
   }
 
+  .chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .chip.auto {
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 15%, transparent);
+  }
+
+  .status {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--st);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.3rem;
+    overflow-wrap: anywhere;
+  }
+
+  /* Facts */
   .facts {
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-    margin: 12px 0 8px;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+    padding: 14px;
   }
 
   .fact {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    display: grid;
+    gap: 3px;
+    align-content: start;
     padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
     min-width: 0;
   }
 
   .flabel {
-    color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 600;
-    margin-bottom: 4px;
+    color: var(--muted);
   }
 
   .fvalue {
+    font-weight: 700;
     font-size: 0.92rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
     overflow-wrap: anywhere;
   }
 
-  /* A person in the facts: a link to their player page (with mradmin.player.view). */
   .person {
-    background: transparent;
-    color: var(--accent);
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
     justify-content: flex-start;
-    text-align: left;
+    gap: 6px;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+  }
+
+  .person:not(:disabled):hover {
+    filter: none;
+    color: var(--tk);
   }
 
   .person:disabled {
-    color: var(--text);
     opacity: 1;
+    cursor: default;
+  }
+
+  .person img {
+    border-radius: 4px;
+    image-rendering: pixelated;
   }
 
   .coords {
+    display: flex;
     flex-wrap: wrap;
-    gap: 0 10px;
+    gap: 0 8px;
   }
 
   .coords span {
     white-space: nowrap;
   }
 
-  .fvalue img {
-    border-radius: 4px;
-    image-rendering: pixelated;
-    flex-shrink: 0;
+  .mono {
+    font-family: ui-monospace, monospace;
+    font-size: 0.85rem;
   }
 
-  .chat {
-    display: grid;
-    gap: 12px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 4px 2px;
-  }
-
-  .row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-    max-width: 85%;
-  }
-
-  .row.staff {
-    flex-direction: row-reverse;
-    margin-left: auto;
-  }
-
-  .row img {
-    border-radius: 6px;
-    image-rendering: pixelated;
-    flex-shrink: 0;
-  }
-
-  .bubble {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px 14px 14px 4px;
-    padding: 8px 12px;
-    min-width: 0;
-  }
-
-  .staff .bubble {
-    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
-    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
-    border-radius: 14px 14px 4px 14px;
-  }
-
-  .who {
-    color: var(--muted);
-    margin-bottom: 2px;
-  }
-
-  .text {
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .text + .text {
-    margin-top: 4px;
-  }
-
-  .system {
-    background: var(--surface-2);
-    border-left: 4px solid var(--warn);
-    border-radius: 10px;
+  .notice {
     padding: 10px 14px;
-    font-size: 0.92rem;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--tk) 8%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--tk) 25%, var(--border));
   }
 
-  .closed-note {
-    text-align: center;
-  }
-
+  /* Unban request */
   .ban {
-    background: var(--surface-2);
-    border-left: 4px solid var(--bad);
-    border-radius: 10px;
-    padding: 10px 14px;
     display: grid;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 8px;
   }
 
   .ban-top {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
     align-items: center;
-  }
-
-  .reason {
-    font-weight: 600;
-    white-space: pre-wrap;
-    word-break: break-word;
+    gap: 8px;
   }
 
   .tag {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-    color: var(--accent);
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
   }
 
   .tag.accepted {
-    background: color-mix(in srgb, var(--good) 15%, transparent);
     color: var(--good);
+    background: color-mix(in srgb, var(--good) 15%, transparent);
   }
 
   .tag.rejected {
-    background: color-mix(in srgb, var(--bad) 12%, transparent);
     color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 12%, transparent);
   }
 
   button.good {
@@ -440,34 +456,182 @@
     color: #fff;
   }
 
-  .composer textarea {
+  .reason {
+    font-weight: 700;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* Conversation: players on the left, the team on the right (violet), the system in the middle. */
+  .conversation {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .messages {
+    list-style: none;
+    margin: 0;
+    padding: 0 4px 0 0;
+    display: grid;
+    gap: 12px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .day,
+  .system {
+    display: flex;
+    justify-content: center;
+  }
+
+  .day span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+  }
+
+  .system > span {
+    display: grid;
+    gap: 2px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    max-width: 80%;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .s-text {
+    white-space: pre-wrap;
+  }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: min(100%, 680px);
+  }
+
+  .msg.staff {
+    flex-direction: row-reverse;
+    justify-self: end;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 14px 14px 14px 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  .msg.staff .bubble {
+    border-radius: 14px 14px 4px 14px;
+    border-color: color-mix(in srgb, #8b5cf6 40%, var(--border));
+    background: color-mix(in srgb, #8b5cf6 9%, var(--surface-2));
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.82rem;
+  }
+
+  .team {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 1px 7px;
+    border-radius: 999px;
+    color: #8b5cf6;
+    background: color-mix(in srgb, #8b5cf6 15%, transparent);
+  }
+
+  .text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  .closed-note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .composer {
+    display: grid;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  textarea {
     width: 100%;
     font: inherit;
     color: var(--text);
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 11px 12px;
     resize: vertical;
-    min-height: 80px;
+    outline: none;
+  }
+
+  textarea:focus {
+    border-color: var(--tk);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tk) 25%, transparent);
+  }
+
+  .c-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   .actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    align-items: center;
-    margin-top: 10px;
-  }
-
-  .keys {
     margin-left: auto;
-    display: none;
   }
 
-  @media (min-width: 760px) {
-    .keys {
-      display: inline;
+  @media (max-width: 640px) {
+    .head {
+      padding: 16px;
+    }
+
+    .conversation {
+      padding: 12px;
+    }
+
+    .avatar {
+      display: none;
+    }
+
+    .actions,
+    .actions button {
+      width: 100%;
     }
   }
 </style>
