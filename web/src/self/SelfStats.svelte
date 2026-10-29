@@ -249,7 +249,6 @@
 
   {#if data}
     {#if tab === 'personal'}
-      <p class="muted small sub">{t('self.stats.yourGameHint', { players: data.players })}</p>
       {#each byGroup(gamePersonal) as g (g.id)}
         <section class="card tile">
           <h2 class="group-title"><span aria-hidden="true">{g.icon}</span> {t('self.stats.group.' + g.id)}</h2>
