@@ -8,10 +8,10 @@
   import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
+  import { sections } from '../lib/changelog.js';
 
   const NEWS_PAGE = 9;
   const RELEASES_PAGE = 5;
-  const TYPES = ['new', 'changed', 'fixed', 'removed'];
 
   let data = $state(null);
   let error = $state('');
@@ -199,17 +199,23 @@
                 </div>
                 {#if r.title && r.title !== r.version}<h3>{r.title}</h3>{/if}
                 {#if r.text}<p class="r-intro">{r.text}</p>{/if}
-                <div class="groups">
-                  {#each TYPES as type}
-                    {@const items = r.entries.filter((e) => e.type === type)}
-                    {#if items.length}
-                      <div class="group t-{type}">
-                        <span class="g-label">{t('self.news.type.' + type)} <span class="n">{items.length}</span></span>
-                        <ul>
-                          {#each items as e}<li>{e.text}</li>{/each}
-                        </ul>
-                      </div>
-                    {/if}
+                <div class="sections">
+                  {#each sections(r.entries) as s}
+                    <div class="section lvl-{s.level}" style="--lvl: {s.level}">
+                      {#if s.title != null}<div class="s-title">{s.title}</div>{/if}
+                      {#if s.groups.length}
+                        <div class="groups">
+                          {#each s.groups as g}
+                            <div class="group t-{g.type}">
+                              <span class="g-label">{t('self.news.type.' + g.type)} <span class="n">{g.items.length}</span></span>
+                              <ul>
+                                {#each g.items as e}<li>{e.text}</li>{/each}
+                              </ul>
+                            </div>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
                   {/each}
                 </div>
               </li>
@@ -627,6 +633,44 @@
     margin: 0;
     color: var(--muted);
     white-space: pre-line;
+  }
+
+  /* Sections of a changelog: a heading and its entries, indented by level (1 main heading, 2 sub heading, 3). */
+  .sections {
+    display: grid;
+    gap: 12px;
+  }
+
+  .section {
+    display: grid;
+    gap: 8px;
+  }
+
+  .section.lvl-2,
+  .section.lvl-3 {
+    margin-left: calc((var(--lvl) - 1) * 18px);
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+  }
+
+  .s-title {
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .lvl-1 > .s-title {
+    font-size: 1.08rem;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lvl-2 > .s-title {
+    font-size: 0.98rem;
+  }
+
+  .lvl-3 > .s-title {
+    font-size: 0.88rem;
+    color: var(--muted);
   }
 
   .groups {

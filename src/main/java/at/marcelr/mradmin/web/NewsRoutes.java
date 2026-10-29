@@ -17,7 +17,7 @@ import java.util.Map;
  * {@link at.marcelr.mradmin.news.NewsDelivery}).
  * <pre>
  *  GET  /api/news                    all posts (also expired and ended ones), the current Uptime Kuma incidents
- *  POST /api/news   {id?, kind, pinned, expires, title: {de, en}, text: {de, en}, version, entries: [{type, de, en}],
+ *  POST /api/news   {id?, kind, pinned, expires, title: {de, en}, text: {de, en}, version, entries: [{type, de, en}] (type also h1/h2/h3 = heading),
  *                    discord}        create (id 0/missing) or change; discord = post it there (once)
  *  POST /api/news/{id}/end           ends a warning
  *  POST /api/news/{id}/delete
@@ -107,13 +107,13 @@ public final class NewsRoutes {
                 if (entries.size() < News.MAX_ENTRIES && raw instanceof Map<?, ?> e) {
                     Map<String, String> t = texts(e, News.MAX_ENTRY);
                     if (!t.isEmpty()) {
-                        entries.add(new News.Entry(News.ENTRY_TYPES.contains(e.get("type")) ? (String) e.get("type")
-                                : "changed", t));
+                        entries.add(new News.Entry(News.validType(e.get("type")) ? (String) e.get("type") : "changed", t));
                     }
                 }
             }
         }
-        boolean complete = "changelog".equals(kind) ? !version.isEmpty() && !entries.isEmpty()
+        // A changelog needs at least one entry besides its headings.
+        boolean complete = "changelog".equals(kind) ? !version.isEmpty() && entries.stream().anyMatch(e -> !e.heading())
                 : News.LANGS.stream().anyMatch(lang -> title.containsKey(lang) && text.containsKey(lang));
         if (!complete) {
             throw new Http.WebException(400, "changelog".equals(kind) ? "news-changelog-empty" : "news-empty");

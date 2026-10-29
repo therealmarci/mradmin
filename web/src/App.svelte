@@ -96,8 +96,8 @@
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
-          ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
-          ...(me.may.news ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
+          ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
+          ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
           ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
@@ -154,10 +154,10 @@
       <Players />
     {:else if route.path === '/versions' && me.may.versions}
       <Versions />
-    {:else if route.path === '/maintenance' && (me.may.maintenance || me.may.announce)}
+    {:else if route.path === '/maintenance' && me.may.maintenance}
       <Maintenance {me} />
-    {:else if route.path === '/news' && me.may.news}
-      <News />
+    {:else if route.path === '/news' && (me.may.news || me.may.announce)}
+      <News {me} />
     {:else if route.path === '/console' && me.may.console}
       <Console {me} />
     {:else if pvpId && me.may.mrpvp}

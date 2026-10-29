@@ -17,7 +17,8 @@ import java.util.Map;
  * the storage file "news". Thread-safe.
  * <ul>
  *   <li><b>news</b>: title + text, may be pinned</li>
- *   <li><b>changelog</b>: version, optional title, entries of a type (new, changed, fixed, removed)</li>
+ *   <li><b>changelog</b>: version, optional title, entries of a type (new, changed, fixed, removed) and headings in
+ *       three levels (h1 main heading, h2 sub heading, h3 a further level) - the entries after a heading belong to it</li>
  *   <li><b>alert</b>: a critical warning (title + text), active until it runs out or is ended</li>
  * </ul>
  */
@@ -26,14 +27,25 @@ public final class News {
     public static final int MAX_TITLE = 120;
     public static final int MAX_TEXT = 4000;
     public static final int MAX_ENTRY = 300;
-    public static final int MAX_ENTRIES = 60;
+    public static final int MAX_ENTRIES = 150;
     public static final List<String> KINDS = List.of("news", "changelog", "alert");
     public static final List<String> ENTRY_TYPES = List.of("new", "changed", "fixed", "removed");
+    /** Headings in a changelog: main heading, sub heading, a further level. */
+    public static final List<String> HEADINGS = List.of("h1", "h2", "h3");
     public static final List<String> LANGS = List.of("de", "en");
     private static final String FILE = "news";
 
-    /** One line of a changelog: its type and the text per language. */
+    /** One line of a changelog: its type (an entry type or a heading) and the text per language. */
     public record Entry(String type, Map<String, String> text) {
+
+        public boolean heading() {
+            return HEADINGS.contains(type);
+        }
+    }
+
+    /** Whether a changelog line may have this type (entry or heading). */
+    public static boolean validType(Object type) {
+        return ENTRY_TYPES.contains(type) || HEADINGS.contains(type);
     }
 
     /**
@@ -74,7 +86,9 @@ public final class News {
             if ("changelog".equals(kind) && !entries.isEmpty()) {
                 List<String> lines = new ArrayList<>();
                 for (Entry e : entries) {
-                    lines.add(in(e.text(), lang));
+                    if (!e.heading()) {
+                        lines.add(in(e.text(), lang));
+                    }
                 }
                 body = String.join(" · ", lines);
             } else {
@@ -201,7 +215,7 @@ public final class News {
                     }
                 }
                 if (!text.isEmpty()) {
-                    entries.add(new Entry(ENTRY_TYPES.contains(type) ? (String) type : "changed", Map.copyOf(text)));
+                    entries.add(new Entry(validType(type) ? (String) type : "changed", Map.copyOf(text)));
                 }
             }
             posts.put(id, new Post(id, kind, texts(p, "title"), texts(p, "text"), p.getString("version", ""),

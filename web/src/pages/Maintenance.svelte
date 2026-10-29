@@ -1,5 +1,6 @@
 <script>
-  // Maintenance (start, plan, extend, end - manual and from Uptime Kuma) and announcements, like the commands.
+  // Maintenance (start, plan, extend, end - manual and from Uptime Kuma), like the commands; the next and the last
+  // three maintenances. Announcements are on the page "Communication".
   import { api } from '../lib/api.js';
   import { t, errorText, lang } from '../lib/i18n.js';
   import { dateTime, duration } from '../lib/format.js';
@@ -9,7 +10,6 @@
   let { me } = $props();
 
   let data = $state(null);
-  let presets = $state([]);
   let error = $state('');
   let message = $state('');
   let busy = $state(false);
@@ -23,12 +23,6 @@
   let title = $state('');
   let description = $state('');
 
-  // Announcement
-  let preset = $state('');
-  let args = $state('');
-  let text = $state('');
-  let discord = $state(true);
-
   async function load() {
     if (!me.may.maintenance) return;
     try {
@@ -41,7 +35,6 @@
 
   $effect(() => {
     load();
-    if (me.may.announce) api('GET', '/announce').then((r) => (presets = r.presets)).catch(() => {});
     const timer = setInterval(load, 5000);
     const clockTimer = setInterval(() => (now = Date.now()), 1000);
     return () => {
@@ -120,29 +113,9 @@
     }
   }
 
-  async function announce(event) {
-    event.preventDefault();
-    const body = preset ? { preset, args, discord: String(discord) } : { text, discord: String(discord) };
-    if (!confirm(t('mt.announceConfirm'))) return;
-    busy = true;
-    error = '';
-    message = '';
-    try {
-      await api('POST', '/announce', body);
-      message = t('mt.announced');
-      args = '';
-      text = '';
-    } catch (e) {
-      error = errorText(e);
-    } finally {
-      busy = false;
-    }
-  }
-
   const IN = ['5m', '10m', '15m', '30m', '1h'];
   const DURATIONS = ['15m', '30m', '1h', '2h', 'open'];
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
-  const chosen = $derived(presets.find((p) => p.name === preset));
   const running = $derived(data?.current);
   const tone = $derived(data ? phaseTone[data.phase] ?? '' : '');
   // The current maintenance in Kuma (for its actions).
@@ -444,34 +417,6 @@
     {:else if data.mode === 'kuma' && data.manage && !data.kumaInfo.canCreate}
       <p class="muted tiny">{t('mt.kumaCannotCreate')}</p>
     {/if}
-  {/if}
-
-  {#if me.may.announce}
-    <form class="card tile" onsubmit={announce}>
-      <h2>{t('mt.announceTitle')}</h2>
-      <p class="muted small">{t('mt.announceHint')}</p>
-      <div class="presets">
-        <button type="button" class="preset" class:active={preset === ''} onclick={() => (preset = '')}>
-          <strong>{t('mt.freeText')}</strong><span class="muted small">{t('mt.freeTextHint')}</span>
-        </button>
-        {#each presets as p (p.name)}
-          <button type="button" class="preset" class:active={preset === p.name} onclick={() => (preset = p.name)}>
-            <strong>{p.name}{#if p.discord}<span class="chip">Discord</span>{/if}</strong><span class="muted small">{p.preview}</span>
-          </button>
-        {/each}
-      </div>
-      {#if preset === ''}
-        <input bind:value={text} maxlength="300" placeholder={t('mt.textPlaceholder')} aria-label={t('mt.freeText')} />
-      {:else if chosen?.values}
-        <input bind:value={args} maxlength="100" placeholder={t('mt.argsPlaceholder')} aria-label={t('mt.args')} />
-      {/if}
-      <div class="send-row">
-        <button type="button" class="toggle" role="switch" aria-checked={discord} onclick={() => (discord = !discord)}>
-          <span class="knob" class:on={discord}></span>{t('mt.toDiscord')}
-        </button>
-        <button type="submit" disabled={busy || (preset === '' && !text.trim())}>{t('mt.send')}</button>
-      </div>
-    </form>
   {/if}
 </div>
 
@@ -907,96 +852,6 @@
     margin: 0;
   }
 
-  /* Announcement */
-  .presets {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  }
-
-  .preset {
-    display: grid;
-    gap: 2px;
-    justify-content: stretch;
-    justify-items: start;
-    text-align: left;
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    font-weight: 400;
-    padding: 10px 12px;
-  }
-
-  .preset strong {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .preset:hover {
-    filter: none;
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  }
-
-  .preset.active {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
-  }
-
-  .send-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0;
-    background: transparent;
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  .toggle:hover {
-    filter: none;
-  }
-
-  .knob {
-    position: relative;
-    width: 40px;
-    height: 22px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--muted) 35%, transparent);
-    transition: background 0.15s;
-  }
-
-  .knob::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
-    transition: transform 0.15s;
-  }
-
-  .knob.on {
-    background: var(--accent);
-  }
-
-  .knob.on::after {
-    transform: translateX(18px);
-  }
-
   @media (max-width: 640px) {
     .head {
       padding: 18px 16px;
@@ -1008,9 +863,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .progress span,
-    .knob,
-    .knob::after {
+    .progress span {
       transition: none;
     }
   }

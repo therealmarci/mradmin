@@ -163,8 +163,8 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
   Farbe bei Lederrüstung, Rüstungsbesatz und Flugdauer bei Raketen. Rechts steht live der Tooltip. Beim Übernehmen
   baut MRadmin das echte Item und prüft alle Werte; was der Editor nicht anzeigt, bleibt am Item erhalten.
 
-## Wartung & Ankündigungen
-`mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
+## Wartung
+`mradmin.maintenance.view` ansehen, `.manage` ändern. Ankündigungen stehen unter [Kommunikation](#kommunikation-mradminnews-mradminannounce).
 
 - Oben steht die **aktuelle Wartung** groß: läuft sie, mit Restzeit und Fortschrittsbalken, ist sie geplant, mit dem
   Countdown bis zum Start; darunter verlängern/kürzen und beenden bzw. absagen.
@@ -180,16 +180,21 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
   Herkunft, Start, Ende und Dauer.
 - **Letzte Wartungen**: die drei zuletzt beendeten oder abgesagten Wartungen, egal ob aus Uptime Kuma oder lokal
   (die Herkunft steht dabei), mit Zeitraum und Dauer. MRadmin merkt sich die letzten zehn.
-- Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
-  Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 
-## Neuigkeiten (`mradmin.news`)
+## Kommunikation (`mradmin.news`, `mradmin.announce`)
+Zwei Bereiche: **Beiträge** für die Spielerseite (`mradmin.news`) und **Ankündigungen** auf dem Bildschirm im Spiel
+(`mradmin.announce`, siehe unten). Wer nur eins der beiden Rechte hat, sieht nur diesen Bereich.
+
+### Beiträge
 Drei Arten von Beiträgen für die Spieler, Texte getrennt auf Deutsch und Englisch (jeder sieht seine Sprache, fehlt sie,
 die andere):
 
 - **Neuigkeit** (Ankündigungen, Events): Titel und Text, **Anheften** stellt sie immer nach vorne.
-- **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) -
-  hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste mit farbigen Abschnitten.
+- **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) und
+  **Überschriften** in drei Ebenen (1 Hauptüberschrift, z.B. „Plugins“; 2 Zwischenüberschrift, z.B. „MRpvp“; 3 eine
+  weitere Gliederung). Einträge gehören zur Überschrift darüber und werden darunter eingerückt, unter jeder Ebene sind
+  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste, im Discord die
+  Abschnitte der Reihe nach.
 - **Kritische Warnung**: Titel und Text. Beim Senden bekommen alle Spieler, die online sind, die Warnung im Chat und als
   Titel auf dem Bildschirm (`player-web.news.alerts`); wer später joint, sieht sie im Chat, solange sie aktiv ist. Sie
   läuft bis „Aktiv bis“ oder bis **Beenden**.
@@ -221,6 +226,10 @@ Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
 **Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
 und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon
 bekommen hat: `news-seen`).
+
+### Ankündigungen
+Wie `/mradmin announce`: Vorlagen (mit Werten) oder eigener Text („Titel | Untertitel“) auf dem Bildschirm aller
+Spieler, auf Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 
 ## Versionen (`mradmin.versions.view`)
 - Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status

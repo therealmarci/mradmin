@@ -110,14 +110,7 @@ public final class NewsDelivery implements Listener {
             if (!post.version().isEmpty() && !post.version().equals(title)) {
                 title = post.version() + " · " + title;
             }
-            for (String type : News.ENTRY_TYPES) {
-                List<String> lines = post.entries().stream().filter(e -> e.type().equals(type))
-                        .map(e -> "• " + DiscordAnnouncer.escape(post.in(e.text(), lang))).toList();
-                if (!lines.isEmpty()) {
-                    body.append("**").append(discord.label("changelog-" + type)).append("**\n")
-                            .append(String.join("\n", lines)).append("\n\n");
-                }
-            }
+            changelog(body, discord, post, lang);
             String text = post.in(post.text(), lang);
             if (body.isEmpty() && !text.isEmpty()) {
                 body.append(DiscordAnnouncer.escape(text));
@@ -127,6 +120,53 @@ public final class NewsDelivery implements Listener {
         }
         String head = post.alert() ? "⚠️ " + title : "changelog".equals(post.kind()) ? "📝 " + title : "📣 " + title;
         return discord.postNews(post.kind(), head, body.toString().strip(), link(post));
+    }
+
+    /**
+     * A changelog for Discord: cut into sections at its headings, the entries of each section by type as before.
+     * Headings: level 1 underlined bold, 2 bold, 3 italic; everything below a heading is indented one step more
+     * (with ideographic spaces - Discord drops normal ones at the start of a line).
+     */
+    private static void changelog(StringBuilder body, DiscordAnnouncer discord, News.Post post, String lang) {
+        List<News.Entry> items = new ArrayList<>();
+        News.Entry heading = null;
+        for (News.Entry e : post.entries()) {
+            if (e.heading()) {
+                section(body, discord, post, lang, heading, items);
+                heading = e;
+                items = new ArrayList<>();
+            } else {
+                items.add(e);
+            }
+        }
+        section(body, discord, post, lang, heading, items);
+    }
+
+    private static void section(StringBuilder body, DiscordAnnouncer discord, News.Post post, String lang,
+                                News.Entry heading, List<News.Entry> items) {
+        int level = heading == null ? 0 : News.HEADINGS.indexOf(heading.type()) + 1;
+        if (heading != null) {
+            String text = DiscordAnnouncer.escape(post.in(heading.text(), lang));
+            String indent = "　".repeat(level - 1);
+            body.append(indent).append(switch (level) {
+                case 1 -> "__**" + text + "**__";
+                case 2 -> "**" + text + "**";
+                default -> "*" + text + "*";
+            }).append('\n');
+        }
+        String indent = "　".repeat(level);
+        for (String type : News.ENTRY_TYPES) {
+            List<String> lines = items.stream().filter(e -> e.type().equals(type))
+                    .map(e -> indent + "• " + DiscordAnnouncer.escape(post.in(e.text(), lang))).toList();
+            if (!lines.isEmpty()) {
+                String label = discord.label("changelog-" + type);
+                body.append(indent).append(heading == null ? "**" + label + "**" : "_" + label + "_").append('\n')
+                        .append(String.join("\n", lines)).append(heading == null ? "\n\n" : "\n");
+            }
+        }
+        if (heading != null) {
+            body.append('\n');
+        }
     }
 
     /**
