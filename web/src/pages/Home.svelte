@@ -1,6 +1,6 @@
 <script>
-  // Start page of the team panel, in the look of the player area: greeting, the situation (what needs attention, or
-  // the key facts), one tile per area (server, players, tickets, the plugins, sleep, maintenance, versions) and the
+  // Start page of the team panel, in the look of the player area: greeting, the situation as a slideshow (what needs
+  // attention, one slide each - or the key facts), one tile per area (server, players, tickets, the plugins, sleep, maintenance, versions) and the
   // players online.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -9,6 +9,7 @@
   import { live } from '../lib/live.svelte.js';
   import { MODULE_ICONS, moduleHue } from '../lib/icons.js';
   import DashTile from '../components/DashTile.svelte';
+  import Carousel from '../components/Carousel.svelte';
 
   let { me } = $props();
 
@@ -88,6 +89,67 @@
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
+
+  // The situation as slides: with warnings an overview and one slide each, otherwise one "everything runs smoothly".
+  let slideIndex = $state(0);
+  const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
+  const counts = $derived(alerts.reduce((c, a) => ({ ...c, [a.tone]: (c[a.tone] ?? 0) + 1 }), {}));
+  const slides = $derived(
+    alerts.length
+      ? [{ key: 'summary', kind: 'summary', tone: slideTone(worst) }, ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a }))]
+      : [{ key: 'good', kind: 'good', tone: 'good' }],
+  );
+
+  // Which part of the server a warning is about.
+  function areaOf(a) {
+    if (a.module) return (data?.tiles ?? []).find((m) => m.id === a.module)?.label ?? a.module;
+    if (a.key.startsWith('tickets')) return t('nav.tickets');
+    if (a.key.startsWith('maintenance')) return t('nav.maintenance');
+    if (a.key.startsWith('versions') || a.key === 'restartSoon') return t('nav.versions');
+    return t('nav.health');
+  }
+
+  // "in 2 h 5 min" / "in 4 min" until a time
+  function until(time) {
+    const m = Math.max(0, Math.ceil((time - Date.now()) / 60000));
+    const h = Math.floor(m / 60);
+    return h ? t('self.hero.inHours', { h, m: m % 60 }) : t('self.hero.inMinutes', { m });
+  }
+
+  // The details of a warning from the rest of the overview: a line and a few facts.
+  function detail(a) {
+    const s = data?.server;
+    const tk = data?.tickets;
+    const m = data?.maintenance;
+    const v = data?.versions;
+    if (a.module) {
+      const tile = (data?.tiles ?? []).find((x) => x.id === a.module);
+      return { line: '', facts: tile ? [{ label: tile.label, value: `${tile.value} ${tile.unit ?? ''}`.trim(), tone: tile.tone }, ...tile.facts] : [] };
+    }
+    if (s && ['tps', 'mspt', 'cpu'].includes(a.key)) {
+      return { line: t('home.d.load', { tps: s.tps.map((x) => x.toFixed(1)).join(' / '), mspt: s.mspt.toFixed(1), online: s.online }), facts: [] };
+    }
+    if (s && a.key === 'ram') return { line: t('home.d.ram', { used: mb(s.ramUsed), max: mb(s.ramMax) }), facts: [] };
+    if (s && a.key === 'disk') return { line: t('home.d.disk', { free: mb(s.diskFree), total: mb(s.diskTotal) }), facts: [] };
+    if (s && a.key === 'ping' && s.players.length) {
+      const top = s.players.reduce((x, p) => (p.ping > x.ping ? p : x));
+      return { line: t('home.d.ping', { online: s.online, max: top.ping, name: top.name }), facts: [] };
+    }
+    if (tk && a.key === 'ticketsUnread') return { line: t('home.d.tickets', { open: tk.open, unread: tk.unread }), facts: [] };
+    if (tk && a.key === 'ticketsMine') return { line: t('home.d.ticketsMine', { mine: tk.mine, open: tk.open }), facts: [] };
+    if (m && a.key.startsWith('maintenance')) {
+      return {
+        line: t('home.d.maintenance', { start: dateTime(m.start), end: m.end ? dateTime(m.end) : t('overview.openEnd') }),
+        facts: [
+          ...(m.title ? [{ label: t('overview.what'), value: m.title }] : []),
+          ...(a.key === 'maintenanceSoon' && m.start > Date.now() ? [{ label: t('home.d.maintenanceIn', { in: until(m.start) }), value: '' }] : []),
+        ],
+      };
+    }
+    if (a.key === 'restartSoon') return { line: t('home.d.restart', { in: until(a.values.time) }), facts: [] };
+    if (v && a.key.startsWith('versions')) return { line: t('home.d.versions', v), facts: [] };
+    return { line: '', facts: [] };
+  }
 </script>
 
 <div class="page">
@@ -102,40 +164,67 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The situation: what needs attention right now - or, if nothing does, the most important facts. -->
-    <section class="situation tone-{worst}" aria-live="polite">
-      <div class="s-head">
-        <span class="badge {worst}">{icon[worst]}</span>
-        <h2>{alerts.length ? t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length }) : t('home.allGood')}</h2>
-      </div>
-      {#if alerts.length}
-        <ul class="alerts">
-          {#each alerts as a (a.key)}
-            <li class="tone-{a.tone}">
-              <span class="badge small {a.tone}">{icon[a.tone]}</span>
-              <span class="text">{alertText(a)}</span>
-              {#if target(a)}
-                <button class="secondary mini" onclick={() => open(a)}>{t('home.show')} →</button>
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <div class="chips">
-          {#if data.server}
-            <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
-            <span><b>{data.server.online}</b> {t('home.online')}</span>
-            <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
+    <!-- The situation as a slideshow: with warnings an overview first, then one slide per warning with its details -
+         otherwise "everything runs smoothly" with the key facts. -->
+    <Carousel {slides} seconds={8} label={t('home.slides')} bind:index={slideIndex}>
+      {#snippet slide(s, i, active)}
+        {#if s.kind === 'good'}
+          <div class="kind"><span class="badge good">✓</span>{t('home.slides')}</div>
+          <h2>{t('home.allGood')}</h2>
+          <div class="chips">
+            {#if data.server}
+              <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
+              <span><b>{data.server.online}</b> {t('home.online')}</span>
+              <span>{t('home.upFor')} <b>{uptime(data.server.uptime)}</b></span>
+            {/if}
+            {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
+            {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
+            {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
+          </div>
+          {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
+            <p class="small">{t('home.nothing')}</p>
           {/if}
-          {#if data.tickets}<span><b>{data.tickets.open}</b> {t('home.ticketsOpen')}</span>{/if}
-          {#each (data.tiles ?? []).filter((m) => m.headline) as m (m.id)}<span>{m.headline}</span>{/each}
-          {#if data.maintenance}<span>{t('overview.phase.' + data.maintenance.phase)}</span>{/if}
-        </div>
-        {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
-          <p class="muted small">{t('home.nothing')}</p>
+        {:else if s.kind === 'summary'}
+          <div class="kind"><span class="badge {worst}">{icon[worst]}</span>{t('home.summary')}</div>
+          <h2>{t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length })}</h2>
+          <div class="chips">
+            {#each ['bad', 'warn', 'info'] as tone}
+              {#if counts[tone]}<span class="sev {tone}"><b>{counts[tone]}</b> {t('home.sev.' + tone)}</span>{/if}
+            {/each}
+          </div>
+          <ul class="list">
+            {#each alerts as a, n (a.key)}
+              <li>
+                <button class="entry tone-{a.tone}" tabindex={active ? 0 : -1} onclick={() => (slideIndex = n + 1)}>
+                  <span class="badge small {a.tone}">{icon[a.tone]}</span>
+                  <span class="area">{areaOf(a)}</span>
+                  <span class="e-text">{alertText(a)}</span>
+                  <span class="go" aria-hidden="true">›</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          {@const a = s.alert}
+          {@const d = detail(a)}
+          <div class="kind">
+            <span class="badge small {a.tone}">{icon[a.tone]}</span>
+            {t('home.sev.' + a.tone)} · {areaOf(a)}
+            <span class="when">{i} / {alerts.length}</span>
+          </div>
+          <h2>{alertText(a)}</h2>
+          {#if d.line}<p>{d.line}</p>{/if}
+          {#if d.facts.length}
+            <div class="chips">
+              {#each d.facts as f}<span class={f.tone ? 'sev ' + f.tone : ''}>{f.label} <b>{f.value}</b></span>{/each}
+            </div>
+          {/if}
+          {#if target(a)}
+            <button class="more" tabindex={active ? 0 : -1} onclick={() => open(a)}>{t('home.show')} →</button>
+          {/if}
         {/if}
-      {/if}
-    </section>
+      {/snippet}
+    </Carousel>
 
     <div class="tiles">
       {#if data.server}
@@ -290,59 +379,33 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent);
   }
 
-  /* The situation, tinted in the tone of its worst entry. */
-  .situation {
-    --tn: var(--good);
-    display: grid;
-    gap: 14px;
-    padding: 18px 20px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--tn) 35%, var(--border));
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tn) 16%, transparent), transparent 60%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .situation.tone-warn {
-    --tn: var(--warn);
-  }
-
-  .situation.tone-bad {
-    --tn: var(--bad);
-  }
-
-  .situation.tone-info {
-    --tn: var(--accent);
-  }
-
-  .s-head {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 1.15rem;
+  /* Inside the slides of the situation (the slide itself comes from Carousel). */
+  .kind .badge {
+    margin-right: 2px;
   }
 
   .badge {
     display: inline-grid;
     place-items: center;
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     color: #fff;
     font-weight: 800;
-    background: var(--good);
+    font-size: 0.8rem;
+    letter-spacing: 0;
+    background: var(--accent);
   }
 
   .badge.small {
-    width: 22px;
-    height: 22px;
-    font-size: 0.75rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+
+  .badge.good {
+    background: var(--good);
   }
 
   .badge.warn {
@@ -353,49 +416,6 @@
     background: var(--bad);
   }
 
-  .badge.info {
-    background: var(--accent);
-  }
-
-  .alerts {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-  }
-
-  .alerts li {
-    --tn: var(--accent);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--tn);
-  }
-
-  .alerts li.tone-warn {
-    --tn: var(--warn);
-  }
-
-  .alerts li.tone-bad {
-    --tn: var(--bad);
-  }
-
-  .alerts .text {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .mini {
-    padding: 4px 10px;
-    font-size: 0.8rem;
-    flex-shrink: 0;
-  }
-
   .chips {
     display: flex;
     flex-wrap: wrap;
@@ -404,10 +424,89 @@
   }
 
   .chips > span {
-    background: var(--surface-2);
+    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
     border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
     border-radius: 999px;
     padding: 5px 12px;
+  }
+
+  .chips .sev.bad {
+    color: var(--bad);
+    border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+  }
+
+  .chips .sev.warn {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  }
+
+  .chips .sev.info {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  .list {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .entry {
+    --tn: var(--accent);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-left: 3px solid var(--tn);
+    color: var(--text);
+    font: inherit;
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .entry:hover {
+    filter: none;
+    border-color: color-mix(in srgb, var(--tn) 50%, var(--border));
+  }
+
+  .entry.tone-warn {
+    --tn: var(--warn);
+  }
+
+  .entry.tone-bad {
+    --tn: var(--bad);
+  }
+
+  .area {
+    flex-shrink: 0;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .e-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .go {
+    color: var(--tn);
+    font-weight: 800;
+  }
+
+  @media (max-width: 560px) {
+    .area {
+      display: none;
+    }
   }
 
   .tiles {
