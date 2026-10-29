@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Kit-Editor (Duelle) zeigt, warum ein Kit nicht in `/duel` erscheint:** Bei jeder Arena steht rot der Grund, wenn sie das Kit so nicht nimmt („braucht Elytra im Kit“, „nur andere Kits“, „kein Bauen“), Arenen mit „nur Elytra“ sind gekennzeichnet. Passt das Kit in keine eingeschaltete Arena, warnt der Editor, und die Kit-Liste zeigt „nicht in /duel“. Braucht MRpvp ab der nächsten Version (ältere Versionen: keine Warnung).
+
 ## [1.0.0] - 2026-10-29
 
 ### Neu

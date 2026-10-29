@@ -162,6 +162,7 @@
           </div>
 
           <div class="rules">
+            {#if kit.playable === false}<span class="badge bad" title={t('pvp.kits.unplayable')}>{t('pvp.kits.badge.unplayable')}</span>{/if}
             <span class="badge items">{t('pvp.kits.itemCount', { n: kit.items })}</span>
             {#if kit.permission}<span class="badge perm mono" title={t('pvp.kits.permission')}>{kit.permission}</span>{/if}
             {#each badges as b}<span class="badge">{b}</span>{/each}
@@ -477,6 +478,11 @@
     font-weight: 600;
     color: var(--pv);
     background: color-mix(in srgb, var(--pv) 12%, transparent);
+  }
+
+  .badge.bad {
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 14%, transparent);
   }
 
   .badge.plain {
