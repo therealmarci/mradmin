@@ -39,6 +39,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Main class of MRadmin: loads config and texts, starts the features (maintenance, tickets, admin mode, web
+ * interface ...) and offers the module API other plugins use through the Bukkit ServicesManager.
+ */
 public final class MRAdmin extends JavaPlugin implements Listener {
 
     private FileConfiguration config;

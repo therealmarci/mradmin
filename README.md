@@ -244,27 +244,25 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 
 ---
 
-## Zusammenarbeit mit anderen Plugins
-MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
-- **Dashboard:** ein Knopf je Plugin mit Live-Infos.
-- **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
-- **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
-- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader** und **Duelle** für die Spieler selbst.
+## Befehle
 
-**MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
-
-| Mit MRadmin | Braucht außerdem |
-|---|---|
-| Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
-| Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
-| In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
-| Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
-
-Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integrations` (z.B. `mrsleep: false`). Die Konsole zeigt beim Start, welche Plugins verbunden sind. Für Entwickler: [docs/MODULE-API.md](docs/MODULE-API.md).
-
-**LibertyBans:** Ist es installiert, zeigt MRadmin Strafen im Spieler-Menü und im Web und ermöglicht Entbannungsanträge über die Weboberfläche.
-
----
+| Befehl | Was er tut | Permission |
+|---|---|---|
+| `/mradmin` (`/mra`) | Admin-Dashboard (Kompass-Hub) · `/mradmin help` zeigt alle Befehle | `mradmin.dashboard` |
+| `/report [spieler]` (`/melden`, `/ticket`, `/support`) | Ticket-Menü: Spieler melden, Fehler melden, sonstige Anliegen, eigene Tickets | `mradmin.tickets.create` |
+| `/web [devices\|logout]` (`/me`) | Link und 6-stelliger Code für die eigene Spielerseite · eigene Geräte · abmelden | `mradmin.web.self` |
+| `/sc [nachricht]` | Staff-Chat (ohne Nachricht: an/aus) | `mradmin.staffchat` |
+| `/mradmin mode [on\|off\|toggle] [spieler]` · `mode list` | Admin-Modus für dich · für andere · wer ist drin | `mradmin.mode` · `.mode.others` |
+| `/mradmin announce [-d] [-q] <text\|vorlage> [werte]` | Ankündigung als Titel, Chat und Actionbar (`-d` auch in Discord, `-q` ohne Ton) | `mradmin.announce` |
+| `/mradmin maintenance [status\|on\|schedule\|extend\|off\|refresh]` | Wartung ansehen, starten, planen, verlängern, beenden, Uptime Kuma neu abfragen | `mradmin.maintenance.view` · `.manage` |
+| `/mradmin tickets` | Alle Tickets | `mradmin.tickets.view` |
+| `/mradmin player <spieler>` · `tp <spieler>` | Spieler-Menü · zu einem Spieler teleportieren | `mradmin.player.view` · `.teleport` |
+| `/mradmin status` | Serverzustand | `mradmin.status` |
+| `/mradmin web [setup\|invite\|sessions\|logout\|remove]` | Web-Zugang einrichten, Team einladen, Sitzungen ansehen und beenden, Konten löschen | `mradmin.web` · `mradmin.web.manage` |
+| `/mradmin mail test <adresse>` | Test-Mail über den eingestellten SMTP-Server | `mradmin.web.manage` |
+| `/mradmin discord [test]` | Discord-Status · Testnachricht | `mradmin.admin.discord` |
+| `/mradmin storage` | Speicher-Status (yaml, sqlite, mysql) | `mradmin.admin.storage` |
+| `/mradmin reload` · `version` | Config und Sprachdateien neu laden · Version | `mradmin.admin.reload` · `mradmin.version` |
 
 ## Permissions
 Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am einfachsten vergibst du die **Gruppen**. Sie sind in allen MRtechnology-Plugins gleich aufgebaut (`<plugin>.player` und `<plugin>.groups.support|staff|admin`), jede Gruppe enthält die darunter. Standardmäßig haben sie nur OPs.
@@ -290,6 +288,7 @@ Standard ist `op`, außer anders angegeben.
 
 | Bereich | Permissions |
 |---|---|
+| Allgemein | `mradmin.version` (`/mradmin version`) · `mradmin.web.self` (`/web`, eigene Spielerseite) |
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
 | Tickets | `mradmin.tickets.create` (`/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
@@ -339,6 +338,28 @@ Umstellen: `type` ändern und den Server neu starten - die bisherigen Daten werd
 
 ### Discord
 Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integrationen → Webhooks*), unter `discord` aktivieren und die URL eintragen. Welche Ereignisse gesendet werden (Tickets, Wartung, Admin-Modus, Web-Anmeldungen …), stellst du unter `discord.events` ein. Test: `/mradmin discord test`.
+
+---
+
+## Zusammenarbeit mit anderen Plugins
+MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
+- **Dashboard:** ein Knopf je Plugin mit Live-Infos.
+- **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
+- **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader** und **Duelle** für die Spieler selbst.
+
+**MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
+
+| Mit MRadmin | Braucht außerdem |
+|---|---|
+| Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
+| Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
+| In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
+
+Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integrations` (z.B. `mrsleep: false`). Die Konsole zeigt beim Start, welche Plugins verbunden sind. Für Entwickler: [docs/MODULE-API.md](docs/MODULE-API.md).
+
+**LibertyBans:** Ist es installiert, zeigt MRadmin Strafen im Spieler-Menü und im Web und ermöglicht Entbannungsanträge über die Weboberfläche.
 
 ---
 

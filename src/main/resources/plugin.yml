@@ -15,7 +15,7 @@ description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcem
 commands:
   mradmin:
     description: Management of MRadmin (announcements, admin mode, maintenance).
-    usage: /mradmin <announce|mode|menu|player|tp|status|tickets|maintenance|discord|reload|version>
+    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|discord|storage|reload|version|help]
     aliases: [mra]
   report:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
@@ -128,6 +128,9 @@ permissions:
     default: op
 
   # -------------------------------------------------------------- Tickets
+  mradmin.web.self:
+    description: "/web - link and sign-in code for the own player page in the web interface (needs player-web.enabled)."
+    default: op
   mradmin.tickets.create:
     description: /report - open tickets and view, answer and close your own.
     default: op
