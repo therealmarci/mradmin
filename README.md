@@ -309,6 +309,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 
 | Abschnitt | Wofür |
 |---|---|
+| `language` · `fallback-language` · `server-language` · `timezone` | Sprachen (pro Spieler automatisch) und Zeitzone aller angezeigten Zeiten (leer = die des Servers) |
 | `features` · `integrations` | Funktionen und Plugin-Verbindungen an/aus |
 | `maintenance` · `uptime-kuma` | Ablauf der Wartung, Anbindung an Uptime Kuma |
 | `announce` · `discord-announce` | Ankündigungen im Spiel und im Community-Discord |
