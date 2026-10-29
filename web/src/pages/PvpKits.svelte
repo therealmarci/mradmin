@@ -1,6 +1,7 @@
 <script>
-  // MRpvp: all kits as cards (icon, name, rules, hotbar) in the order the game shows them. Open one to edit it, copy
-  // it, or move it up and down. Needs mrpvp.admin.kits (like the kit editor in the game).
+  // MRpvp: all kits as a list in the order the game shows them - one row per kit (place, icon and name, hotbar,
+  // rules, buttons). The order changes with ↑ ↓ or by dragging the handle. Open one to edit it or copy it.
+  // Needs mrpvp.admin.kits (like the kit editor in the game).
   import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { go } from '../lib/router.svelte.js';
@@ -14,6 +15,11 @@
   let error = $state('');
   let busy = $state(false);
 
+  // Dragging a row by its handle: the row being dragged and the gap it would land in (0 = before the first).
+  let grabbed = $state(null);
+  let dragIndex = $state(null);
+  let gap = $state(null);
+
   async function load() {
     try {
       const data = await moduleData('mrpvp', 'kits');
@@ -25,19 +31,51 @@
     }
   }
 
-  async function move(index, step) {
+  async function reorder(from, to) {
+    if (from === to) return;
     const ids = kits.map((k) => k.id);
-    const [id] = ids.splice(index, 1);
-    ids.splice(index + step, 0, id);
+    const [id] = ids.splice(from, 1);
+    ids.splice(to, 0, id);
+    // Shown at once, MRpvp confirms with the next load.
+    kits = ids.map((x) => kits.find((k) => k.id === x));
     busy = true;
     try {
       await moduleAction('mrpvp', { action: 'kitOrder', ids });
       await load();
     } catch (e) {
       error = errorText(e);
+      await load();
     } finally {
       busy = false;
     }
+  }
+
+  function dragStart(e, i) {
+    dragIndex = i;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', kits[i].id);
+  }
+
+  function dragOver(e, i) {
+    if (dragIndex == null) return;
+    e.preventDefault();
+    const r = e.currentTarget.getBoundingClientRect();
+    gap = e.clientY < r.top + r.height / 2 ? i : i + 1;
+  }
+
+  function dragDrop(e) {
+    e.preventDefault();
+    const from = dragIndex;
+    const to = gap;
+    dragEnd();
+    if (from == null || to == null) return;
+    reorder(from, to > from ? to - 1 : to);
+  }
+
+  function dragEnd() {
+    dragIndex = null;
+    gap = null;
+    grabbed = null;
   }
 
   function ruleBadges(r) {
@@ -94,47 +132,49 @@
       <button onclick={() => go('/pvp/new-kit')}>+ {t('pvp.kits.new')}</button>
     </section>
   {:else}
-    <ul class="list">
+    <ol class="rows" class:sorting={dragIndex != null}>
       {#each kits as kit, i (kit.id)}
         {@const badges = ruleBadges(kit.rules)}
-        <li class="kit">
-          <div class="k-top">
-            <button class="k-open" onclick={() => go('/pvp/kits/' + kit.id)}>
-              <span class="k-icon"><ItemIcon item={{ type: kit.icon, amount: 1 }} size={40} /></span>
-              <span class="k-title">
-                <strong>{kit.name}</strong>
-                <span class="muted small mono">{kit.id}</span>
-              </span>
-            </button>
-            <span class="order">
-              <span class="pos" title={t('pvp.kits.position')}>{i + 1}</span>
-              <button class="secondary tiny" disabled={busy || i === 0} onclick={() => move(i, -1)} aria-label={t('pvp.kits.up')}>↑</button>
-              <button class="secondary tiny" disabled={busy || i === kits.length - 1} onclick={() => move(i, 1)} aria-label={t('pvp.kits.down')}>↓</button>
-            </span>
+        <li class="row" class:dragged={dragIndex === i} class:gap-before={gap === i && dragIndex !== i && dragIndex !== i - 1}
+          class:gap-after={gap === kits.length && i === kits.length - 1 && dragIndex !== i}
+          draggable={grabbed === i} ondragstart={(e) => dragStart(e, i)} ondragover={(e) => dragOver(e, i)}
+          ondrop={dragDrop} ondragend={dragEnd}>
+          <div class="place">
+            <span class="grip" title={t('pvp.kits.drag')} aria-hidden="true"
+              onpointerdown={() => (grabbed = i)} onpointerup={() => dragIndex == null && (grabbed = null)}>⋮⋮</span>
+            <button class="arrow" disabled={busy || i === 0} onclick={() => reorder(i, i - 1)} aria-label={t('pvp.kits.up')}>▲</button>
+            <span class="pos" title={t('pvp.kits.position')}>{i + 1}</span>
+            <button class="arrow" disabled={busy || i === kits.length - 1} onclick={() => reorder(i, i + 1)} aria-label={t('pvp.kits.down')}>▼</button>
           </div>
+
+          <button class="kit" onclick={() => go('/pvp/kits/' + kit.id)}>
+            <span class="k-icon"><ItemIcon item={{ type: kit.icon, amount: 1 }} size={36} /></span>
+            <span class="k-title">
+              <strong>{kit.name}</strong>
+              <span class="muted small mono">{kit.id}</span>
+            </span>
+          </button>
 
           <div class="hotbar">
             {#each Array.from({ length: 9 }, (_, s) => kit.hotbar.find((h) => h.slot === s)) as item}
-              <ItemIcon {item} size={30} />
+              <ItemIcon {item} size={28} />
             {/each}
           </div>
 
-          <div class="badges">
+          <div class="rules">
+            <span class="badge items">{t('pvp.kits.itemCount', { n: kit.items })}</span>
             {#if kit.permission}<span class="badge perm mono" title={t('pvp.kits.permission')}>{kit.permission}</span>{/if}
             {#each badges as b}<span class="badge">{b}</span>{/each}
-            {#if !badges.length && !kit.permission}<span class="muted small">{t('pvp.kits.noRules')}</span>{/if}
+            {#if !badges.length}<span class="badge plain">{t('pvp.kits.noRules')}</span>{/if}
           </div>
 
-          <div class="k-foot">
-            <span class="muted small">{t('pvp.kits.itemCount', { n: kit.items })}</span>
-            <span class="k-actions">
-              <button class="secondary mini" onclick={() => go('/pvp/new-kit/' + kit.id)}>{t('pvp.kits.copy')}</button>
-              <button class="mini" onclick={() => go('/pvp/kits/' + kit.id)}>{t('pvp.kits.edit')}</button>
-            </span>
+          <div class="actions">
+            <button class="secondary mini" onclick={() => go('/pvp/new-kit/' + kit.id)}>{t('pvp.kits.copy')}</button>
+            <button class="mini" onclick={() => go('/pvp/kits/' + kit.id)}>{t('pvp.kits.edit')}</button>
           </div>
         </li>
       {/each}
-    </ul>
+    </ol>
   {/if}
 </div>
 
@@ -232,46 +272,127 @@
     flex-wrap: wrap;
   }
 
-  .list {
+  /* The list: one row per kit, columns place | kit | hotbar | rules | buttons. Narrower screens move the
+     hotbar (and on phones the rules) into their own line. */
+  .rows {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  }
-
-  /* One kit: icon and name, the hotbar as in the game, its rules, the buttons. */
-  .kit {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background:
-      radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--pv) 8%, transparent), transparent 55%),
-      var(--surface);
-    box-shadow: var(--shadow);
-    transition: transform 0.15s, border-color 0.15s;
-  }
-
-  .kit:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--pv) 40%, var(--border));
-  }
-
-  .k-top {
-    display: flex;
-    align-items: center;
     gap: 10px;
   }
 
-  .k-open {
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1.2fr) auto;
+    grid-template-areas: 'place kit hotbar rules actions';
+    align-items: center;
+    gap: 10px 18px;
+    padding: 12px 16px 12px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: border-color 0.15s, opacity 0.15s;
+  }
+
+  .row:hover {
+    border-color: color-mix(in srgb, var(--pv) 40%, var(--border));
+  }
+
+  .row.dragged {
+    opacity: 0.4;
+  }
+
+  /* Where the dragged kit would land */
+  .row.gap-before::before,
+  .row.gap-after::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--pv);
+  }
+
+  .row.gap-before::before {
+    top: -7px;
+  }
+
+  .row.gap-after::after {
+    bottom: -7px;
+  }
+
+  .place {
+    grid-area: place;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    justify-items: center;
+    column-gap: 4px;
+  }
+
+  .grip {
+    grid-row: 1 / 4;
+    padding: 6px 2px;
+    font-size: 0.9rem;
+    letter-spacing: -2px;
+    color: var(--muted);
+    cursor: grab;
+    user-select: none;
+  }
+
+  .sorting .grip {
+    cursor: grabbing;
+  }
+
+  .arrow,
+  .pos {
+    grid-column: 2;
+  }
+
+  .arrow {
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    font-size: 0.6rem;
+    border-radius: 6px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+  }
+
+  .arrow:not(:disabled):hover {
+    filter: none;
+    color: var(--pv);
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+
+  .arrow:disabled {
+    opacity: 0.25;
+  }
+
+  .pos {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--pv);
+    background: color-mix(in srgb, var(--pv) 12%, var(--surface-2));
+  }
+
+  .kit {
+    grid-area: kit;
     display: flex;
     align-items: center;
     gap: 12px;
-    flex: 1;
     min-width: 0;
     padding: 0;
     background: transparent;
@@ -282,19 +403,19 @@
     text-align: left;
   }
 
-  .k-open:hover {
+  .kit:hover {
     filter: none;
   }
 
-  .k-open:hover strong {
+  .kit:hover strong {
     color: var(--pv);
   }
 
   .k-icon {
     display: grid;
     place-items: center;
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     flex-shrink: 0;
     border-radius: 12px;
     background: color-mix(in srgb, var(--pv) 12%, var(--surface-2));
@@ -307,60 +428,42 @@
   }
 
   .k-title strong {
-    font-size: 1.08rem;
+    font-size: 1.04rem;
     overflow-wrap: anywhere;
-  }
-
-  .order {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .pos {
-    min-width: 26px;
-    text-align: center;
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--muted);
-  }
-
-  .tiny {
-    padding: 4px 9px;
-  }
-
-  .mini {
-    padding: 4px 12px;
-    font-size: 0.85rem;
   }
 
   /* The hotbar on a dark strip like in the game */
   .hotbar {
+    grid-area: hotbar;
     display: flex;
     gap: 3px;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 6px;
+    padding: 5px;
     border-radius: 10px;
     background: color-mix(in srgb, #000 22%, var(--surface-2));
     border: 1px solid var(--border);
   }
 
-  .badges {
+  .rules {
+    grid-area: rules;
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
     align-items: center;
-    flex: 1;
-    align-content: flex-start;
+    min-width: 0;
   }
 
   .badge {
-    font-size: 0.75rem;
+    font-size: 0.73rem;
     font-weight: 700;
     padding: 2px 9px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .badge.items {
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
   }
 
   .badge.perm {
@@ -369,18 +472,20 @@
     background: color-mix(in srgb, var(--pv) 12%, transparent);
   }
 
-  .k-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
+  .badge.plain {
+    font-weight: 500;
+    color: var(--muted);
   }
 
-  .k-actions {
+  .actions {
+    grid-area: actions;
     display: flex;
     gap: 6px;
+  }
+
+  .mini {
+    padding: 5px 12px;
+    font-size: 0.85rem;
   }
 
   .empty {
@@ -399,6 +504,43 @@
     margin: 0;
   }
 
+  @media (max-width: 1250px) {
+    .row {
+      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.3fr) auto;
+      grid-template-areas:
+        'place kit rules actions'
+        'place hotbar hotbar hotbar';
+    }
+
+    .hotbar {
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .row {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        'place kit'
+        'place hotbar'
+        'place rules'
+        'place actions';
+      padding: 12px 12px 12px 6px;
+    }
+
+    .grip {
+      display: none;
+    }
+
+    .hotbar {
+      flex-wrap: wrap;
+    }
+
+    .actions {
+      justify-content: flex-end;
+    }
+  }
+
   @media (max-width: 640px) {
     .head {
       padding: 18px 16px;
@@ -406,7 +548,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .kit {
+    .row {
       transition: none;
     }
   }

@@ -2,11 +2,12 @@
   // One item like in an inventory slot: the game's picture (or a short label if MRadmin has no pictures), the
   // amount, the durability bar and the enchantment glint. Hovering (or tapping) shows the tooltip as in the game.
   // With "onclick" the slot is a button (kit editor) - then a tap selects instead of showing the tooltip.
+  // "slotKey" marks the slot for ItemGrid (drag and drop, right click), "notip" keeps the tooltip closed (while dragging).
   import { items, loadItems, iconStyle, tooltipText } from '../lib/items.svelte.js';
   import { itemShort, itemTone } from '../lib/pvp.js';
   import ItemTooltip from './ItemTooltip.svelte';
 
-  let { item = null, size = 40, placeholder = '', selected = false, onclick = null, extra = '' } = $props();
+  let { item = null, size = 40, placeholder = '', selected = false, onclick = null, extra = '', slotKey = null, notip = false } = $props();
 
   loadItems();
 
@@ -19,7 +20,7 @@
   let position = $state({ x: 0, y: 0, below: false });
 
   function show() {
-    if (!item || !anchor) return;
+    if (!item || !anchor || notip) return;
     const r = anchor.getBoundingClientRect();
     const below = r.top < 160;
     position = { x: Math.max(8, Math.min(r.left, window.innerWidth - 290)), y: below ? r.bottom + 6 : r.top - 6, below };
@@ -28,6 +29,10 @@
   function hide() {
     open = false;
   }
+  $effect(() => {
+    if (notip) open = false;
+  });
+
   function tap(e) {
     if (onclick) {
       hide();
@@ -51,6 +56,7 @@
   class:glint
   style="--size: {size}px"
   bind:this={anchor}
+  data-slot={slotKey}
   onpointerenter={(e) => e.pointerType === 'mouse' && show()}
   onpointerleave={hide}
   onblur={hide}

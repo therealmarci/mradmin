@@ -1,6 +1,8 @@
 <script>
-  // MRpvp: one kit in the editor - the inventory like in the game (click a slot to edit its item, or switch on
-  // "move" to swap two slots), name and description per language, icon, permission and the rules of the kit.
+  // MRpvp: one kit in the editor - the inventory like in the game, name and description per language, icon,
+  // permission and the rules of the kit. Slots: click = edit the item, drag with the mouse = move (Ctrl = copy),
+  // right click = copy / cut / paste / delete (also Ctrl+C/X/V and Del over a slot). On touch the modes "move"
+  // (tap two slots, they swap) and "copy" (tap the source, then every slot that gets a copy) do the same.
   // Nothing is stored until "Save"; then MRpvp writes kits.yml and reloads the kits (rounds already running keep
   // their kit). id = kit to edit; for a new kit id is null and copyFrom optionally names a kit to start from.
   import { moduleAction, moduleData } from '../lib/modules.js';
@@ -27,8 +29,11 @@
   let message = $state('');
   let saving = $state(false);
   let dirty = $state(false);
-  let moving = $state(false);
+  let mode = $state('edit'); // 'edit' | 'move' | 'copy'
   let picked = $state(null);
+  let clipboard = $state(null); // item data
+  let hovered = null;
+  let contextMenu = $state(null); // { slot, x, y }
   let editing = $state(null);
   let iconPicking = $state(false);
   // The language whose name and description are being edited.
@@ -96,25 +101,94 @@
 
   function onslot(slot) {
     const key = String(slot);
-    if (moving) {
+    if (mode === 'move') {
       if (picked == null) {
-        picked = key;
+        if (slots[key]) picked = key;
       } else {
-        const a = slots[picked];
-        const b = slots[key];
-        slots[picked] = b;
-        slots[key] = a;
+        swap(picked, key);
         picked = null;
-        dirty = true;
+      }
+      return;
+    }
+    if (mode === 'copy') {
+      if (picked == null) {
+        if (slots[key]) picked = key;
+      } else if (picked === key) {
+        picked = null;
+      } else {
+        put(key, slots[picked]);
       }
       return;
     }
     editing = key;
   }
 
-  function setMoving(value) {
-    moving = value;
+  function setMode(value) {
+    mode = value;
     picked = null;
+  }
+
+  function swap(a, b) {
+    if (a === b) return;
+    const first = slots[a];
+    slots[a] = slots[b];
+    slots[b] = first;
+    dirty = true;
+  }
+
+  /** A copy of an item into a slot (the slot's old item is replaced). */
+  function put(key, item) {
+    if (!item) return;
+    slots[key] = $state.snapshot(item);
+    dirty = true;
+  }
+
+  function clear(key) {
+    if (!slots[key]) return;
+    slots[key] = null;
+    dirty = true;
+  }
+
+  // Dragged with the mouse: move (both swap) or copy with Ctrl.
+  function dropped(from, to, copy) {
+    const a = String(from);
+    const b = String(to);
+    if (copy) put(b, slots[a]);
+    else swap(a, b);
+  }
+
+  function command(action, slot) {
+    const key = String(slot);
+    contextMenu = null;
+    if (action === 'edit') editing = key;
+    else if (action === 'copy' && slots[key]) clipboard = $state.snapshot(slots[key]);
+    else if (action === 'cut' && slots[key]) {
+      clipboard = $state.snapshot(slots[key]);
+      clear(key);
+    } else if (action === 'paste') put(key, clipboard);
+    else if (action === 'delete') clear(key);
+  }
+
+  function openMenu(slot, x, y) {
+    picked = null;
+    contextMenu = { slot: String(slot), x: Math.min(x, window.innerWidth - 220), y: Math.min(y, window.innerHeight - 230) };
+  }
+
+  // Ctrl+C / Ctrl+X / Ctrl+V / Del over a slot - not while typing or in a dialog.
+  function keydown(e) {
+    if (e.key === 'Escape') {
+      contextMenu = null;
+      picked = null;
+      return;
+    }
+    if (hovered == null || editing != null || iconPicking) return;
+    if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const action = ctrl && e.key.toLowerCase() === 'c' ? 'copy' : ctrl && e.key.toLowerCase() === 'x' ? 'cut'
+      : ctrl && e.key.toLowerCase() === 'v' ? 'paste' : e.key === 'Delete' || e.key === 'Backspace' ? 'delete' : null;
+    if (!action) return;
+    e.preventDefault();
+    command(action, hovered);
   }
 
   function slotLabel(key) {
@@ -220,7 +294,8 @@
   load();
 </script>
 
-<svelte:window onbeforeunload={(e) => dirty && e.preventDefault()} />
+<svelte:window onbeforeunload={(e) => dirty && e.preventDefault()} onkeydown={keydown}
+  onpointerdown={(e) => contextMenu && !e.target.closest('.ctx') && (contextMenu = null)} onscroll={() => (contextMenu = null)} />
 
 <!-- Three choices for regeneration / hunger: players choose, always on, always off. -->
 {#snippet tri(key)}
@@ -250,10 +325,7 @@
     {#if !error}<p class="muted">{t('common.loading')}</p>{/if}
   {:else}
     <header class="head">
-      <button class="k-icon" onclick={() => (iconPicking = true)} title={t('pvp.kits.icon') + ' - ' + t('pvp.kits.iconChange')}>
-        <ItemIcon item={{ type: kit.icon, amount: 1 }} size={44} />
-        <span class="pen" aria-hidden="true">✎</span>
-      </button>
+      <span class="k-icon"><ItemIcon item={{ type: kit.icon, amount: 1 }} size={44} /></span>
       <div class="intro">
         <h1>{id || title ? title || kit.id : t('pvp.kits.newTitle')}</h1>
         <div class="facts">
@@ -277,14 +349,28 @@
       <div class="s-head">
         <h2>{t('pvp.kits.inventory')}</h2>
         <div class="seg" role="radiogroup">
-          <button role="radio" aria-checked={!moving} class:active={!moving} onclick={() => setMoving(false)}>✎ {t('pvp.kits.edit')}</button>
-          <button role="radio" aria-checked={moving} class:active={moving} onclick={() => setMoving(true)}>⇄ {t('pvp.kits.move')}</button>
+          {#each [['edit', '✎', 'pvp.kits.edit'], ['move', '⇄', 'pvp.kits.move'], ['copy', '⧉', 'pvp.kits.copyMode']] as [m, sign, key]}
+            <button role="radio" aria-checked={mode === m} class:active={mode === m} onclick={() => setMode(m)}>{sign} {t(key)}</button>
+          {/each}
         </div>
       </div>
-      <p class="hint-line" class:active={moving}>{moving ? (picked == null ? t('pvp.kits.moveHint1') : t('pvp.kits.moveHint2')) : t('pvp.kits.inventoryHint')}</p>
+      <p class="hint-line" class:active={mode !== 'edit'}>
+        {#if mode === 'move'}{picked == null ? t('pvp.kits.moveHint1') : t('pvp.kits.moveHint2')}
+        {:else if mode === 'copy'}{picked == null ? t('pvp.kits.copyHint1') : t('pvp.kits.copyHint2')}
+        {:else}{t('pvp.kits.inventoryHint')}{/if}
+      </p>
       <div class="inv-grid">
-        <ItemGrid inventory={grid.inventory} armor={grid.armor} offhand={grid.offhand} {onslot} selected={picked == null ? null : picked in ARMOR_INDEX || picked === 'offhand' ? picked : Number(picked)} size={44} />
+        <ItemGrid inventory={grid.inventory} armor={grid.armor} offhand={grid.offhand} {onslot} size={44}
+          selected={picked == null ? null : picked in ARMOR_INDEX || picked === 'offhand' ? picked : Number(picked)}
+          ondrop={dropped} onmenu={openMenu} onhover={(s) => (hovered = s)} />
       </div>
+      {#if clipboard}
+        <div class="clip">
+          <ItemIcon item={clipboard} size={32} />
+          <span class="grow-text"><span class="muted small">{t('pvp.kits.clipboard')}</span><strong>{typeName(clipboard.type)}</strong></span>
+          <button class="secondary mini" onclick={() => (clipboard = null)}>{t('pvp.kits.clipboardClear')}</button>
+        </div>
+      {/if}
     </section>
 
     <div class="columns">
@@ -318,9 +404,15 @@
               <textarea id="kit-desc" rows="3" bind:value={kit.descriptions[textLang]} oninput={() => (dirty = true)}></textarea>
             </div>
             <div class="preview">
-              <span class="label small">{t('pvp.kits.preview')}</span>
+              <div class="s-head">
+                <span class="label small">{t('pvp.kits.preview')}</span>
+                <button class="secondary mini" onclick={() => (iconPicking = true)}>{t('pvp.kits.iconChangeLong')}</button>
+              </div>
               <div class="mc">
-                <ItemIcon item={{ type: kit.icon, amount: 1 }} size={36} />
+                <button class="icon-pick" onclick={() => (iconPicking = true)} title={t('pvp.kits.iconChangeLong')}>
+                  <ItemIcon item={{ type: kit.icon, amount: 1 }} size={40} />
+                  <span class="pen" aria-hidden="true">✎</span>
+                </button>
                 <div class="mc-tip">
                   <div>{#each previewName as s}<span style={spanStyle(s)}>{s.text}</span>{/each}</div>
                   {#each previewLore as line}
@@ -462,6 +554,19 @@
   </div>
 {/if}
 
+{#if contextMenu}
+  {@const has = !!slots[contextMenu.slot]}
+  <div class="ctx" role="menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px">
+    <div class="ctx-title">{slotLabel(contextMenu.slot)}</div>
+    <button role="menuitem" onclick={() => command('edit', contextMenu.slot)}>✎ {t('pvp.kits.edit')}<kbd>{t('pvp.kits.key.click')}</kbd></button>
+    <button role="menuitem" disabled={!has} onclick={() => command('copy', contextMenu.slot)}>⧉ {t('pvp.kits.copy')}<kbd>{t('pvp.kits.key.ctrl')}+C</kbd></button>
+    <button role="menuitem" disabled={!has} onclick={() => command('cut', contextMenu.slot)}>✂ {t('pvp.kits.menu.cut')}<kbd>{t('pvp.kits.key.ctrl')}+X</kbd></button>
+    <button role="menuitem" disabled={!clipboard} onclick={() => command('paste', contextMenu.slot)}>
+      {#if clipboard}<ItemIcon item={clipboard} size={18} notip />{:else}📋{/if} {t('pvp.kits.menu.paste')}<kbd>{t('pvp.kits.key.ctrl')}+V</kbd></button>
+    <button role="menuitem" class="bad" disabled={!has} onclick={() => command('delete', contextMenu.slot)}>✕ {t('pvp.kits.menu.delete')}<kbd>{t('pvp.kits.key.del')}</kbd></button>
+  </div>
+{/if}
+
 {#if editing != null}
   <ItemEditor item={slots[editing] ?? null} heading={slotLabel(editing)}
     onsave={(item) => { slots[editing] = item; dirty = true; }}
@@ -516,10 +621,6 @@
     border: 1px solid color-mix(in srgb, var(--pv) 35%, transparent);
   }
 
-  .k-icon:hover {
-    filter: none;
-    border-color: var(--pv);
-  }
 
   .pen {
     position: absolute;
@@ -960,6 +1061,99 @@
     border-radius: 999px;
     color: var(--muted);
     background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  /* The icon in the preview: click = change */
+  .icon-pick {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--pv) 14%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--pv) 35%, transparent);
+  }
+
+  .icon-pick:hover {
+    filter: none;
+    border-color: var(--pv);
+  }
+
+  .mini {
+    padding: 3px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* The clipboard under the inventory */
+  .clip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--pv) 8%, var(--surface-2));
+    border: 1px dashed color-mix(in srgb, var(--pv) 45%, var(--border));
+  }
+
+  .grow-text {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Right-click menu of a slot */
+  .ctx {
+    position: fixed;
+    z-index: 1200;
+    display: grid;
+    min-width: 210px;
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow), 0 14px 34px -12px rgb(0 0 0 / 0.4);
+  }
+
+  .ctx-title {
+    padding: 4px 10px 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .ctx button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 8px;
+    text-align: left;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    background: transparent;
+  }
+
+  .ctx button:not(:disabled):hover {
+    filter: none;
+    background: var(--surface-2);
+  }
+
+  .ctx button.bad {
+    color: var(--bad);
+  }
+
+  .ctx kbd {
+    margin-left: auto;
+    padding-left: 14px;
+    font-family: inherit;
+    font-size: 0.72rem;
+    color: var(--muted);
   }
 
   /* Unsaved changes: a bar at the bottom */
