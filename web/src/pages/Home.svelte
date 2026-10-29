@@ -91,8 +91,8 @@
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The health monitor's last hour for the first slide (only with the right to see it): every 30 seconds while the
-  // tab is visible, thinned out to about 90 points (each the average of its seconds, the peaks as maximum).
+  // The health monitor's last hour for the first slide (only with the right to see it): once a minute while the tab
+  // is visible, one point per minute (the average of its seconds).
   let health = $state(null);
   async function loadHealth() {
     try {
@@ -104,28 +104,33 @@
   $effect(() => {
     if (!me.may.health) return;
     loadHealth();
-    return poll(loadHealth, 30_000);
+    return poll(loadHealth, 60_000);
   });
 
-  const BUCKETS = 90;
-  const PEAKS = new Set(['msptMax', 'gcMax']);
+  const MINUTE = 60_000;
   const series = $derived.by(() => {
-    const points = health?.points ?? [];
-    if (points.length <= BUCKETS) return points;
-    const size = points.length / BUCKETS;
-    const out = [];
-    for (let b = 0; b < BUCKETS; b++) {
-      const part = points.slice(Math.floor(b * size), Math.floor((b + 1) * size));
+    const minutes = new Map();
+    for (const point of health?.points ?? []) {
+      const key = Math.floor(point.time / MINUTE);
+      if (!minutes.has(key)) minutes.set(key, []);
+      minutes.get(key).push(point);
+    }
+    return [...minutes.values()].map((part) => {
       const avg = { time: part.at(-1).time };
       for (const key of Object.keys(part[0])) {
         if (key === 'time') continue;
         const vals = part.map((x) => x[key]).filter((v) => typeof v === 'number' && v >= 0);
-        avg[key] = vals.length ? (PEAKS.has(key) ? Math.max(...vals) : vals.reduce((a, c) => a + c, 0) / vals.length) : null;
+        avg[key] = vals.length ? vals.reduce((a, c) => a + c, 0) / vals.length : null;
       }
-      out.push(avg);
-    }
-    return out;
+      return avg;
+    });
   });
+  const charts = [
+    { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
+    { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
+    { key: 'heapUsed', label: t('overview.ram'), color: 'var(--series-3)', format: (v) => mb(v) },
+    { key: 'players', label: t('health.players'), color: '#a855f7', format: (v) => String(Math.round(v ?? 0)) },
+  ];
   // The latest values: the newest point of the monitor, TPS/MSPT/RAM from the overview (every 2 seconds).
   const now = $derived({
     ...(health?.points?.at(-1) ?? {}),
@@ -226,8 +231,15 @@
             </div>
             <div class="h-chart">
               <span class="muted small">{t('home.h.lastHour')}</span>
-              <div class="spark-box">
-                <Sparkline values={series.map((x) => x.tps)} color="var(--series-1)" max={20} height={56} label="TPS" />
+              <div class="sparks">
+                {#each charts as c (c.key)}
+                  <div class="spark-card" style="--c: {c.color}">
+                    <div class="sc-head"><span>{c.label}</span><b>{c.format(series.at(-1)?.[c.key])}</b></div>
+                    <div class="spark-box">
+                      <Sparkline values={series.map((x) => x[c.key])} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
+                    </div>
+                  </div>
+                {/each}
               </div>
             </div>
           </div>
@@ -460,7 +472,37 @@
   .h-chart {
     display: grid;
     gap: 4px;
-    max-width: 420px;
+  }
+
+  .sparks {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spark-card {
+    display: grid;
+    gap: 2px;
+    padding: 6px 10px 5px;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-left: 3px solid var(--c);
+  }
+
+  .sc-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .sc-head span {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .spark-box {
