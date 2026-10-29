@@ -4,7 +4,7 @@
   // simply asks for a new code.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
-  import LangFlags from './LangFlags.svelte';
+  import LangFlags from '../components/LangFlags.svelte';
 
   let { onSignedIn, error: outer = '' } = $props();
 
