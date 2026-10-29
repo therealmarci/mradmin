@@ -34,5 +34,20 @@ export function sections(entries, textOf = (e) => e.text) {
     }));
 }
 
+/**
+ * The lines of a changelog as written, each with its indent: a heading by its level (level 1 = 0), an entry one step
+ * below the heading above it. [{ heading, level, indent, type, text }]
+ */
+export function lines(entries, textOf = (e) => e.text) {
+  let level = 0;
+  return (entries ?? []).map((e) => {
+    if (isHeading(e.type)) {
+      level = levelOf(e.type);
+      return { heading: true, level, indent: level - 1, type: e.type, text: textOf(e) };
+    }
+    return { heading: false, level: 0, indent: level, type: e.type, text: textOf(e) };
+  });
+}
+
 /** How many real entries (no headings) a changelog has. */
 export const entryCount = (entries) => (entries ?? []).filter((e) => !isHeading(e.type)).length;

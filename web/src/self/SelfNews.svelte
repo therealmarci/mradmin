@@ -1,14 +1,14 @@
 <script>
   // The page "News" of the player area: active warnings on top (written by the team or pinned in Uptime Kuma), then
   // two areas to switch between - news (the newest or pinned one big, the others as cards, read in a window) and the
-  // changelog (a timeline of versions with their entries by kind). Links like /me/news#post-3 open that post,
+  // changelog (a timeline of versions, each written out like a document with its headings). Links like /me/news#post-3 open that post,
   // /me/news#changelog the changelog.
   import { tick } from 'svelte';
   import { api } from '../lib/api.js';
   import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
-  import { sections } from '../lib/changelog.js';
+  import { lines } from '../lib/changelog.js';
 
   const NEWS_PAGE = 9;
   const RELEASES_PAGE = 5;
@@ -199,23 +199,16 @@
                 </div>
                 {#if r.title && r.title !== r.version}<h3>{r.title}</h3>{/if}
                 {#if r.text}<p class="r-intro">{r.text}</p>{/if}
-                <div class="sections">
-                  {#each sections(r.entries) as s}
-                    <div class="section lvl-{s.level}" style="--lvl: {s.level}">
-                      {#if s.title != null}<div class="s-title">{s.title}</div>{/if}
-                      {#if s.groups.length}
-                        <div class="groups">
-                          {#each s.groups as g}
-                            <div class="group t-{g.type}">
-                              <span class="g-label">{t('self.news.type.' + g.type)} <span class="n">{g.items.length}</span></span>
-                              <ul>
-                                {#each g.items as e}<li>{e.text}</li>{/each}
-                              </ul>
-                            </div>
-                          {/each}
-                        </div>
-                      {/if}
-                    </div>
+                <div class="doc">
+                  {#each lines(r.entries) as l}
+                    {#if l.heading}
+                      <div class="d-head h{l.level}" style="--indent: {l.indent}">{l.text}</div>
+                    {:else}
+                      <div class="d-line t-{l.type}" style="--indent: {l.indent}">
+                        <span class="tag">{t('news.type.' + l.type)}</span>
+                        <span class="d-text">{l.text}</span>
+                      </div>
+                    {/if}
                   {/each}
                 </div>
               </li>
@@ -635,55 +628,54 @@
     white-space: pre-line;
   }
 
-  /* Sections of a changelog: a heading and its entries, indented by level (1 main heading, 2 sub heading, 3). */
-  .sections {
+  /* A changelog like a document: headings and lines as written; every step of indent shows a thin guide line on the
+     left, so the entries below a heading stay visibly together. */
+  .doc {
     display: grid;
-    gap: 12px;
   }
 
-  .section {
-    display: grid;
-    gap: 8px;
+  .d-head,
+  .d-line {
+    --step: 20px;
+    padding-left: calc(var(--indent) * var(--step));
+    background: repeating-linear-gradient(90deg, var(--border) 0 2px, transparent 2px var(--step)) left top /
+      calc(var(--indent) * var(--step)) 100% no-repeat;
   }
 
-  .section.lvl-2,
-  .section.lvl-3 {
-    margin-left: calc((var(--lvl) - 1) * 18px);
-    padding-left: 12px;
-    border-left: 2px solid var(--border);
-  }
-
-  .s-title {
+  .d-head {
+    padding-top: 12px;
+    padding-bottom: 4px;
     font-weight: 800;
     overflow-wrap: anywhere;
   }
 
-  .lvl-1 > .s-title {
-    font-size: 1.08rem;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border);
+  .d-head:first-child {
+    padding-top: 0;
   }
 
-  .lvl-2 > .s-title {
-    font-size: 0.98rem;
+  .d-head.h1 {
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
   }
 
-  .lvl-3 > .s-title {
-    font-size: 0.88rem;
+  .d-head.h2 {
+    font-size: 1rem;
+  }
+
+  .d-head.h3 {
+    font-size: 0.9rem;
     color: var(--muted);
   }
 
-  .groups {
-    display: grid;
+  .d-line {
+    --t: var(--muted);
+    display: flex;
+    align-items: baseline;
     gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  }
-
-  .group {
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border-left: 3px solid var(--t);
+    padding-top: 3px;
+    padding-bottom: 3px;
   }
 
   .t-new {
@@ -702,30 +694,34 @@
     --t: var(--bad);
   }
 
-  .g-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
+  .tag {
+    flex-shrink: 0;
+    min-width: 76px;
+    padding: 1px 8px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.7rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     color: var(--t);
+    background: color-mix(in srgb, var(--t) 14%, transparent);
   }
 
-  .group ul {
-    margin: 8px 0 0;
-    padding-left: 18px;
-    display: grid;
-    gap: 4px;
-  }
-
-  .group li {
+  .d-text {
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  .group li::marker {
-    color: var(--t);
+  @media (max-width: 520px) {
+    .d-head,
+    .d-line {
+      --step: 12px;
+    }
+
+    .tag {
+      min-width: 0;
+    }
   }
 
   .pager {
