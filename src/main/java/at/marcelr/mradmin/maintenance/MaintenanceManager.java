@@ -55,6 +55,19 @@ public final class MaintenanceManager {
     private Window manual;
     /** Kuma maintenances ended early with "/mradmin maintenance off": key -> start they had at that time. */
     private final Map<String, Instant> ignored = new HashMap<>();
+    /** Maintenances that are over (Kuma and manual), newest first, at most {@link #HISTORY} (persisted). */
+    private final List<Past> history = new ArrayList<>();
+    private static final int HISTORY = 10;
+
+    /**
+     * A maintenance that is over.
+     *
+     * @param window    the maintenance as it was last seen
+     * @param at        when it ended or was cancelled
+     * @param cancelled cancelled before it began (otherwise it ran)
+     */
+    public record Past(Window window, Instant at, boolean cancelled) {
+    }
 
     // State of the last tick (persisted).
     private Phase phase = Phase.NONE;
@@ -267,6 +280,7 @@ public final class MaintenanceManager {
                 messages().broadcast("maintenance-cancelled", resolvers(previous, now));
             }
             plugin.discord().log("maintenance-cancelled", discordTags(previous));
+            remember(previous, true);
         }
         // Discord: a new maintenance or new times (not for the countdown phases themselves).
         if (current != null && next != Phase.ACTIVE && before != Phase.ACTIVE) {
@@ -381,6 +395,23 @@ public final class MaintenanceManager {
         messages().broadcast("maintenance-ended");
         plugin.discord().log("maintenance-end", discordTags(window));
         plugin.getLogger().info("Maintenance ended.");
+        remember(window, false);
+    }
+
+    /** Puts a maintenance that is over at the front of the history (saved with the next {@link #save}). */
+    private void remember(Window window, boolean cancelled) {
+        if (window == null) {
+            return;
+        }
+        history.add(0, new Past(window, Instant.now(), cancelled));
+        while (history.size() > HISTORY) {
+            history.remove(history.size() - 1);
+        }
+    }
+
+    /** The maintenances that are over, newest first. */
+    public List<Past> history() {
+        return List.copyOf(history);
     }
 
     private void playSound(Settings.MaintenanceSettings m) {
@@ -578,6 +609,22 @@ public final class MaintenanceManager {
             phase = Phase.NONE;
         }
         tracked = readWindow(data.getConfigurationSection("state.window"));
+        history.clear();
+        ConfigurationSection historySection = data.getConfigurationSection("history");
+        if (historySection != null) {
+            for (String key : historySection.getKeys(false)) {
+                ConfigurationSection s = historySection.getConfigurationSection(key);
+                Window w = readWindow(s == null ? null : s.getConfigurationSection("window"));
+                String at = s == null ? "" : s.getString("at", "");
+                if (w != null && !at.isEmpty()) {
+                    try {
+                        history.add(new Past(w, Instant.parse(at), s.getBoolean("cancelled")));
+                    } catch (RuntimeException e) {
+                        // broken entry - skipped
+                    }
+                }
+            }
+        }
         active = phase == Phase.ACTIVE;
         activeWindow = active ? tracked : null;
     }
@@ -593,6 +640,13 @@ public final class MaintenanceManager {
         ignored.forEach((key, start) -> data.set("ignored." + key.replace(':', '_'), start == null ? "" : start.toString()));
         data.set("state.phase", phase.name());
         writeWindow(data, "state.window", tracked);
+        int h = 0;
+        for (Past past : history) {
+            String path = "history.h" + h++;
+            writeWindow(data, path + ".window", past.window());
+            data.set(path + ".at", past.at().toString());
+            data.set(path + ".cancelled", past.cancelled());
+        }
         plugin.storage().saveYaml("maintenance", data);
     }
 

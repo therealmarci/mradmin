@@ -141,14 +141,26 @@
 
   const IN = ['5m', '10m', '15m', '30m', '1h'];
   const DURATIONS = ['15m', '30m', '1h', '2h', 'open'];
-  // Kuma's status of a maintenance - its colour.
-  const KTONE = { 'under-maintenance': 'bad', scheduled: 'info', inactive: '', ended: 'good' };
-  const STRATEGIES = ['manual', 'single', 'cron', 'recurring-interval', 'recurring-weekday', 'recurring-day-of-month'];
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
   const chosen = $derived(presets.find((p) => p.name === preset));
   const running = $derived(data?.current);
-  const others = $derived((data?.windows ?? []).filter((w) => !running || w.start !== running.start || w.source !== running.source));
   const tone = $derived(data ? phaseTone[data.phase] ?? '' : '');
+  // The current maintenance in Kuma (for its actions).
+  const kumaCurrent = $derived(
+    running?.source === 'kuma' ? (data?.kumaInfo?.maintenances ?? []).find((m) => m.id === running.id) ?? null : null,
+  );
+
+  // The last three maintenances that are over - MRadmin's own history (Kuma and manual) plus the ones Kuma reports as
+  // ended that MRadmin did not see end, newest first.
+  const history = $derived.by(() => {
+    if (!data) return [];
+    const own = (data.history ?? []).map((h) => ({ ...h, when: h.endedAt }));
+    const seen = new Set(own.filter((h) => h.source === 'kuma').map((h) => h.id));
+    const kuma = (data.kumaInfo?.maintenances ?? [])
+      .filter((m) => m.status === 'ended' && !seen.has(m.id))
+      .map((m) => ({ source: 'kuma', id: m.id, title: m.title, start: m.start, end: m.end, endedAt: m.end, when: m.end || m.start, cancelled: false }));
+    return [...own, ...kuma].sort((a, b) => b.when - a.when).slice(0, 3);
+  });
 
   /** "1:05:09" or "4:09" */
   function countdown(ms) {
@@ -271,6 +283,27 @@
             </button>
           </div>
           {#if running.source === 'kuma'}<p class="muted tiny">{t('mt.kumaHint')}</p>{/if}
+        {:else if data.manage && kumaCurrent && data.kumaInfo.state === 'connected'}
+          {@const km = kumaCurrent}
+          <div class="now-actions">
+            {#if km.strategy === 'single' && km.status !== 'ended'}
+              <div class="seg" role="group" aria-label={t('mt.extend')}>
+                {#each ['+15m', '+30m', '+1h'] as by}
+                  <button type="button" disabled={busy} onclick={() => kumaAct(km.id, 'extend', { by: by.replace('+', '') })}>{by}</button>
+                {/each}
+              </div>
+            {/if}
+            <span class="grow"></span>
+            {#if km.status === 'inactive'}
+              <button class="secondary" disabled={busy} onclick={() => kumaAct(km.id, 'resume')}>▶ {t('mt.resume')}</button>
+            {:else if km.status !== 'ended'}
+              <button class="secondary" disabled={busy}
+                onclick={() => kumaAct(km.id, 'pause', {}, km.status === 'under-maintenance' ? t('mt.pauseConfirm') : null)}>
+                {km.status === 'under-maintenance' ? t('mt.endNow') : t('mt.pause')}</button>
+            {/if}
+            <button class="danger" disabled={busy}
+              onclick={() => kumaAct(km.id, 'delete', {}, t('mt.deleteConfirm', { title: km.title }))}>{t('mt.delete')}</button>
+          </div>
         {/if}
       {:else}
         <div class="calm">
@@ -291,114 +324,90 @@
           {#if data.manage}
             <button class="secondary mini" disabled={busy} onclick={() => act('refresh')}>{t('mt.refresh')}</button>
           {/if}
+          {#if data.kumaInfo?.url}<a class="small" href={data.kumaInfo.url + '/maintenance'} target="_blank" rel="noopener">{t('mt.openKuma')} ↗</a>{/if}
         {:else}
           <span class="muted small">{t('mt.localMode')}</span>
         {/if}
       </div>
     </section>
 
-    <div class="cols">
-      {#if data.mode === 'kuma'}
-        {@const k = data.kumaInfo}
-        <section class="card tile">
-          <div class="t-head">
-            <h2>{t('mt.kumaTitle')}{#if k.maintenances.length}<span class="n">{k.maintenances.length}</span>{/if}</h2>
-            {#if k.url}<a class="small" href={k.url + '/maintenance'} target="_blank" rel="noopener">{t('mt.openKuma')} ↗</a>{/if}
-          </div>
-          {#if k.state !== 'connected'}
-            <p class="error small">{t('mt.kumaNotConnected')}{#if k.problem} ({k.problem}){/if}</p>
-          {/if}
-          {#if k.maintenances.length === 0}
-            <p class="muted small">{t('mt.kumaNone')}</p>
-          {:else}
-            <ul class="list">
-              {#each k.maintenances as m (m.id)}
-                <li class="item {KTONE[m.status] ?? ''}">
-                  <div class="i-top">
-                    <span class="status">{t('mt.kstatus.' + (m.status in KTONE ? m.status : 'unknown'))}</span>
-                    <span class="chip">{t('mt.strategy.' + (STRATEGIES.includes(m.strategy) ? m.strategy : 'other'))}</span>
-                  </div>
-                  <strong>{m.title || t('overview.maintenance')}</strong>
-                  {#if m.start}<span class="muted small">{dateTime(m.start)} – {m.end ? dateTime(m.end) : t('overview.openEnd')}</span>{/if}
-                  {#if m.description}<span class="small">{m.description}</span>{/if}
-                  {#if data.manage && k.state === 'connected'}
-                    <div class="i-actions">
-                      {#if m.strategy === 'single' && m.status !== 'ended'}
-                        <div class="seg small-seg" role="group" aria-label={t('mt.extend')}>
-                          {#each ['+15m', '+30m', '+1h'] as by}
-                            <button type="button" disabled={busy} onclick={() => kumaAct(m.id, 'extend', { by: by.replace('+', '') })}>{by}</button>
-                          {/each}
-                        </div>
-                      {/if}
-                      {#if m.status === 'inactive'}
-                        <button class="secondary mini" disabled={busy} onclick={() => kumaAct(m.id, 'resume')}>▶ {t('mt.resume')}</button>
-                      {:else if m.status !== 'ended'}
-                        <button class="secondary mini" disabled={busy}
-                          onclick={() => kumaAct(m.id, 'pause', {}, m.status === 'under-maintenance' ? t('mt.pauseConfirm') : null)}>⏸ {m.status === 'under-maintenance' ? t('mt.endNow') : t('mt.pause')}</button>
-                      {/if}
-                      <button class="danger mini" disabled={busy}
-                        onclick={() => kumaAct(m.id, 'delete', {}, t('mt.deleteConfirm', { title: m.title }))}>{t('mt.delete')}</button>
-                    </div>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if !k.canCreate}<p class="muted tiny">{t('mt.kumaCannotCreate')}</p>{/if}
-        </section>
-      {:else if others.length}
-        <section class="card tile">
-          <h2>{t('mt.upcoming')}<span class="n">{others.length}</span></h2>
-          <ul class="list">
-            {#each others as w}
-              <li class="item info">
-                <div class="i-top">
-                  <span class="status">{t('mt.startsIn')} {duration(w.start - now)}</span>
-                  <span class="chip">{t('mt.source.' + w.source)}</span>
-                </div>
-                <strong>{w.title || t('overview.maintenance')}</strong>
-                <span class="muted small">{dateTime(w.start)} – {w.end ? dateTime(w.end) : t('overview.openEnd')}</span>
-              </li>
-            {/each}
-          </ul>
-        </section>
+    <!-- The last three maintenances, wherever they came from -->
+    <section class="card tile">
+      <h2>{t('mt.history')}</h2>
+      {#if history.length === 0}
+        <p class="muted small">{t('mt.historyNone')}</p>
+      {:else}
+        <ul class="history">
+          {#each history as h (h.source + h.id + h.when)}
+            <li class="item {h.cancelled ? '' : 'good'}">
+              <div class="i-top">
+                <span class="status">{h.cancelled ? t('mt.hist.cancelled') : t('mt.hist.ended')}</span>
+                <span class="chip origin {h.source}">{t('mt.origin.' + h.source)}</span>
+              </div>
+              <strong>{h.title || t('overview.maintenance')}</strong>
+              <span class="muted small">
+                {#if h.cancelled}
+                  {t('mt.hist.planned', { time: h.start ? dateTime(h.start) : '-' })}
+                {:else}
+                  {h.start ? dateTime(h.start) : '?'} – {dateTime(h.endedAt)}
+                {/if}
+              </span>
+              {#if !h.cancelled && h.start && h.endedAt > h.start}
+                <span class="chip">{t('mt.hist.lasted', { d: duration(h.endedAt - h.start) })}</span>
+              {/if}
+            </li>
+          {/each}
+        </ul>
       {/if}
+    </section>
 
-      {#if data.manage && (data.mode === 'kuma' ? data.kumaInfo.canCreate && data.kumaInfo.state === 'connected' : !data.manual)}
-        <form class="card tile" onsubmit={create}>
-          <h2>{t('mt.new')}{#if data.mode === 'kuma'}<span class="chip">Uptime Kuma</span>{/if}</h2>
-          <div class="seg wide" role="radiogroup">
-            <button type="button" role="radio" aria-checked={mode === 'now'} class:active={mode === 'now'} onclick={() => (mode = 'now')}>{t('mt.now')}</button>
-            <button type="button" role="radio" aria-checked={mode === 'plan'} class:active={mode === 'plan'} onclick={() => (mode = 'plan')}>{t('mt.plan')}</button>
-          </div>
-          {#if mode === 'plan'}
-            <div class="field">
-              <span class="flabel">{t('mt.in')}</span>
-              {@render choices(IN, inValue, (v) => (inValue = v), t('mt.in'), '')}
+    {#if data.mode === 'kuma' && data.kumaInfo.state !== 'connected'}
+      <p class="error small">{t('mt.kumaNotConnected')}{#if data.kumaInfo.problem} ({data.kumaInfo.problem}){/if}</p>
+    {/if}
+
+    <!-- New maintenance: when on the left, what on the right -->
+    {#if data.manage && (data.mode === 'kuma' ? data.kumaInfo.canCreate && data.kumaInfo.state === 'connected' : !data.manual)}
+      <form class="card tile" onsubmit={create}>
+        <h2>{t('mt.new')}{#if data.mode === 'kuma'}<span class="chip">Uptime Kuma</span>{/if}</h2>
+        <div class="form-cols">
+          <div class="form-col">
+            <div class="seg wide" role="radiogroup">
+              <button type="button" role="radio" aria-checked={mode === 'now'} class:active={mode === 'now'} onclick={() => (mode = 'now')}>{t('mt.now')}</button>
+              <button type="button" role="radio" aria-checked={mode === 'plan'} class:active={mode === 'plan'} onclick={() => (mode = 'plan')}>{t('mt.plan')}</button>
             </div>
-          {/if}
-          <div class="field">
-            <span class="flabel">{t('mt.duration')}</span>
-            {@render choices(DURATIONS.filter((v) => !(v === 'open' && data.mode === 'kuma' && mode === 'plan')), durationValue,
-              (v) => (durationValue = v), t('mt.duration'), t('overview.openEnd'))}
-          </div>
-          <div class="field">
-            <label class="flabel" for="mt-title">{t('mt.titleLabel')}</label>
-            <input id="mt-title" bind:value={title} maxlength="100" placeholder={t('mt.titlePlaceholder')} />
-          </div>
-          {#if data.mode === 'kuma'}
+            {#if mode === 'plan'}
+              <div class="field">
+                <span class="flabel">{t('mt.in')}</span>
+                {@render choices(IN, inValue, (v) => (inValue = v), t('mt.in'), '')}
+              </div>
+            {/if}
             <div class="field">
-              <label class="flabel" for="mt-desc">{t('mt.description')}</label>
-              <input id="mt-desc" bind:value={description} maxlength="300" placeholder={t('mt.descriptionPlaceholder')} />
+              <span class="flabel">{t('mt.duration')}</span>
+              {@render choices(DURATIONS.filter((v) => !(v === 'open' && data.mode === 'kuma' && mode === 'plan')), durationValue,
+                (v) => (durationValue = v), t('mt.duration'), t('overview.openEnd'))}
             </div>
-            <p class="muted tiny">{t('mt.kumaCreateHint')}</p>
-          {/if}
-          {#if preview}<div class="preview" class:bad={mode === 'now'}>{preview}</div>{/if}
-          <p class="muted tiny">{t('mt.durationHint')}</p>
-          <button type="submit" class="submit" class:danger={mode === 'now'} disabled={busy}>{mode === 'now' ? t('mt.startNow') : t('mt.schedule')}</button>
-        </form>
-      {/if}
-    </div>
+            <p class="muted tiny">{t('mt.durationHint')}</p>
+          </div>
+          <div class="form-col">
+            <div class="field">
+              <label class="flabel" for="mt-title">{t('mt.titleLabel')}</label>
+              <input id="mt-title" bind:value={title} maxlength="100" placeholder={t('mt.titlePlaceholder')} />
+            </div>
+            {#if data.mode === 'kuma'}
+              <div class="field">
+                <label class="flabel" for="mt-desc">{t('mt.description')}</label>
+                <input id="mt-desc" bind:value={description} maxlength="300" placeholder={t('mt.descriptionPlaceholder')} />
+              </div>
+              <p class="muted tiny">{t('mt.kumaCreateHint')}</p>
+            {/if}
+            {#if preview}<div class="preview" class:bad={mode === 'now'}>{preview}</div>{/if}
+            <button type="submit" class="submit" class:danger={mode === 'now'} disabled={busy}>{mode === 'now' ? t('mt.startNow') : t('mt.schedule')}</button>
+          </div>
+        </div>
+      </form>
+    {:else if data.mode === 'kuma' && data.manage && !data.kumaInfo.canCreate}
+      <p class="muted tiny">{t('mt.kumaCannotCreate')}</p>
+    {/if}
   {/if}
 
   {#if me.may.announce}
@@ -669,17 +678,6 @@
   }
 
   /* Tiles */
-  .cols {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-    align-items: start;
-  }
-
-  .cols:empty {
-    display: none;
-  }
-
   .tile {
     display: grid;
     gap: 12px;
@@ -694,23 +692,6 @@
     font-size: 1.05rem;
   }
 
-  .t-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .n {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0 7px;
-    border-radius: 999px;
-    color: var(--muted);
-    background: color-mix(in srgb, var(--muted) 18%, transparent);
-  }
-
   .chip {
     font-size: 0.72rem;
     font-weight: 700;
@@ -720,14 +701,53 @@
     background: color-mix(in srgb, var(--muted) 15%, transparent);
   }
 
-  /* Maintenances as cards with the colour of their state on the left */
-  .list {
+  /* The last three maintenances next to each other (one below the other on phones) */
+  .history {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 10px;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .history .item {
+    align-content: start;
+  }
+
+  .history .chip {
+    justify-self: start;
+  }
+
+  .chip.origin.kuma {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  @media (max-width: 860px) {
+    .history {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* New maintenance: two columns on wide screens */
+  .form-cols {
+    display: grid;
+    gap: 16px 28px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    align-items: start;
+  }
+
+  .form-col {
+    display: grid;
+    gap: 12px;
+  }
+
+  .grow {
+    flex: 1;
+  }
+
+  /* A maintenance as a card with the colour of its state on the left */
 
   .item {
     display: grid;
@@ -802,11 +822,6 @@
     background: var(--surface);
     color: var(--text);
     box-shadow: var(--shadow);
-  }
-
-  .small-seg button {
-    padding: 3px 10px;
-    font-size: 0.8rem;
   }
 
   .choice-row {

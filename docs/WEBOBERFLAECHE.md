@@ -166,13 +166,18 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
 ## Wartung & Ankündigungen
 `mradmin.maintenance.view` ansehen, `.manage` ändern, `mradmin.announce` ankündigen.
 
-- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - Liste der
-  Wartungen dieses Servers mit Status (läuft, geplant, pausiert, vorbei), neue anlegen (jetzt bis zum Beenden, jetzt
-  mit Dauer oder geplant), verlängern, pausieren/fortsetzen, löschen. Neue Wartungen hängt MRadmin an
-  `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren Status-Seiten erscheinen); geändert
-  werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden angezeigt, bearbeitet in Kuma.
+- Oben steht die **aktuelle Wartung** groß: läuft sie, mit Restzeit und Fortschrittsbalken, ist sie geplant, mit dem
+  Countdown bis zum Start; darunter verlängern/kürzen und beenden bzw. absagen.
+- **Mit Uptime Kuma** (`uptime-kuma` eingerichtet): Die Wartungen werden direkt in Kuma verwaltet - neue anlegen
+  (jetzt bis zum Beenden, jetzt mit Dauer oder geplant), die aktuelle verlängern, pausieren/fortsetzen, löschen. Neue
+  Wartungen hängt MRadmin an `uptime-kuma.monitor-ids`, damit sie für diesen Server gelten (und auf deren
+  Status-Seiten erscheinen); geändert werden können nur Wartungen dieses Servers. Wiederkehrende Wartungen werden in
+  Kuma bearbeitet (Link „In Uptime Kuma öffnen“).
 - **Ohne Uptime Kuma**: die eigene Wartung von MRadmin wie `/mradmin maintenance` - jetzt starten oder mit Countdown
-  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen.
+  planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen. Eine Vorschau zeigt vorher, wann sie
+  beginnt und endet.
+- **Letzte Wartungen**: die drei zuletzt beendeten oder abgesagten Wartungen, egal ob aus Uptime Kuma oder lokal
+  (die Herkunft steht dabei), mit Zeitraum und Dauer. MRadmin merkt sich die letzten zehn.
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf
   Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
 

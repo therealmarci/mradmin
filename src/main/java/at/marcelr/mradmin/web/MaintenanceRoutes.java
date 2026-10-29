@@ -84,6 +84,15 @@ public final class MaintenanceRoutes {
             }
             windows.sort((a, b) -> Long.compare((Long) a.get("start"), (Long) b.get("start")));
             r.put("windows", windows);
+            // Maintenances that are over (Kuma and manual), newest first; the page mixes in Kuma's ended ones.
+            List<Map<String, Object>> history = new ArrayList<>();
+            for (MaintenanceManager.Past past : m.history()) {
+                Map<String, Object> h = window(past.window());
+                h.put("endedAt", past.at().toEpochMilli());
+                h.put("cancelled", past.cancelled());
+                history.add(h);
+            }
+            r.put("history", history);
             r.put("kuma", m.kuma().state().name().toLowerCase(Locale.ROOT));
             Instant last = m.kuma().lastUpdate();
             r.put("kumaUpdate", last == null ? 0 : last.toEpochMilli());
@@ -263,6 +272,8 @@ public final class MaintenanceRoutes {
         }
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("source", w.source());
+        // Maintenance id in Uptime Kuma (0 for manual ones) - the page finds the Kuma actions for it.
+        m.put("id", w.id());
         m.put("title", w.title() == null ? "" : w.title());
         m.put("start", w.start() == null ? 0L : w.start().toEpochMilli());
         m.put("end", w.end() == null ? 0L : w.end().toEpochMilli());
