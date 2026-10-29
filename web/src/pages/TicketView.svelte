@@ -97,6 +97,13 @@
 
   const mineClaimed = $derived(ticket?.claimedBy === me.name);
 
+  // Buttons in the head: a ticket of MRchunks (lock for lag) leads to its chunk loader, a ticket about a player to
+  // them - the reported player, otherwise the one who wrote it (not for contact requests from the website).
+  const loaderId = $derived(ticket?.source === 'mrchunks' && /^\d+$/.test(ticket?.sourceId ?? '') && me.may.mrchunks ? ticket.sourceId : null);
+  const person = $derived(!ticket || !me.may.players || request?.kind === 'contact' ? null
+    : ticket.report && ticket.targetUuid ? { uuid: ticket.targetUuid, name: ticket.target }
+    : { uuid: ticket.creatorUuid, name: ticket.creator });
+
   // A day line whenever the day changes.
   const day = (ms) => new Date(ms).toDateString();
   const time = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -121,11 +128,21 @@
         </span>
         <h1>{ticket.summary || ticket.categoryName}</h1>
       </div>
-      {#if ticket.open && me.may.ticketsClaim}
-        <button class="secondary small" onclick={() => action('claim')} disabled={busy}>
-          {mineClaimed ? t('ticket.release') : t('ticket.claim')}
-        </button>
-      {/if}
+      <div class="h-actions">
+        {#if loaderId}
+          <button class="secondary small" onclick={() => go('/chunks/' + loaderId)}>▦ {t('ticket.toLoader')}</button>
+        {/if}
+        {#if person}
+          <button class="secondary small person-btn" onclick={() => go('/players/' + person.uuid)}>
+            <img src={head(person.uuid, 32)} alt="" width="18" height="18" /> {t('ticket.toPlayer', { name: person.name })}
+          </button>
+        {/if}
+        {#if ticket.open && me.may.ticketsClaim}
+          <button class="secondary small" onclick={() => action('claim')} disabled={busy}>
+            {mineClaimed ? t('ticket.release') : t('ticket.claim')}
+          </button>
+        {/if}
+      </div>
     </header>
 
     <!-- The facts as small tiles: label on top, value below. -->
@@ -299,6 +316,23 @@
     gap: 6px;
     min-width: 0;
     flex: 1;
+  }
+
+  .h-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .person-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .person-btn img {
+    border-radius: 4px;
+    image-rendering: pixelated;
   }
 
   .h-top {

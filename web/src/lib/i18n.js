@@ -1129,6 +1129,8 @@ const texts = {
     'tickets.waiting': 'Wartet',
     'tickets.categories': 'Kategorien',
     'ticket.team': 'Team',
+    'ticket.toLoader': 'Zum Chunkloader',
+    'ticket.toPlayer': 'Zu {name}',
 
     'ticket.back': 'Alle Tickets',
     'ticket.by': 'Von',
@@ -2681,6 +2683,8 @@ const texts = {
     'tickets.waiting': 'Waiting',
     'tickets.categories': 'Categories',
     'ticket.team': 'Team',
+    'ticket.toLoader': 'Go to the chunk loader',
+    'ticket.toPlayer': 'Go to {name}',
 
     'ticket.back': 'All tickets',
     'ticket.by': 'By',

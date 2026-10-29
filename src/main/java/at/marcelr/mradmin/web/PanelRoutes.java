@@ -422,6 +422,8 @@ public final class PanelRoutes {
         s.put("lastActivity", t.lastActivity().toEpochMilli());
         s.put("count", t.messages().size());
         s.put("source", t.source() == null ? null : t.source().toLowerCase(Locale.ROOT));
+        // The module's own id of the problem (e.g. the loader id) - for the button to it.
+        s.put("sourceId", t.sourceId());
         at.marcelr.mradmin.ticket.WebRequest request = t.request();
         if (request != null) {
             Map<String, Object> r = new LinkedHashMap<>();
