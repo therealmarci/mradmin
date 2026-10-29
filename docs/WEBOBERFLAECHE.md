@@ -228,8 +228,22 @@ und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin u
 bekommen hat: `news-seen`).
 
 ### Ankündigungen
-Wie `/mradmin announce`: Vorlagen (mit Werten) oder eigener Text („Titel | Untertitel“) auf dem Bildschirm aller
-Spieler, auf Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+**Senden** (`mradmin.announce`): eine eigene Vorlage (mit Werten, wenn sie Platzhalter hat) oder ein eigener Text
+(„Titel | Untertitel“) auf dem Bildschirm, auf Wunsch auch in den Community-Discord. Alles landet im Web-Protokoll.
+
+**Vorlagen** (`mradmin.announce.templates`): neu anlegen, bearbeiten, löschen - nutzbar im Web, im Ankündigungs-Menü
+im Spiel und mit `/mradmin announce <name>`.
+- **Texte** je Deutsch und Englisch: Titel, Untertitel, Chat, Actionbar (MiniMessage, Platzhalter `<args>`, `<arg1>` …),
+  mit einer **Vorschau** des Bildschirms. Leere Felder werden nicht gezeigt.
+- **Discord**: an/aus und eigener Text (Markdown, `{args}`).
+- **Anzeige**: Ein-, Anzeige- und Ausblendzeit des Titels in Sekunden.
+- **Ton**: wie in der Config, keiner oder ein eigener (alle Sounds des Spiels zur Auswahl) mit Lautstärke und Tonhöhe.
+- **Zielgruppe**: Spieler, Bots, Support, Staff oder Admin. Jede Gruppe bekommt auch, was für die darunter gedacht ist -
+  „Spieler“ erreicht alle, „Support“ Support, Staff und Admin (nach `mradmin.groups.*`), „Bots“ zusätzlich die NPCs.
+
+Die eingebauten Vorlagen der Sprachdatei (`restart`, `restart-now`, `update`, `event`) stehen hier und im Spiel-Menü
+nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten gehen sie weiter. Gespeichert wird im
+Speicher von MRadmin unter `announce-templates`.
 
 ## Versionen (`mradmin.versions.view`)
 - Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status

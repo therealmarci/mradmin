@@ -63,7 +63,7 @@ Eine ausgeschaltete Funktion verschwindet komplett aus Befehlen, Menüs und Web.
 ## Admin-Dashboard
 **`/mradmin`** (oder Rechtsklick mit dem Admin-Kompass) öffnet das Dashboard:
 - **Live-Kacheln** für Spieler, Server, Wartung und Tickets. Darunter zeigt eine farbige Scheibe den Zustand, z.B. TPS (grün ab 19,5, gelb ab 15), Wartung (gelb = geplant, rot = aktiv), Tickets (rot = warten auf Antwort).
-- **Ankündigen:** alle Vorlagen als Knöpfe, „Eigener Text“ öffnet einen Dialog.
+- **Ankündigen:** die eigenen Vorlagen als Knöpfe (die eingebauten aus der Sprachdatei stehen nicht im Menü), „Eigener Text“ öffnet einen Dialog.
 - **Plugin-Knöpfe:** Admin-Menüs der anderen MRtechnology-Plugins mit Live-Infos. Eigene Knöpfe (z.B. für Chunky) gehen über `admin-mode.menu.buttons`.
 - **Schalter** für Admin-Modus und Staff-Chat.
 
@@ -142,7 +142,8 @@ uptime-kuma:
 /mradmin announce restart 5 Minuten
 ```
 - **Eigener Text** erscheint als Titel auf dem Bildschirm. Mit `|` trennst du **Titel | Untertitel**. Farben im [MiniMessage-Format](https://docs.advntr.dev/minimessage/format.html) sind erlaubt.
-- **Vorlagen** (z.B. `restart`, `event`) stehen in der Sprachdatei unter `announce-presets`. Werte nach dem Namen füllen `<arg1>`, `<arg2>` … Eigene Vorlagen schreibst du einfach dazu.
+- **Eigene Vorlagen** legst du in der Weboberfläche unter **Kommunikation → Ankündigungen** an (`mradmin.announce.templates`): Titel, Untertitel, Chat und Actionbar je Deutsch und Englisch mit Vorschau, optional ein Discord-Text, Anzeigedauer des Titels, Ton und **Zielgruppe** (Spieler, Bots, Support, Staff, Admin - jede Gruppe bekommt auch, was für die darunter gedacht ist; „Spieler“ = alle). Sie gehen im Web, im Ankündigungs-Menü und mit `/mradmin announce <name>`. Werte nach dem Namen füllen `<arg1>`, `<arg2>` … bzw. `<args>`.
+- **Eingebaute Vorlagen** (`restart`, `restart-now`, `update`, `event`) stehen in der Sprachdatei unter `announce-presets`. MRadmin nutzt `restart` selbst (Neustart-Countdown); in den Menüs stehen sie nicht, mit dem Befehl und in Skripten gehen sie weiter.
 
 <details>
 <summary>Beispiel: Restart-Script mit Countdown</summary>
@@ -292,7 +293,7 @@ Standard ist `op`, außer anders angegeben.
 | Dashboard | `mradmin.dashboard` · `mradmin.status` · `mradmin.status.health` |
 | Tickets | `mradmin.tickets.create` (`/report`) · `.notify` · `.view` · `.reply` · `.claim` · `.close` · `.reopen` · `.teleport` |
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
-| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.news` (Kommunikation im Web) · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
+| Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.announce.templates` (Ankündigungs-Vorlagen im Web) · `mradmin.news` (Kommunikation im Web) · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |

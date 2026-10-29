@@ -4,13 +4,14 @@
   // Discord, previewed once in game (warnings: chat and title). Texts in German and English - a language left empty
   // shows the other one. Changelogs have entries by type and headings in three levels. Warnings pinned on Uptime Kuma
   // status pages are listed too (read only).
-  // Announcements - like /mradmin announce: a preset with values or an own text, shown on every screen.
+  // Announcements (components/AnnouncePanel): send an own template or a free text, make the templates.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
   import { ICONS } from '../lib/icons.js';
   import { ENTRY_TYPES, HEADINGS, isHeading, levelOf, sections, entryCount } from '../lib/changelog.js';
   import Toast from '../components/Toast.svelte';
+  import AnnouncePanel from '../components/AnnouncePanel.svelte';
 
   let { me } = $props();
 
@@ -30,13 +31,6 @@
   let draft = $state(empty());
   let tab = $state('de');
 
-  // Announcement
-  let presets = $state([]);
-  let preset = $state('');
-  let args = $state('');
-  let text = $state('');
-  let toDiscord = $state(true);
-
   async function load() {
     if (!me.may.news) return;
     try {
@@ -47,7 +41,6 @@
     }
   }
   load();
-  if (me.may.announce) api('GET', '/announce').then((r) => (presets = r.presets)).catch(() => {});
 
   // <input type="date"> works with "2026-11-30"; stored is the end of that day (local time).
   const toDay = (ms) => {
@@ -126,25 +119,6 @@
     }
   }
 
-  async function announce(event) {
-    event.preventDefault();
-    const body = preset ? { preset, args, discord: String(toDiscord) } : { text, discord: String(toDiscord) };
-    if (!confirm(t('mt.announceConfirm'))) return;
-    busy = true;
-    error = '';
-    message = '';
-    try {
-      await api('POST', '/announce', body);
-      message = t('mt.announced');
-      args = '';
-      text = '';
-    } catch (e) {
-      error = errorText(e);
-    } finally {
-      busy = false;
-    }
-  }
-
   const heading = (p) => p.title.de || p.title.en || p.version || '?';
   const realEntries = (l) => draft.entries.some((e) => !isHeading(e.type) && e[l].trim());
   const filled = (l) => (draft.kind === 'changelog' ? realEntries(l) : draft.title[l].trim() && draft.text[l].trim());
@@ -156,7 +130,6 @@
   const posts = $derived((data?.posts ?? []).filter((p) => filter === 'all' || p.kind === filter));
   const activeAlerts = $derived((data?.posts ?? []).filter((p) => p.kind === 'alert' && !over(p)).length + (data?.incidents?.length ?? 0));
   const counts = $derived(KINDS.reduce((c, k) => ((c[k] = (data?.posts ?? []).filter((p) => p.kind === k).length), c), {}));
-  const chosen = $derived(presets.find((p) => p.name === preset));
 
   // Indent of every changelog line in the editor: a heading by its level, an entry by the heading above it.
   const indents = $derived.by(() => {
@@ -406,31 +379,7 @@
       <p class="muted">{t('common.loading')}</p>
     {/if}
   {:else if area === 'announce' && me.may.announce}
-    <form class="card tile" onsubmit={announce}>
-      <h2>{t('mt.announceTitle')}</h2>
-      <p class="muted small">{t('mt.announceHint')}</p>
-      <div class="presets">
-        <button type="button" class="preset" class:active={preset === ''} onclick={() => (preset = '')}>
-          <strong>{t('mt.freeText')}</strong><span class="muted small">{t('mt.freeTextHint')}</span>
-        </button>
-        {#each presets as p (p.name)}
-          <button type="button" class="preset" class:active={preset === p.name} onclick={() => (preset = p.name)}>
-            <strong>{p.name}{#if p.discord}<span class="chip">Discord</span>{/if}</strong><span class="muted small">{p.preview}</span>
-          </button>
-        {/each}
-      </div>
-      {#if preset === ''}
-        <input bind:value={text} maxlength="300" placeholder={t('mt.textPlaceholder')} aria-label={t('mt.freeText')} />
-      {:else if chosen?.values}
-        <input bind:value={args} maxlength="100" placeholder={t('mt.argsPlaceholder')} aria-label={t('mt.args')} />
-      {/if}
-      <div class="submit-row">
-        <button type="button" class="toggle" role="switch" aria-checked={toDiscord} onclick={() => (toDiscord = !toDiscord)}>
-          <span class="knob" class:on={toDiscord}></span>{t('mt.toDiscord')}
-        </button>
-        <button type="submit" disabled={busy || (preset === '' && !text.trim())}>{t('mt.send')}</button>
-      </div>
-    </form>
+    <AnnouncePanel {me} onmessage={(m) => (message = m)} onerror={(e) => (error = e)} />
   {/if}
 </div>
 
@@ -1097,43 +1046,6 @@
   .buttons {
     display: flex;
     gap: 6px;
-  }
-
-  /* Announcement */
-  .presets {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  }
-
-  .preset {
-    display: grid;
-    gap: 2px;
-    justify-content: stretch;
-    justify-items: start;
-    text-align: left;
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    font-weight: 400;
-    padding: 10px 12px;
-  }
-
-  .preset strong {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .preset:hover {
-    filter: none;
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  }
-
-  .preset.active {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
   }
 
   @media (max-width: 640px) {

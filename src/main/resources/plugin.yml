@@ -95,6 +95,7 @@ permissions:
       mradmin.groups.staff: true
       mradmin.maintenance.manage: true
       mradmin.announce: true
+      mradmin.announce.templates: true
       mradmin.news: true
       mradmin.mode.others: true
       mradmin.web.audit: true
@@ -172,6 +173,9 @@ permissions:
     default: op
   mradmin.announce:
     description: /mradmin announce - announcements on the screen of all players.
+    default: op
+  mradmin.announce.templates:
+    description: "Web interface: create, change and delete announcement templates (page Communication)."
     default: op
   mradmin.mode:
     description: /mradmin mode - admin mode for yourself (the compass opens the dashboard).

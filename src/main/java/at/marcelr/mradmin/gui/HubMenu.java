@@ -213,7 +213,7 @@ public final class HubMenu extends Menu {
         List<Button> tools = new ArrayList<>();
         if (viewer.hasPermission(MRAdminCommand.PERM_ANNOUNCE) && plugin.feature(Feature.ANNOUNCE)) {
             tools.add(new Button(Items.of(Material.GOAT_HORN).name(messages.item("gui-hub-announce-name"))
-                    .lore(messages.lore("gui-hub-announce-lore", tag("count", plugin.announcer().presets().size())))
+                    .lore(messages.lore("gui-hub-announce-lore", tag("count", plugin.announcer().menuPresets().size())))
                     .build(), click -> {
                 clickSound();
                 new AnnounceMenu(plugin, viewer, this::reopen).open();
