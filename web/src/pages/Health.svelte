@@ -2,6 +2,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import LineChart from '../components/LineChart.svelte';
+  import { ICONS } from '../lib/icons.js';
 
   const RANGES = [
     { key: '1m', ms: 60e3 },
@@ -134,15 +135,24 @@
   );
 </script>
 
-<div class="stack">
-  <div class="head">
-    <div>
-      <h1>{t('health.title')}</h1>
-      <p class="muted small">{t('health.subtitle')}</p>
+<div class="page">
+  <header class="head">
+    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.pulse} /></svg>
+    <div class="intro">
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
+      </span>
+      <div>
+        <h1>{t('health.title')}</h1>
+        <p class="muted">{t('health.subtitle')}</p>
+      </div>
     </div>
-  </div>
+    {#if state}<span class="state {state.tone}"><b>{state.icon}</b> {state.label}</span>{/if}
+  </header>
 
-  <div class="ranges" role="group" aria-label={t('health.range')}>
+  <div class="switch" role="group" aria-label={t('health.range')}>
     {#each RANGES as r}
       <button class:active={range === r.key} onclick={() => choose(r.key)}
         disabled={history && r.ms > Math.max(history.history, 24 * 3600e3)}>{t('health.range.' + r.key)}</button>
@@ -153,44 +163,44 @@
 
   {#if latest}
     <div class="kpis">
-      <div class="card kpi">
+      <div class="kpi {state?.tone ?? ''}">
         <div class="label">TPS</div>
         <div class="value">{tps(latest.tps)}</div>
-        {#if state}<div class="status {state.tone}"><b>{state.icon}</b> {state.label}</div>{/if}
+        <div class="bar"><span style="width: {Math.min(100, ((latest.tps ?? 0) / 20) * 100)}%"></span></div>
       </div>
-      <div class="card kpi">
+      <div class="kpi {latest.mspt > 50 ? 'bad' : latest.mspt > 40 ? 'warn' : ''}">
         <div class="label">MSPT</div>
         <div class="value">{ms(latest.mspt)}</div>
         <div class="sub">95 %: {ms(latest.msptP95)} · max {ms(latest.msptMax)}</div>
       </div>
-      <div class="card kpi">
+      <div class="kpi">
         <div class="label">{t('health.cpu')}</div>
         <div class="value">{pct(latest.cpu)}</div>
         <div class="sub">{t('health.system')}: {pct(latest.cpuSystem)}</div>
       </div>
-      <div class="card kpi">
+      <div class="kpi">
         <div class="label">{t('health.ram')}</div>
         <div class="value">{mb(latest.heapUsed)}</div>
-        <div class="meter"><div style="width: {Math.min(100, (latest.heapUsed / latest.heapMax) * 100)}%"></div></div>
+        <div class="bar"><span style="width: {Math.min(100, (latest.heapUsed / latest.heapMax) * 100)}%"></span></div>
         <div class="sub">{t('health.of')} {mb(latest.heapMax)}</div>
       </div>
-      <div class="card kpi">
+      <div class="kpi">
         <div class="label">{t('health.ping')}</div>
         <div class="value">{latest.players > 0 && latest.ping >= 0 ? Math.round(latest.ping) + ' ms' : '–'}</div>
         <div class="sub">{latest.players} {t('health.players')}</div>
       </div>
       {#if system}
-        <div class="card kpi">
+        <div class="kpi">
           <div class="label">{t('health.uptime')}</div>
           <div class="value">{uptime(system.uptime)}</div>
           <div class="sub">{system.server}</div>
         </div>
-        <div class="card kpi">
+        <div class="kpi">
           <div class="label">{t('health.serverSize')}</div>
           <div class="value">{system.serverSize >= 0 ? mb(system.serverSize) : '…'}</div>
           <div class="sub">{t('health.serverSizeHint')}</div>
         </div>
-        <div class="card kpi">
+        <div class="kpi">
           <div class="label">{t('health.dbSize')}</div>
           <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
           <div class="sub">{t('health.storage.' + system.storage)}</div>
@@ -238,7 +248,13 @@
   <div class="two">
     {#if system}
       <section class="card">
-        <h3>{t('health.worlds')}</h3>
+        <div class="c-head">
+          <span class="c-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"><path d={ICONS.grid} /></svg>
+          </span>
+          <h3>{t('health.worlds')}</h3>
+        </div>
         <div class="table">
           <table>
             <thead>
@@ -251,20 +267,31 @@
             </tbody>
           </table>
         </div>
-        <h3 class="spaced">{t('health.systemInfo')}</h3>
-        <dl class="facts">
-          <dt>Server</dt><dd>{system.server}</dd>
-          <dt>Java</dt><dd>{system.java}</dd>
-          <dt>{t('health.os')}</dt><dd>{system.os} · {system.cores} {t('health.cores')}</dd>
-          <dt>Threads</dt><dd>{system.threads}</dd>
-          <dt>Plugins</dt><dd>{system.plugins}</dd>
-          <dt>{t('health.disk')}</dt><dd>{mb(system.diskFree)} {t('health.free')} {t('health.of')} {mb(system.diskTotal)}</dd>
-        </dl>
+        <div class="c-head spaced">
+          <span class="c-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"><path d={ICONS.terminal} /></svg>
+          </span>
+          <h3>{t('health.systemInfo')}</h3>
+        </div>
+        <div class="facts">
+          <div class="fact"><span>Server</span><b>{system.server}</b></div>
+          <div class="fact"><span>Java</span><b>{system.java}</b></div>
+          <div class="fact"><span>{t('health.os')}</span><b>{system.os} · {system.cores} {t('health.cores')}</b></div>
+          <div class="fact"><span>Threads</span><b>{system.threads}</b></div>
+          <div class="fact"><span>Plugins</span><b>{system.plugins}</b></div>
+          <div class="fact"><span>{t('health.disk')}</span><b>{mb(system.diskFree)} {t('health.free')} {t('health.of')} {mb(system.diskTotal)}</b>
+            <div class="bar"><span style="width: {Math.min(100, (1 - system.diskFree / Math.max(1, system.diskTotal)) * 100)}%"></span></div></div>
+        </div>
       </section>
     {/if}
 
     <section class="card">
-      <div class="lag-head">
+      <div class="c-head">
+        <span class="c-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round"><path d={ICONS.box} /></svg>
+        </span>
         <h3>{t('health.lag')}</h3>
         <button class="secondary mini" onclick={loadLag} disabled={lagBusy}>{t('health.recount')}</button>
       </div>
@@ -274,10 +301,13 @@
           <p class="muted">{t('health.lagNone')}</p>
         {:else}
           <ol class="lag">
-            {#each lag.chunks as c}
+            {#each lag.chunks as c, i}
               <li>
-                <div class="lag-row"><strong>{c.count}</strong> <span class="muted small mono">{c.world} {c.x} {c.z}</span></div>
-                <div class="muted small">{c.types.map((ty) => `${ty.count}× ${ty.type}`).join(' · ')}</div>
+                <span class="rank">{i + 1}</span>
+                <div class="lag-body">
+                  <div class="lag-row"><strong>{c.count}</strong> <span class="muted small mono">{c.world} {c.x} {c.z}</span></div>
+                  <div class="muted small">{c.types.map((ty) => `${ty.count}× ${ty.type}`).join(' · ')}</div>
+                </div>
               </li>
             {/each}
           </ol>
@@ -288,51 +318,197 @@
 </div>
 
 <style>
-  .head h1 {
-    margin: 0;
+  .page {
+    --hm: var(--accent);
+    display: grid;
+    gap: 16px;
   }
 
-  .ranges {
+  /* Head: like the other pages - symbol, title, and the state of the server on the right. */
+  .head {
+    position: relative;
+    overflow: hidden;
     display: flex;
-    gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 24px;
+    padding: 22px 24px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--hm) 30%, var(--border));
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--hm) 20%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .ranges button {
-    background: var(--surface-2);
-    color: var(--muted);
-    border-color: var(--border);
+  .watermark {
+    position: absolute;
+    right: -16px;
+    bottom: -30px;
+    width: 150px;
+    height: 150px;
+    color: var(--hm);
+    opacity: 0.08;
+    transform: rotate(-12deg);
+    pointer-events: none;
+  }
+
+  .intro {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    color: var(--hm);
+    background: color-mix(in srgb, var(--hm) 16%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--hm) 35%, transparent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.45rem;
+  }
+
+  .intro p {
+    margin: 2px 0 0;
+  }
+
+  .state {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 14px;
     border-radius: 999px;
-    font-size: 0.9rem;
+    font-weight: 700;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
   }
 
-  .ranges button.active {
-    background: var(--accent);
-    color: var(--accent-text);
-    border-color: transparent;
+  .state b {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.7rem;
   }
 
+  .state.good {
+    color: var(--good);
+    border-color: color-mix(in srgb, var(--good) 40%, var(--border));
+  }
+
+  .state.good b {
+    background: var(--good);
+  }
+
+  .state.warn {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+  }
+
+  .state.warn b {
+    background: var(--warn);
+  }
+
+  .state.bad {
+    color: var(--bad);
+    border-color: color-mix(in srgb, var(--bad) 40%, var(--border));
+  }
+
+  .state.bad b {
+    background: var(--bad);
+  }
+
+  /* The range as one switch */
+  .switch {
+    justify-self: start;
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .switch button {
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 9px;
+    font-size: 0.88rem;
+  }
+
+  .switch button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  /* Key figures: small tiles, the tone of the value on the left edge. */
   .kpis {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
   }
 
   .kpi {
+    --tn: var(--hm);
+    display: grid;
+    gap: 4px;
+    align-content: start;
     padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--tn);
+    background:
+      radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--hm) 10%, transparent), transparent 55%),
+      var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .kpi.good {
+    --tn: var(--good);
+  }
+
+  .kpi.warn {
+    --tn: var(--warn);
+  }
+
+  .kpi.bad {
+    --tn: var(--bad);
+  }
+
+  .kpi.good .value,
+  .kpi.warn .value,
+  .kpi.bad .value {
+    color: var(--tn);
   }
 
   .label {
     color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
 
   .value {
     font-size: 1.6rem;
-    font-weight: 700;
-    margin: 2px 0;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
   }
 
   .sub {
@@ -340,57 +516,19 @@
     font-size: 0.8rem;
   }
 
-  .status {
-    font-size: 0.82rem;
-    font-weight: 600;
-  }
-
-  .status b {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 0.7rem;
-    margin-right: 4px;
-  }
-
-  .good {
-    color: var(--good);
-  }
-
-  .good b {
-    background: var(--good);
-  }
-
-  .warn {
-    color: var(--warn);
-  }
-
-  .warn b {
-    background: var(--warn);
-  }
-
-  .bad {
-    color: var(--bad);
-  }
-
-  .bad b {
-    background: var(--bad);
-  }
-
-  .meter {
+  .bar {
     height: 6px;
     border-radius: 3px;
-    background: color-mix(in srgb, var(--series-1) 18%, var(--surface));
-    margin: 6px 0 4px;
+    background: color-mix(in srgb, var(--border) 80%, transparent);
+    margin: 4px 0 2px;
     overflow: hidden;
   }
 
-  .meter div {
+  .bar span {
+    display: block;
     height: 100%;
-    background: var(--series-1);
+    border-radius: 3px;
+    background: var(--tn, var(--hm));
   }
 
   .charts {
@@ -408,19 +546,46 @@
     display: grid;
     gap: 16px;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    align-items: start;
+  }
+
+  /* Cards below: a head with symbol */
+  .c-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .c-head .mini {
+    margin-left: auto;
+  }
+
+  .c-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    color: var(--hm);
+    background: color-mix(in srgb, var(--hm) 14%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--hm) 30%, transparent);
   }
 
   h3 {
-    font-size: 0.95rem;
-    margin: 0 0 8px;
+    font-size: 1rem;
+    margin: 0;
   }
 
   .spaced {
-    margin-top: 18px;
+    margin-top: 20px;
   }
 
   .table {
     overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
   }
 
   table {
@@ -433,8 +598,12 @@
   th,
   td {
     text-align: right;
-    padding: 5px 8px;
+    padding: 7px 10px;
     border-bottom: 1px solid var(--grid);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
   }
 
   th:first-child,
@@ -445,29 +614,35 @@
   th {
     color: var(--muted);
     font-weight: 600;
+    background: var(--surface-2);
   }
 
   .facts {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 4px 14px;
-    font-size: 0.88rem;
-    margin: 0;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
   }
 
-  .facts dt {
+  .fact {
+    display: grid;
+    gap: 2px;
+    align-content: start;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    min-width: 0;
+  }
+
+  .fact span {
     color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 600;
   }
 
-  .facts dd {
-    margin: 0;
-    word-break: break-word;
-  }
-
-  .lag-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .fact b {
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
   }
 
   .mini {
@@ -476,15 +651,53 @@
   }
 
   .lag {
-    margin: 0;
-    padding-left: 1.4em;
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
     display: grid;
     gap: 8px;
+  }
+
+  .lag li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+
+  .rank {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--hm);
+    background: color-mix(in srgb, var(--hm) 15%, transparent);
+  }
+
+  .lag-body {
+    min-width: 0;
   }
 
   .lag-row {
     display: flex;
     gap: 10px;
     align-items: baseline;
+  }
+
+  .mono {
+    font-family: ui-monospace, monospace;
+  }
+
+  @media (max-width: 640px) {
+    .head {
+      padding: 18px 16px;
+    }
   }
 </style>
