@@ -5,6 +5,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
+  import Toast from '../components/Toast.svelte';
 
   const KINDS = ['news', 'changelog', 'alert'];
   const TYPES = ['new', 'changed', 'fixed', 'removed'];
@@ -127,7 +128,7 @@
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
   {#if data && !data.playerWeb}<div class="notice">{t('news.playerWebOff')}</div>{/if}
 
   {#if data?.incidents?.length}

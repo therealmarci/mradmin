@@ -90,8 +90,7 @@
       <div class="kpi"><div class="label">{t('chunks.chunks')}</div><div class="value">{overview.chunks}</div>
         <div class="sub">{overview.defaultBudget != null ? t('chunks.overviewBudget', { n: overview.defaultBudget }) : t('chunks.size', { n: overview.size })}</div></div>
       {#if overview.dummiesEnabled}
-        <div class="kpi"><div class="label">{t('chunks.dummies')}</div><div class="value">{overview.dummies}</div>
-          <div class="sub">{t('chunks.dummiesSub', { n: overview.links })}</div></div>
+        <div class="kpi"><div class="label">{t('chunks.dummies')}</div><div class="value">{overview.dummies}</div></div>
       {/if}
       <div class="kpi {overview.locked ? 'bad' : overview.warn ? 'warn' : ''}"><div class="label">{t('chunks.problems')}</div>
         <div class="value">{overview.locked + overview.warn}</div>

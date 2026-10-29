@@ -5,6 +5,7 @@
   import { ago, dateTime } from '../lib/format.js';
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
+  import Toast from './Toast.svelte';
 
   let { me } = $props();
 
@@ -95,7 +96,7 @@
     </div>
     <p class="muted small">{t('passkey.hint')}</p>
     {#if error}<div class="error">{error}</div>{/if}
-    {#if message}<div class="notice">{message}</div>{/if}
+    <Toast text={message} />
 
     {#if adding}
       <form class="add" onsubmit={add}>

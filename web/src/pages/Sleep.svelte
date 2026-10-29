@@ -5,6 +5,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import { head, duration } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
+  import Toast from '../components/Toast.svelte';
 
   let { me } = $props();
 
@@ -60,7 +61,7 @@
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if overview}
     <div class="kpis">

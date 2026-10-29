@@ -7,6 +7,7 @@
   import { t, lang, errorText } from '../lib/i18n.js';
   import Blocks from './Blocks.svelte';
   import AreaHeader from './AreaHeader.svelte';
+  import Toast from '../components/Toast.svelte';
 
   let { module, id, onChanged } = $props();
 
@@ -65,10 +66,8 @@
 <!-- The plugin's colour (same as its tile on the start page) for header, cards and bars. -->
 <div class="page" style="--hue: {hue}; --tint: hsl({hue} 70% 55%)">
   {#if area}<AreaHeader {area} />{/if}
-  <!-- Result of an action as a small note at the bottom - also visible above an open card. -->
-  {#if error || message}
-    <div class="toast" class:bad={error} role="status" aria-live="polite">{error || message}</div>
-  {/if}
+  <!-- Result of an action as a small bubble at the bottom - also visible above an open card. -->
+  <Toast text={error || message} tone={error ? 'bad' : 'good'} />
   {#if area}
     <Blocks blocks={area.blocks} onAction={action} {busy} />
   {:else if !error}
@@ -80,28 +79,5 @@
   .page {
     display: grid;
     gap: 16px;
-  }
-
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 20px;
-    z-index: 60;
-    transform: translateX(-50%);
-    max-width: min(92vw, 520px);
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--good);
-    box-shadow: var(--shadow);
-  }
-
-  .toast.bad {
-    border-left-color: var(--bad);
-    color: var(--bad);
   }
 </style>

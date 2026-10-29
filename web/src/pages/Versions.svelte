@@ -5,6 +5,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import { ago, dateTime, duration } from '../lib/format.js';
   import { markdown } from '../lib/markdown.js';
+  import Toast from '../components/Toast.svelte';
 
   let data = $state(null);
   let error = $state('');
@@ -84,7 +85,7 @@
     {/if}
   </div>
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if data}
     {#if data.restart.endsAt > 0}

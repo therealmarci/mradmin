@@ -3,6 +3,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
+  import Toast from './Toast.svelte';
 
   let { me } = $props();
 
@@ -119,7 +120,7 @@
   </div>
   <p class="muted small">{t('push.hint')}</p>
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if !supported}
     <p class="warn small">{ios && !installed ? t('push.iosInstall') : t('push.unsupported')}</p>

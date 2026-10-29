@@ -9,6 +9,7 @@
   import PvpPart from '../components/PvpPart.svelte';
   import BansPart from '../components/BansPart.svelte';
   import PartTile from '../components/PartTile.svelte';
+  import Toast from '../components/Toast.svelte';
 
   // Without a section: preview of the player and one tile per section; a tile opens /players/<uuid>/<section>.
   let { uuid, me, section = null } = $props();
@@ -88,7 +89,7 @@
     <button class="back" onclick={() => go('/players')}>← {t('player.back')}</button>
   {/if}
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if player && section}
     <!-- One section of the player: a small head, then the section itself. -->

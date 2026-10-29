@@ -12,6 +12,7 @@
   import ItemGrid from '../components/ItemGrid.svelte';
   import ArenaMap from '../components/ArenaMap.svelte';
   import Hearts from '../components/Hearts.svelte';
+  import Toast from '../components/Toast.svelte';
 
   let { id, me } = $props();
 
@@ -131,7 +132,7 @@
   <button class="back" onclick={() => go('/pvp')}>← {t('pvp.back')}</button>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if running}
     <div class="head">

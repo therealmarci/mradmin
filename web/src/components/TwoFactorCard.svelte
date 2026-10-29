@@ -6,6 +6,7 @@
   import { t, errorText } from '../lib/i18n.js';
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
+  import Toast from './Toast.svelte';
 
   let { me } = $props();
 
@@ -95,7 +96,7 @@
     <span class="tag" class:on={me.totp}>{me.totp ? '✓ ' + t('twofa.on') : '○ ' + t('twofa.off')}</span>
   </div>
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if me.totp}
     <p class="muted small">{t('twofa.onHint')}</p>

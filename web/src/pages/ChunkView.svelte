@@ -6,6 +6,7 @@
   import { go } from '../lib/router.svelte.js';
   import { STATUS } from '../lib/chunks.js';
   import { ICONS } from '../lib/icons.js';
+  import Toast from '../components/Toast.svelte';
 
   let { id, me } = $props();
 
@@ -57,15 +58,12 @@
   const value = (m) => (m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
-  // With a dummy on, the size only changes evenly (a dummy needs a centred square).
-  const evenOnly = $derived(loader?.dummy && loader?.dummiesEnabled);
-  const DIRECTIONS = ['north', 'south', 'west', 'east'];
 </script>
 
 <div class="page">
   <button class="back" onclick={() => go('/chunks')}>← {t('chunks.back')}</button>
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if loader}
     {@const st = STATUS[loader.status]}
@@ -164,31 +162,6 @@
       </section>
 
       <div class="side">
-        {#if sized && me.may.mrchunksResize}
-          <section class="card">
-            <div class="c-head">
-              <span class="c-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round"><path d={ICONS.grid} /></svg>
-              </span>
-              <h2>{t('chunks.resize')}</h2>
-            </div>
-            <p class="muted small">{evenOnly ? t('chunks.resizeDummy') : t('chunks.resizeHint', { max: loader.maxReach * 2 + 1 })}</p>
-            <div class="resize">
-              {#each evenOnly ? ['all'] : [...DIRECTIONS, 'all'] as d (d)}
-                <div class="rrow" class:all={d === 'all'}>
-                  <span>{t('chunks.dir.' + d)}</span>
-                  <div class="stepper">
-                    <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '-1' })} aria-label="-1">−</button>
-                    <strong class="mono">{d === 'all' ? loader.width + '×' + loader.length : loader.reach[d]}</strong>
-                    <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '1' })} aria-label="+1">+</button>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </section>
-        {/if}
-
         <section class="card">
           <div class="c-head">
             <span class="c-icon" aria-hidden="true">
@@ -501,46 +474,6 @@
 
   .tiny {
     font-size: 0.72rem;
-  }
-
-  .resize {
-    display: grid;
-    gap: 6px;
-    margin-top: 8px;
-  }
-
-  .rrow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 6px 10px;
-    border-radius: 10px;
-    background: var(--surface-2);
-  }
-
-  .rrow.all {
-    background: color-mix(in srgb, var(--cl) 10%, var(--surface-2));
-    font-weight: 700;
-  }
-
-  .stepper {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .stepper button {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 8px;
-    font-size: 1.1rem;
-  }
-
-  .stepper strong {
-    min-width: 48px;
-    text-align: center;
   }
 
   .members {

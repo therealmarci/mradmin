@@ -7,6 +7,7 @@
   import TwoFactorCard from '../components/TwoFactorCard.svelte';
   import NotificationsCard from '../components/NotificationsCard.svelte';
   import DiscordCard from '../components/DiscordCard.svelte';
+  import Toast from '../components/Toast.svelte';
 
   let { me } = $props();
 
@@ -97,7 +98,7 @@
   </section>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   <div class="layout">
     <nav class="sections" aria-label={t('nav.account')}>

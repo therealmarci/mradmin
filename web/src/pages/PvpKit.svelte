@@ -11,6 +11,7 @@
   import ItemGrid from '../components/ItemGrid.svelte';
   import ItemIcon from '../components/ItemIcon.svelte';
   import ItemEditor from '../components/ItemEditor.svelte';
+  import Toast from '../components/Toast.svelte';
 
   let { id = null, copyFrom = null } = $props();
 
@@ -206,7 +207,7 @@
   <button class="back" onclick={back}>← {t('pvp.kits.back')}</button>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if !kit}
     {#if !error}<p class="muted">{t('common.loading')}</p>{/if}

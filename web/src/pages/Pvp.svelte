@@ -9,6 +9,7 @@
   import { live } from '../lib/live.svelte.js';
   import { hearts, clock } from '../lib/pvp.js';
   import Hearts from '../components/Hearts.svelte';
+  import Toast from '../components/Toast.svelte';
 
   let { me } = $props();
 
@@ -120,7 +121,7 @@
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
-  {#if message}<div class="notice">{message}</div>{/if}
+  <Toast text={message} />
 
   {#if overview}
     <div class="kpis">
