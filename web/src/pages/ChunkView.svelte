@@ -5,6 +5,7 @@
   import { ago, dateTime, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { STATUS } from '../lib/chunks.js';
+  import { ICONS } from '../lib/icons.js';
 
   let { id, me } = $props();
 
@@ -68,34 +69,41 @@
 
   {#if loader}
     {@const st = STATUS[loader.status]}
-    <section class="card header">
-      <div class="title">
-        <img src={head(loader.owner)} alt="" width="44" height="44" />
-        <div>
+    <!-- Head: owner, name, state (its colour on the left as in the list), the facts and what can be done. -->
+    <section class="head {st.tone}">
+      <div class="who">
+        <img src={head(loader.owner)} alt="" width="56" height="56" />
+        <div class="names">
+          <span class="status">{#if st.icon}{st.icon} {/if}{t('chunks.status.' + loader.status)}</span>
           <h1>{loader.name}</h1>
           <div class="muted">
             {#if me.may.players}<button class="plink" onclick={() => go('/players/' + loader.owner)}>{loader.ownerName}</button>{:else}{loader.ownerName}{/if}
             · Nr. {loader.number}
           </div>
         </div>
-        <span class="badge-status {st.tone}">{#if st.icon}{st.icon} {/if}{t('chunks.status.' + loader.status)}</span>
       </div>
-      <dl class="facts">
-        <dt>{t('ticket.location')}</dt><dd class="mono coords"><span>{loader.world}</span><span>X {loader.x}</span><span>Y {loader.y}</span><span>Z {loader.z}</span></dd>
-        <dt>{t('chunks.created')}</dt><dd>{dateTime(loader.created)}</dd>
+
+      {#if loader.lock}
+        <div class="lock">
+          <b>{t('chunks.status.locked')}</b>
+          {t('chunks.lockedBy', { metric: loader.lock.metric, value: Math.round(loader.lock.value), limit: Math.round(loader.lock.limit) })} · {dateTime(loader.lock.since)}
+        </div>
+      {/if}
+
+      <div class="facts">
+        <div class="fact"><span>{t('ticket.location')}</span><b class="mono coords"><i>{loader.world}</i><i>X {loader.x}</i><i>Y {loader.y}</i><i>Z {loader.z}</i></b></div>
+        <div class="fact"><span>{t('chunks.created')}</span><b>{dateTime(loader.created)}</b></div>
         {#if sized}
-          <dt>{t('chunks.sizeLabel')}</dt><dd>{t('chunks.sizeValue', { width: loader.width, length: loader.length, chunks: loader.chunks })}</dd>
-          <dt>{t('chunks.ownerBudget')}</dt><dd>{t('chunks.budgetValue', { used: loader.budgetUsed, budget: loader.budget < 0 ? '∞' : loader.budget })}</dd>
+          <div class="fact"><span>{t('chunks.sizeLabel')}</span><b>{t('chunks.sizeValue', { width: loader.width, length: loader.length, chunks: loader.chunks })}</b></div>
+          <div class="fact"><span>{t('chunks.ownerBudget')}</span><b>{t('chunks.budgetValue', { used: loader.budgetUsed, budget: loader.budget < 0 ? '∞' : loader.budget })}</b>
+            {#if loader.budget > 0}<div class="bar"><span style="width: {Math.min(100, (loader.budgetUsed / loader.budget) * 100)}%"></span></div>{/if}</div>
         {/if}
         {#if loader.dummiesEnabled}
-          <dt>{t('chunks.dummy')}</dt>
-          <dd class:good-text={loader.dummyPresent}>{loader.dummyPresent ? '🧍 ' + t('chunks.dummySits') : loader.dummy ? t('chunks.dummyWaiting') : t('chunks.dummyNone')}</dd>
+          <div class="fact"><span>{t('chunks.dummy')}</span>
+            <b class:good-text={loader.dummyPresent}>{loader.dummyPresent ? '🧍 ' + t('chunks.dummySits') : loader.dummy ? t('chunks.dummyWaiting') : t('chunks.dummyNone')}</b></div>
         {/if}
-        {#if loader.lock}
-          <dt>{t('chunks.status.locked')}</dt>
-          <dd class="bad-text">{t('chunks.lockedBy', { metric: loader.lock.metric, value: Math.round(loader.lock.value), limit: Math.round(loader.lock.limit) })} · {dateTime(loader.lock.since)}</dd>
-        {/if}
-      </dl>
+      </div>
+
       {#if me.may.mrchunksManage || me.may.mrchunksToggle}
         <div class="actions">
           {#if loader.lock}
@@ -114,73 +122,100 @@
                 {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
               </button>
             {/if}
-            <button class="danger" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
+            <button class="danger push" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
           {/if}
         </div>
       {/if}
     </section>
 
-    {#if sized && me.may.mrchunksResize}
-      <section class="card">
-        <h2>{t('chunks.resize')}</h2>
-        <p class="muted small">{evenOnly ? t('chunks.resizeDummy') : t('chunks.resizeHint', { max: loader.maxReach * 2 + 1 })}</p>
-        <div class="resize">
-          {#each evenOnly ? ['all'] : [...DIRECTIONS, 'all'] as d (d)}
-            <div class="rrow">
-              <span>{t('chunks.dir.' + d)}</span>
-              <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '-1' })} aria-label="-1">−</button>
-              <strong class="mono">{d === 'all' ? loader.width + '×' + loader.length : loader.reach[d]}</strong>
-              <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '1' })} aria-label="+1">+</button>
-            </div>
-          {/each}
+    <div class="grid">
+      <section class="card activity">
+        <div class="c-head">
+          <span class="c-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
+          </span>
+          <h2>{t('chunks.activity')}</h2>
         </div>
-      </section>
-    {/if}
-
-    <section class="card">
-      <h2>{t('chunks.activity')}</h2>
-      {#if loader.metrics}
-        <p class="muted small">
-          {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
-        </p>
-        {#if loader.pool && !loader.lock}
-          <p class="small" class:warn-text={loader.pool.warnRatio >= 1} class:bad-text={loader.pool.lockRatio >= 1}>
-            {t('chunks.pool', { percent: Math.round(loader.pool.warnRatio * 100), chunks: loader.pool.chunks })}
+        {#if loader.metrics}
+          <p class="muted small">
+            {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
           </p>
-        {/if}
-        <div class="metrics">
-          {#each loader.metrics as m (m.key)}
-            <div class="metric">
-              <div class="mrow"><span>{m.label}</span><strong class="{tone(m)}-text">{value(m)}</strong></div>
-              <div class="bar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
-                <div class="fill {tone(m)}" style="width: {share(m)}%"></div>
-                {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
+          {#if loader.pool && !loader.lock}
+            <p class="small" class:warn-text={loader.pool.warnRatio >= 1} class:bad-text={loader.pool.lockRatio >= 1}>
+              {t('chunks.pool', { percent: Math.round(loader.pool.warnRatio * 100), chunks: loader.pool.chunks })}
+            </p>
+          {/if}
+          <div class="metrics">
+            {#each loader.metrics as m (m.key)}
+              <div class="metric {tone(m)}">
+                <div class="mrow"><span>{m.label}</span><strong class="{tone(m)}-text">{value(m)} <small class="muted">/ {m.lock}</small></strong></div>
+                <div class="mbar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
+                  <div class="fill {tone(m)}" style="width: {share(m)}%"></div>
+                  {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
+                </div>
+                <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
               </div>
-              <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
-            </div>
-          {/each}
-        </div>
-      {:else}
-        <p class="muted">{t('chunks.noActivity')}</p>
-      {/if}
-    </section>
+            {/each}
+          </div>
+        {:else}
+          <p class="muted">{t('chunks.noActivity')}</p>
+        {/if}
+      </section>
 
-    <section class="card">
-      <h2>{t('chunks.members')}</h2>
-      {#if loader.members.length === 0}
-        <p class="muted">{t('chunks.noMembers')}</p>
-      {:else}
-        <ul class="members">
-          {#each loader.members as m}
-            <li>
-              <img src={head(m.uuid)} alt="" width="24" height="24" />
-              <span>{m.name}</span>
-              <span class="muted small">{m.scope === 'all' ? t('chunks.allLoaders') : t('chunks.thisLoader')} · {m.until ? t('chunks.until', { time: dateTime(m.until) }) : t('chunks.permanent')}</span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </section>
+      <div class="side">
+        {#if sized && me.may.mrchunksResize}
+          <section class="card">
+            <div class="c-head">
+              <span class="c-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round"><path d={ICONS.grid} /></svg>
+              </span>
+              <h2>{t('chunks.resize')}</h2>
+            </div>
+            <p class="muted small">{evenOnly ? t('chunks.resizeDummy') : t('chunks.resizeHint', { max: loader.maxReach * 2 + 1 })}</p>
+            <div class="resize">
+              {#each evenOnly ? ['all'] : [...DIRECTIONS, 'all'] as d (d)}
+                <div class="rrow" class:all={d === 'all'}>
+                  <span>{t('chunks.dir.' + d)}</span>
+                  <div class="stepper">
+                    <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '-1' })} aria-label="-1">−</button>
+                    <strong class="mono">{d === 'all' ? loader.width + '×' + loader.length : loader.reach[d]}</strong>
+                    <button class="secondary" disabled={busy} onclick={() => act('resize', { direction: d, delta: '1' })} aria-label="+1">+</button>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {/if}
+
+        <section class="card">
+          <div class="c-head">
+            <span class="c-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"><path d={ICONS.users} /></svg>
+            </span>
+            <h2>{t('chunks.members')}</h2>
+            <span class="count">{loader.members.length}</span>
+          </div>
+          {#if loader.members.length === 0}
+            <p class="muted small">{t('chunks.noMembers')}</p>
+          {:else}
+            <ul class="members">
+              {#each loader.members as m}
+                <li>
+                  <img src={head(m.uuid)} alt="" width="28" height="28" />
+                  <span class="m-body">
+                    <strong>{m.name}</strong>
+                    <span class="muted small">{m.scope === 'all' ? t('chunks.allLoaders') : t('chunks.thisLoader')} · {m.until ? t('chunks.until', { time: dateTime(m.until) }) : t('chunks.permanent')}</span>
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+      </div>
+    </div>
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
@@ -188,6 +223,7 @@
 
 <style>
   .page {
+    --cl: var(--accent);
     display: grid;
     gap: 16px;
   }
@@ -195,115 +231,254 @@
   .back {
     justify-self: start;
     background: transparent;
-    color: var(--accent);
+    color: var(--cl);
     padding: 4px 0;
   }
 
-  .title {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    flex-wrap: wrap;
+  .head {
+    --st: var(--muted);
+    display: grid;
+    gap: 16px;
+    padding: 20px 22px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--cl) 28%, var(--border));
+    border-left: 4px solid var(--st);
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--cl) 18%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .title img {
-    border-radius: 8px;
+  .head.good {
+    --st: var(--good);
+  }
+
+  .head.warn {
+    --st: var(--warn);
+  }
+
+  .head.bad {
+    --st: var(--bad);
+  }
+
+  .head.info {
+    --st: var(--accent);
+  }
+
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .who img {
+    border-radius: 12px;
     image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .names {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .status {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--st);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.45rem;
+    overflow-wrap: anywhere;
+  }
+
+  h2 {
+    font-size: 1rem;
+    margin: 0;
   }
 
   .plink {
     background: transparent;
-    color: var(--accent);
+    color: var(--cl);
     padding: 0;
     font-weight: 600;
   }
 
-  .title h1 {
-    margin: 0;
-    font-size: 1.3rem;
-  }
-
-  .title .badge-status {
-    margin-left: auto;
+  .lock {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--bad) 35%, var(--border));
   }
 
   .facts {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 4px 16px;
-    margin: 14px 0 0;
-    font-size: 0.9rem;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
   }
 
-  .facts dt {
+  .fact {
+    display: grid;
+    gap: 3px;
+    align-content: start;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    min-width: 0;
+  }
+
+  .fact > span {
     color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 600;
   }
 
-  .facts dd {
-    margin: 0;
+  .fact b {
+    font-size: 0.92rem;
+    overflow-wrap: anywhere;
   }
 
-  /* Wrapped only between the values - never inside one. */
   .coords {
     display: flex;
     flex-wrap: wrap;
-    gap: 0 12px;
+    gap: 0 8px;
   }
 
-  .coords span {
+  .coords i {
+    font-style: normal;
     white-space: nowrap;
+  }
+
+  .mono {
+    font-family: ui-monospace, monospace;
+  }
+
+  .bar {
+    height: 5px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--border) 80%, transparent);
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .bar span {
+    display: block;
+    height: 100%;
+    background: var(--cl);
   }
 
   .actions {
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
-    margin-top: 16px;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
   }
 
-  .resize {
-    display: grid;
-    gap: 8px;
-    max-width: 360px;
+  .push {
+    margin-left: auto;
   }
 
-  .rrow {
+  /* Below: activity on the left, size and members on the right */
+  .grid {
     display: grid;
-    grid-template-columns: 1fr 40px 64px 40px;
-    gap: 8px;
+    gap: 16px;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+
+  .side {
+    display: grid;
+    gap: 16px;
+  }
+
+  .c-head {
+    display: flex;
     align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
   }
 
-  .rrow strong {
-    text-align: center;
+  .c-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    color: var(--cl);
+    background: color-mix(in srgb, var(--cl) 14%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--cl) 30%, transparent);
+  }
+
+  .count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+
+  .activity p {
+    margin: 0 0 8px;
   }
 
   .metrics {
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    margin-top: 6px;
+  }
+
+  .metric {
+    --tn: var(--good);
+    display: grid;
+    gap: 5px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-left: 3px solid var(--tn);
+  }
+
+  .metric.warn {
+    --tn: var(--warn);
+  }
+
+  .metric.bad {
+    --tn: var(--bad);
   }
 
   .mrow {
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
+    gap: 8px;
+    font-size: 0.88rem;
   }
 
-  .bar {
+  .mrow small {
+    font-weight: 600;
+  }
+
+  .mbar {
     position: relative;
-    height: 8px;
+    height: 7px;
     border-radius: 4px;
-    background: var(--surface-2);
-    margin: 6px 0 4px;
+    background: color-mix(in srgb, var(--border) 80%, transparent);
+    overflow: visible;
   }
 
   .fill {
     height: 100%;
     border-radius: 4px;
-  }
-
-  .fill.good {
     background: var(--good);
   }
 
@@ -317,14 +492,82 @@
 
   .tick {
     position: absolute;
-    top: -3px;
+    top: -2px;
+    bottom: -2px;
     width: 2px;
-    height: 14px;
-    background: var(--muted);
+    border-radius: 1px;
+    background: var(--warn);
   }
 
   .tiny {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+  }
+
+  .resize {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .rrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+
+  .rrow.all {
+    background: color-mix(in srgb, var(--cl) 10%, var(--surface-2));
+    font-weight: 700;
+  }
+
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stepper button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    font-size: 1.1rem;
+  }
+
+  .stepper strong {
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .members {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .members li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+
+  .members img {
+    border-radius: 6px;
+    image-rendering: pixelated;
+  }
+
+  .m-body {
+    display: grid;
+    min-width: 0;
   }
 
   .good-text {
@@ -339,51 +582,19 @@
     color: var(--bad);
   }
 
-  .members {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
   }
 
-  .members li {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
+  @media (max-width: 640px) {
+    .head {
+      padding: 16px;
+    }
 
-  .members img {
-    border-radius: 4px;
-    image-rendering: pixelated;
-  }
-
-  .badge-status {
-    font-size: 0.78rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    color: var(--muted);
-  }
-
-  .badge-status.good {
-    color: var(--good);
-    background: color-mix(in srgb, var(--good) 14%, transparent);
-  }
-
-  .badge-status.warn {
-    color: var(--warn);
-    background: color-mix(in srgb, var(--warn) 16%, transparent);
-  }
-
-  .badge-status.bad {
-    color: var(--bad);
-    background: color-mix(in srgb, var(--bad) 14%, transparent);
-  }
-
-  .badge-status.info {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    .push {
+      margin-left: 0;
+    }
   }
 </style>
