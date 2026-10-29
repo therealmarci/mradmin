@@ -39,7 +39,8 @@
   }
 
   const ICONS = {
-    'play-time': '⏱️', 'blocks-mined': '⛏️', 'mob-kills': '⚔️', 'xp-level': '✨', deaths: '💀',
+    'play-time': '⏱️', 'blocks-mined': '⛏️', 'blocks-placed': '🧱', 'mob-kills': '⚔️', 'xp-level': '✨', deaths: '💀',
+    totems: '🗿', 'times-slept': '🛏️', 'distance-swum': '🏊', 'distance-flown': '🪂',
     distance: '🧭', 'fish-caught': '🎣', jumps: '🦘', 'items-crafted': '🛠️',
   };
   // The game's statistics are named by the page ("game:play-time"), the plugins' bring their own title.
@@ -54,6 +55,30 @@
   const podiums = $derived(
     (data?.rankings ?? []).map((r) => ({ ...r, podium: r.places.slice(0, 3), rest: r.places.slice(3) })),
   );
+
+  // The game's statistics in groups (both tabs); a value of no group goes to the last one.
+  const GROUPS = [
+    { id: 'time', icon: '⏱️', keys: ['play-time', 'xp-level'] },
+    { id: 'build', icon: '⛏️', keys: ['blocks-mined', 'blocks-placed', 'items-crafted'] },
+    { id: 'fight', icon: '⚔️', keys: ['mob-kills', 'deaths', 'totems'] },
+    { id: 'travel', icon: '🧭', keys: ['distance', 'distance-swum', 'distance-flown', 'jumps'] },
+    { id: 'leisure', icon: '🎣', keys: ['fish-caught', 'times-slept'] },
+  ];
+
+  /** The items (with game:<key> ids) per group, in the order of the groups and of their keys; empty groups left out. */
+  function byGroup(items) {
+    const known = new Set(GROUPS.flatMap((g) => g.keys));
+    return GROUPS.map((g, i) => ({
+      ...g,
+      items: [
+        ...g.keys.map((k) => items.find((x) => key(x.id) === k)).filter(Boolean),
+        ...(i === GROUPS.length - 1 ? items.filter((x) => !known.has(key(x.id))) : []),
+      ],
+    })).filter((g) => g.items.length);
+  }
+
+  const gameRankings = $derived(podiums.filter((r) => game(r.id)));
+  const pluginRankings = $derived(podiums.filter((r) => !game(r.id)));
 
   // Server tab: every ranking as a podium or as a table, chosen per ranking (remembered in the browser).
   const MODES_KEY = 'mradmin.stats.modes';
@@ -111,6 +136,95 @@
   </article>
 {/snippet}
 
+{#snippet rankingCard(r)}
+  <section class="card ranking">
+    <div class="r-head">
+      <h2 title={title(r)}><span aria-hidden="true">{icon(r)}</span> <span class="r-title">{title(r)}</span></h2>
+      {#if r.places.length}
+        <div class="mode" role="group" aria-label={t('self.stats.view')}>
+          <button class:active={mode(r.id) === 'podium'} aria-pressed={mode(r.id) === 'podium'}
+            aria-label={t('self.stats.viewPodium')} title={t('self.stats.viewPodium')} onclick={() => setMode(r.id, 'podium')}>
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M1 14h14M2 14V9h4v5M6 14V5h4v9M10 14V8h4v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+          </button>
+          <button class:active={mode(r.id) === 'table'} aria-pressed={mode(r.id) === 'table'}
+            aria-label={t('self.stats.viewTable')} title={t('self.stats.viewTable')} onclick={() => setMode(r.id, 'table')}>
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+          </button>
+        </div>
+      {/if}
+    </div>
+    <!-- One body below the head, so all cards of a row line up (subgrid). -->
+    <div class="r-body">
+    {#if r.places.length === 0}
+      <p class="muted small">{t('self.stats.empty')}</p>
+    {:else if mode(r.id) === 'table'}
+      <!-- Every player, scrollable; opens with the own row in view. -->
+      <div class="r-scroll" use:toOwn>
+      <table class="r-table">
+        <thead>
+          <tr><th class="num">{t('self.stats.colPlace')}</th><th>{t('self.stats.colPlayer')}</th><th class="num">{t('self.stats.colValue')}</th></tr>
+        </thead>
+        <tbody>
+          {#each r.all ?? r.places as p (p.uuid)}
+            <tr class:self={p.self}>
+              <td class="num">{medal(p.rank) ?? p.rank}</td>
+              <td><span class="who"><img src={head(p.uuid)} alt="" width="20" height="20" /> {p.name}</span></td>
+              <td class="num strong">{p.value}</td>
+            </tr>
+          {/each}
+          {#if r.own && !(r.all ?? []).some((p) => p.self)}
+            <tr class="gap-row" aria-hidden="true"><td colspan="3">⋯</td></tr>
+            <tr class="self">
+              <td class="num">{r.own.rank}</td>
+              <td><span class="who"><img src={head(r.own.uuid)} alt="" width="20" height="20" /> {r.own.name}</span></td>
+              <td class="num strong">{r.own.value}</td>
+            </tr>
+          {/if}
+        </tbody>
+      </table>
+      </div>
+    {:else}
+      <div class="podium">
+        {#each [1, 0, 2] as i}
+          {@const p = r.podium[i]}
+          {#if p}
+            <div class="step s{i + 1}" class:self={p.self}>
+              <img src={head(p.uuid)} alt="" width="36" height="36" />
+              <span class="p-name">{p.name}</span>
+              <span class="p-value">{p.value}</span>
+              <span class="block"><span>{medal(i + 1)}</span></span>
+            </div>
+          {:else}
+            <div class="step empty-step"></div>
+          {/if}
+        {/each}
+      </div>
+      {#if r.rest.length || r.own}
+        <ol class="rest">
+          {#each r.rest as p (p.uuid)}
+            <li class:self={p.self}>
+              <span class="rank">{p.rank}</span>
+              <img src={head(p.uuid)} alt="" width="22" height="22" />
+              <span class="name">{p.name}</span>
+              <strong>{p.value}</strong>
+            </li>
+          {/each}
+          {#if r.own}
+            <li class="gap" aria-hidden="true">⋯</li>
+            <li class="self">
+              <span class="rank">{r.own.rank}</span>
+              <img src={head(r.own.uuid)} alt="" width="22" height="22" />
+              <span class="name">{r.own.name}</span>
+              <strong>{r.own.value}</strong>
+            </li>
+          {/if}
+        </ol>
+      {/if}
+    {/if}
+    </div>
+  </section>
+{/snippet}
+
 <div class="page">
   <header class="head">
     <span class="watermark" aria-hidden="true">📊</span>
@@ -135,16 +249,18 @@
 
   {#if data}
     {#if tab === 'personal'}
-      <section class="card tile">
-        <h2>{t('self.stats.yourGame')}</h2>
-        <p class="muted small sub">{t('self.stats.yourGameHint', { players: data.players })}</p>
-        <div class="stats">
-          {#each gamePersonal as p (p.id)}{@render statCard(p)}{/each}
-        </div>
-      </section>
+      <p class="muted small sub">{t('self.stats.yourGameHint', { players: data.players })}</p>
+      {#each byGroup(gamePersonal) as g (g.id)}
+        <section class="card tile">
+          <h2 class="group-title"><span aria-hidden="true">{g.icon}</span> {t('self.stats.group.' + g.id)}</h2>
+          <div class="stats">
+            {#each g.items as p (p.id)}{@render statCard(p)}{/each}
+          </div>
+        </section>
+      {/each}
       {#if pluginPersonal.length}
         <section class="card tile">
-          <h2>{t('self.stats.yourPlugins')}</h2>
+          <h2 class="group-title"><span aria-hidden="true">🏆</span> {t('self.stats.yourPlugins')}</h2>
           <div class="stats">
             {#each pluginPersonal as p (p.id)}{@render statCard(p)}{/each}
           </div>
@@ -175,92 +291,22 @@
       {#if podiums.length === 0}
         <p class="muted">{t('self.stats.none')}</p>
       {/if}
-      <div class="rankings">
-        {#each podiums as r (r.id)}
-          <section class="card ranking">
-            <div class="r-head">
-              <h2 title={title(r)}><span aria-hidden="true">{icon(r)}</span> <span class="r-title">{title(r)}</span></h2>
-              {#if r.places.length}
-                <div class="mode" role="group" aria-label={t('self.stats.view')}>
-                  <button class:active={mode(r.id) === 'podium'} aria-pressed={mode(r.id) === 'podium'}
-                    onclick={() => setMode(r.id, 'podium')}>{t('self.stats.viewPodium')}</button>
-                  <button class:active={mode(r.id) === 'table'} aria-pressed={mode(r.id) === 'table'}
-                    onclick={() => setMode(r.id, 'table')}>{t('self.stats.viewTable')}</button>
-                </div>
-              {/if}
-            </div>
-            <!-- One body below the head, so all cards of a row line up (subgrid). -->
-            <div class="r-body">
-            {#if r.places.length === 0}
-              <p class="muted small">{t('self.stats.empty')}</p>
-            {:else if mode(r.id) === 'table'}
-              <!-- Every player, scrollable; opens with the own row in view. -->
-              <div class="r-scroll" use:toOwn>
-              <table class="r-table">
-                <thead>
-                  <tr><th class="num">{t('self.stats.colPlace')}</th><th>{t('self.stats.colPlayer')}</th><th class="num">{t('self.stats.colValue')}</th></tr>
-                </thead>
-                <tbody>
-                  {#each r.all ?? r.places as p (p.uuid)}
-                    <tr class:self={p.self}>
-                      <td class="num">{medal(p.rank) ?? p.rank}</td>
-                      <td><span class="who"><img src={head(p.uuid)} alt="" width="20" height="20" /> {p.name}</span></td>
-                      <td class="num strong">{p.value}</td>
-                    </tr>
-                  {/each}
-                  {#if r.own && !(r.all ?? []).some((p) => p.self)}
-                    <tr class="gap-row" aria-hidden="true"><td colspan="3">⋯</td></tr>
-                    <tr class="self">
-                      <td class="num">{r.own.rank}</td>
-                      <td><span class="who"><img src={head(r.own.uuid)} alt="" width="20" height="20" /> {r.own.name}</span></td>
-                      <td class="num strong">{r.own.value}</td>
-                    </tr>
-                  {/if}
-                </tbody>
-              </table>
-              </div>
-            {:else}
-              <div class="podium">
-                {#each [1, 0, 2] as i}
-                  {@const p = r.podium[i]}
-                  {#if p}
-                    <div class="step s{i + 1}" class:self={p.self}>
-                      <img src={head(p.uuid)} alt="" width="36" height="36" />
-                      <span class="p-name">{p.name}</span>
-                      <span class="p-value">{p.value}</span>
-                      <span class="block"><span>{medal(i + 1)}</span></span>
-                    </div>
-                  {:else}
-                    <div class="step empty-step"></div>
-                  {/if}
-                {/each}
-              </div>
-              {#if r.rest.length || r.own}
-                <ol class="rest">
-                  {#each r.rest as p (p.uuid)}
-                    <li class:self={p.self}>
-                      <span class="rank">{p.rank}</span>
-                      <img src={head(p.uuid)} alt="" width="22" height="22" />
-                      <span class="name">{p.name}</span>
-                      <strong>{p.value}</strong>
-                    </li>
-                  {/each}
-                  {#if r.own}
-                    <li class="gap" aria-hidden="true">⋯</li>
-                    <li class="self">
-                      <span class="rank">{r.own.rank}</span>
-                      <img src={head(r.own.uuid)} alt="" width="22" height="22" />
-                      <span class="name">{r.own.name}</span>
-                      <strong>{r.own.value}</strong>
-                    </li>
-                  {/if}
-                </ol>
-              {/if}
-            {/if}
-            </div>
-          </section>
-        {/each}
-      </div>
+      {#each byGroup(gameRankings) as g (g.id)}
+        <section class="card tile">
+          <h2 class="group-title"><span aria-hidden="true">{g.icon}</span> {t('self.stats.group.' + g.id)}</h2>
+          <div class="rankings">
+            {#each g.items as r (r.id)}{@render rankingCard(r)}{/each}
+          </div>
+        </section>
+      {/each}
+      {#if pluginRankings.length}
+        <section class="card tile">
+          <h2 class="group-title"><span aria-hidden="true">🏆</span> {t('self.stats.yourPluginsServer')}</h2>
+          <div class="rankings">
+            {#each pluginRankings as r (r.id)}{@render rankingCard(r)}{/each}
+          </div>
+        </section>
+      {/if}
 
       <section class="card privacy">
         <span class="p-icon" aria-hidden="true">{data.hidden ? '🙈' : '👀'}</span>
@@ -682,38 +728,11 @@
     overflow: hidden;
   }
 
-  .r-head .mode {
-    justify-self: start;
-  }
-
   .r-body {
     display: grid;
     gap: 12px;
     align-content: start;
   }
-  .mode {
-    display: inline-flex;
-    padding: 3px;
-    gap: 3px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .mode button {
-    background: transparent;
-    color: var(--muted);
-    padding: 4px 10px;
-    border-radius: 7px;
-    font-size: 0.8rem;
-  }
-
-  .mode button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
-
   .r-scroll {
     max-height: 380px;
     overflow-y: auto;
@@ -784,5 +803,65 @@
   .who img {
     border-radius: 4px;
     image-rendering: pixelated;
+  }
+
+  /* The podium / table switch: two small symbols in the top right corner of the card. */
+  .ranking {
+    position: relative;
+  }
+
+  .ranking .mode {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .ranking .mode button {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  .ranking .mode button:hover {
+    opacity: 1;
+    background: var(--surface-2);
+  }
+
+  .ranking .mode button.active {
+    opacity: 1;
+    color: var(--st);
+    background: color-mix(in srgb, var(--st) 14%, transparent);
+    box-shadow: none;
+  }
+
+  .r-head h2 {
+    padding-right: 60px;
+  }
+
+  /* Rankings sit inside the tile of their group. */
+  .tile .ranking {
+    background: var(--surface-2);
+    box-shadow: none;
+  }
+
+  .group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tile .rankings {
+    margin-top: 14px;
   }
 </style>

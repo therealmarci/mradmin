@@ -40,7 +40,12 @@ public final class VanillaStats {
         DISTANCE("distance"),
         FISH_CAUGHT("fish-caught"),
         JUMPS("jumps"),
-        ITEMS_CRAFTED("items-crafted");
+        ITEMS_CRAFTED("items-crafted"),
+        BLOCKS_PLACED("blocks-placed"),
+        TOTEMS("totems"),
+        TIMES_SLEPT("times-slept"),
+        DISTANCE_SWUM("distance-swum"),
+        DISTANCE_FLOWN("distance-flown");
 
         public final String key;
 
@@ -139,11 +144,52 @@ public final class VanillaStats {
             v.put(Kind.FISH_CAUGHT, (double) p.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
             v.put(Kind.JUMPS, (double) p.getStatistic(org.bukkit.Statistic.JUMP));
             v.put(Kind.ITEMS_CRAFTED, perMaterial(p, org.bukkit.Statistic.CRAFT_ITEM, false));
+            v.put(Kind.BLOCKS_PLACED, placed(p));
+            v.put(Kind.TOTEMS, (double) p.getStatistic(org.bukkit.Statistic.USE_ITEM, org.bukkit.Material.TOTEM_OF_UNDYING));
+            v.put(Kind.TIMES_SLEPT, (double) p.getStatistic(org.bukkit.Statistic.SLEEP_IN_BED));
+            v.put(Kind.DISTANCE_SWUM, p.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM) / CM_PER_KM);
+            v.put(Kind.DISTANCE_FLOWN, (p.getStatistic(org.bukkit.Statistic.AVIATE_ONE_CM)
+                    + p.getStatistic(org.bukkit.Statistic.FLY_ONE_CM)) / CM_PER_KM);
             result.put(p.getUniqueId(), new Live(p.getName(), v));
         }
         return result;
     }
 
+
+    /** Placed blocks of an online player: "used" of every item that is a block (that is what placing counts). */
+    private static double placed(org.bukkit.entity.Player p) {
+        double sum = 0;
+        for (org.bukkit.Material m : org.bukkit.Material.values()) {
+            if (!m.isBlock() || !m.isItem()) {
+                continue;
+            }
+            try {
+                sum += p.getStatistic(org.bukkit.Statistic.USE_ITEM, m);
+            } catch (IllegalArgumentException ignored) {
+                // not counted for this one
+            }
+        }
+        return sum;
+    }
+
+    /** Placed blocks from the file: the "used" entries of items that are blocks. */
+    private static double placed(JsonObject used) {
+        double sum = 0;
+        if (used != null) {
+            for (Map.Entry<String, JsonElement> e : used.entrySet()) {
+                org.bukkit.Material m = org.bukkit.Material.matchMaterial(e.getKey());
+                if (m != null && m.isBlock()) {
+                    sum += e.getValue().getAsDouble();
+                }
+            }
+        }
+        return sum;
+    }
+
+    private static double number(JsonObject group, String key) {
+        JsonElement value = group == null ? null : group.get(key);
+        return value == null ? 0 : value.getAsDouble();
+    }
     /** A statistic per block (mined) or per item (crafted) added up over all of them. */
     private static double perMaterial(org.bukkit.entity.Player p, org.bukkit.Statistic statistic, boolean blocks) {
         double sum = 0;
@@ -261,6 +307,11 @@ public final class VanillaStats {
             case FISH_CAUGHT -> custom(stats, "minecraft:fish_caught");
             case JUMPS -> custom(stats, "minecraft:jump");
             case ITEMS_CRAFTED -> sum(stats.getAsJsonObject("minecraft:crafted"));
+            case BLOCKS_PLACED -> placed(stats.getAsJsonObject("minecraft:used"));
+            case TOTEMS -> number(stats.getAsJsonObject("minecraft:used"), "minecraft:totem_of_undying");
+            case TIMES_SLEPT -> custom(stats, "minecraft:sleep_in_bed");
+            case DISTANCE_SWUM -> custom(stats, "minecraft:swim_one_cm") / CM_PER_KM;
+            case DISTANCE_FLOWN -> (custom(stats, "minecraft:aviate_one_cm") + custom(stats, "minecraft:fly_one_cm")) / CM_PER_KM;
         };
     }
 
@@ -285,7 +336,7 @@ public final class VanillaStats {
         java.util.Locale locale = "de".equals(lang) ? java.util.Locale.GERMANY : java.util.Locale.UK;
         return switch (kind) {
             case PLAY_TIME -> String.format(locale, "%,.1f h", value);
-            case DISTANCE -> String.format(locale, "%,.1f km", value);
+            case DISTANCE, DISTANCE_SWUM, DISTANCE_FLOWN -> String.format(locale, "%,.1f km", value);
             default -> String.format(locale, "%,d", Math.round(value));
         };
     }

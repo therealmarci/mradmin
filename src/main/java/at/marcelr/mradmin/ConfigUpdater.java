@@ -42,8 +42,9 @@ public final class ConfigUpdater {
  * 31: discord-announce.kuma (Uptime Kuma incidents in the community Discord).
  * 32: uptime-kuma.incident-seconds (incidents read more often than the maintenance list).
  * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
+ * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
      */
-    public static final int CURRENT_VERSION = 33;
+    public static final int CURRENT_VERSION = 34;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -155,6 +156,19 @@ public final class ConfigUpdater {
                 if (index >= 0) {
                     list.set(index, list.contains("xp-level") ? null : "xp-level");
                     list.removeIf(java.util.Objects::isNull);
+                    template.set("player-web.rankings.statistics", list);
+                }
+            }
+            // v34: the new statistics also go into existing ranking lists (an empty list stays empty = none wanted).
+            if (version < 34) {
+                java.util.List<String> list = new java.util.ArrayList<>(template.getStringList("player-web.rankings.statistics"));
+                if (!list.isEmpty()) {
+                    for (String added : java.util.List.of("blocks-placed", "totems", "times-slept", "distance-swum",
+                            "distance-flown")) {
+                        if (!list.contains(added)) {
+                            list.add(added);
+                        }
+                    }
                     template.set("player-web.rankings.statistics", list);
                 }
             }
