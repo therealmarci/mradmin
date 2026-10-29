@@ -133,15 +133,6 @@
   });
   const healthTone = $derived(tpsTone(now.tps ?? 20));
 
-  const pct = (v) => (v == null || v < 0 ? '–' : Math.round(v) + ' %');
-  const num = (v) => (v == null ? '–' : v >= 10000 ? (v / 1000).toFixed(1) + 'K' : String(Math.round(v)));
-  const charts = [
-    { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
-    { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
-    { key: 'cpu', label: t('health.cpu'), color: 'var(--series-3)', max: 100, format: pct },
-    { key: 'heapUsed', label: t('overview.ram'), color: 'var(--series-4, #a855f7)', format: (v) => mb(v) },
-    { key: 'players', label: t('health.players'), color: 'var(--series-5, #eab308)', format: (v) => num(v) },
-  ];
 
   // The slides: the health monitor first, then one banner per warning.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
@@ -214,7 +205,7 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The slideshow: the health monitor first (the last hour as small charts and the key figures), then one banner
+    <!-- The slideshow: the health monitor first (TPS with the key figures and its last hour), then one banner
          per area that has something to do (each warning with its details). -->
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
@@ -223,37 +214,21 @@
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
-            <span class="when">{t('home.h.lastHour')}</span>
           </div>
           <div class="h-body">
             <div class="h-main">
               <div class="h-big"><strong class="{healthTone}-text">{(p.tps ?? 0).toFixed(1)}</strong><span>TPS</span></div>
-              <ul class="bullets">
-                <li><span>{t('overview.mspt')}</span><b>{(p.mspt ?? 0).toFixed(1)} ms</b>
-                  {#if p.msptP95 != null}<small>{t('home.h.p95', { v: (p.msptP95 ?? 0).toFixed(1) + ' ms' })}</small>{/if}</li>
-                <li><span>{t('health.cpu')}</span><b>{pct(p.cpu)}</b></li>
-                <li><span>{t('overview.ram')}</span><b>{mb(p.heapUsed)} / {mb(p.heapMax)}</b></li>
-                <li><span>{t('health.players')}</span><b>{p.players ?? data.server?.online ?? 0}</b></li>
-                <li><span>{t('health.ping')}</span><b>{p.ping == null || p.ping < 0 ? '–' : Math.round(p.ping) + ' ms'}</b></li>
-                <li><span>{t('health.chart.chunks')}</span><b>{num(p.chunks)}</b></li>
-                <li><span>{t('health.chart.entities')}</span><b>{num(p.entities)}</b></li>
-                {#if data.server}<li><span>{t('home.h.uptime')}</span><b>{uptime(data.server.uptime)}</b></li>{/if}
-              </ul>
+              <div class="chips">
+                <span>{t('overview.mspt')} <b>{(p.mspt ?? 0).toFixed(1)} ms</b></span>
+                <span>{t('overview.ram')} <b>{mb(p.heapUsed ?? data.server?.ramUsed)} / {mb(p.heapMax ?? data.server?.ramMax)}</b></span>
+                <span>{t('health.players')} <b>{data.server?.online ?? p.players ?? 0}</b></span>
+              </div>
             </div>
-            <div class="sparks">
-              {#each charts as c (c.key)}
-                {@const values = series.map((x) => x[c.key])}
-                {@const known = values.filter((v) => v != null && v >= 0)}
-                <div class="spark-card" style="--c: {c.color}">
-                  <div class="sc-head"><span>{c.label}</span><b>{c.format(p[c.key])}</b></div>
-                  <div class="spark-box">
-                    <Sparkline {values} color={c.color} max={c.max} limit={c.limit} height={46} label={c.label} />
-                  </div>
-                  {#if known.length}
-                    <div class="sc-range">{t('home.h.range', { min: c.format(Math.min(...known)), max: c.format(Math.max(...known)) })}</div>
-                  {/if}
-                </div>
-              {/each}
+            <div class="h-chart">
+              <span class="muted small">{t('home.h.lastHour')}</span>
+              <div class="spark-box">
+                <Sparkline values={series.map((x) => x.tps)} color="var(--series-1)" max={20} height={56} label="TPS" />
+              </div>
             </div>
           </div>
           <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/health')}>{t('home.toHealth')} →</button>
@@ -451,13 +426,17 @@
     background: var(--accent);
   }
 
-  /* The health slide: TPS big with the key figures beside the charts of the last hour. */
+  /* The health slide: TPS big with the key figures, beside it the TPS of the last hour. */
   .h-body {
     display: grid;
-    gap: 16px 22px;
-    grid-template-columns: minmax(220px, 300px) 1fr;
-    align-items: start;
-    margin-top: 4px;
+    gap: 12px 24px;
+    grid-template-columns: auto minmax(160px, 1fr);
+    align-items: center;
+  }
+
+  .h-main {
+    display: grid;
+    gap: 10px;
   }
 
   .h-big {
@@ -467,7 +446,7 @@
   }
 
   .h-big strong {
-    font-size: 2.6rem;
+    font-size: 2.4rem;
     line-height: 1;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -478,78 +457,14 @@
     font-weight: 700;
   }
 
-  .bullets {
-    list-style: none;
-    margin: 10px 0 0;
-    padding: 0;
-    display: grid;
-    gap: 5px;
-    font-size: 0.88rem;
-  }
-
-  .bullets li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 8px;
-    padding-bottom: 5px;
-    border-bottom: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
-  }
-
-  .bullets li:last-child {
-    border-bottom: 0;
-  }
-
-  .bullets li > span {
-    color: var(--muted);
-    flex: 1;
-  }
-
-  .bullets small {
-    flex-basis: 100%;
-    text-align: right;
-    color: var(--muted);
-    font-size: 0.76rem;
-  }
-
-  .sparks {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
-  }
-
-  .spark-card {
+  .h-chart {
     display: grid;
     gap: 4px;
-    padding: 10px 12px 8px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-top: 3px solid var(--c);
-  }
-
-  .sc-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-
-  .sc-head span {
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    max-width: 420px;
   }
 
   .spark-box {
     position: relative;
-  }
-
-  .sc-range {
-    font-size: 0.7rem;
-    color: var(--muted);
   }
 
   .good-text {
@@ -564,7 +479,7 @@
     color: var(--bad);
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 640px) {
     .h-body {
       grid-template-columns: 1fr;
     }
