@@ -221,7 +221,7 @@
   const compare = $derived.by(() => {
     if (!game || players.length < 2) return [];
     const [a, b] = players;
-    const row = (label, va, vb, ta, tb) => ({ label, a: va, b: vb, ta: ta ?? String(va), tb: tb ?? String(vb), max: Math.max(va, vb, 0.0001) });
+    const row = (label, va, vb, ta, tb) => ({ label, a: va, b: vb, ta: ta ?? String(va), tb: tb ?? String(vb) });
     return [
       row(t('pvp.dealt'), a.damageDealt, b.damageDealt, hearts(a.damageDealt) + '❤', hearts(b.damageDealt) + '❤'),
       row(t('pvp.taken'), a.damageTaken, b.damageTaken, hearts(a.damageTaken) + '❤', hearts(b.damageTaken) + '❤'),
@@ -412,18 +412,22 @@
         <section class="card tile">
           <h2>{t('pvp.game.compare')}</h2>
           <div class="cmp">
-            <div class="cmp-head side1"><img src={head(players[0].uuid)} alt="" width="22" height="22" />{players[0].name}</div>
-            <span></span>
-            <div class="cmp-head side2 right">{players[1].name}<img src={head(players[1].uuid)} alt="" width="22" height="22" /></div>
+            <div class="cmp-head">
+              <span class="who side1"><img src={head(players[0].uuid)} alt="" width="24" height="24" />{players[0].name}</span>
+              <span class="who side2">{players[1].name}<img src={head(players[1].uuid)} alt="" width="24" height="24" /></span>
+            </div>
             {#each compare as c}
-              <div class="cmp-side side1" class:lead={c.a > c.b}>
-                <span class="v">{c.ta}</span>
-                <span class="bar"><span style="width: {(c.a / c.max) * 100}%"></span></span>
-              </div>
-              <span class="cmp-label">{c.label}</span>
-              <div class="cmp-side side2 right" class:lead={c.b > c.a}>
-                <span class="bar"><span style="width: {(c.b / c.max) * 100}%"></span></span>
-                <span class="v">{c.tb}</span>
+              {@const sum = c.a + c.b}
+              <div class="cmp-row">
+                <span class="cmp-label">{c.label}</span>
+                <div class="cmp-line">
+                  <span class="v side1" class:lead={c.a > c.b}>{c.ta}</span>
+                  <span class="tug" class:empty={sum <= 0}>
+                    <span class="part side1" style="flex-grow: {sum > 0 ? c.a : 1}"></span>
+                    <span class="part side2" style="flex-grow: {sum > 0 ? c.b : 1}"></span>
+                  </span>
+                  <span class="v side2" class:lead={c.b > c.a}>{c.tb}</span>
+                </div>
               </div>
             {/each}
           </div>
@@ -959,76 +963,93 @@
     background: color-mix(in srgb, var(--warn) 14%, transparent);
   }
 
-  /* Comparison: values with bars growing from the middle */
+  /* Comparison as a tug of war: one bar per value, side 1 from the left edge, side 2 from the right edge, each as
+     big as its share; the values at the ends, the name of the value above in the middle. */
   .cmp {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 8px 14px;
+    gap: 12px;
   }
 
   .cmp-head {
     display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .who {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     font-weight: 800;
     color: var(--sd);
+    overflow-wrap: anywhere;
   }
 
-  .cmp-head img {
+  .who img {
     border-radius: 5px;
     image-rendering: pixelated;
+    border: 2px solid var(--sd);
   }
 
-  .cmp-head.right {
-    justify-content: flex-end;
+  .cmp-row {
+    display: grid;
+    gap: 4px;
   }
 
   .cmp-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--muted);
     text-align: center;
   }
 
-  .cmp-side {
-    display: flex;
+  .cmp-line {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr) 7rem;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
 
-  .cmp-side .v {
-    min-width: 64px;
+  .v {
     font-weight: 700;
     font-size: 0.9rem;
+    color: var(--muted);
   }
 
-  .cmp-side.right .v {
+  .v.side2 {
     text-align: right;
   }
 
-  .cmp-side.lead .v {
+  .v.lead {
     color: var(--sd);
+    font-weight: 800;
   }
 
-  .bar {
-    flex: 1;
+  .tug {
     display: flex;
-    height: 8px;
-    border-radius: 4px;
-    overflow: hidden;
-    background: color-mix(in srgb, var(--border) 80%, transparent);
+    gap: 3px;
+    height: 10px;
   }
 
-  .side1 .bar {
-    justify-content: flex-end;
-  }
-
-  .bar span {
-    display: block;
-    height: 100%;
-    border-radius: 4px;
+  .part {
+    flex-basis: 0;
+    min-width: 3px;
     background: var(--sd);
+  }
+
+  .part.side1 {
+    border-radius: 5px 0 0 5px;
+  }
+
+  .part.side2 {
+    border-radius: 0 5px 5px 0;
+  }
+
+  .tug.empty .part {
+    background: color-mix(in srgb, var(--border) 80%, transparent);
   }
 
   /* Saved inventories */
@@ -1106,8 +1127,9 @@
       order: -1;
     }
 
-    .cmp-side .v {
-      min-width: 0;
+    .cmp-line {
+      grid-template-columns: 4.75rem minmax(0, 1fr) 4.75rem;
+      gap: 8px;
     }
 
     .stop {
