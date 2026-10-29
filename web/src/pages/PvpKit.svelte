@@ -1,8 +1,7 @@
 <script>
   // MRpvp: one kit in the editor - the inventory like in the game, name and description per language, icon,
   // permission and the rules of the kit. Slots: click = edit the item, drag with the mouse = move (Ctrl = copy),
-  // right click = copy / cut / paste / delete (also Ctrl+C/X/V and Del over a slot). On touch the modes "move"
-  // (tap two slots, they swap) and "copy" (tap the source, then every slot that gets a copy) do the same.
+  // right click (long press on touch) = copy / cut / paste / delete (also Ctrl+C/X/V and Del over a slot).
   // Nothing is stored until "Save"; then MRpvp writes kits.yml and reloads the kits (rounds already running keep
   // their kit). id = kit to edit; for a new kit id is null and copyFrom optionally names a kit to start from.
   import { moduleAction, moduleData } from '../lib/modules.js';
@@ -29,8 +28,6 @@
   let message = $state('');
   let saving = $state(false);
   let dirty = $state(false);
-  let mode = $state('edit'); // 'edit' | 'move' | 'copy'
-  let picked = $state(null);
   let clipboard = $state(null); // item data
   let hovered = null;
   let contextMenu = $state(null); // { slot, x, y }
@@ -100,32 +97,7 @@
   });
 
   function onslot(slot) {
-    const key = String(slot);
-    if (mode === 'move') {
-      if (picked == null) {
-        if (slots[key]) picked = key;
-      } else {
-        swap(picked, key);
-        picked = null;
-      }
-      return;
-    }
-    if (mode === 'copy') {
-      if (picked == null) {
-        if (slots[key]) picked = key;
-      } else if (picked === key) {
-        picked = null;
-      } else {
-        put(key, slots[picked]);
-      }
-      return;
-    }
-    editing = key;
-  }
-
-  function setMode(value) {
-    mode = value;
-    picked = null;
+    editing = String(slot);
   }
 
   function swap(a, b) {
@@ -170,7 +142,6 @@
   }
 
   function openMenu(slot, x, y) {
-    picked = null;
     contextMenu = { slot: String(slot), x: Math.min(x, window.innerWidth - 220), y: Math.min(y, window.innerHeight - 230) };
   }
 
@@ -178,7 +149,6 @@
   function keydown(e) {
     if (e.key === 'Escape') {
       contextMenu = null;
-      picked = null;
       return;
     }
     if (hovered == null || editing != null || iconPicking) return;
@@ -344,24 +314,13 @@
       </div>
     </header>
 
-    <!-- Inventory: edit an item or swap two slots -->
+    <!-- Inventory: click = edit, drag = move, right click = clipboard -->
     <section class="card tile inv">
-      <div class="s-head">
-        <h2>{t('pvp.kits.inventory')}</h2>
-        <div class="seg" role="radiogroup">
-          {#each [['edit', '✎', 'pvp.kits.edit'], ['move', '⇄', 'pvp.kits.move'], ['copy', '⧉', 'pvp.kits.copyMode']] as [m, sign, key]}
-            <button role="radio" aria-checked={mode === m} class:active={mode === m} onclick={() => setMode(m)}>{sign} {t(key)}</button>
-          {/each}
-        </div>
-      </div>
-      <p class="hint-line" class:active={mode !== 'edit'}>
-        {#if mode === 'move'}{picked == null ? t('pvp.kits.moveHint1') : t('pvp.kits.moveHint2')}
-        {:else if mode === 'copy'}{picked == null ? t('pvp.kits.copyHint1') : t('pvp.kits.copyHint2')}
-        {:else}{t('pvp.kits.inventoryHint')}{/if}
-      </p>
+      <h2>{t('pvp.kits.inventory')}</h2>
+      <p class="hint-line">{t('pvp.kits.inventoryHint')}</p>
       <div class="inv-grid">
         <ItemGrid inventory={grid.inventory} armor={grid.armor} offhand={grid.offhand} {onslot} size={44}
-          selected={picked == null ? null : picked in ARMOR_INDEX || picked === 'offhand' ? picked : Number(picked)}
+          selected={contextMenu ? (/^\d+$/.test(contextMenu.slot) ? Number(contextMenu.slot) : contextMenu.slot) : null}
           ondrop={dropped} onmenu={openMenu} onhover={(s) => (hovered = s)} />
       </div>
       {#if clipboard}
@@ -719,10 +678,6 @@
     color: var(--muted);
   }
 
-  .hint-line.active {
-    color: var(--pv);
-    font-weight: 600;
-  }
 
   .inv-grid {
     display: flex;

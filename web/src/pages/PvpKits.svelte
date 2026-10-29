@@ -272,23 +272,25 @@
     flex-wrap: wrap;
   }
 
-  /* The list: one row per kit, columns place | kit | hotbar | rules | buttons. Narrower screens move the
-     hotbar (and on phones the rules) into their own line. */
+  /* The list: one row per kit, columns place | kit | hotbar | rules | buttons. The columns belong to the list
+     (subgrid), so every row lines up with the others. Narrower screens move the hotbar (and on phones the rules
+     and buttons) into their own line. */
   .rows {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 10px;
+    grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1.2fr) auto;
+    gap: 10px 18px;
   }
 
   .row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1.2fr) auto;
-    grid-template-areas: 'place kit hotbar rules actions';
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
     align-items: center;
-    gap: 10px 18px;
+    row-gap: 10px;
     padding: 12px 16px 12px 10px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
@@ -326,7 +328,8 @@
   }
 
   .place {
-    grid-area: place;
+    grid-column: 1;
+    grid-row: 1;
     display: grid;
     grid-template-columns: auto auto;
     grid-template-rows: auto auto auto;
@@ -389,7 +392,8 @@
   }
 
   .kit {
-    grid-area: kit;
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -434,7 +438,8 @@
 
   /* The hotbar on a dark strip like in the game */
   .hotbar {
-    grid-area: hotbar;
+    grid-column: 3;
+    grid-row: 1;
     display: flex;
     gap: 3px;
     padding: 5px;
@@ -444,7 +449,8 @@
   }
 
   .rules {
-    grid-area: rules;
+    grid-column: 4;
+    grid-row: 1;
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
@@ -478,7 +484,8 @@
   }
 
   .actions {
-    grid-area: actions;
+    grid-column: 5;
+    grid-row: 1;
     display: flex;
     gap: 6px;
   }
@@ -505,39 +512,65 @@
   }
 
   @media (max-width: 1250px) {
-    .row {
+    .rows {
       grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.3fr) auto;
-      grid-template-areas:
-        'place kit rules actions'
-        'place hotbar hotbar hotbar';
+    }
+
+    .place {
+      grid-row: 1 / 3;
+    }
+
+    .rules {
+      grid-column: 3;
+    }
+
+    .actions {
+      grid-column: 4;
     }
 
     .hotbar {
+      grid-column: 2 / -1;
+      grid-row: 2;
       justify-self: start;
     }
   }
 
   @media (max-width: 760px) {
-    .row {
+    .rows {
       grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        'place kit'
-        'place hotbar'
-        'place rules'
-        'place actions';
+    }
+
+    .row {
       padding: 12px 12px 12px 6px;
+    }
+
+    .place {
+      grid-row: 1 / 5;
+    }
+
+    .kit,
+    .hotbar,
+    .rules,
+    .actions {
+      grid-column: 2;
+    }
+
+    .hotbar {
+      grid-row: 2;
+      flex-wrap: wrap;
+    }
+
+    .rules {
+      grid-row: 3;
+    }
+
+    .actions {
+      grid-row: 4;
+      justify-content: flex-end;
     }
 
     .grip {
       display: none;
-    }
-
-    .hotbar {
-      flex-wrap: wrap;
-    }
-
-    .actions {
-      justify-content: flex-end;
     }
   }
 
