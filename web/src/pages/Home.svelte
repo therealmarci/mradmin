@@ -90,15 +90,12 @@
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The situation as slides: with warnings an overview and one slide each, otherwise one "everything runs smoothly".
-  let slideIndex = $state(0);
+  // The situation as slides: the server status first (with or without warnings), then one slide per warning.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
-  const counts = $derived(alerts.reduce((c, a) => ({ ...c, [a.tone]: (c[a.tone] ?? 0) + 1 }), {}));
-  const slides = $derived(
-    alerts.length
-      ? [{ key: 'summary', kind: 'summary', tone: slideTone(worst) }, ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a }))]
-      : [{ key: 'good', kind: 'good', tone: 'good' }],
-  );
+  const slides = $derived([
+    { key: 'status', kind: 'status', tone: alerts.length ? 'accent' : 'good' },
+    ...alerts.map((a) => ({ key: 'alert:' + a.key, kind: 'alert', tone: slideTone(a.tone), alert: a })),
+  ]);
 
   // Which part of the server a warning is about.
   function areaOf(a) {
@@ -166,11 +163,11 @@
   {#if data}
     <!-- The situation as a slideshow: with warnings an overview first, then one slide per warning with its details -
          otherwise "everything runs smoothly" with the key facts. -->
-    <Carousel {slides} seconds={8} label={t('home.slides')} bind:index={slideIndex}>
+    <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
-        {#if s.kind === 'good'}
-          <div class="kind"><span class="badge good">✓</span>{t('home.slides')}</div>
-          <h2>{t('home.allGood')}</h2>
+        {#if s.kind === 'status'}
+          <div class="kind"><span class="badge {worst}">{icon[worst]}</span>{t('home.slides')}</div>
+          <h2>{alerts.length ? t('home.status') : t('home.allGood')}</h2>
           <div class="chips">
             {#if data.server}
               <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
@@ -184,26 +181,6 @@
           {#if !data.server && !data.tickets && !data.tiles?.length && !data.maintenance}
             <p class="small">{t('home.nothing')}</p>
           {/if}
-        {:else if s.kind === 'summary'}
-          <div class="kind"><span class="badge {worst}">{icon[worst]}</span>{t('home.summary')}</div>
-          <h2>{t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length })}</h2>
-          <div class="chips">
-            {#each ['bad', 'warn', 'info'] as tone}
-              {#if counts[tone]}<span class="sev {tone}"><b>{counts[tone]}</b> {t('home.sev.' + tone)}</span>{/if}
-            {/each}
-          </div>
-          <ul class="list">
-            {#each alerts as a, n (a.key)}
-              <li>
-                <button class="entry tone-{a.tone}" tabindex={active ? 0 : -1} onclick={() => (slideIndex = n + 1)}>
-                  <span class="badge small {a.tone}">{icon[a.tone]}</span>
-                  <span class="area">{areaOf(a)}</span>
-                  <span class="e-text">{alertText(a)}</span>
-                  <span class="go" aria-hidden="true">›</span>
-                </button>
-              </li>
-            {/each}
-          </ul>
         {:else}
           {@const a = s.alert}
           {@const d = detail(a)}
@@ -443,70 +420,6 @@
   .chips .sev.info {
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  }
-
-  .list {
-    list-style: none;
-    margin: 4px 0 0;
-    padding: 0;
-    display: grid;
-    gap: 6px;
-  }
-
-  .entry {
-    --tn: var(--accent);
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--tn);
-    color: var(--text);
-    font: inherit;
-    font-weight: 400;
-    text-align: left;
-  }
-
-  .entry:hover {
-    filter: none;
-    border-color: color-mix(in srgb, var(--tn) 50%, var(--border));
-  }
-
-  .entry.tone-warn {
-    --tn: var(--warn);
-  }
-
-  .entry.tone-bad {
-    --tn: var(--bad);
-  }
-
-  .area {
-    flex-shrink: 0;
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  .e-text {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .go {
-    color: var(--tn);
-    font-weight: 800;
-  }
-
-  @media (max-width: 560px) {
-    .area {
-      display: none;
-    }
   }
 
   .tiles {
