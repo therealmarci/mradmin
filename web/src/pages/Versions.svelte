@@ -115,9 +115,11 @@
         {data.checking ? t('versions.checking') : data.checkedAt ? t('versions.checkedAt', { time: ago(data.checkedAt) }) : t('versions.neverChecked')}
       </span>
       <span class="chip">{t('versions.auto.' + data.auto)}</span>
+      {#if data.may.install}
       <button class="secondary mini" disabled={busy || data.checking} onclick={() => act('/versions/check', {}, t('versions.checkStarted'))}>
         ⟳ {t('versions.check')}
       </button>
+      {/if}
     </div>
 
     <!-- Restart: a running countdown, or - only after an update was downloaded - the restart buttons -->

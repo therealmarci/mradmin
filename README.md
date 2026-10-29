@@ -272,8 +272,8 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 | Gruppe | Enthält |
 |---|---|
 | `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin version` |
-| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen, Web-Konsole ansehen |
-| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken, Admin-Modus · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
+| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen (ohne „Jetzt prüfen“), Web-Konsole ansehen |
+| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
 | `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
 
 Die Gruppen bringen auch die nötigen **LibertyBans**-Rechte mit (falls installiert): Support sieht Strafen, Verlauf und die Bann- und Mute-Listen (`libertybans.commands`, `libertybans.list.*`), Staff darf kicken, muten und verwarnen, nur Admins bannen. Diese Rechte gelten dann auch für die LibertyBans-Befehle im Spiel.
@@ -297,7 +297,7 @@ Standard ist `op`, außer anders angegeben.
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
-| Versionen & Neustart (Web) | `mradmin.versions.view` (ansehen) · `mradmin.versions.install` (herunterladen) · `mradmin.server.restart` (neu starten) |
+| Versionen & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
 </details>

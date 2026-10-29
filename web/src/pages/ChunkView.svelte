@@ -43,7 +43,7 @@
         go('/chunks');
         return;
       }
-      message = t('chunks.done.' + action);
+      message = t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
       await load();
     } catch (e) {
       error = errorText(e);
@@ -58,6 +58,8 @@
   const value = (m) => (m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
+  // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
+  const conspicuousOnly = $derived(!!loader?.conspicuous && !!me.may.mrchunksToggleConspicuous && !me.may.mrchunksManage);
 </script>
 
 <div class="page">
@@ -102,24 +104,24 @@
         {/if}
       </div>
 
-      {#if me.may.mrchunksManage || me.may.mrchunksToggle}
+      {#if me.may.mrchunksManage || me.may.mrchunksToggle || conspicuousOnly}
         <div class="actions">
           {#if loader.lock}
             {#if me.may.mrchunksManage}
               <button onclick={() => act('unlock')} disabled={busy}>{t('chunks.unlock')}</button>
             {/if}
           {:else}
-            <button class:secondary={loader.active} onclick={() => act('toggle')} disabled={busy}>
+            <button class:secondary={loader.active} onclick={() => act(conspicuousOnly && !me.may.mrchunksToggle ? 'conspicuousToggle' : 'toggle')} disabled={busy}>
               {loader.active ? t('chunks.switchOff') : t('chunks.switchOn')}
             </button>
           {/if}
+          {#if (me.may.mrchunksManage || conspicuousOnly) && loader.dummiesEnabled}
+            <button class="secondary" onclick={() => act(me.may.mrchunksManage ? 'dummy' : 'conspicuousDummy')} disabled={busy || (!loader.dummy && loader.dummyFits === false)}
+              title={!loader.dummy && loader.dummyFits === false ? t('chunks.dummyNeedsSquare') : ''}>
+              {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
+            </button>
+          {/if}
           {#if me.may.mrchunksManage}
-            {#if loader.dummiesEnabled}
-              <button class="secondary" onclick={() => act('dummy')} disabled={busy || (!loader.dummy && loader.dummyFits === false)}
-                title={!loader.dummy && loader.dummyFits === false ? t('chunks.dummyNeedsSquare') : ''}>
-                {loader.dummy ? t('chunks.dummyOff') : t('chunks.dummyOn')}
-              </button>
-            {/if}
             <button class="danger push" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
           {/if}
         </div>

@@ -44,7 +44,7 @@ permissions:
       mradmin.tickets.create: true
       mradmin.web.self: true
   mradmin.groups.support:
-    description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, web interface, view maintenance and join during it, view versions and the web console."
+    description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, admin mode, web interface, view maintenance and join during it, view versions and the web console."
     default: op
     children:
       mradmin.player: true
@@ -68,20 +68,20 @@ permissions:
       mradmin.maintenance.notify: true
       mradmin.versions.view: true
       mradmin.web.console.view: true
+      mradmin.mode: true
       # LibertyBans (if installed): view punishments, history and the ban and mute lists
       libertybans.commands: true
       libertybans.list.history: true
       libertybans.list.banlist: true
       libertybans.list.mutelist: true
   mradmin.groups.staff:
-    description: "Group staff: support + summon, freeze and kick players, admin mode; with LibertyBans kick, mute and warn."
+    description: "Group staff: support + summon, freeze and kick players; with LibertyBans kick, mute and warn."
     default: op
     children:
       mradmin.groups.support: true
       mradmin.player.summon: true
       mradmin.player.freeze: true
       mradmin.player.kick: true
-      mradmin.mode: true
       # LibertyBans: kick, mute and warn players (and lift mutes and warns)
       libertybans.kick.do.target.uuid: true
       libertybans.mute.do.target.uuid: true
@@ -242,10 +242,10 @@ permissions:
     description: Notice when joining the server if an update is available.
     default: op
   mradmin.versions.view:
-    description: "Web interface: page Versions - installed MRtechnology plugins and their updates."
+    description: "Web interface: page Versions - installed MRtechnology plugins and their updates (view only)."
     default: op
   mradmin.versions.install:
-    description: "Web interface: download updates of MRtechnology plugins (installed on the next start)."
+    description: "Web interface: check for updates now and download updates of MRtechnology plugins (installed on the next start)."
     default: op
     children:
       mradmin.versions.view: true

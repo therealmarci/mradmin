@@ -255,7 +255,8 @@ Speicher von MRadmin unter `announce-templates`.
   (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
   auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
 - Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
-  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (höchstens einmal pro
+  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit
+  `mradmin.versions.install`, höchstens einmal pro
   Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
