@@ -226,10 +226,11 @@
       row(t('pvp.dealt'), a.damageDealt, b.damageDealt, hearts(a.damageDealt) + '❤', hearts(b.damageDealt) + '❤'),
       row(t('pvp.taken'), a.damageTaken, b.damageTaken, hearts(a.damageTaken) + '❤', hearts(b.damageTaken) + '❤'),
       row(t('pvp.hits'), a.hits, b.hits, `${a.hits} (${a.crits} ${t('pvp.crits')})`, `${b.hits} (${b.crits} ${t('pvp.crits')})`),
-      row(t('pvp.arrows'), a.arrowsHit, b.arrowsHit, `${a.arrowsHit}/${a.arrowsShot}`, `${b.arrowsHit}/${b.arrowsShot}`),
-      row(t('pvp.totems'), a.totems, b.totems),
+      // Arrows and totems only when someone used them (not every kit has them).
+      (a.arrowsShot || b.arrowsShot) && row(t('pvp.arrows'), a.arrowsHit, b.arrowsHit, `${a.arrowsHit}/${a.arrowsShot}`, `${b.arrowsHit}/${b.arrowsShot}`),
+      (a.totems || b.totems) && row(t('pvp.totems'), a.totems, b.totems),
       row(t('pvp.healthEnd'), a.healthEnd ?? 0, b.healthEnd ?? 0, hearts(a.healthEnd) + '❤', hearts(b.healthEnd) + '❤'),
-    ];
+    ].filter(Boolean);
   });
 
   const rating = $derived(
