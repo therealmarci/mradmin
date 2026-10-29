@@ -115,7 +115,7 @@
 
 <section class="card stack">
   <div class="row">
-    <h2>🔔 {t('push.title')}</h2>
+    <h2>{t('push.title')}</h2>
     {#if endpoint}<span class="tag on">✓ {t('push.thisOn')}</span>{:else}<span class="tag">○ {t('push.thisOff')}</span>{/if}
   </div>
   <p class="muted small">{t('push.hint')}</p>

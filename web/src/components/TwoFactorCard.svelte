@@ -92,7 +92,7 @@
 
 <section class="card stack">
   <div class="row">
-    <h2>📱 {t('twofa.title')}</h2>
+    <h2>{t('twofa.title')}</h2>
     <span class="tag" class:on={me.totp}>{me.totp ? '✓ ' + t('twofa.on') : '○ ' + t('twofa.off')}</span>
   </div>
   {#if error}<div class="error">{error}</div>{/if}

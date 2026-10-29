@@ -89,7 +89,7 @@
 {#if data?.enabled}
   <section class="card stack">
     <div class="row">
-      <h2>🔑 {t('passkey.title')}</h2>
+      <h2>{t('passkey.title')}</h2>
       {#if passkeys.supported && !adding}
         <button class="secondary small-button" onclick={() => (adding = true)}>{t('passkey.add')}</button>
       {/if}
