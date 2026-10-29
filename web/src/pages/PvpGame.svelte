@@ -26,6 +26,9 @@
   let view = $state('inventory');
   let replayT = $state(0);
   let playing = $state(false);
+  let speed = $state(1);
+  // When the live data came - the time of the round runs on from there between two loads.
+  let receivedAt = 0;
   // Optional reason when taking a round out of the statistics.
   let note = $state('');
   // side -> { hit, hurt }: lights up for a moment after a hit (dot on the map, hearts shake)
@@ -50,6 +53,7 @@
   async function load() {
     try {
       running = await moduleData('mrpvp', 'live', { id });
+      receivedAt = Date.now();
       flash(running);
       error = '';
       return;
@@ -83,18 +87,23 @@
     if (events.plugin.plugin === 'mrpvp' && events.plugin.id === String(id) && events.plugin.tick) untrack(load);
   });
 
-  // Replay: half a second of the round every 250 ms (double speed), stops at the end.
+  // Replay: runs smoothly with the chosen speed, stops at the end.
   $effect(() => {
     if (!playing) return;
-    const timer = setInterval(() => {
+    let last = performance.now();
+    let frame;
+    const step = (now) => {
       const end = times[times.length - 1] ?? 0;
+      replayT = Math.min(end, replayT + (now - last) * speed);
+      last = now;
       if (replayT >= end) {
         playing = false;
         return;
       }
-      replayT = Math.min(end, replayT + 500);
-    }, 250);
-    return () => clearInterval(timer);
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
   });
 
   function togglePlay() {
@@ -124,19 +133,69 @@
 
   // Replay: the positions at (or just before) the chosen time.
   const times = $derived([...new Set((game?.positions ?? []).map((p) => p.t))]);
-  const replayMarkers = $derived.by(() => {
-    if (!game?.positions?.length) return [];
-    const latest = {};
-    for (const p of game.positions) {
-      if (p.t <= replayT) latest[p.side] = p;
-    }
-    return Object.values(latest);
+  // The positions per side, in time order.
+  const tracks = $derived.by(() => {
+    const bySide = { 1: [], 2: [] };
+    for (const p of game?.positions ?? []) (bySide[p.side] ??= []).push(p);
+    for (const list of Object.values(bySide)) list.sort((a, b) => a.t - b.t);
+    return bySide;
   });
+
+  /** Where a side stood at a time: between two samples (every half second) the dot glides. */
+  function posAt(side, time) {
+    const list = tracks[side] ?? [];
+    if (!list.length || time < list[0].t) return null;
+    let i = list.length - 1;
+    while (i > 0 && list[i].t > time) i--;
+    const a = list[i];
+    const b = list[i + 1];
+    if (!b) return a;
+    const k = (time - a.t) / (b.t - a.t || 1);
+    return { ...a, x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k };
+  }
+
+  // What happens in the fight as effects on the map (see ArenaMap): where it happened, and for a hit where the
+  // attacker stood. pos(side, t) gives a side's position at a time.
+  function effectsOf(list, pos) {
+    return list.map((e) => {
+      const actor = sideOf(e.actor);
+      const target = sideOf(e.target);
+      const from = e.type === 'hit' && actor ? pos(actor, e.t) : null;
+      // Where MRpvp logged it - unless that lies outside the map (then the player's position).
+      const m = (running ?? game)?.map;
+      const inside = e.x != null && m && e.x >= 0 && e.z >= 0 && e.x <= m.sizeX && e.z <= m.sizeZ;
+      const at = inside ? { x: e.x, z: e.z } : pos(target || actor, e.t);
+      const dmg = e.damage != null ? `-${hearts(e.damage)}❤` : '';
+      return {
+        t: e.t, kind: e.type, x: at?.x, z: at?.z, fx: from?.x, fz: from?.z, side: actor || target,
+        label: e.type === 'hit' || e.type === 'damage' ? dmg : t('pvp.fx.' + e.type),
+      };
+    });
+  }
+
+  // A side lit up shortly after it hit (yellow) or was hit (red) - in the replay from the log.
+  function recent(side, kind, time) {
+    return log.some((e) => e.type === 'hit' && time - e.t >= 0 && time - e.t < FLASH && sideOf(kind === 'hit' ? e.actor : e.target) === side);
+  }
+
+  const replayMarkers = $derived(
+    [1, 2].map((side) => {
+      const p = posAt(side, replayT);
+      return p && { x: p.x, z: p.z, yaw: p.yaw, side, hit: recent(side, 'hit', replayT), hurt: recent(side, 'hurt', replayT) };
+    }).filter(Boolean),
+  );
+  const replayEffects = $derived(game ? effectsOf(log, posAt) : []);
   const liveMarkers = $derived(
     (running?.players ?? []).filter((p) => p.x != null).map((p) => ({
       x: p.x, z: p.z, yaw: p.yaw, side: p.side, hit: flashes[p.side]?.hit, hurt: flashes[p.side]?.hurt,
     })),
   );
+  // Live: the last entries; the attacker stands where the live position shows him.
+  const liveEffects = $derived(
+    running ? effectsOf(log.slice(-20), (side) => running.players.find((p) => p.side === side && p.x != null) ?? null) : [],
+  );
+  const liveClock = () => (running ? running.elapsed + (Date.now() - receivedAt) : 0);
+  const replayClock = () => replayT;
   const snapshots = $derived(game?.snapshots ?? []);
   const snapshot = $derived(snapshots[snapshotIndex] ?? null);
   const log = $derived((running ?? game)?.events ?? []);
@@ -291,7 +350,7 @@
       <div class="two">
         <section class="card tile">
           <h2>{t('pvp.map')}</h2>
-          <ArenaMap map={running.map} markers={liveMarkers} />
+          <ArenaMap map={running.map} markers={liveMarkers} effects={liveEffects} clock={liveClock} />
         </section>
         <section class="card tile">
           <h2>{t('pvp.log')}<span class="n">{log.length}</span></h2>
@@ -375,12 +434,17 @@
       <div class="two">
         <section class="card tile">
           <h2>{t('pvp.replay')}</h2>
-          <ArenaMap map={game.map} markers={replayMarkers} />
+          <ArenaMap map={game.map} markers={replayMarkers} effects={replayEffects} clock={replayClock} />
           {#if times.length}
             <div class="player-bar">
               <button class="play" onclick={togglePlay} aria-label={playing ? t('pvp.game.stopReplay') : t('pvp.game.play')}>{playing ? '⏸' : '▶'}</button>
-              <input type="range" min="0" max={times[times.length - 1]} step="500" bind:value={replayT} oninput={() => (playing = false)} />
+              <input type="range" min="0" max={times[times.length - 1]} step="100" bind:value={replayT} oninput={() => (playing = false)} />
               <span class="muted small mono">{clock(replayT)} / {clock(times[times.length - 1])}</span>
+            </div>
+            <div class="seg speed" role="radiogroup" aria-label={t('pvp.game.speed')}>
+              {#each [0.25, 0.5, 1, 2] as v}
+                <button role="radio" aria-checked={speed === v} class:active={speed === v} onclick={() => (speed = v)}>{v}×</button>
+              {/each}
             </div>
           {:else}
             <p class="muted small">{t('pvp.noPositions')}</p>
@@ -804,6 +868,15 @@
     flex-shrink: 0;
     padding: 0;
     border-radius: 50%;
+  }
+
+  .speed {
+    justify-self: start;
+  }
+
+  .speed button {
+    padding: 3px 10px;
+    font-size: 0.8rem;
   }
 
   .player-bar input[type='range'] {
