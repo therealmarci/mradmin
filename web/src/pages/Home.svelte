@@ -1,8 +1,14 @@
 <script>
+  // Start page of the team panel, in the look of the player area: greeting, the situation (what needs attention, or
+  // the key facts), one tile per area (server, players, tickets, the plugins, sleep, maintenance, versions) and the
+  // players online.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, tpsTone, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
+  import { live } from '../lib/live.svelte.js';
+  import { MODULE_ICONS, moduleHue } from '../lib/icons.js';
+  import DashTile from '../components/DashTile.svelte';
 
   let { me } = $props();
 
@@ -67,35 +73,49 @@
     return t('alert.' + a.key, v);
   }
 
-  const icon = { bad: '✕', warn: '!', info: 'i' };
+  // "12 / 49" or "120 / 245 Chunks" in a plugin's fact -> fill of a bar (0..1); everything else -> null
+  function meter(value) {
+    const m = /^\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)/.exec(String(value ?? ''));
+    if (!m) return null;
+    const num = (s) => Number(s.replace(/[.,]/g, ''));
+    const max = num(m[2]);
+    return max > 0 ? Math.min(1, num(m[1]) / max) : null;
+  }
+
+  const icon = { bad: '✕', warn: '!', info: 'i', good: '✓' };
   const alerts = $derived(data?.alerts ?? []);
   const worst = $derived(alerts[0]?.tone ?? 'good');
   const avgPing = $derived(
     data?.server?.players.length ? Math.round(data.server.players.reduce((s, p) => s + p.ping, 0) / data.server.players.length) : null,
   );
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
+  const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
+  const share = (a, b) => (b > 0 ? a / b : 0);
 </script>
 
-<div class="stack">
-  <div>
-    <h1>{t('home.hello', { name: me.name })}</h1>
-    <p class="muted small">{t('home.live')}</p>
-  </div>
+<div class="page">
+  <section class="card hello">
+    <img src={head(me.uuid)} alt="" width="64" height="64" />
+    <div>
+      <h1>{t('home.hello', { name: me.name })}</h1>
+      <p class="muted"><span class="dot" class:on={live.connected}></span>{t('home.live')}</p>
+    </div>
+  </section>
 
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
     <!-- The situation: what needs attention right now - or, if nothing does, the most important facts. -->
-    <section class="card hero tone-{worst}" aria-live="polite">
+    <section class="situation tone-{worst}" aria-live="polite">
+      <div class="s-head">
+        <span class="badge {worst}">{icon[worst]}</span>
+        <h2>{alerts.length ? t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length }) : t('home.allGood')}</h2>
+      </div>
       {#if alerts.length}
-        <div class="hero-head">
-          <span class="badge {worst}">{icon[worst]}</span>
-          <h2>{t(alerts.length === 1 ? 'home.attentionOne' : 'home.attention', { n: alerts.length })}</h2>
-        </div>
         <ul class="alerts">
           {#each alerts as a (a.key)}
-            <li>
-              <span class="badge small-badge {a.tone}">{icon[a.tone]}</span>
+            <li class="tone-{a.tone}">
+              <span class="badge small {a.tone}">{icon[a.tone]}</span>
               <span class="text">{alertText(a)}</span>
               {#if target(a)}
                 <button class="secondary mini" onclick={() => open(a)}>{t('home.show')} →</button>
@@ -104,11 +124,7 @@
           {/each}
         </ul>
       {:else}
-        <div class="hero-head">
-          <span class="badge good">✓</span>
-          <h2>{t('home.allGood')}</h2>
-        </div>
-        <div class="facts-row">
+        <div class="chips">
           {#if data.server}
             <span><b>{data.server.tps[0].toFixed(1)}</b> TPS</span>
             <span><b>{data.server.online}</b> {t('home.online')}</span>
@@ -124,132 +140,108 @@
       {/if}
     </section>
 
-    <div class="grid">
+    <div class="tiles">
       {#if data.server}
         {@const s = data.server}
-        <button class="card tile" disabled={!me.may.health} onclick={() => go('/health')}>
-          <div class="label">{t('overview.server')}</div>
-          <div class="big {tpsTone(s.tps[0])}">{s.tps[0].toFixed(1)} <span class="unit">TPS</span></div>
-          <div class="facts">
-            <div><span class="muted">{t('overview.tps')}</span> {s.tps.map((v) => v.toFixed(1)).join(' / ')}</div>
-            <div><span class="muted">{t('overview.mspt')}</span> {s.mspt.toFixed(1)} ms</div>
-            <div><span class="muted">{t('overview.ram')}</span> {mb(s.ramUsed)} / {mb(s.ramMax)}
-              <div class="bar"><div style="width: {Math.min(100, (s.ramUsed / s.ramMax) * 100)}%"></div></div></div>
-          </div>
-          <div class="small link">{#if me.may.health}{t('home.toHealth')} →{/if}</div>
-        </button>
+        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={s.tps[0].toFixed(1)} unit="TPS" tone={tpsTone(s.tps[0])}
+          rows={[
+            { label: t('overview.tps'), value: s.tps.map((v) => v.toFixed(1)).join(' / ') },
+            { label: t('overview.mspt'), value: s.mspt.toFixed(1) + ' ms', tone: msptTone(s.mspt), fill: s.mspt / 50 },
+            { label: t('overview.ram'), value: `${mb(s.ramUsed)} / ${mb(s.ramMax)}`, fill: share(s.ramUsed, s.ramMax),
+              tone: share(s.ramUsed, s.ramMax) > 0.9 ? 'warn' : '' },
+          ]}
+          link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
 
-        <section class="card">
-          <div class="label">{t('overview.players')}</div>
-          <div class="big">{s.online} <span class="unit">/ {s.max}</span></div>
-          <div class="facts">
-            <div><span class="muted">{t('home.avgPing')}</span> {avgPing === null ? '–' : avgPing + ' ms'}</div>
-            <div><span class="muted">{t('home.upFor')}</span> {uptime(s.uptime)}</div>
-            <div><span class="muted">{t('health.disk')}</span> {mb(s.diskFree)} {t('health.free')}</div>
-          </div>
-          <div></div>
-        </section>
+        <DashTile icon="users" hue={150} title={t('overview.players')} value={s.online} unit={'/ ' + s.max}
+          rows={[
+            { label: t('home.avgPing'), value: avgPing === null ? '–' : avgPing + ' ms' },
+            { label: t('home.upFor'), value: uptime(s.uptime) },
+            { label: t('health.disk'), value: `${mb(s.diskFree)} ${t('health.free')}` },
+          ]} />
       {/if}
 
       {#if data.tickets}
         {@const tk = data.tickets}
-        <button class="card tile" onclick={() => go('/tickets')}>
-          <div class="label">{t('overview.tickets')}</div>
-          <div class="big {tk.unread > 0 ? 'bad' : tk.open > 0 ? 'warn' : 'good'}">
-            {tk.open} <span class="unit">{t('overview.openTickets')}</span>
-          </div>
-          <div class="facts">
-            <div><span class="muted">{t('overview.unread')}</span> <span class:bad={tk.unread > 0}>{tk.unread}</span></div>
-            {#if me.may.ticketsClaim}<div><span class="muted">{t('tickets.mine')}</span> {tk.mine}</div>{/if}
-          </div>
-          <div class="small link">{t('overview.toTickets')} →</div>
-        </button>
+        <DashTile icon="ticket" hue={270} title={t('overview.tickets')} value={tk.open} unit={t('overview.openTickets')}
+          tone={tk.unread > 0 ? 'bad' : tk.open > 0 ? 'warn' : 'good'}
+          rows={[
+            { label: t('overview.unread'), value: tk.unread, tone: tk.unread > 0 ? 'bad' : '' },
+            ...(me.may.ticketsClaim ? [{ label: t('tickets.mine'), value: tk.mine }] : []),
+          ]}
+          link={t('overview.toTickets')} onclick={() => go('/tickets')} />
       {/if}
 
       <!-- Tiles of the modules (MRchunks ...): label, value and facts come from the plugin itself. -->
       {#each data.tiles ?? [] as m (m.id)}
-        <button class="card tile" onclick={() => m.page && go(m.page)} disabled={!m.page}>
-          <div class="label">{m.label}</div>
-          <div class="big {m.tone}">{m.value} {#if m.unit}<span class="unit">{m.unit}</span>{/if}</div>
-          <div class="facts">
-            {#each m.facts as f}
-              <div class={f.tone}><span class="muted">{f.label}</span> {f.value}</div>
-            {/each}
-          </div>
-          <div class="small link">{#if m.link}{m.link} →{/if}</div>
-        </button>
+        <DashTile icon={MODULE_ICONS[m.id] ?? 'box'} hue={moduleHue(m.id)} title={m.label} value={m.value} unit={m.unit} tone={m.tone}
+          rows={m.facts.map((f) => ({ label: f.label, value: f.value, tone: f.tone, fill: meter(f.value) }))}
+          link={m.link} onclick={m.page ? () => go(m.page) : null} />
       {/each}
 
       {#if data.mrsleep}
         {@const sl = data.mrsleep}
         {@const managed = sl.worlds.filter((w) => w.managed)}
-        <button class="card tile" onclick={() => go('/sleep')}>
-          <div class="label">{t('nav.sleep')}</div>
-          <div class="big small-big {sl.blocked > 0 ? 'warn' : 'good'}">
-            {sl.blocked > 0 ? '⛔ ' + t('home.sleepBlocked', { n: sl.blocked }) : t('home.sleepFree')}
-          </div>
-          <div class="facts">
-            {#each managed.slice(0, 3) as w (w.name)}
-              <div><span class="muted">{w.name}</span> {w.thunder ? '⛈' : w.night ? '☽' : '☀'} {w.sleeping} / {w.needed}</div>
-            {/each}
-            {#if sl.bans}<div><span class="muted">{t('sleep.bans')}</span> {sl.bans}</div>{/if}
-          </div>
-          <div class="small link">{t('home.toSleep')} →</div>
-        </button>
+        <DashTile icon="moon" hue={235} title={t('nav.sleep')} small
+          value={sl.blocked > 0 ? '⛔ ' + t('home.sleepBlocked', { n: sl.blocked }) : t('home.sleepFree')}
+          tone={sl.blocked > 0 ? 'warn' : 'good'}
+          rows={[
+            ...managed.slice(0, 3).map((w) => ({ label: w.name, value: `${w.thunder ? '⛈' : w.night ? '☽' : '☀'} ${w.sleeping} / ${w.needed}`,
+              fill: share(w.sleeping, w.needed) })),
+            ...(sl.bans ? [{ label: t('sleep.bans'), value: sl.bans }] : []),
+          ]}
+          link={t('home.toSleep')} onclick={() => go('/sleep')} />
       {/if}
 
       {#if data.maintenance}
         {@const m = data.maintenance}
-        <button class="card tile" onclick={() => go('/maintenance')}>
-          <div class="label">{t('overview.maintenance')}</div>
-          <div class="big small-big {phaseTone[m.phase]}">{t('overview.phase.' + m.phase)}</div>
-          <div class="facts">
-            {#if m.phase !== 'none'}
-              {#if m.title}<div class="wide"><span class="muted">{t('overview.what')}</span> {m.title}</div>{/if}
-              <div><span class="muted">{t('overview.from')}</span> {dateTime(m.start)}</div>
-              <div><span class="muted">{t('overview.until')}</span> {m.end ? dateTime(m.end) : t('overview.openEnd')}</div>
-            {/if}
-          </div>
-          <div class="small link">{t('home.toMaintenance')} →</div>
-        </button>
+        <DashTile icon="tool" hue={28} title={t('overview.maintenance')} small value={t('overview.phase.' + m.phase)} tone={phaseTone[m.phase]}
+          rows={m.phase === 'none' ? [] : [
+            ...(m.title ? [{ label: t('overview.what'), value: m.title }] : []),
+            { label: t('overview.from'), value: dateTime(m.start) },
+            { label: t('overview.until'), value: m.end ? dateTime(m.end) : t('overview.openEnd') },
+          ]}
+          link={t('home.toMaintenance')} onclick={() => go('/maintenance')} />
       {/if}
 
       {#if data.versions}
         {@const v = data.versions}
-        <button class="card tile" onclick={() => go('/versions')}>
-          <div class="label">{t('nav.versions')}</div>
-          <div class="big small-big {v.restartAt ? 'bad' : v.staged ? 'info' : v.updates ? 'warn' : 'good'}">
-            {v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : v.updates ? t('home.versionsUpdates', { n: v.updates }) : t('home.versionsCurrent')}
-          </div>
-          <div class="facts">
-            <div><span class="muted">{t('home.versionsPlugins')}</span> {v.plugins}</div>
-            <div><span class="muted">{t('home.versionsAvailable')}</span> {v.updates}</div>
-            <div><span class="muted">{t('home.versionsWaiting')}</span> {v.staged}</div>
-          </div>
-          <div class="small link">{t('home.toVersions')} →</div>
-        </button>
+        <DashTile icon="box" hue={190} title={t('nav.versions')} small
+          value={v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : v.updates ? t('home.versionsUpdates', { n: v.updates }) : t('home.versionsCurrent')}
+          tone={v.restartAt ? 'bad' : v.staged ? 'info' : v.updates ? 'warn' : 'good'}
+          rows={[
+            { label: t('home.versionsPlugins'), value: v.plugins },
+            { label: t('home.versionsAvailable'), value: v.updates, tone: v.updates ? 'warn' : '' },
+            { label: t('home.versionsWaiting'), value: v.staged },
+          ]}
+          link={t('home.toVersions')} onclick={() => go('/versions')} />
       {/if}
     </div>
 
     {#if data.server}
-      <section class="card">
-        <div class="label">{t('overview.players')} · {data.server.online} / {data.server.max}</div>
+      <section class="card online">
+        <div class="o-head">
+          <span class="o-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9c0-3.3 3.1-6 7-6s7 2.7 7 6M16 3.5a4 4 0 0 1 0 7M18 14c2.4.6 4 2.6 4 5" /></svg>
+          </span>
+          <h2>{t('overview.players')}</h2>
+          <span class="count">{data.server.online} / {data.server.max}</span>
+        </div>
         {#if data.server.players.length === 0}
           <p class="muted small">{t('overview.nobody')}</p>
         {:else}
           <div class="players">
             {#each data.server.players as p (p.uuid)}
-              <div class="player">
-                <img src={head(p.uuid)} alt="" width="32" height="32" />
-                <div>
-                  <div class="pname">{p.name}</div>
-                  <div class="muted small">
-                    {p.world} · {p.ping} ms
-                    {#if p.admin}· <span class="warn">{t('overview.admin')}</span>{/if}
-                    {#if p.frozen}· <span class="bad">{t('overview.frozen')}</span>{/if}
-                  </div>
-                </div>
-              </div>
+              <svelte:element this={me.may.players ? 'button' : 'div'} class="player" onclick={me.may.players ? () => go('/players/' + p.uuid) : undefined}
+                role={me.may.players ? undefined : 'group'}>
+                <img src={head(p.uuid)} alt="" width="36" height="36" />
+                <span class="p-body">
+                  <span class="pname">{p.name}</span>
+                  <span class="muted small">{p.world} · {p.ping} ms</span>
+                </span>
+                {#if p.admin}<span class="tag warn">{t('overview.admin')}</span>{/if}
+                {#if p.frozen}<span class="tag bad">{t('overview.frozen')}</span>{/if}
+              </svelte:element>
             {/each}
           </div>
         {/if}
@@ -257,8 +249,8 @@
     {/if}
 
     {#if me.totp && me.recoveryLeft <= 2}
-      <button class="card tile notice-tile" onclick={() => go('/account')}>
-        <span class="warn">!</span> {t('home.recoveryLow')}
+      <button class="notice" onclick={() => go('/account')}>
+        <span class="badge small warn">!</span> {t('home.recoveryLow')} <span class="arrow" aria-hidden="true">→</span>
       </button>
     {/if}
   {:else if !error}
@@ -267,30 +259,80 @@
 </div>
 
 <style>
-  .hero {
-    border-left: 4px solid var(--good);
-    padding: 16px 20px;
+  .page {
+    display: grid;
+    gap: 16px;
   }
 
-  .hero.tone-warn {
-    border-left-color: var(--warn);
+  .hello {
+    display: flex;
+    gap: 16px;
+    align-items: center;
   }
 
-  .hero.tone-bad {
-    border-left-color: var(--bad);
+  .hello img {
+    border-radius: 10px;
+    image-rendering: pixelated;
   }
 
-  .hero.tone-info {
-    border-left-color: var(--accent);
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
   }
 
-  .hero-head {
+  .hello p {
+    margin: 4px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--muted);
+  }
+
+  .dot.on {
+    background: var(--good);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent);
+  }
+
+  /* The situation, tinted in the tone of its worst entry. */
+  .situation {
+    --tn: var(--good);
+    display: grid;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--tn) 35%, var(--border));
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tn) 16%, transparent), transparent 60%),
+      var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .situation.tone-warn {
+    --tn: var(--warn);
+  }
+
+  .situation.tone-bad {
+    --tn: var(--bad);
+  }
+
+  .situation.tone-info {
+    --tn: var(--accent);
+  }
+
+  .s-head {
     display: flex;
     gap: 12px;
     align-items: center;
   }
 
-  .hero-head h2 {
+  h2 {
     margin: 0;
     font-size: 1.15rem;
   }
@@ -299,17 +341,17 @@
     display: inline-grid;
     place-items: center;
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     color: #fff;
     font-weight: 800;
     background: var(--good);
   }
 
-  .small-badge {
-    width: 20px;
-    height: 20px;
+  .badge.small {
+    width: 22px;
+    height: 22px;
     font-size: 0.75rem;
   }
 
@@ -327,19 +369,30 @@
 
   .alerts {
     list-style: none;
-    margin: 12px 0 0;
+    margin: 0;
     padding: 0;
     display: grid;
     gap: 8px;
   }
 
   .alerts li {
+    --tn: var(--accent);
     display: flex;
     gap: 10px;
     align-items: center;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
     background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-left: 3px solid var(--tn);
+  }
+
+  .alerts li.tone-warn {
+    --tn: var(--warn);
+  }
+
+  .alerts li.tone-bad {
+    --tn: var(--bad);
   }
 
   .alerts .text {
@@ -348,182 +401,149 @@
   }
 
   .mini {
-    padding: 3px 10px;
+    padding: 4px 10px;
     font-size: 0.8rem;
     flex-shrink: 0;
   }
 
-  .facts-row {
+  .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 8px;
     font-size: 0.92rem;
   }
 
-  .facts-row > span {
+  .chips > span {
     background: var(--surface-2);
     border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-radius: 8px;
-    padding: 5px 10px;
+    border-radius: 999px;
+    padding: 5px 12px;
   }
 
-  /* Every tile has the same four rows (label, big value, sub-tiles, link) as a subgrid: in a row of tiles they
-     all sit on the same level, however much each one holds. */
-  .grid {
+  .tiles {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   }
 
-  .grid > .card {
+  /* Players online */
+  .online {
     display: grid;
-    grid-row: span 4;
-    grid-template-rows: subgrid;
-    row-gap: 6px;
-    align-content: start;
+    gap: 14px;
   }
 
-  /* Clickable tiles look exactly like the others: buttons centre their content (also with display: block), so
-     a column from the top, full width - the link at the bottom. */
-  .tile {
-    text-align: left;
-    color: var(--text);
-    font-weight: 400;
-    justify-content: stretch;
-    justify-items: stretch;
-  }
-
-  .tile:disabled {
-    opacity: 1;
-    cursor: default;
-  }
-
-  .label {
-    color: var(--muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  /* Centred in its row - a short text ("Keine Wartung geplant") sits level with the big numbers. */
-  .big {
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1.1;
+  .o-head {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0 6px;
-    min-height: 2.4rem;
+    gap: 12px;
   }
 
-  .small-big {
-    font-size: 1.3rem;
-  }
-
-  .unit {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--muted);
-  }
-
-  /* Every value as a subtle sub-tile: label small on top, value below. */
-  .facts {
+  .o-icon {
     display: grid;
-    gap: 6px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 118px), 1fr));
-    align-content: start;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    color: hsl(150 70% 45%);
+    background: color-mix(in srgb, hsl(150 70% 45%) 16%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, hsl(150 70% 45%) 35%, transparent);
   }
 
-  .facts > div {
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 0.92rem;
+  .o-head h2 {
+    flex: 1;
+  }
+
+  .count {
     font-weight: 700;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .facts .muted {
-    display: block;
-    font-size: 0.74rem;
-    font-weight: 600;
-    margin-bottom: 1px;
-  }
-
-  .bar {
-    height: 5px;
-    border-radius: 3px;
-    background: var(--border);
-    margin-top: 6px;
-    overflow: hidden;
-  }
-
-  .bar div {
-    height: 100%;
-    background: var(--accent);
-  }
-
-  .good {
-    color: var(--good);
-  }
-
-  .warn {
-    color: var(--warn);
-  }
-
-  .bad {
-    color: var(--bad);
-  }
-
-  .info {
-    color: var(--accent);
-  }
-
-  .badge.good,
-  .badge.warn,
-  .badge.bad,
-  .badge.info {
-    color: #fff;
-  }
-
-  .link {
-    color: var(--accent);
-    align-self: end;
-  }
-
-  .facts .wide {
-    grid-column: 1 / -1;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
   }
 
   .players {
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    margin-top: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
   }
 
   .player {
     display: flex;
     gap: 10px;
     align-items: center;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    color: var(--text);
+    font: inherit;
+    font-weight: 400;
+    text-align: left;
+  }
+
+  button.player:hover {
+    filter: none;
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   }
 
   .player img {
-    border-radius: 6px;
+    border-radius: 8px;
     image-rendering: pixelated;
   }
 
-  .pname {
-    font-weight: 600;
+  .p-body {
+    display: grid;
+    flex: 1;
+    min-width: 0;
   }
 
-  .notice-tile {
-    padding: 12px 18px;
-    flex-direction: row;
+  .pname {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .tag.warn {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 15%, transparent);
+  }
+
+  .tag.bad {
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 15%, transparent);
+  }
+
+  .notice {
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .notice .arrow {
+    margin-left: auto;
+    color: var(--warn);
+  }
+
+  .notice:hover {
+    filter: none;
   }
 </style>

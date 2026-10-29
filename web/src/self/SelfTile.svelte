@@ -3,6 +3,7 @@
   // first key figure big, the others below - values like "12 / 49" as a bar -, texts (e.g. a ban) as a line. Each
   // plugin gets its own colour from its id, its icon as a large watermark.
   import { t } from '../lib/i18n.js';
+  import { moduleHue } from '../lib/icons.js';
 
   // onclick null = the tile only shows (no page behind it).
   let { area, onclick = null } = $props();
@@ -13,7 +14,7 @@
   const rest = $derived(stats.slice(1));
 
   // A stable hue per plugin, so a plugin always has the same colour.
-  const hue = $derived([...area.module].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7));
+  const hue = $derived(moduleHue(area.module));
 
   // "12 / 49" or "120 / 245 Chunks" -> fill of the bar (0..1); everything else -> null
   function meter(value) {
