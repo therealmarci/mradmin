@@ -179,7 +179,7 @@
         {#each podiums as r (r.id)}
           <section class="card ranking">
             <div class="r-head">
-              <h2><span aria-hidden="true">{icon(r)}</span> {title(r)}</h2>
+              <h2 title={title(r)}><span aria-hidden="true">{icon(r)}</span> <span class="r-title">{title(r)}</span></h2>
               {#if r.places.length}
                 <div class="mode" role="group" aria-label={t('self.stats.view')}>
                   <button class:active={mode(r.id) === 'podium'} aria-pressed={mode(r.id) === 'podium'}
@@ -189,6 +189,8 @@
                 </div>
               {/if}
             </div>
+            <!-- One body below the head, so all cards of a row line up (subgrid). -->
+            <div class="r-body">
             {#if r.places.length === 0}
               <p class="muted small">{t('self.stats.empty')}</p>
             {:else if mode(r.id) === 'table'}
@@ -255,6 +257,7 @@
                 </ol>
               {/if}
             {/if}
+            </div>
           </section>
         {/each}
       </div>
@@ -495,12 +498,16 @@
     display: grid;
     gap: 14px;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    align-items: start;
   }
 
   .ranking {
     display: grid;
     gap: 12px;
     align-content: start;
+    /* Head and body as rows of the grid around, so head and body start on the same line in every card. */
+    grid-row: span 2;
+    grid-template-rows: subgrid;
   }
 
   .podium {
@@ -650,14 +657,40 @@
     }
   }
 
+
+  /* Same head in every card: the title (at most two lines), the switch always below it on the left. */
   .r-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    display: grid;
+    gap: 10px;
+    align-content: start;
   }
 
+  .r-head h2 {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin: 0;
+    min-height: 2.6em;
+    line-height: 1.3;
+  }
+
+  .r-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .r-head .mode {
+    justify-self: start;
+  }
+
+  .r-body {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
   .mode {
     display: inline-flex;
     padding: 3px;
