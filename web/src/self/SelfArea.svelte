@@ -3,6 +3,7 @@
   // plugin, which checks everything again and answers with the reason if it refuses.
   import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
+  import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import Blocks from './Blocks.svelte';
   import AreaHeader from './AreaHeader.svelte';
@@ -28,8 +29,8 @@
     module;
     id;
     untrack(load);
-    const timer = setInterval(load, 10000);
-    return () => clearInterval(timer);
+    // Every 10 seconds again while the tab is visible.
+    return poll(load, 10_000);
   });
 
   // The note disappears again after a few seconds.

@@ -5,6 +5,7 @@
   // /me/news#changelog the changelog.
   import { tick } from 'svelte';
   import { api } from '../lib/api.js';
+  import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
 
@@ -30,16 +31,16 @@
   }
   load();
 
-  // Warnings come and go (also from Uptime Kuma): every 30 seconds again, without opening anything.
+  // Warnings come and go (also from Uptime Kuma): every 30 seconds again while the tab is visible, without opening
+  // anything.
   $effect(() => {
-    const timer = setInterval(async () => {
+    return poll(async () => {
       try {
         data = await api('GET', '/self/news?all=1&lang=' + lang);
       } catch {
         // keep what is shown
       }
     }, 30_000);
-    return () => clearInterval(timer);
   });
 
   // #post-3: the news opens in the window, a changelog is shown and marked.

@@ -4,6 +4,7 @@
   // changelogs). Moves on by itself (player-web.news.seconds) - a bar between the arrows runs down until the next one -,
   // stops while the pointer or the keyboard is on it, can be swiped on the phone. Nothing to show = not shown at all.
   import { api } from '../lib/api.js';
+  import { poll } from '../lib/poll.js';
   import { t, lang } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
@@ -24,13 +25,14 @@
     }
   }
 
-  // Again every 20 seconds - a warning or a maintenance planned meanwhile appears without reloading the page.
+  // Again every 20 seconds while the tab is visible - a warning or a maintenance planned meanwhile appears without
+  // reloading the page.
   $effect(() => {
     load();
-    const timer = setInterval(load, 20_000);
+    const stop = poll(load, 20_000);
     const clock = setInterval(() => (now = Date.now()), 1000);
     return () => {
-      clearInterval(timer);
+      stop();
       clearInterval(clock);
     };
   });

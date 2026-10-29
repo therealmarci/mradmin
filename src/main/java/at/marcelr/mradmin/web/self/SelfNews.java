@@ -105,7 +105,7 @@ public final class SelfNews {
             }
         }
         if (settings.newsPluginNotices()) {
-            slides.addAll(notices(http));
+            slides.addAll(cachedNotices(http, lang));
         }
         if (settings.newsTickets() && tickets.available(http.player().player())) {
             slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
@@ -140,6 +140,33 @@ public final class SelfNews {
         m.put("updated", p.updated());
         m.put("expires", p.expires());
         return m;
+    }
+
+    /** How long the plugins' warnings of a player are kept for the slideshow (it reloads every 20 seconds). */
+    private static final long NOTICES_MILLIS = 45_000L;
+
+    private record CachedNotices(long at, List<Map<String, Object>> notices) {
+    }
+
+    /** player + language -> the plugins' warnings, so the slideshow does not build every area on every reload. */
+    private final Map<String, CachedNotices> noticeCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** After an action of the player (e.g. a loader switched): their warnings are built again on the next reload. */
+    void forget(UUID player) {
+        noticeCache.keySet().removeIf(k -> k.startsWith(player + ":"));
+    }
+
+    private List<Map<String, Object>> cachedNotices(Http http, String lang) throws Exception {
+        String key = http.player().player() + ":" + lang;
+        long now = System.currentTimeMillis();
+        CachedNotices cached = noticeCache.get(key);
+        if (cached != null && now - cached.at() < NOTICES_MILLIS) {
+            return cached.notices();
+        }
+        noticeCache.values().removeIf(c -> now - c.at() >= NOTICES_MILLIS);
+        List<Map<String, Object>> fresh = notices(http);
+        noticeCache.put(key, new CachedNotices(now, fresh));
+        return fresh;
     }
 
     /** Warnings of the plugins: Text blocks with tone bad (first) or warn in the summary of their areas. */

@@ -53,12 +53,35 @@ public final class SelfStats {
         return plugin.settings().playerWeb().rankings();
     }
 
+
+    /** The other online players' current values are read again at most this often (the viewer's every time). */
+    private static final long LIVE_MILLIS = 60_000L;
+    private volatile Map<UUID, VanillaStats.Live> liveAll = Map.of();
+    private volatile long liveAt;
+
+    /**
+     * Online players' values for the next answer: the viewer's right now, everyone else's at most a minute old - reading
+     * them costs the server thread something per player.
+     */
+    private void live(UUID viewer) throws Exception {
+        long now = System.currentTimeMillis();
+        Map<UUID, VanillaStats.Live> values;
+        if (now - liveAt > LIVE_MILLIS) {
+            values = server.sync(() -> VanillaStats.readLive(null));
+            liveAt = now;
+        } else {
+            values = new java.util.HashMap<>(liveAll);
+            values.putAll(server.sync(() -> VanillaStats.readLive(viewer)));
+        }
+        liveAll = values;
+        vanilla.live(values);
+    }
     /**
      * The viewer's own game statistics for the tile on the start page (player-web.personal-stats, in that order):
      * [{key, value}] with the value formatted for the language; empty = no tile.
      */
     List<Map<String, Object>> personal(UUID player, String lang) throws Exception {
-        vanilla.live(server.sync(VanillaStats::readLive));
+        live(player);
         List<Map<String, Object>> result = new ArrayList<>();
         for (String key : plugin.settings().playerWeb().personalStats()) {
             VanillaStats.Kind kind = VanillaStats.Kind.byKey(key);
@@ -83,7 +106,7 @@ public final class SelfStats {
         List<Map<String, Object>> totals = new ArrayList<>();
         List<String> shown = plugin.settings().playerWeb().rankingKinds();
         // Online players with their values right now (the files are only written when the server saves).
-        vanilla.live(server.sync(VanillaStats::readLive));
+        live(viewer);
         // The game's statistics: the viewer's own value and place for every kind, rankings and totals for the
         // configured ones (player-web.rankings.statistics).
         for (VanillaStats.Kind kind : VanillaStats.Kind.values()) {

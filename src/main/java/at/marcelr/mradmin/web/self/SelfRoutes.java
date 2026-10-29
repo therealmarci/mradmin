@@ -213,6 +213,7 @@ public final class SelfRoutes {
             http.json(400, Map.of("error", "module", "message", refused));
             return;
         }
+        news.forget(viewer.player());
         plugin.getLogger().info(viewer.name() + " (own page) " + module.id() + "/" + area + ": " + action + ".");
     }
 

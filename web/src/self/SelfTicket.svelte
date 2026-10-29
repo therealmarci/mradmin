@@ -3,6 +3,7 @@
   // the team's on the left, notes of the system in the middle), and the answer below (Ctrl+Enter sends).
   import { untrack, tick } from 'svelte';
   import { api } from '../lib/api.js';
+  import { poll } from '../lib/poll.js';
   import { t, errorText } from '../lib/i18n.js';
   import { go } from '../lib/router.svelte.js';
   import { dateTime } from '../lib/format.js';
@@ -33,8 +34,8 @@
   $effect(() => {
     id;
     untrack(load);
-    const timer = setInterval(load, 10000);
-    return () => clearInterval(timer);
+    // Every 10 seconds again while the tab is visible.
+    return poll(load, 10_000);
   });
 
   async function reply(event) {

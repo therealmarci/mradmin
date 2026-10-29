@@ -114,12 +114,13 @@ public final class VanillaStats {
     }
 
     /**
-     * The current values of every online player, straight from the server - Minecraft only writes them to the files
-     * when it saves. Main thread only.
+     * The current values of online players ({@code only} null = all, otherwise just that one), straight from the
+     * server - Minecraft only writes them to the files when it saves. Main thread only.
      */
-    public static Map<UUID, Live> readLive() {
+    public static Map<UUID, Live> readLive(UUID only) {
         Map<UUID, Live> result = new HashMap<>();
-        for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers()) {
+        for (org.bukkit.entity.Player p : only == null ? List.copyOf(Bukkit.getOnlinePlayers())
+                : java.util.Optional.ofNullable(Bukkit.getPlayer(only)).map(List::of).orElse(List.of())) {
             Map<Kind, Double> v = new java.util.EnumMap<>(Kind.class);
             v.put(Kind.PLAY_TIME, p.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / TICKS_PER_HOUR);
             v.put(Kind.BLOCKS_MINED, perMaterial(p, org.bukkit.Statistic.MINE_BLOCK, true));
