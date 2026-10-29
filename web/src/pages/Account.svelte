@@ -113,24 +113,6 @@
     <span class="state {level.tone}"><span class="dot"></span>{t('account.level.' + level.key)}</span>
   </header>
 
-  <!-- What protects the account -->
-  <div class="kpis">
-    <button class="kpi" class:good={me.passkeys > 0} onclick={() => choose('security')}>
-      <span class="label">{t('passkey.title')}</span><span class="value">{me.passkeys}</span>
-    </button>
-    <button class="kpi" class:good={me.totp} class:warn={!me.totp} onclick={() => choose('security')}>
-      <span class="label">{t('twofa.title')}</span>
-      <span class="value small-value">{me.totp ? t('account.chip.totpOn') : t('account.chip.totpOff')}</span>
-      {#if me.totp}<span class="sub" class:warn-text={me.recoveryLeft <= 2}>{t('account.recoveryLeftLabel')}: {me.recoveryLeft} / 8</span>{/if}
-    </button>
-    <button class="kpi" class:good={!!me.discord} onclick={() => choose('security')}>
-      <span class="label">Discord</span><span class="value small-value">{me.discord || '–'}</span>
-    </button>
-    <button class="kpi" onclick={() => choose('devices')}>
-      <span class="label">{t('account.tab.devices')}</span><span class="value">{sessions ? sessions.length : '…'}</span>
-    </button>
-  </div>
-
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 
@@ -251,73 +233,6 @@
     height: 8px;
     border-radius: 50%;
     background: var(--tn);
-  }
-
-  /* What protects the account */
-  .kpis {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
-  }
-
-  .kpi {
-    --tn: var(--ac);
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    justify-items: start;
-    padding: 14px 16px;
-    text-align: left;
-    font: inherit;
-    font-weight: 400;
-    color: var(--text);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    border-top: 3px solid var(--tn);
-    background:
-      radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--ac) 10%, transparent), transparent 55%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .kpi:hover {
-    filter: none;
-    border-color: color-mix(in srgb, var(--tn) 45%, var(--border));
-  }
-
-  .kpi.good {
-    --tn: var(--good);
-  }
-
-  .kpi.warn {
-    --tn: var(--warn);
-  }
-
-  .label {
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 700;
-  }
-
-  .value {
-    font-size: 1.6rem;
-    font-weight: 800;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-
-  .small-value {
-    font-size: 1.05rem;
-    color: var(--tn);
-  }
-
-  .sub {
-    color: var(--muted);
-    font-size: 0.78rem;
-  }
-
-  .warn-text {
-    color: var(--warn);
   }
 
   /* Areas */
