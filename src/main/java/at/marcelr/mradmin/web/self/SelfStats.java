@@ -27,6 +27,8 @@ import java.util.UUID;
 public final class SelfStats {
 
     private static final String FILE = "ranking-hidden";
+    /** Places in the table view of a ranking at most. */
+    private static final int ALL_MAX = 1000;
 
     private final WebServer server;
     private final MRAdmin plugin;
@@ -166,10 +168,14 @@ public final class SelfStats {
         return m;
     }
 
-    /** Top places without hidden players, numbered again, plus the viewer's own place if it is further down. */
+    /**
+     * Top places without hidden players, numbered again, plus the viewer's own place if it is further down, and all
+     * places (up to 1000) for the table view.
+     */
     private static Map<String, Object> ranking(String id, String title, List<Place> all, UUID viewer, Set<UUID> hidden,
                                                int top) {
         List<Map<String, Object>> places = new ArrayList<>();
+        List<Map<String, Object>> everyone = new ArrayList<>();
         Map<String, Object> own = null;
         int rank = 0;
         for (Place p : all) {
@@ -178,13 +184,15 @@ public final class SelfStats {
             }
             rank++;
             boolean self = p.player().equals(viewer);
+            Map<String, Object> place = place(rank, p, self);
             if (rank <= top) {
-                places.add(place(rank, p, self));
+                places.add(place);
             } else if (self) {
-                own = place(rank, p, true);
+                own = place;
             }
-            if (rank > top && own != null) {
-                break;
+            // Everyone for the table view (a few thousand at most).
+            if (rank <= ALL_MAX) {
+                everyone.add(place);
             }
         }
         Map<String, Object> m = new LinkedHashMap<>();
@@ -192,6 +200,7 @@ public final class SelfStats {
         m.put("title", title);
         m.put("places", places);
         m.put("own", own);
+        m.put("all", everyone);
         return m;
     }
 

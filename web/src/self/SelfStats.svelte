@@ -77,6 +77,12 @@
       // only for this visit then
     }
   }
+
+  // The table of a ranking opens with the own row in the middle (scrolling only the table, not the page).
+  function toOwn(box) {
+    const row = box.querySelector('tr.self');
+    if (row) box.scrollTop = Math.max(0, row.offsetTop - box.clientHeight / 2);
+  }
 </script>
 
 {#snippet statCard(p)}
@@ -186,19 +192,21 @@
             {#if r.places.length === 0}
               <p class="muted small">{t('self.stats.empty')}</p>
             {:else if mode(r.id) === 'table'}
+              <!-- Every player, scrollable; opens with the own row in view. -->
+              <div class="r-scroll" use:toOwn>
               <table class="r-table">
                 <thead>
                   <tr><th class="num">{t('self.stats.colPlace')}</th><th>{t('self.stats.colPlayer')}</th><th class="num">{t('self.stats.colValue')}</th></tr>
                 </thead>
                 <tbody>
-                  {#each r.places as p (p.uuid)}
+                  {#each r.all ?? r.places as p (p.uuid)}
                     <tr class:self={p.self}>
                       <td class="num">{medal(p.rank) ?? p.rank}</td>
                       <td><span class="who"><img src={head(p.uuid)} alt="" width="20" height="20" /> {p.name}</span></td>
                       <td class="num strong">{p.value}</td>
                     </tr>
                   {/each}
-                  {#if r.own}
+                  {#if r.own && !(r.all ?? []).some((p) => p.self)}
                     <tr class="gap-row" aria-hidden="true"><td colspan="3">⋯</td></tr>
                     <tr class="self">
                       <td class="num">{r.own.rank}</td>
@@ -208,7 +216,7 @@
                   {/if}
                 </tbody>
               </table>
-            {:else}
+              </div>
             {:else}
               <div class="podium">
                 {#each [1, 0, 2] as i}
@@ -671,6 +679,20 @@
     background: var(--surface);
     color: var(--text);
     box-shadow: var(--shadow);
+  }
+
+  .r-scroll {
+    max-height: 380px;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 10px;
+  }
+
+  .r-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface);
   }
 
   .r-table {
