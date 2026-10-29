@@ -194,6 +194,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (newsDelivery != null) {
             newsDelivery.incidents().stop();
         }
+        if (web != null) {
+            web.playerSessions().flush();
+        }
         discord.shutdown();
         if (discordAnnounce != null) {
             discordAnnounce.shutdown();

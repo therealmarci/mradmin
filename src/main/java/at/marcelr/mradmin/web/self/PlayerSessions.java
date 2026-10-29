@@ -29,7 +29,7 @@ import java.util.UUID;
 public final class PlayerSessions {
 
     private static final String FILE = "player-sessions";
-    /** Note the use of a session at most once per hour (and save then), not on every request. */
+    /** Every use of a session counts at once, but it is written to disk at most once per hour (or on a new address). */
     private static final long SEEN_EVERY = 3_600_000L;
     /** Wrong codes from all addresses together per minute - more and every code is refused for a moment. */
     private static final int MAX_WRONG_PER_MINUTE = 30;
@@ -58,6 +58,8 @@ public final class PlayerSessions {
     private final Map<String, Code> codes = new HashMap<>();
     /** times of wrong codes in the last minute (all addresses) */
     private final Deque<Long> wrong = new ArrayDeque<>();
+    /** when the uses were last written to disk */
+    private long seenSaved;
 
     public PlayerSessions(MRAdmin plugin) {
         this.plugin = plugin;
@@ -144,10 +146,12 @@ public final class PlayerSessions {
             save();
             return null;
         }
-        if (now - s.lastSeen() >= SEEN_EVERY || !s.ip().equals(ip)) {
-            s = new Session(s.id(), s.hash(), s.player(), s.name(), s.created(), s.verified(), now,
-                    expiry(s.verified(), now), ip, s.agent());
-            sessions.put(hash, s);
+        boolean moved = !s.ip().equals(ip);
+        s = new Session(s.id(), s.hash(), s.player(), s.name(), s.created(), s.verified(), now,
+                expiry(s.verified(), now), ip, s.agent());
+        sessions.put(hash, s);
+        if (moved || now - seenSaved >= SEEN_EVERY) {
+            seenSaved = now;
             save();
         }
         return s;
@@ -217,6 +221,11 @@ public final class PlayerSessions {
                 // broken entry - that browser simply signs in again
             }
         }
+    }
+
+    /** Writes the uses noted since the last save (on shutdown). */
+    public synchronized void flush() {
+        save();
     }
 
     private void save() {
