@@ -176,6 +176,8 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
 - **Ohne Uptime Kuma**: die eigene Wartung von MRadmin wie `/mradmin maintenance` - jetzt starten oder mit Countdown
   planen (Dauer oder offenes Ende, Titel), verlängern, beenden bzw. absagen. Eine Vorschau zeigt vorher, wann sie
   beginnt und endet.
+- **Kommende Wartungen**: die nächsten drei nach der aktuellen, ebenfalls aus Uptime Kuma und lokal gemischt mit
+  Herkunft, Start, Ende und Dauer.
 - **Letzte Wartungen**: die drei zuletzt beendeten oder abgesagten Wartungen, egal ob aus Uptime Kuma oder lokal
   (die Herkunft steht dabei), mit Zeitraum und Dauer. MRadmin merkt sich die letzten zehn.
 - Wie `/mradmin announce`: Vorlagen aus der Sprachdatei (mit Werten) oder eigener Text („Titel | Untertitel“), auf

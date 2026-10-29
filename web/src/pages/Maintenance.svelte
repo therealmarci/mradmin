@@ -150,6 +150,20 @@
     running?.source === 'kuma' ? (data?.kumaInfo?.maintenances ?? []).find((m) => m.id === running.id) ?? null : null,
   );
 
+  // The next three maintenances after the current one - MRadmin's windows (Kuma and manual) plus the ones Kuma has
+  // scheduled that are not among them, by start.
+  const upcoming = $derived.by(() => {
+    if (!data) return [];
+    const isCurrent = (w) => running && w.source === running.source && w.id === running.id && w.start === running.start;
+    const own = (data.windows ?? []).filter((w) => !isCurrent(w) && w.start > now);
+    const seen = new Set(own.filter((w) => w.source === 'kuma').map((w) => w.id));
+    if (running?.source === 'kuma') seen.add(running.id);
+    const kuma = (data.kumaInfo?.maintenances ?? [])
+      .filter((m) => m.status === 'scheduled' && !seen.has(m.id) && m.start > now)
+      .map((m) => ({ source: 'kuma', id: m.id, title: m.title, start: m.start, end: m.end }));
+    return [...own, ...kuma].sort((a, b) => a.start - b.start).slice(0, 3);
+  });
+
   // The last three maintenances that are over - MRadmin's own history (Kuma and manual) plus the ones Kuma reports as
   // ended that MRadmin did not see end, newest first.
   const history = $derived.by(() => {
@@ -329,6 +343,28 @@
           <span class="muted small">{t('mt.localMode')}</span>
         {/if}
       </div>
+    </section>
+
+    <!-- The next three maintenances, wherever they come from -->
+    <section class="card tile">
+      <h2>{t('mt.coming')}</h2>
+      {#if upcoming.length === 0}
+        <p class="muted small">{t('mt.comingNone')}</p>
+      {:else}
+        <ul class="history">
+          {#each upcoming as w (w.source + w.id + w.start)}
+            <li class="item info">
+              <div class="i-top">
+                <span class="status">{t('mt.startsIn')} {duration(w.start - now)}</span>
+                <span class="chip origin {w.source}">{t('mt.origin.' + w.source)}</span>
+              </div>
+              <strong>{w.title || t('overview.maintenance')}</strong>
+              <span class="muted small">{dateTime(w.start)} – {w.end ? dateTime(w.end) : t('overview.openEnd')}</span>
+              <span class="chip">{w.end ? t('mt.hist.lasts', { d: duration(w.end - w.start) }) : t('overview.openEnd')}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </section>
 
     <!-- The last three maintenances, wherever they came from -->
