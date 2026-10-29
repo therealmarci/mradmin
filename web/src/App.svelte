@@ -89,17 +89,17 @@
   const nav = $derived(
     me
       ? [
-          { path: '/', label: t('nav.home') },
-          ...(me.may.tickets ? [{ path: '/tickets', label: t('nav.tickets') }] : []),
-          ...(me.may.players ? [{ path: '/players', label: t('nav.players') }] : []),
-          ...(me.may.health ? [{ path: '/health', label: t('nav.health') }] : []),
-          ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks') }] : []),
-          ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep') }] : []),
-          ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp') }] : []),
-          ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance') }] : []),
-          ...(me.may.news ? [{ path: '/news', label: t('nav.news') }] : []),
-          ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions') }] : []),
-          ...(me.may.console ? [{ path: '/console', label: t('nav.console') }] : []),
+          { path: '/', label: t('nav.home'), icon: 'home' },
+          ...(me.may.tickets ? [{ path: '/tickets', label: t('nav.tickets'), icon: 'ticket' }] : []),
+          ...(me.may.players ? [{ path: '/players', label: t('nav.players'), icon: 'users' }] : []),
+          ...(me.may.health ? [{ path: '/health', label: t('nav.health'), icon: 'pulse' }] : []),
+          ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
+          ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
+          ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
+          ...(me.may.maintenance || me.may.announce ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
+          ...(me.may.news ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
+          ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
+          ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
       : [],
   );
@@ -129,7 +129,7 @@
 {:else if me === null}
   <Login onSignedIn={loadMe} />
 {:else}
-  <TopBar items={nav} current={section} onnav={(path) => go(path)} user={me} live={live.connected}
+  <TopBar items={nav} current={section} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} live={live.connected}
     liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
       { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
       { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },

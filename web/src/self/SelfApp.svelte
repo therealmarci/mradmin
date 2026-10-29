@@ -56,12 +56,15 @@
   const areaMatch = $derived(route.path.match(/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/));
 
   const nav = $derived([
-    { path: '/me', label: t('self.nav.home') },
-    ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title })),
-    ...(player?.news ? [{ path: '/me/news', label: t('self.nav.news') }] : []),
-    ...(player?.tickets ? [{ path: '/me/tickets', label: t('self.nav.tickets') }] : []),
-    ...(player?.stats ? [{ path: '/me/stats', label: t('self.nav.stats') }] : []),
+    { path: '/me', label: t('self.nav.home'), icon: 'home' },
+    ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title, icon: AREA_ICONS[a.module] ?? a.icon })),
+    ...(player?.news ? [{ path: '/me/news', label: t('self.nav.news'), icon: 'news' }] : []),
+    ...(player?.tickets ? [{ path: '/me/tickets', label: t('self.nav.tickets'), icon: 'ticket' }] : []),
+    ...(player?.stats ? [{ path: '/me/stats', label: t('self.nav.stats'), icon: 'chart' }] : []),
   ]);
+  // Plugins with a drawn symbol in the bar (like in the team panel), others show their emoji.
+  const AREA_ICONS = { mrchunks: 'grid', mrpvp: 'swords', mrsleep: 'moon' };
+
   // The place to highlight - also on its sub-pages (a single ticket, ...).
   const current = $derived(nav.find((i) => route.path === i.path || (i.path !== '/me' && route.path.startsWith(i.path + '/')))?.path ?? null);
 </script>
@@ -71,7 +74,7 @@
 {:else if player === null}
   <SelfLogin {error} onSignedIn={() => { error = ''; player = undefined; }} />
 {:else}
-  <TopBar items={nav} current={current} onnav={(path) => go(path)} user={player} menu={[
+  <TopBar items={nav} current={current} onnav={(path) => go(path)} user={player} moreLabel={t('nav.more')} menu={[
     { label: t('self.nav.devices'), icon: '📱', active: route.path === '/me/devices', onclick: () => go('/me/devices') },
     { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },
   ]} />
@@ -107,5 +110,4 @@
     margin: 0 auto;
     padding: 16px;
   }
-
 </style>
