@@ -50,7 +50,7 @@
               <strong class="title">{c.title}</strong>
               {#if c.subtitle}<span class="subtitle">{c.subtitle}</span>{/if}
             </div>
-            {#if c.badge}<span class="badge {c.tone}">{c.badge}</span>{/if}
+            {#if c.badge}<span class="badge {c.tone}" title={c.badge}>{c.badge}</span>{/if}
           </div>
           {#if c.stats.length}
             <div class="chips">
@@ -88,7 +88,7 @@
           <h2>{open.title}</h2>
           {#if open.subtitle}<span class="subtitle">{open.subtitle}</span>{/if}
         </div>
-        {#if open.badge}<span class="badge {open.tone}">{open.badge}</span>{/if}
+        {#if open.badge}<span class="badge {open.tone}" title={open.badge}>{open.badge}</span>{/if}
         <button class="close secondary" aria-label={t('common.close')} onclick={() => (openId = null)}>✕</button>
       </div>
       {#if open.stats.length}
@@ -223,6 +223,10 @@
 
   .badge {
     flex-shrink: 0;
+    max-width: 55%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 0.72rem;
     font-weight: 700;
     padding: 3px 9px;
