@@ -55,7 +55,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(15, Map.ofEntries(
+    private final Messages messages = new Messages(16, Map.ofEntries(
             Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
                     "maintenance-motd")),
             Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",
@@ -78,7 +78,20 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             // 13: one Discord message per maintenance with the actual begin and end.
             Map.entry(13, Set.of("discord-announce.maintenance-started", "discord-announce.maintenance-ended")),
             Map.entry(14, Set.of("web-self-link")),
-            Map.entry(15, Set.of("discord-announce.kuma-status-link"))));
+            Map.entry(15, Set.of("discord-announce.kuma-status-link")),
+            Map.entry(16, Set.of(
+                    "reload-invalid", "storage-pending", "health-alert", "health-recovered", "web-status", "web-off",
+                    "web-setup-link", "web-setup-link-other", "web-self-link", "web-self-no-url", "web-self-devices",
+                    "web-no-public-url", "web-target-no-permission", "announce-invalid-part", "mode-on", "mode-off",
+                    "mode-off-no-world", "mode-resumed", "mode-save-failed", "mode-load-failed", "freeze-frozen",
+                    "gui-hub-announce-lore", "gui-switch-admin-on-lore", "gui-switch-admin-off-lore",
+                    "gui-switch-staffchat-on-lore", "gui-switch-staffchat-off-lore", "gui-status-activity-none-lore",
+                    "maintenance-rescheduled", "maintenance-join-staff", "maintenance-ended",
+                    "maintenance-cmd-extend-failed", "maintenance-cmd-off-kuma", "gui-ticket-archive-lore",
+                    "ticket-report-notify", "ticket-too-many", "ticket-created", "ticket-answer", "ticket-notify-new",
+                    "ticket-notify-message", "ticket-closed-creator", "ticket-reopened-creator", "ticket-claimed-from",
+                    "ticket-join-staff", "staffchat-on", "discord-status-active", "discord-test-hint",
+                    "discord-announce-status-active", "mail-test-off"))));
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private at.marcelr.mradmin.news.NewsDelivery newsDelivery;

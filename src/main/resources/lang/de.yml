@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 15
+lang-version: 16
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -20,7 +20,7 @@ feature-disabled: "<prefix><gray>Diese Funktion ist auf diesem Server ausgeschal
 players-only: "<prefix><red>Dieser Befehl kann nur von Spielern genutzt werden."
 player-not-found: "<prefix><red>Spieler <white><player></white> ist nicht online."
 reloaded: "<prefix><green>Konfiguration und Sprachdatei neu geladen."
-reload-invalid: "<prefix><red>config.yml hat einen Fehler bei Zeile <white><line></white> oder kurz davor</red> <gray>- häufig ein fehlendes Anführungszeichen oder falsche Einrückung. Die bisherige Konfiguration bleibt aktiv. <dark_gray>(<error>)"
+reload-invalid: "<prefix><hover:show_text:'<gray>Oft ein fehlendes Anführungszeichen oder falsche Einrückung.<newline>Die bisherige Konfiguration bleibt aktiv.<newline><dark_gray><error>'><red>config.yml: Fehler bei Zeile <white><line></white></hover>"
 # Uhrzeiten (Java-Muster): time-format für heute, date-format für andere Tage.
 time-format: "HH:mm 'Uhr'"
 date-format: "dd.MM.yyyy 'um' HH:mm 'Uhr'"
@@ -37,9 +37,9 @@ help-discord: "<gold>/mradmin discord [test [announce]]</gold> <dark_gray>- <gra
 help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>Konfiguration neu laden"
 help-storage: "<gold>/mradmin storage</gold> <dark_gray>- <gray>Speicher (YAML, SQLite, MySQL) anzeigen"
 storage-status: "<prefix><gray>Speicher: <white><type></white> <dark_gray>(<target>)"
-storage-pending: "<prefix><yellow>In der Config steht <white><type></white> - das gilt erst nach einem Neustart <gray>(oder die Datenbank war beim Start nicht erreichbar, siehe Konsole)</gray>."
-health-alert: "<prefix><red>🐢 Der Server laggt seit <minutes> Minuten <gray>(<white><tps></white> TPS)</gray>. Details in der Weboberfläche unter Health."
-health-recovered: "<prefix><green>✅ Der Server läuft wieder flüssig <gray>(<white><tps></white> TPS)</gray>."
+storage-pending: "<prefix><hover:show_text:'<gray>Oder die Datenbank war beim Start nicht erreichbar (Konsole).'><yellow><white><type></white> gilt erst nach einem Neustart.</hover>"
+health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Health.'><red>🐢 Server laggt seit <minutes> min <gray>(<tps> TPS)</hover>"
+health-recovered: "<prefix><green>✅ Server läuft wieder flüssig <gray>(<tps> TPS)"
 
 # --- Weboberfläche (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>Weboberfläche: Konto einrichten, angemeldete Geräte"
@@ -49,22 +49,22 @@ web-usage: |-
   <gray>/mradmin web logout [spieler] <dark_gray>- <gray>alle Geräte abmelden
   <gray>/mradmin web invite <spieler> <dark_gray>- <gray>Einrichtungslink für jemand anderen (Admins, Konsole)
   <gray>/mradmin web remove <spieler> <dark_gray>- <gray>Web-Konto löschen (Admins)
-web-status: "<prefix><gray>Weboberfläche: <state> <dark_gray>(<address>)</dark_gray> <gray>· Konten: <white><accounts></white> · angemeldete Geräte: <white><sessions>"
+web-status: "<prefix><hover:show_text:'<gray><address><newline>Konten: <accounts> · Geräte: <sessions>'><gray>Weboberfläche: <state></hover>"
 web-state-on: "<green>läuft"
 web-state-off: "<red>aus</red> <gray>(web.enabled in der Config)"
-web-off: "<prefix><red>Die Weboberfläche ist aus.</red> <gray>web.enabled: true in der Config setzen und /mradmin reload."
+web-off: "<prefix><hover:show_text:'<gray>web.enabled: true setzen, dann /mradmin reload'><red>Die Weboberfläche ist aus.</hover>"
 web-setup-console: "<prefix><gray>Für die Konsole: /mradmin web invite <spieler>"
-web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nicht weitergeben!)"
-web-setup-link-other: "<prefix><green>Einrichtungslink für <white><player></white>:</green> <link> <gray>(10 Minuten gültig, nur einmal nutzbar - nur an <player> geben!)"
+web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <hover:show_text:'<gray>10 Minuten gültig, nur einmal nutzbar.'><red>Nicht weitergeben!</hover>"
+web-setup-link-other: "<prefix><green>Link für <white><player></white>:</green> <link> <hover:show_text:'<gray>10 Minuten gültig, nur einmal nutzbar.'><red>Nur an <player>!</hover>"
 web-link-label: "<aqua><u>[Einrichtung öffnen]</u></aqua>"
 # Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
-web-self-link: "<prefix><green>Deine Seite im Web: <link> <gray>· Code zum Anmelden: <code> <dark_gray>(gilt <seconds> Sekunden und nur einmal)"
+web-self-link: "<prefix><green>Deine Seite: <link> <gray>· Code: <code> <hover:show_text:'<gray>Gilt <seconds> Sekunden und nur einmal.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
 web-self-code-hover: "<gray>Klicken zum Kopieren"
 web-self-link-label: "<aqua><u>[Meine Seite öffnen]</u></aqua>"
 web-self-disabled: "<prefix><gray>Die Spielerseite im Web ist auf diesem Server nicht eingeschaltet."
-web-self-no-url: "<prefix><red>Die Adresse der Weboberfläche fehlt (web.public-url) - bitte melde das dem Team."
-web-self-devices: "<prefix><gray>Du bist auf <white><count></white> Geräten in deiner Seite angemeldet. <button>"
+web-self-no-url: "<prefix><hover:show_text:'<gray>web.public-url fehlt'><red>Weblink fehlt - bitte dem Team melden.</hover>"
+web-self-devices: "<prefix><gray>Auf <white><count></white> Geräten angemeldet. <button>"
 web-self-logout-button: "<red><u>[Alle abmelden]</u></red>"
 web-self-logout: "<prefix><green>Alle Geräte abgemeldet <gray>(<count>). Mit /web meldest du dich wieder an."
 news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"
@@ -77,8 +77,8 @@ alert-title: "<red><b>⚠ <title>"
 alert-subtitle: "<white><text>"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-no-public-url: "<prefix><yellow>web.public-url ist nicht gesetzt - der Link nutzt die lokale Adresse und funktioniert nur auf diesem Rechner."
-web-target-no-permission: "<prefix><yellow><player> hat die Permission mradmin.web nicht - die Anmeldung klappt erst damit."
+web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url ist nicht gesetzt.'><yellow>Link geht nur auf diesem Rechner.</hover>"
+web-target-no-permission: "<prefix><hover:show_text:'<gray>Ohne die Permission klappt die Anmeldung nicht.'><yellow><player> fehlt mradmin.web.</hover>"
 web-sessions-header: "<prefix><gray>Angemeldete Geräte von <white><player></white>:"
 web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, zuletzt <seen>)"
 web-sessions-none: "<prefix><gray><player> ist auf keinem Gerät angemeldet."
@@ -99,7 +99,7 @@ announce-usage: |-
   <gold>/mradmin announce title="..." subtitle="..." chat="..." discord="..."</gold> <dark_gray>- <gray>frei zusammengesetzt (für Scripts), dazu actionbar, sound, stay, to, id
   <gray>Mit <white>-d</white> geht ein eigener Text auch in den Community-Discord, mit <white>-q</white> ein Preset nicht.
 announce-sent: "<prefix><green>Ankündigung gesendet."
-announce-invalid-part: "<prefix><red>Ungültiger Wert für <white><part></white>: <white><value></white> <gray>(Zahlen in Sekunden, Töne als Bukkit-Name oder Key)"
+announce-invalid-part: "<prefix><hover:show_text:'<gray>Zahlen in Sekunden, Töne als Bukkit-Name oder Key'><red>Ungültig: <white><part></white> = <white><value></white></hover>"
 # Überschrift bei eigenem Text ohne "|"
 announce-custom-title: "<gold><bold>Ankündigung"
 # Chat-Ausgabe bei eigenem Text. Platzhalter: <title> <message>
@@ -133,16 +133,16 @@ announce-presets:
     discord: "⭐ **Event:** {args}"
 # --- Admin-Modus ---------------------------------------------------------------
 mode-usage: "<prefix><gray>Verwendung: <gold>/mradmin mode [on|off|list] [spieler]"
-mode-on: "<prefix><green>Admin-Modus <white>an</white>. <gray>Dein Inventar ist sicher gespeichert. Rechtsklick mit dem Kompass: Admin-Menü. Beenden: <white>/mradmin mode off"
-mode-off: "<prefix><green>Admin-Modus <white>aus</white>. <gray>Alles ist wieder wie vorher <dark_gray>(<duration> im Admin-Modus)"
-mode-off-no-world: "<prefix><yellow>Admin-Modus aus - aber die Welt <white><world></white> ist nicht geladen, du bleibst hier. Inventar & Co. sind wiederhergestellt."
-mode-resumed: "<prefix><yellow>Du bist noch im Admin-Modus <gray>(seit <duration>). Beenden: <white>/mradmin mode off"
+mode-on: "<prefix><hover:show_text:'<gray>Inventar ist gespeichert.<newline>Rechtsklick mit dem Kompass: Admin-Menü<newline>Beenden: /mradmin mode off'><green>Admin-Modus <white>an</white></hover>"
+mode-off: "<prefix><hover:show_text:'<gray>Alles wie vorher (<duration> im Admin-Modus)'><green>Admin-Modus <white>aus</white></hover>"
+mode-off-no-world: "<prefix><hover:show_text:'<gray>Welt <world> nicht geladen, du bleibst hier.<newline>Inventar und Co. sind wiederhergestellt.'><yellow>Admin-Modus aus, Welt fehlt</hover>"
+mode-resumed: "<prefix><hover:show_text:'<gray>Beenden: /mradmin mode off'><yellow>Noch im Admin-Modus <gray>(seit <duration>)</hover>"
 mode-already-on: "<prefix><gray>Du bist schon im Admin-Modus."
 mode-already-off: "<prefix><gray>Du bist nicht im Admin-Modus."
 mode-on-other: "<prefix><green><white><player></white> ist jetzt im Admin-Modus."
 mode-off-other: "<prefix><green><white><player></white> ist nicht mehr im Admin-Modus."
-mode-save-failed: "<prefix><red>Dein Inventar konnte nicht gespeichert werden - Admin-Modus wurde NICHT gestartet. Siehe Konsole."
-mode-load-failed: "<prefix><red>Dein gespeicherter Stand aus dem Admin-Modus ist beschädigt. Bitte melde dich bei einem Admin (Datei wurde nicht gelöscht)."
+mode-save-failed: "<prefix><hover:show_text:'<gray>Siehe Konsole.'><red>Inventar nicht gespeichert - Admin-Modus NICHT gestartet.</hover>"
+mode-load-failed: "<prefix><hover:show_text:'<gray>Bitte melde dich bei einem Admin (die Datei bleibt erhalten).'><red>Admin-Modus-Stand beschädigt.</hover>"
 mode-no-drop: "<prefix><red>Im Admin-Modus kannst du nichts fallen lassen."
 mode-no-clear: "<prefix><red>Das Inventar leeren geht im Admin-Modus nicht - alles ist wieder da."
 mode-list-header: "<prefix><gray>Im Admin-Modus:"
@@ -155,7 +155,7 @@ mode-compass-lore:
   - "<dark_gray>Teleport, Plugins, Wartung"
 player-summoned: "<prefix><gray><white><player></white> wurde zu dir geholt."
 player-summoned-target: "<prefix><gray>Du wurdest von <white><staff></white> geholt."
-freeze-frozen: "<prefix><aqua><bold>Du wurdest eingefroren.</bold></aqua> <gray>Bitte warte auf <white><staff></white> und logge dich nicht aus."
+freeze-frozen: "<prefix><aqua><bold>Du bist eingefroren.</bold></aqua> <gray>Warte auf <white><staff></white>, nicht ausloggen."
 kick-screen: "<red><bold>Du wurdest vom Server geworfen.</bold></red><newline><newline><gray>Von: <white><staff></white><newline><gray>Grund: <white><reason>"
 kick-no-reason: "Kein Grund angegeben"
 # Push-Benachrichtigungen der Weboberfläche (reiner Text, keine Formatierung).
@@ -222,30 +222,21 @@ gui-tile-tickets-open: "<yellow><count> offene Tickets"
 gui-tile-tickets-none: "<green>Keine offenen Tickets"
 gui-hub-announce-name: "<light_purple><bold>Ankündigen"
 gui-hub-announce-lore:
-  - "<gray>Presets: <white><count>"
-  - "<gray>oder eigener Text"
-  - ""
-  - "<yellow>Klick: Ankündigung wählen"
+  - "<gray>Vorlagen: <white><count></white> oder eigener Text"
+  - "<yellow>Klick: wählen"
 gui-switch-admin: "<gold><bold>Admin-Modus: <state>"
 gui-switch-admin-on-lore:
-  - "<gray>Inventar, XP & Co. sind gespeichert."
-  - ""
-  - "<yellow>Klick: beenden <gray>(alles zurück,"
-  - "<gray>Teleport zum Ausgangspunkt)"
+  - "<gray>Inventar und XP gespeichert."
+  - "<yellow>Klick: beenden <gray>(alles zurück)"
 gui-switch-admin-off-lore:
-  - "<gray>Creative + Admin-Kompass,"
-  - "<gray>dein Inventar wird sicher gespeichert."
-  - ""
+  - "<gray>Creative + Kompass, Inventar gespeichert."
   - "<yellow>Klick: starten"
 gui-switch-staffchat: "<aqua><bold>Staff-Chat: <state>"
 gui-switch-staffchat-on-lore:
-  - "<gray>Dein Chat geht nur ans Team."
-  - ""
+  - "<gray>Chat nur ans Team."
   - "<yellow>Klick: ausschalten"
 gui-switch-staffchat-off-lore:
-  - "<gray>Dein Chat geht an alle."
-  - "<gray>Einzelne Nachricht: <white>/sc <text>"
-  - ""
+  - "<gray>Chat an alle · einzeln: <white>/sc <text>"
   - "<yellow>Klick: einschalten"
 gui-title-announce: "<dark_gray>MRadmin » Ankündigen"
 gui-announce-preset-id: "<dark_gray>Preset: <preset>"
@@ -376,9 +367,8 @@ gui-status-chunk-click:
 gui-status-no-chunks: "<green>Keine Entities geladen"
 gui-status-activity-none: "<green>Keine auffälligen Chunkloader"
 gui-status-activity-none-lore:
-  - "<gray>Hier erscheinen Chunkloader, deren Bereich"
-  - "<gray>auffällig viel Aktivität hat oder die wegen"
-  - "<gray>Lag gesperrt sind (Daten von <white><plugin></white>)."
+  - "<gray>Auffällige oder gesperrte Chunkloader"
+  - "<gray>erscheinen hier (<white><plugin></white>)."
 
 # --- Wartungsarbeiten ----------------------------------------------------------
 # Platzhalter: <title> (Thema der Wartung, z.B. aus Uptime Kuma), <title-line> / <kick-title-line> (Zeile mit dem Thema, leer ohne Thema),
@@ -395,7 +385,7 @@ maintenance-announced: |-
     <dark_gray>▪</dark_gray> <gray>Beginn: <white><start></white> <dark_gray>·</dark_gray> <gray>Ende: <white><end></white>
     <dark_gray>▪</dark_gray> <gray>Danach können nur Teammitglieder joinen.
 maintenance-reminder: "<prefix><yellow>⚠ Die Wartungsarbeiten beginnen in <white><in></white>."
-maintenance-rescheduled: "<prefix><yellow>Die Wartung wurde verschoben: <gray>Beginn jetzt <white><start></white>, Ende <white><end></white>."
+maintenance-rescheduled: "<prefix><yellow>Wartung verschoben: <white><start></white> - <white><end></white>"
 maintenance-cancelled: "<prefix><green>Die geplanten Wartungsarbeiten wurden abgesagt."
 # Großer Countdown in den letzten Sekunden (maintenance.title-countdown-seconds). <seconds> = verbleibende Sekunden
 maintenance-countdown-title: "<red><bold><seconds>"
@@ -408,8 +398,8 @@ maintenance-start-subtitle: "<gray>Bis später - voraussichtlich bis <white><end
 # An Staff (mradmin.maintenance.bypass):
 maintenance-extended: "<prefix><yellow>Die Wartung wurde verlängert: <gray>Ende jetzt <white><end></white>."
 maintenance-shortened: "<prefix><green>Die Wartung endet früher: <gray>Ende jetzt <white><end></white>."
-maintenance-join-staff: "<prefix><light_purple>Wartungsmodus aktiv <gray>- nur das Team kann joinen. Ende: <white><end></white>."
-maintenance-ended: "<prefix><green>✔ Die Wartungsarbeiten sind beendet - der Server ist wieder für alle offen."
+maintenance-join-staff: "<prefix><light_purple>Wartung aktiv <gray>bis <white><end></white> - nur Team"
+maintenance-ended: "<prefix><green>✔ Wartung beendet - der Server ist wieder offen."
 # Bildschirm beim Kick / wenn jemand während der Wartung joinen will
 maintenance-kick: |-
   <red><bold>Wartungsarbeiten</bold></red><kick-title-line>
@@ -437,9 +427,9 @@ maintenance-usage: |-
 maintenance-cmd-on: "<prefix><green>Wartung gestartet. <gray>Ende: <white><end></white>."
 maintenance-cmd-scheduled: "<prefix><green>Wartung geplant für <white><start></white>."
 maintenance-cmd-extended: "<prefix><green>Neues Ende: <white><end></white>."
-maintenance-cmd-extend-failed: "<prefix><red>Verlängern geht nur bei Wartungen, die per Befehl gestartet wurden (Kuma-Wartungen bitte in Uptime Kuma ändern)."
+maintenance-cmd-extend-failed: "<prefix><hover:show_text:'<gray>Kuma-Wartungen in Uptime Kuma ändern.'><red>Nur Befehls-Wartungen sind verlängerbar.</hover>"
 maintenance-cmd-off: "<prefix><green>Wartung beendet bzw. abgesagt."
-maintenance-cmd-off-kuma: "<prefix><green>Wartung aus Uptime Kuma hier beendet. <gray>Sie bleibt aus, bis sie in Kuma neue Zeiten bekommt."
+maintenance-cmd-off-kuma: "<prefix><hover:show_text:'<gray>Bleibt aus, bis sie in Kuma neue Zeiten bekommt.'><green>Kuma-Wartung hier beendet.</hover>"
 maintenance-cmd-none: "<prefix><gray>Gerade ist keine Wartung aktiv oder geplant."
 maintenance-cmd-refresh: "<prefix><gray>Wartungen werden von Uptime Kuma abgefragt ..."
 maintenance-status-header: "<prefix><gray>Wartungsstatus:"
@@ -506,10 +496,7 @@ gui-new-ticket-lore:
   - "<yellow>Klick: Kategorie wählen"
 gui-ticket-archive: "<gold><bold>Archiv"
 gui-ticket-archive-lore:
-  - "<gray>Deine geschlossenen Tickets: <white><count>"
-  - "<gray>Neu geschlossen: <white><unread>"
-  - "<dark_gray>Sie bleiben eine Weile sichtbar."
-  - ""
+  - "<gray>Geschlossen: <white><count></white> <dark_gray>(neu: <unread>)"
   - "<yellow>Klick: Archiv öffnen"
 gui-ticket-archive-back: "<green><bold>Offene Tickets"
 gui-ticket-archive-back-lore:
@@ -618,7 +605,7 @@ ticket-close-no: "<gray>Zurück"
 
 # Automatische Tickets bei Chunkloader-Sperren (MRchunks). Der Text der Sperre selbst kommt aus der Sprachdatei von
 # MRchunks (lock-details).
-ticket-report-notify: "<prefix><yellow>Zu <white><subject></white> gibt es jetzt Ticket <white>#<id></white>.</yellow> <gray>Dort kannst du erklären, was passiert ist - das Team liest mit.</gray> <open>"
+ticket-report-notify: "<prefix><hover:show_text:'<gray>Erklär dort, was passiert ist - das Team liest mit.'><yellow>Ticket <white>#<id></white> zu <white><subject></white></hover> <open>"
 ticket-lock-hint: "<gray>Dein Chunkloader wurde automatisch gesperrt. Schreib hier, was passiert ist und was du an der Farm geändert hast. Das Team kann die Sperre aufheben und schließt das Ticket danach."
 ticket-report-again: "Erneut gemeldet:"
 ticket-close-team-only: "<prefix><gray>Dieses Ticket kann nur das Team schließen."
@@ -627,32 +614,32 @@ ticket-view-object-hover: "<gray>Menü des Loaders: Teleport, an/aus, Grenze, Ak
 
 # Chat
 ticket-cooldown: "<prefix><red>Bitte warte noch <white><time></white> bis zum nächsten Ticket."
-ticket-too-many: "<prefix><red>Du hast schon <white><max></white> offene Tickets - das Team kümmert sich darum. Neue Infos kannst du in deinen Tickets nachreichen."
+ticket-too-many: "<prefix><hover:show_text:'<gray>Neue Infos in deinen Tickets nachreichen.'><red>Schon <white><max></white> offene Tickets.</hover>"
 ticket-no-target: "<prefix><red>Bitte wähle einen Spieler aus."
 ticket-self: "<prefix><red>Dich selbst kannst du nicht melden."
 ticket-subject-short: "<prefix><red>Bitte gib einen Titel an (mindestens <min> Zeichen)."
 ticket-text-short: "<prefix><red>Bitte beschreibe es etwas genauer (mindestens <min> Zeichen)."
-ticket-created: "<prefix><green>Danke! Dein Ticket <white>#<id></white> (<type>) ist beim Team angekommen.</green> <open>"
+ticket-created: "<prefix><green>Danke! Ticket <white>#<id></white> ist beim Team.</green> <open>"
 ticket-is-closed: "<prefix><red>Ticket #<id> ist geschlossen."
 ticket-reply-empty: "<prefix><red>Bitte schreib erst eine Nachricht."
 ticket-reply-cooldown: "<prefix><red>Nicht so schnell - warte noch <white><time></white>."
-ticket-answer: "<prefix><gold>💬 Das Team hat in deinem Ticket <white>#<id></white> geantwortet:</gold> <gray><text></gray> <open>"
-ticket-notify-new: "<prefix><gold>🎫 Ticket #<id></gold> <dark_gray>(<type>)</dark_gray> <gray>von <white><player></white>: <white><summary></white> <dark_gray>- <gray><text> <open> <teleport> <list>"
-ticket-notify-message: "<prefix><gold>💬 Ticket #<id></gold> <gray>- <white><player></white>: <gray><text> <open>"
+ticket-answer: "<prefix><gold>💬 Antwort in <white>#<id></white>:</gold> <gray><text></gray> <open>"
+ticket-notify-new: "<prefix><hover:show_text:'<gray><type> · <summary>'><gold>🎫 #<id></gold> <white><player></white>:</hover> <gray><text> <open> <teleport> <list>"
+ticket-notify-message: "<prefix><gold>💬 #<id></gold> <white><player></white>: <gray><text> <open>"
 ticket-closed: "<prefix><green>Ticket #<id> ist geschlossen."
-ticket-closed-creator: "<prefix><green>Dein Ticket <white>#<id></white> (<summary>) wurde vom Team geschlossen. Danke!</green> <open>"
+ticket-closed-creator: "<prefix><hover:show_text:'<gray><summary>'><green>Ticket <white>#<id></white> geschlossen. Danke!</hover> <open>"
 ticket-closed-by-creator: "<prefix><gray>Ticket #<id> wurde von <white><player></white> selbst geschlossen."
 ticket-reopened: "<prefix><yellow>Ticket #<id> ist wieder offen."
-ticket-reopened-creator: "<prefix><yellow>Dein Ticket <white>#<id></white> wurde wieder geöffnet.</yellow> <open>"
+ticket-reopened-creator: "<prefix><yellow>Ticket <white>#<id></white> wieder offen.</yellow> <open>"
 ticket-claimed: "<prefix><gold>Du bearbeitest jetzt Ticket #<id>."
-ticket-claimed-from: "<prefix><gold>Du bearbeitest jetzt Ticket #<id></gold> <gray>(vorher: <white><player></white>)."
+ticket-claimed-from: "<prefix><gold>Du hast #<id></gold> <gray>(vorher <white><player></white>)"
 ticket-released: "<prefix><gray>Ticket #<id> ist wieder frei."
 ticket-no-location: "<prefix><red>Der Ort des Tickets ist gerade nicht erreichbar (Welt nicht geladen)."
 ticket-teleported-player: "<prefix><gray>Ticket #<id>: zu <white><player></white> teleportiert."
 ticket-teleported-place: "<prefix><gray>Ticket #<id>: zum Ort teleportiert, an dem das Ticket erstellt wurde."
 ticket-not-found: "<prefix><red>Ticket <white><id></white> gibt es nicht."
 ticket-join-unread: "<prefix><gold>Du hast neue Antworten in <white><count></white> Ticket(s).</gold> <list>"
-ticket-join-staff: "<prefix><gold>Es gibt <white><count></white> offene Tickets</gold> <gray>(<white><unread></white> warten auf Antwort).</gray> <list>"
+ticket-join-staff: "<prefix><gold><white><count></white> offene Tickets</gold> <gray>(<unread> ohne Antwort)</gray> <list>"
 ticket-button-open: "<aqua>[Öffnen]"
 ticket-button-open-hover: "<gray>Ticket #<id> öffnen"
 ticket-button-teleport: "<aqua>[Teleport]"
@@ -661,7 +648,7 @@ ticket-button-list: "<yellow>[Alle Tickets]"
 ticket-button-list-hover: "<gray>Ticket-Menü öffnen"
 ticket-button-mine: "<yellow>[Ansehen]"
 ticket-button-mine-hover: "<gray>Deine Tickets öffnen"
-staffchat-on: "<prefix><green>Staff-Chat an - deine Nachrichten gehen nur noch ans Team. <gray>Aus: <white>/sc"
+staffchat-on: "<prefix><hover:show_text:'<gray>Aus: /sc'><green>Staff-Chat an - nur ans Team.</hover>"
 staffchat-off: "<prefix><gray>Staff-Chat aus - du schreibst wieder im normalen Chat."
 staffchat-usage: "<prefix><gray>Verwendung: <gold>/sc <nachricht>"
 staffchat-format: "<dark_gray>[<red>Staff</red>]</dark_gray> <white><player></white><dark_gray>:</dark_gray> <aqua><message>"
@@ -728,12 +715,12 @@ discord-announce:
   kuma-status-link: "Mehr dazu"
 
 # --- Discord -----------------------------------------------------------------
-discord-status-active: "<prefix><green>Discord-Webhook aktiv <gray>(<white><events></white>/<white><total></white> Events eingeschaltet)"
+discord-status-active: "<prefix><green>Discord aktiv <gray>(<events>/<total> Events)"
 discord-status-inactive: "<prefix><red>Discord-Webhook inaktiv: <white><reason>"
 discord-status-last: "<prefix><gray>Letzter Versand: <white><result>"
 discord-status-never: "seit dem Start noch nichts gesendet"
-discord-test-hint: "<prefix><gray>Testnachricht: <white>/mradmin discord test</white> (Admin-Log) bzw. <white>/mradmin discord test announce</white> (Ankündigungen)."
-discord-announce-status-active: "<prefix><green>Ankündigungs-Webhook aktiv <gray>(aktuelle Wartung: <white><tracked></white>)"
+discord-test-hint: "<prefix><hover:show_text:'<gray>/mradmin discord test - Admin-Log<newline>/mradmin discord test announce - Ankündigungen'><gray>Test: <white>/mradmin discord test</white></hover>"
+discord-announce-status-active: "<prefix><green>Ankündigungen aktiv <gray>(Wartung: <tracked>)"
 discord-announce-status-inactive: "<prefix><gray>Ankündigungs-Webhook inaktiv: <white><reason>"
 discord-test-sending: "<prefix><gray>Sende Testnachricht an Discord ..."
 discord-test-ok: "<prefix><green>✔ Testnachricht ist in Discord angekommen."
@@ -780,7 +767,7 @@ request-rejected-note: "Abgelehnt von <admin>."
 push-ticket-contact-title: "Kontaktanfrage #<id>"
 push-ticket-contact-body: "<player>: <summary>"
 mail-test-usage: "<prefix><gray>Verwendung: <white>/mradmin mail test <adresse>"
-mail-test-off: "<prefix><red>Mailversand ist aus oder nicht vollständig eingerichtet (mail.enabled, host, from in der config.yml)."
+mail-test-off: "<prefix><hover:show_text:'<gray>mail.enabled, host, from in der config.yml'><red>Mailversand ist aus oder unvollständig.</hover>"
 mail-test-sending: "<prefix><gray>Sende Testmail an <white><address></white> ..."
 mail-test-sent: "<prefix><green>Testmail verschickt - schau ins Postfach (auch in den Spam-Ordner)."
 mail-test-failed: "<prefix><red>Testmail fehlgeschlagen: <white><error>"

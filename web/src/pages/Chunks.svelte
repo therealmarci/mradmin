@@ -58,7 +58,7 @@
     }
   }
 
-  // Problems first: locked, conspicuous, disabled by lag, paused, then the rest by owner and number.
+  // Highest load first (the staged shutdown takes them in this order), then problems, owner and number.
   const order = { locked: 0, warn: 1, shed: 2, paused: 3, ok: 4, inactive: 5 };
   const shown = $derived(
     (loaders ?? [])
@@ -67,7 +67,7 @@
         const q = search.trim().toLowerCase();
         return !q || [l.name, l.ownerName, l.world, `${l.x} ${l.y} ${l.z}`].some((v) => v.toLowerCase().includes(q));
       })
-      .sort((a, b) => order[a.status] - order[b.status] || a.ownerName.localeCompare(b.ownerName) || a.number - b.number),
+      .sort((a, b) => (b.load ?? -1) - (a.load ?? -1) || order[a.status] - order[b.status] || a.ownerName.localeCompare(b.ownerName) || a.number - b.number),
   );
   const counts = $derived(
     (loaders ?? []).reduce((c, l) => ((c[l.status] = (c[l.status] ?? 0) + 1), c), {}),
@@ -213,6 +213,14 @@
               {:else if l.worst && l.status === 'warn'}
                 <span class="note warn-text">{l.worst.metric}: {Math.round(l.worst.value)} ({t('chunks.warnLimit')} {Math.round(l.worst.warn)})</span>
               {/if}
+              {#if l.shed}
+                <span class="note warn-text">{t('chunks.shedBack', { back: dateTime(l.shed.back), since: ago(l.shed.since) })}</span>
+              {/if}
+              <!-- Load (share of the lock limit of the worst metric): the staged shutdown takes the highest first. -->
+              <span class="l-load {l.load >= 1 ? 'bad' : l.loadWarn ? 'warn' : 'good'}" title={t('chunks.loadHint')}>
+                <span class="l-load-head"><span>{t('chunks.load')}</span><b>{l.load != null ? Math.round(l.load * 100) + ' %' : '–'}</b></span>
+                <span class="bar"><span style="width: {Math.min(100, (l.load ?? 0) * 100)}%"></span></span>
+              </span>
             </button>
           </li>
         {/each}
@@ -613,6 +621,33 @@
 
   .mono {
     font-family: ui-monospace, monospace;
+  }
+
+  /* Load bar in every loader card */
+  .l-load {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    --tn: var(--good);
+  }
+
+  .l-load.warn {
+    --tn: var(--warn);
+  }
+
+  .l-load.bad {
+    --tn: var(--bad);
+  }
+
+  .l-load-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .l-load-head b {
+    color: var(--text);
   }
 
   .note {
