@@ -128,8 +128,9 @@ Permissions: `mrsleep.admin.gui` ansehen, Blockaden aufheben mit `mrsleep.admin.
 Permissions von MRpvp: `mrpvp.admin.gui` ansehen, `.games` beendete Runden, `.stop`, `.pause`, `.ban`, `.reset`, `.restore`, `.review` handeln, `.kits` Kits bearbeiten.
 
 - **Kits** (`.kits`, Chip „Kits →“): alle Kits als Karten (Symbol, Schnellleiste, Regeln), Reihenfolge mit ↑/↓, kopieren,
-  neu anlegen. Im Kit-Editor das Inventar wie im Spiel - Klick auf einen Platz öffnet den Item-Editor, mit „Verschieben“
-  tauschen zwei Plätze. Dazu ID (eine andere ID benennt um), Name und Beschreibung auf Deutsch und Englisch (gleich =
+  neu anlegen. Im Kit-Editor das Inventar wie im Spiel - Klick auf einen Platz öffnet den Item-Editor, mit der Maus
+  ziehen tauscht zwei Plätze (Strg = kopieren), Rechtsklick öffnet Kopieren/Ausschneiden/Einfügen/Leeren; auf Handy und
+  Tablet Platz gedrückt halten = Menü, gedrückt halten und ziehen = verschieben. Dazu ID (eine andere ID benennt um), Name und Beschreibung auf Deutsch und Englisch (gleich =
   für alle Sprachen), Symbol, Permission und die Regeln: kein Schaden, Treffer bis zum Sieg, Regeneration und Hunger
   (fest an/aus oder Spielerwahl), braucht Bau-Arena, festes Zeitlimit, Herzen, Effekte beim Start (Effekt + Stufe),
   Cooldowns für Items des Kits (Sekunden), nur bestimmte Arenen. Eine neue Arena erscheint beim nächsten

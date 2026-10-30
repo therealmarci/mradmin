@@ -88,6 +88,11 @@
           <b>{t('chunks.status.locked')}</b>
           {t('chunks.lockedBy', { metric: loader.lock.metric, value: Math.round(loader.lock.value), limit: Math.round(loader.lock.limit) })} · {dateTime(loader.lock.since)}
         </div>
+      {:else if loader.shed}
+        <div class="lock shed">
+          <b>{t('chunks.status.shed')}</b>
+          {t('chunks.shedSince', { since: dateTime(loader.shed.since), back: dateTime(loader.shed.back) })}
+        </div>
       {/if}
 
       <div class="facts">
@@ -286,6 +291,12 @@
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 10%, var(--surface));
     border: 1px solid color-mix(in srgb, var(--bad) 35%, var(--border));
+  }
+
+  .lock.shed {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--warn) 35%, var(--border));
   }
 
   .facts {

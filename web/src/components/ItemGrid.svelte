@@ -5,6 +5,7 @@
   // "chestplate", "leggings", "boots" or "offhand"; "selected" marks one of them.
   // Optional for editors (kit editor): "ondrop(from, to, copy)" - an item dragged with the mouse onto another slot
   // (Ctrl held = copy); "onmenu(slot, x, y)" - right click on a slot; "onhover(slot | null)" - the slot under the mouse.
+  // On touch: hold a slot = menu, hold and move = drag.
   import ItemIcon from './ItemIcon.svelte';
   import { t } from '../lib/i18n.js';
 
@@ -35,13 +36,14 @@
     return raw == null ? null : /^\d+$/.test(raw) ? Number(raw) : raw;
   };
 
-  // Drag and drop with the mouse (touch keeps tapping). It starts after a few pixels so a click stays a click.
+  // Drag and drop with the mouse (touch: see below). It starts after a few pixels so a click stays a click.
   let press = null;
   let drag = $state(null); // { from, item, x, y, over, copy }
   let swallowClick = false;
 
   function down(e) {
-    if (!ondrop || e.button !== 0 || e.pointerType !== 'mouse') return;
+    if (e.pointerType !== 'mouse') return touchDown(e);
+    if (!ondrop || e.button !== 0) return;
     const from = keyOf(e.target);
     if (from == null || !itemAt(from)) return;
     press = { from, x: e.clientX, y: e.clientY };
@@ -68,6 +70,72 @@
     drag = null;
   }
 
+  // Touch (phones, tablets): no right click and no mouse drag there. Hold a slot briefly (450 ms): let go = menu,
+  // move the finger = drag the item onto another slot. Moving before that is scrolling and changes nothing.
+  let touch = null; // { from, x, y, armed, timer }
+  let touchAt = 0;
+
+  function touchDown(e) {
+    if (!ondrop && !onmenu) return;
+    const from = keyOf(e.target);
+    if (from == null) return;
+    touchEnd();
+    touch = { from, x: e.clientX, y: e.clientY, armed: false, timer: setTimeout(armTouch, 450) };
+    window.addEventListener('pointermove', touchMove);
+    window.addEventListener('pointerup', touchUp, { once: true });
+    window.addEventListener('pointercancel', touchEnd, { once: true });
+    window.addEventListener('touchmove', holdStill, { passive: false });
+  }
+
+  function armTouch() {
+    if (!touch) return;
+    touch.armed = true;
+    navigator.vibrate?.(15);
+  }
+
+  // Once armed the page must not scroll while the finger drags the item.
+  function holdStill(e) {
+    if (touch?.armed) e.preventDefault();
+  }
+
+  function touchMove(e) {
+    if (!touch) return;
+    const dist = Math.hypot(e.clientX - touch.x, e.clientY - touch.y);
+    if (!touch.armed) {
+      if (dist > 10) touchEnd();
+      return;
+    }
+    if (!ondrop || !itemAt(touch.from) || (!drag && dist < 8)) return;
+    // Look under the finger, the ghost floats above it so the finger does not hide the item.
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const over = root?.contains(target) ? keyOf(target) : null;
+    drag = { from: touch.from, item: itemAt(touch.from), x: e.clientX, y: e.clientY - 44, over, copy: false };
+  }
+
+  function touchUp() {
+    const done = touch;
+    touchEnd();
+    if (!done?.armed) return;
+    touchAt = Date.now();
+    swallowClick = true;
+    setTimeout(() => (swallowClick = false), 400);
+    if (drag) {
+      if (drag.over != null && drag.over !== drag.from) ondrop(drag.from, drag.over, false);
+      drag = null;
+    } else if (onmenu) {
+      onmenu(done.from, done.x, done.y);
+    }
+  }
+
+  function touchEnd() {
+    if (touch) clearTimeout(touch.timer);
+    touch = null;
+    window.removeEventListener('pointermove', touchMove);
+    window.removeEventListener('pointerup', touchUp);
+    window.removeEventListener('pointercancel', touchEnd);
+    window.removeEventListener('touchmove', holdStill);
+  }
+
   // After a drag the browser still clicks the slot it ended on - that must not open the editor.
   function clickCapture(e) {
     if (swallowClick) {
@@ -78,6 +146,10 @@
 
   function menu(e) {
     if (!onmenu) return;
+    if (touch || Date.now() - touchAt < 800) {
+      e.preventDefault();
+      return;
+    }
     const key = keyOf(e.target);
     if (key == null) return;
     e.preventDefault();
@@ -139,6 +211,9 @@
     gap: 10px;
     align-items: flex-start;
     overflow-x: auto;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .player.dragging {

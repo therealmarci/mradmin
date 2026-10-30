@@ -254,6 +254,19 @@
   const missingArenas = $derived(kit ? kit.rules.arenas.filter((a) => !arenas.some((x) => x.id === a)) : []);
   const nowhere = $derived(kit ? kit.rules.arenas.length > 0 && missingArenas.length === kit.rules.arenas.length : false);
 
+  // Why an arena does not take the kit as it is now (same check as MRpvp's ArenaTemplate.fits); null = it fits.
+  const hasElytra = $derived(Object.values(slots).some((i) => i && i.type === 'elytra'));
+  function blocked(a) {
+    if (a.kits?.length && !a.kits.includes(kit.id)) return t('pvp.kits.arenaKitList');
+    if (a.elytraOnly && !hasElytra) return t('pvp.kits.arenaElytra');
+    if (kit.rules.build && !a.build) return t('pvp.kits.arenaNoBuild');
+    return null;
+  }
+  // Older MRpvp versions do not send elytraOnly/kits - then no warning instead of a wrong one.
+  const checkable = $derived(arenas.some((a) => a.elytraOnly !== undefined));
+  const unplayable = $derived(kit && checkable && !nowhere && !arenas.some((a) => a.enabled && !blocked(a)
+    && (!kit.rules.arenas.length || kit.rules.arenas.includes(a.id))));
+
   // Item types in the kit - those can get a cooldown.
   const kitTypes = $derived([...new Set(Object.values(slots).filter(Boolean).map((i) => i.type))].sort((a, b) => typeName(a).localeCompare(typeName(b))));
   const itemCount = $derived(Object.values(slots).filter(Boolean).length);
@@ -397,11 +410,14 @@
           <div class="arenas">
             {#each arenas as a (a.id)}
               {@const on = kit.rules.arenas.includes(a.id)}
-              <button class="arena" class:on class:off={!a.enabled} aria-pressed={on} onclick={() => toggleArena(a.id)}>
+              {@const reason = blocked(a)}
+              <button class="arena" class:on class:off={!a.enabled} class:blocked={reason} aria-pressed={on} onclick={() => toggleArena(a.id)}>
                 <span class="tick" aria-hidden="true">{on ? '✓' : ''}</span>
                 <span>{a.name}</span>
                 {#if a.build}<span class="a-tag">{t('pvp.build')}</span>{/if}
+                {#if a.elytraOnly}<span class="a-tag">{t('pvp.kits.elytraOnly')}</span>{/if}
                 {#if !a.enabled}<span class="a-tag">{t('pvp.kits.arenaOff')}</span>{/if}
+                {#if reason}<span class="a-tag bad">{reason}</span>{/if}
               </button>
             {/each}
             {#each missingArenas as a (a)}
@@ -413,6 +429,7 @@
             {/each}
           </div>
           {#if missingArenas.length}<div class="error">{nowhere ? t('pvp.kits.arenaNowhere') : t('pvp.kits.arenaMissingHint')}</div>{/if}
+          {#if unplayable}<div class="error">{t('pvp.kits.unplayable')}</div>{/if}
         </section>
       </div>
 
@@ -1016,6 +1033,15 @@
     border-radius: 999px;
     color: var(--muted);
     background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .a-tag.bad {
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 14%, transparent);
+  }
+
+  .arena.blocked {
+    border-color: color-mix(in srgb, var(--bad) 40%, var(--border));
   }
 
   /* The icon in the preview: click = change */
