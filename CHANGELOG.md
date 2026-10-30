@@ -9,13 +9,15 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.0.1] - 2026-10-30
+
 ### Neu
-- **Chunkloader: Steuerung für das Team:** Auf der Chunkloader-Seite gibt es die Kachel **Steuerung**: alle Chunkloader vorübergehend pausieren bzw. die Pause aufheben (`mrchunks.admin.pause`) und die gestaffelte Abschaltung mit harter Grenze aus- und einschalten (`mrchunks.admin.monitoring`), jeweils mit Hinweis, wer es seit wann geändert hat. Braucht MRchunks ab der nächsten Version.
+- **Chunkloader: Steuerung für das Team:** Auf der Chunkloader-Seite gibt es die Kachel **Steuerung**: alle Chunkloader vorübergehend pausieren bzw. die Pause aufheben (`mrchunks.admin.pause`) und die gestaffelte Abschaltung mit harter Grenze aus- und einschalten (`mrchunks.admin.monitoring`), jeweils mit Hinweis, wer es seit wann geändert hat. Braucht MRchunks ab 1.0.1.
 
 ### Behoben & geändert
 - **Kit-Editor auf Handy und Tablet (Issue #13):** Auf Touch-Geräten gab es weder Rechtsklick noch Ziehen - Items ließen sich nur bearbeiten. Jetzt: einen Platz **kurz gedrückt halten** und loslassen öffnet das Menü (Kopieren, Ausschneiden, Einfügen, Platz leeren), gedrückt halten und **mit dem Finger ziehen** verschiebt das Item auf einen anderen Platz. In der Kit-Liste sortieren auf Touch-Geräten die Pfeile (der Ziehgriff ist dort ausgeblendet).
 - **Chunkloader: Steuerung kompakter:** Die beiden Schalter der Kachel **Steuerung** (alle pausieren, gestaffelte Abschaltung) stehen jetzt je in einer schmalen Zeile mit Status-Punkt und kleinem Knopf; die ausführliche Erklärung erscheint beim Darüberfahren.
-- **Chunkloader: Zustand „Durch Lags deaktiviert“:** Die Chunkloader-Seiten zeigen Loader, die die gestaffelte Abschaltung von MRchunks vorübergehend abgeschaltet hat (eigener Filter, gelb, mit Zeitpunkt und frühester Rückkehr), dazu einen Hinweis bei hoher Serverlast. Braucht MRchunks ab der nächsten Version.
+- **Chunkloader: Zustand „Durch Lags deaktiviert“:** Die Chunkloader-Seiten zeigen Loader, die die gestaffelte Abschaltung von MRchunks vorübergehend abgeschaltet hat (eigener Filter, gelb, mit Zeitpunkt und frühester Rückkehr), dazu einen Hinweis bei hoher Serverlast. Braucht MRchunks ab 1.0.1.
 - **Kit-Editor (Duelle) zeigt, warum ein Kit nicht in `/duel` erscheint:** Bei jeder Arena steht rot der Grund, wenn sie das Kit so nicht nimmt („braucht Elytra im Kit“, „nur andere Kits“, „kein Bauen“), Arenen mit „nur Elytra“ sind gekennzeichnet. Passt das Kit in keine eingeschaltete Arena, warnt der Editor, und die Kit-Liste zeigt „nicht in /duel“. Braucht MRpvp ab der nächsten Version (ältere Versionen: keine Warnung).
 
 ## [1.0.0] - 2026-10-29
