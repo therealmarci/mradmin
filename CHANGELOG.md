@@ -13,6 +13,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 - **Chunkloader: Auslastung pro Loader:** Jede Loader-Kachel der Chunkloader-Seite zeigt ständig einen Balken **Ø Auslastung** (Anteil an der Sperrgrenze beim schlechtesten Messwert; grün, gelb ab der Warnung, rot ab der Sperrgrenze). Die Liste ist danach **absteigend sortiert** - ganz oben steht der Loader, den die gestaffelte Abschaltung als nächsten abschalten würde. Braucht MRchunks ab der nächsten Version.
 - **Chunkloader: Rückkehrzeit in den Kacheln:** Loader, die durch Lags deaktiviert sind (auch nach der harten Grenze, wenn alle aus sind), zeigen in ihrer Kachel, seit wann sie aus sind und wann sie voraussichtlich zurückkommen. Die Loader-Seite sagt „voraussichtlich“ statt „frühestens“.
 
+### Behoben & geändert
+- **Kurze Chat- und Menütexte:** Chatnachrichten sind jetzt eine knappe Zeile; Einzelheiten (Hinweise, Grenzwerte, Befehle) erscheinen, wenn man mit der Maus darüberfährt, in der Konsole in Klammern dahinter. Auch einige Menü-Beschreibungen sind kürzer (`lang-version` 16 - eigene Änderungen an diesen Texten in `lang/de.yml` und `lang/en.yml` werden dabei ersetzt).
+
 ## [1.0.2] - 2026-10-30
 
 ### Behoben & geändert
