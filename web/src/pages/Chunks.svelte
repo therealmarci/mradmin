@@ -115,40 +115,38 @@
 
     {#if me?.may?.mrchunksPause || me?.may?.mrchunksMonitoring}
       {@const mon = overview.monitoring}
-      <!-- Server-wide switches for the team (each with its own permission). -->
+      <!-- Server-wide switches for the team (each with its own permission), one compact line each. -->
       <section class="card tile controls">
         <h2>{t('chunks.control.title')}</h2>
-        <div class="control-grid">
+        <div class="ctl-rows">
           {#if me.may.mrchunksPause}
-            <div class="control" class:on={overview.adminPause}>
-              <div class="c-text">
-                <b>{t('chunks.control.pauseAll.title')}</b>
-                <span class="muted small">{overview.adminPause
-                  ? t('chunks.control.pauseAll.active', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })
-                  : t('chunks.control.pauseAll.hint')}</span>
-              </div>
+            <div class="ctl" title={t('chunks.control.pauseAll.hint')}>
+              <span class="ctl-dot" class:warn={overview.adminPause}></span>
+              <b>{t('chunks.control.pauseAll.title')}</b>
+              <span class="muted small ctl-state">{overview.adminPause
+                ? t('chunks.control.pauseAll.active', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })
+                : t('chunks.control.pauseAll.none')}</span>
               {#if overview.adminPause}
-                <button onclick={() => control('pauseAll', false)} disabled={busy}>{t('chunks.control.pauseAll.lift')}</button>
+                <button class="ctl-btn" onclick={() => control('pauseAll', false)} disabled={busy}>{t('chunks.control.pauseAll.lift')}</button>
               {:else}
-                <button class="danger" onclick={() => control('pauseAll', true, t('chunks.control.pauseAll.confirm', { n: overview.active }))} disabled={busy}>{t('chunks.control.pauseAll.start')}</button>
+                <button class="ctl-btn danger" onclick={() => control('pauseAll', true, t('chunks.control.pauseAll.confirm', { n: overview.active }))} disabled={busy}>{t('chunks.control.pauseAll.start')}</button>
               {/if}
             </div>
           {/if}
           {#if me.may.mrchunksMonitoring && mon}
-            <div class="control" class:on={mon.active}>
-              <div class="c-text">
-                <b>{t('chunks.control.monitoring.title')}</b>
-                <span class="muted small">
-                  {#if !mon.configured}{t('chunks.control.monitoring.config')}
-                  {:else if mon.active}{t('chunks.control.monitoring.activeHint', { warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–', mspt: overview.mspt })}
-                  {:else}{t('chunks.control.monitoring.offHint', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' })}{/if}
-                </span>
-              </div>
+            <div class="ctl" title={mon.active ? t('chunks.control.monitoring.activeHint', { warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–', mspt: overview.mspt }) : ''}>
+              <span class="ctl-dot" class:ok={mon.active} class:warn={mon.configured && !mon.active}></span>
+              <b>{t('chunks.control.monitoring.title')}</b>
+              <span class="muted small ctl-state">
+                {#if !mon.configured}{t('chunks.control.monitoring.config')}
+                {:else if mon.active}{t('chunks.control.monitoring.activeShort', { mspt: overview.mspt, warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–' })}
+                {:else}{t('chunks.control.monitoring.offShort', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' })}{/if}
+              </span>
               {#if mon.configured}
                 {#if mon.active}
-                  <button class="secondary" onclick={() => control('monitoring', false, t('chunks.control.monitoring.confirm'))} disabled={busy}>{t('chunks.control.monitoring.disable')}</button>
+                  <button class="ctl-btn secondary" onclick={() => control('monitoring', false, t('chunks.control.monitoring.confirm'))} disabled={busy}>{t('chunks.control.monitoring.disable')}</button>
                 {:else}
-                  <button onclick={() => control('monitoring', true)} disabled={busy}>{t('chunks.control.monitoring.enable')}</button>
+                  <button class="ctl-btn" onclick={() => control('monitoring', true)} disabled={busy}>{t('chunks.control.monitoring.enable')}</button>
                 {/if}
               {/if}
             </div>
@@ -317,40 +315,82 @@
   }
 
   /* Key figures, like on the health page */
+  .controls {
+    padding: 12px 16px;
+  }
+
   .controls h2 {
-    margin: 0 0 10px;
-    font-size: 1rem;
+    margin: 0 0 6px;
+    font-size: 0.95rem;
   }
 
-  .control-grid {
+  .ctl-rows {
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   }
 
-  .control {
+  .ctl {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-  }
-
-  .control.on {
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  }
-
-  .c-text {
-    display: grid;
-    gap: 3px;
+    padding: 6px 0;
     min-width: 0;
   }
 
-  .control button {
+  .ctl + .ctl {
+    border-top: 1px solid var(--border);
+  }
+
+  .ctl b {
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .ctl-state {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ctl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
     flex-shrink: 0;
+    background: var(--muted);
+  }
+
+  .ctl-dot.ok {
+    background: var(--good);
+  }
+
+  .ctl-dot.warn {
+    background: var(--warn);
+  }
+
+  .ctl-btn {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    min-height: 0;
+  }
+
+  @media (max-width: 560px) {
+    .ctl {
+      flex-wrap: wrap;
+    }
+
+    .ctl-state {
+      order: 3;
+      flex-basis: 100%;
+      white-space: normal;
+      padding-left: 18px;
+    }
+
+    .ctl-btn {
+      margin-left: auto;
+    }
   }
 
   .kpis {

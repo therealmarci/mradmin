@@ -349,6 +349,13 @@
     user-select: none;
   }
 
+  /* Touch screens cannot drag rows (HTML drag and drop is mouse only) - there the arrows sort. */
+  @media (pointer: coarse) {
+    .grip {
+      visibility: hidden;
+    }
+  }
+
   .sorting .grip {
     cursor: grabbing;
   }
