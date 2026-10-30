@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.0.2] - 2026-10-30
+
+### Behoben & geändert
+- **Chunkloader: Steuerung als Kennzahl-Kacheln:** Die beiden Schalter „Gestaffelte Abschaltung“ und „Alle pausieren“ sind jetzt zwei Kacheln in der Reihe der Kennzahlen (Zustand groß, darunter seit wann und von wem, farbige Oberkante) mit einem Schalter oben rechts statt einer eigenen Kachel mit Knöpfen. Ausschalten der Abschaltung und Pausieren fragen weiter nach.
+
 ## [1.0.1] - 2026-10-30
 
 ### Neu

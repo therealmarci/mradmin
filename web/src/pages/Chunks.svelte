@@ -113,47 +113,6 @@
       <div class="notice warn">⏸ {t('chunks.adminPaused', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })}</div>
     {/if}
 
-    {#if me?.may?.mrchunksPause || me?.may?.mrchunksMonitoring}
-      {@const mon = overview.monitoring}
-      <!-- Server-wide switches for the team (each with its own permission), one compact line each. -->
-      <section class="card tile controls">
-        <h2>{t('chunks.control.title')}</h2>
-        <div class="ctl-rows">
-          {#if me.may.mrchunksPause}
-            <div class="ctl" title={t('chunks.control.pauseAll.hint')}>
-              <span class="ctl-dot" class:warn={overview.adminPause}></span>
-              <b>{t('chunks.control.pauseAll.title')}</b>
-              <span class="muted small ctl-state">{overview.adminPause
-                ? t('chunks.control.pauseAll.active', { by: overview.adminPause.by, since: dateTime(overview.adminPause.since) })
-                : t('chunks.control.pauseAll.none')}</span>
-              {#if overview.adminPause}
-                <button class="ctl-btn" onclick={() => control('pauseAll', false)} disabled={busy}>{t('chunks.control.pauseAll.lift')}</button>
-              {:else}
-                <button class="ctl-btn danger" onclick={() => control('pauseAll', true, t('chunks.control.pauseAll.confirm', { n: overview.active }))} disabled={busy}>{t('chunks.control.pauseAll.start')}</button>
-              {/if}
-            </div>
-          {/if}
-          {#if me.may.mrchunksMonitoring && mon}
-            <div class="ctl" title={mon.active ? t('chunks.control.monitoring.activeHint', { warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–', mspt: overview.mspt }) : ''}>
-              <span class="ctl-dot" class:ok={mon.active} class:warn={mon.configured && !mon.active}></span>
-              <b>{t('chunks.control.monitoring.title')}</b>
-              <span class="muted small ctl-state">
-                {#if !mon.configured}{t('chunks.control.monitoring.config')}
-                {:else if mon.active}{t('chunks.control.monitoring.activeShort', { mspt: overview.mspt, warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–' })}
-                {:else}{t('chunks.control.monitoring.offShort', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' })}{/if}
-              </span>
-              {#if mon.configured}
-                {#if mon.active}
-                  <button class="ctl-btn secondary" onclick={() => control('monitoring', false, t('chunks.control.monitoring.confirm'))} disabled={busy}>{t('chunks.control.monitoring.disable')}</button>
-                {:else}
-                  <button class="ctl-btn" onclick={() => control('monitoring', true)} disabled={busy}>{t('chunks.control.monitoring.enable')}</button>
-                {/if}
-              {/if}
-            </div>
-          {/if}
-        </div>
-      </section>
-    {/if}
     <div class="kpis">
       <div class="kpi"><div class="label">{t('chunks.loaders')}</div><div class="value">{overview.loaders}</div>
         <div class="sub">{t('chunks.owners', { n: overview.owners })}</div></div>
@@ -167,6 +126,43 @@
       <div class="kpi {overview.locked ? 'bad' : overview.warn || overview.shed ? 'warn' : ''}"><div class="label">{t('chunks.problems')}</div>
         <div class="value">{overview.locked + overview.warn + (overview.shed ?? 0)}</div>
         <div class="sub">{overview.locked} {t('chunks.status.locked')} · {overview.warn} {t('chunks.status.warn')}{#if overview.shed} · {overview.shed} {t('chunks.status.shed')}{/if}</div></div>
+      {#if me?.may?.mrchunksMonitoring && overview.monitoring}
+        {@const mon = overview.monitoring}
+        <!-- Team switches as key-figure tiles (each with its own permission). -->
+        <div class="kpi {mon.active ? 'good' : mon.configured ? 'warn' : ''}"
+          title={mon.active ? t('chunks.control.monitoring.activeHint', { warn: mon.warn, shutdown: mon.shutdown, cap: mon.hardCap || '–', mspt: overview.mspt })
+            : mon.configured ? t('chunks.control.monitoring.offHint', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' }) : ''}>
+          <div class="label k-head">{t('chunks.control.monitoring.title')}
+            {#if mon.configured}
+              <button class="sw" role="switch" aria-checked={mon.active} disabled={busy}
+                aria-label={t(mon.active ? 'chunks.control.monitoring.disable' : 'chunks.control.monitoring.enable')}
+                onclick={() => (mon.active ? control('monitoring', false, t('chunks.control.monitoring.confirm')) : control('monitoring', true))}>
+                <span class="knob" class:on={mon.active}></span>
+              </button>
+            {/if}
+          </div>
+          <div class="value">{t(mon.active ? 'chunks.control.on' : 'chunks.control.off')}</div>
+          <div class="sub">
+            {#if !mon.configured}{t('chunks.control.monitoring.config')}
+            {:else if mon.active}{t('chunks.control.monitoring.sub', { mspt: overview.mspt, shutdown: mon.shutdown })}
+            {:else}{t('chunks.control.since', { by: mon.offBy ?? '?', since: mon.offSince ? dateTime(mon.offSince) : '' })}{/if}
+          </div>
+        </div>
+      {/if}
+      {#if me?.may?.mrchunksPause}
+        {@const pause = overview.adminPause}
+        <div class="kpi {pause ? 'warn' : ''}" title={t('chunks.control.pauseAll.hint')}>
+          <div class="label k-head">{t('chunks.control.pauseAll.title')}
+            <button class="sw" role="switch" aria-checked={!!pause} disabled={busy}
+              aria-label={t(pause ? 'chunks.control.pauseAll.lift' : 'chunks.control.pauseAll.start')}
+              onclick={() => (pause ? control('pauseAll', false) : control('pauseAll', true, t('chunks.control.pauseAll.confirm', { n: overview.active })))}>
+              <span class="knob warn" class:on={!!pause}></span>
+            </button>
+          </div>
+          <div class="value">{t(pause ? 'chunks.control.pauseAll.yes' : 'chunks.control.pauseAll.no')}</div>
+          <div class="sub">{pause ? t('chunks.control.since', { by: pause.by, since: dateTime(pause.since) }) : t('chunks.control.pauseAll.sub')}</div>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -314,85 +310,62 @@
     margin-right: 2px;
   }
 
-  /* Key figures, like on the health page */
-  .controls {
-    padding: 12px 16px;
-  }
-
-  .controls h2 {
-    margin: 0 0 6px;
-    font-size: 0.95rem;
-  }
-
-  .ctl-rows {
-    display: grid;
-  }
-
-  .ctl {
+  /* Switch in the head of a key-figure tile (team controls) */
+  .k-head {
     display: flex;
-    gap: 10px;
     align-items: center;
-    padding: 6px 0;
-    min-width: 0;
+    justify-content: space-between;
+    gap: 8px;
   }
 
-  .ctl + .ctl {
-    border-top: 1px solid var(--border);
+  .sw {
+    padding: 0;
+    min-height: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
   }
 
-  .ctl b {
-    font-size: 0.9rem;
-    white-space: nowrap;
+  .sw:hover {
+    filter: none;
   }
 
-  .ctl-state {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .knob {
+    position: relative;
+    display: block;
+    width: 36px;
+    height: 20px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 35%, transparent);
+    transition: background 0.15s;
   }
 
-  .ctl-dot {
-    width: 8px;
-    height: 8px;
+  .knob::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    flex-shrink: 0;
-    background: var(--muted);
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+    transition: transform 0.15s;
   }
 
-  .ctl-dot.ok {
+  .knob.on {
     background: var(--good);
   }
 
-  .ctl-dot.warn {
+  .knob.warn.on {
     background: var(--warn);
   }
 
-  .ctl-btn {
-    flex-shrink: 0;
-    padding: 4px 10px;
-    font-size: 0.8rem;
-    min-height: 0;
+  .knob.on::after {
+    transform: translateX(16px);
   }
 
-  @media (max-width: 560px) {
-    .ctl {
-      flex-wrap: wrap;
-    }
-
-    .ctl-state {
-      order: 3;
-      flex-basis: 100%;
-      white-space: normal;
-      padding-left: 18px;
-    }
-
-    .ctl-btn {
-      margin-left: auto;
-    }
-  }
-
+  /* Key figures, like on the health page */
   .kpis {
     display: grid;
     gap: 12px;
