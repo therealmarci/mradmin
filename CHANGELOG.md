@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.0.3] - 2026-10-30
+
 ### Neu
 - **Chunkloader: Auslastung pro Loader:** Jede Loader-Kachel der Chunkloader-Seite zeigt ständig einen Balken **Ø Auslastung** (Anteil an der Sperrgrenze beim schlechtesten Messwert; grün, gelb ab der Warnung, rot ab der Sperrgrenze). Die Liste ist danach **absteigend sortiert** - ganz oben steht der Loader, den die gestaffelte Abschaltung als nächsten abschalten würde. Braucht MRchunks ab der nächsten Version.
 - **Chunkloader: Rückkehrzeit in den Kacheln:** Loader, die durch Lags deaktiviert sind (auch nach der harten Grenze, wenn alle aus sind), zeigen in ihrer Kachel, seit wann sie aus sind und wann sie voraussichtlich zurückkommen. Die Loader-Seite sagt „voraussichtlich“ statt „frühestens“.
