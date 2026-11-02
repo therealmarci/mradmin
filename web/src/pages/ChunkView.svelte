@@ -8,6 +8,7 @@
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
   import LineChart from '../components/LineChart.svelte';
+  import Sparkline from '../components/Sparkline.svelte';
 
   let { id, me } = $props();
 
@@ -64,6 +65,17 @@
     const timer = setInterval(loadHistory, 20000);
     return () => clearInterval(timer);
   });
+
+  // The metric shown large (a click on its tile); Esc or a click beside it closes it.
+  let chart = $state(null);
+  let chartHeight = $state(400);
+  const chartMetric = $derived(chart && history ? loader?.metrics?.find((m) => m.key === chart) : null);
+
+  function openChart(key) {
+    if (!history) return;
+    chartHeight = Math.max(260, Math.round(window.innerHeight * 0.62));
+    chart = key;
+  }
 
   function chooseRange(key) {
     range = key;
@@ -213,44 +225,23 @@
           <p class="muted small">{t('chunks.ownLimits')}</p>
           <div class="metrics">
             {#each loader.metrics as m (m.key)}
-              <div class="metric {tone(m)}">
+              <button class="metric {tone(m)}" class:plain={!history} onclick={() => openChart(m.key)} title={history ? t('chunks.historyOpen') : ''}>
                 <div class="mrow"><span>{m.label}</span><strong class="{tone(m)}-text">{value(m)} <small class="muted">/ {m.lock}</small></strong></div>
                 <div class="mbar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
                   <div class="fill {tone(m)}" style="width: {share(m)}%"></div>
                   {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
                 </div>
+                {#if history?.points.length > 1}
+                  <div class="spark"><Sparkline values={history.points.map((p) => p[m.key])} color="var(--tn)" height={28} label={m.label} /></div>
+                {/if}
                 <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
-              </div>
+              </button>
             {/each}
           </div>
         {:else}
           <p class="muted">{t('chunks.noActivity')}</p>
         {/if}
 
-        {#if loader.metrics && history}
-          <div class="history">
-            <div class="h-head">
-              <h3>{t('chunks.history')}</h3>
-              <div class="switch" role="group" aria-label={t('chunks.history')}>
-                {#each RANGES as r}
-                  <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
-                {/each}
-              </div>
-            </div>
-            {#if history.points.length}
-              <div class="charts">
-                {#each loader.metrics as m (m.key)}
-                  <LineChart title={m.label} points={history.points} from={history.from} to={history.to} height={170}
-                    seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
-                    refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
-                    series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} />
-                {/each}
-              </div>
-            {:else}
-              <p class="muted small">{t('chunks.historyEmpty')}</p>
-            {/if}
-          </div>
-        {/if}
       </section>
 
       <div class="side">
@@ -285,6 +276,29 @@
     <p class="muted">{t('common.loading')}</p>
   {/if}
 </div>
+
+<svelte:window onkeydown={(e) => chart && e.key === 'Escape' && (chart = null)} />
+
+{#if chartMetric}
+  {@const m = chartMetric}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (chart = null)}>
+    <div class="big" role="dialog" aria-modal="true" aria-label={m.label}>
+      <div class="switch" role="group" aria-label={t('chunks.history')}>
+        {#each RANGES as r}
+          <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
+        {/each}
+      </div>
+      {#if !history.points.length}
+        <p class="empty small">{t('chunks.historyEmpty')}</p>
+      {/if}
+      <LineChart title={m.label} points={history.points} from={history.from} to={history.to} height={chartHeight}
+        seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
+        refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
+        series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} onClose={() => (chart = null)} />
+    </div>
+  </div>
+{/if}
 
 <style>
   .page {
@@ -463,27 +477,34 @@
     align-items: center;
   }
 
-  /* Measurements over time, one chart per value */
-  .history {
+  /* One value large, over the page */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 45%);
     display: grid;
-    gap: 12px;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-    min-width: 0;
+    place-items: center;
+    padding: 16px;
   }
 
-  .h-head {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
+  .big {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+    width: min(1400px, 100%);
   }
 
-  .h-head h3 {
+  .big > :global(*:last-child) {
+    justify-self: stretch;
+  }
+
+  .empty {
     margin: 0;
-    font-size: 1rem;
+    padding: 6px 12px;
+    border-radius: 9px;
+    color: var(--muted);
+    background: var(--surface);
   }
 
   .switch {
@@ -508,12 +529,6 @@
     background: var(--surface);
     color: var(--text);
     box-shadow: var(--shadow);
-  }
-
-  .charts {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
   }
 
   .push {
@@ -575,12 +590,31 @@
   .metric {
     --tn: var(--good);
     display: grid;
+    /* It is a button: not centred, and the text of the tile instead of the button's. */
+    justify-content: stretch;
+    width: 100%;
     gap: 5px;
     padding: 10px 12px;
     border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
     background: var(--surface-2);
     border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
     border-left: 3px solid var(--tn);
+  }
+
+  .metric:hover:not(.plain) {
+    background: color-mix(in srgb, var(--tn) 8%, var(--surface-2));
+  }
+
+  .metric.plain {
+    cursor: default;
+  }
+
+  /* The dot of the sparkline is placed in here. */
+  .spark {
+    position: relative;
   }
 
   .metric.warn {
