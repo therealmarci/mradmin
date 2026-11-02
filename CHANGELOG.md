@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.1.0] - 2026-11-02
+
 ### Neu
 - **Chunkloader: Limit-Sperre aussetzen:** Auf der Seite eines Loaders setzt ein Admin die Sperre wegen überschrittener Grenzen für diesen Loader vorübergehend aus, höchstens 24 Stunden (Permission `mrchunks.admin.suspendlock`). Ein deswegen gesperrter Loader wird dabei entsperrt, die Aussetzung lässt sich vorzeitig beenden. Die Liste zeigt, bei welchen Loadern sie läuft. Braucht MRchunks ab der nächsten Version.
 - **Chunkloader: Diagramme der Messwerte:** Auf der Seite eines Loaders zeigt jede Messwert-Kachel ihren Verlauf als kleine Kurve. Ein Klick auf die Kachel öffnet das große Diagramm mit Warn- und Sperrgrenze, Zeitraum umschaltbar (1m, 10m, 30m, 1h, 6h, 12h). Bei langen Zeiträumen bleiben Spitzen sichtbar. Der Verlauf liegt in MRadmins Speicher (`storage.type`: Datei, SQLite oder MySQL) und übersteht Neustarts. Ist der Loader aus, bleiben die Kacheln mit der letzten Messung sichtbar (grau). Die kleine Kurve in der Kachel richtet sich nur nach dem eigenen Messwert: grün normal, orange über seiner Warngrenze, rot über seiner Sperrgrenze. Solange der Loader aus ist, fällt sie auf 0, grau bei aus oder durch Lags deaktiviert, dunkelrot bei gesperrt. Das große Diagramm nutzt dieselben Farben, zeigt die Zeiten als Fläche mit Namen und darüber den aktuellen Wert. Beide laufen flüssig: Die Zeit läuft im Browser weiter, die Linie ist eine weiche Kurve bis zum aktuellen Zeitpunkt, und neue Messungen gleiten hinein. Braucht MRchunks ab der nächsten Version.
