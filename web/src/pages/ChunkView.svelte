@@ -78,18 +78,81 @@
   let blendStart = 0;
   let before = null;
 
-  function take(result) {
-    const last = history?.points.at(-1);
-    const next = result.points.at(-1);
-    const fresh = !calm && last && next && history.range === range && next.time !== last.time;
-    if (fresh) {
+  // Applies new data; if that brings a new newest point, the line glides there.
+  function change(apply) {
+    const last = allPoints.at(-1);
+    const sameRange = history?.range === range;
+    apply();
+    const next = allPoints.at(-1);
+    if (!calm && sameRange && last && next && next.time !== last.time) {
       before = last;
       blendStart = performance.now();
       blend = 0;
     }
-    serverOffset = result.to - Date.now();
-    history = { ...result, range };
   }
+
+  function take(result) {
+    change(() => {
+      serverOffset = result.to - Date.now();
+      history = { ...result, range };
+    });
+  }
+
+  // Live view: while this page is open the server measures this loader more often (mrchunks.admin.live). The page stops
+  // asking in a tab in the background, then the server stops measuring. Without it everything stays as it is.
+  const LIVE_KEEP_MS = 900000;
+  let liveActive = $state(false);
+  let liveBuffer = $state([]);
+
+  $effect(() => {
+    id;
+    liveBuffer = [];
+    liveActive = false;
+    if (!me.may.mrchunksLive) return;
+    let stopped = false;
+    let timer;
+    async function tick() {
+      let wait = 2000;
+      if (!document.hidden) {
+        try {
+          const answer = await moduleData('mrchunks', 'loaderLive', { id });
+          liveActive = answer.live;
+          wait = answer.live ? answer.seconds * 1000 : 5000;
+          if (answer.point && answer.point.time !== liveBuffer.at(-1)?.time) {
+            change(() => {
+              liveBuffer = [...liveBuffer.filter((p) => p.time >= answer.point.time - LIVE_KEEP_MS), answer.point];
+            });
+          }
+        } catch {
+          // MRchunks without the live view, or the server is restarting.
+          liveActive = false;
+          wait = 30000;
+        }
+      }
+      if (!stopped) timer = setTimeout(tick, wait);
+    }
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  });
+
+  // The server's points with the finer live points in their place. On long ranges they would only be a thick line, there
+  // the newest one is enough.
+  const allPoints = $derived.by(() => {
+    const server = history?.points ?? [];
+    const first = liveBuffer[0]?.time;
+    if (first === undefined) return server;
+    const newest = liveBuffer.at(-1);
+    if (RANGE_MS[range] > 3600000) return server.at(-1)?.time < newest.time ? [...server, newest] : server;
+    return [...server.filter((p) => p.time < first), ...liveBuffer, ...server.filter((p) => p.time > newest.time)];
+  });
+  // The tiles show the newest live value.
+  const tileMetrics = $derived.by(() => {
+    const newest = liveActive && loader?.active ? liveBuffer.at(-1) : null;
+    return (loader?.metrics ?? []).map((m) => (newest ? { ...m, value: newest[m.key] ?? m.value } : m));
+  });
 
   $effect(() => {
     // One pixel of the large chart: moving more often would not show.
@@ -111,7 +174,7 @@
   const rangeStart = $derived(now - RANGE_MS[range]);
   // The newest point on its way from the value before to the new one.
   const shown = $derived.by(() => {
-    const last = history?.points.at(-1);
+    const last = allPoints.at(-1);
     if (!last || !before || blend >= 1) return last ?? null;
     const eased = blend * (2 - blend);
     const mixed = { time: last.time };
@@ -120,7 +183,7 @@
     }
     return mixed;
   });
-  const shownPoints = $derived(shown ? [...history.points.slice(0, -1), shown] : []);
+  const shownPoints = $derived(shown ? [...allPoints.slice(0, -1), shown] : []);
 
   // The metric shown large (a click on its tile); Esc or a click beside it closes it.
   let chart = $state(null);
@@ -296,6 +359,7 @@
               stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
           </span>
           <h2>{t('chunks.activity')}</h2>
+          {#if liveActive}<span class="live" title={t('chunks.liveHint')}>{t('chunks.live')}</span>{/if}
         </div>
         {#if loader.metrics}
           <p class="muted small">
@@ -309,7 +373,7 @@
           </p>
           <p class="muted small">{t('chunks.ownLimits')}</p>
           <div class="metrics">
-            {#each loader.metrics as m (m.key)}
+            {#each tileMetrics as m (m.key)}
               <button class="metric {tileTone(m)}" class:plain={!history} onclick={() => openChart(m.key)} title={history ? t('chunks.historyOpen') : ''}>
                 <div class="mrow"><span>{m.label}</span><strong class="{tileTone(m)}-text">{value(m)} <small class="muted">/ {m.lock}</small></strong></div>
                 <div class="mbar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
@@ -651,6 +715,23 @@
     color: var(--cl);
     background: color-mix(in srgb, var(--cl) 14%, var(--surface-2));
     border: 1px solid color-mix(in srgb, var(--cl) 30%, transparent);
+  }
+
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--good);
+  }
+
+  .live::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--good);
   }
 
   .count {
