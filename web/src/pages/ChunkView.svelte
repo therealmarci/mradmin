@@ -188,7 +188,7 @@
   // The metric shown large (a click on its tile); Esc or a click beside it closes it.
   let chart = $state(null);
   let chartHeight = $state(400);
-  const chartMetric = $derived(chart && history ? loader?.metrics?.find((m) => m.key === chart) : null);
+  const chartMetric = $derived(chart && history ? tileMetrics.find((m) => m.key === chart) : null);
 
   function openChart(key) {
     if (!history) return;
@@ -384,11 +384,14 @@
                   <div class="fill {tileTone(m)}" style="width: {share(m)}%"></div>
                   {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
                 </div>
-                {#if history?.points.length > 1 || phases.length}
-                  <StateLine points={shownPoints.map((p) => linePoint(p, m))} {phases} live={livePoint && linePoint(livePoint, m)}
-                    from={rangeStart} to={now} label={m.label} />
-                {/if}
                 <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
+                <!-- Always there, so every tile has the same layout: the curve fills the bottom edge of the tile. -->
+                <div class="well">
+                  {#if history?.points.length > 1 || phases.length}
+                    <StateLine points={shownPoints.map((p) => linePoint(p, m))} {phases} live={livePoint && linePoint(livePoint, m)}
+                      from={rangeStart} to={now} height={40} label={m.label} />
+                  {/if}
+                </div>
               </button>
             {/each}
           </div>
@@ -437,19 +440,27 @@
   {@const m = chartMetric}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (chart = null)}>
-    <div class="big" role="dialog" aria-modal="true" aria-label={m.label}>
-      <div class="switch" role="group" aria-label={t('chunks.history')}>
-        {#each RANGES as r}
-          <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
-        {/each}
+    <div class="big {tileTone(m)}" role="dialog" aria-modal="true" aria-label={m.label}>
+      <div class="big-head">
+        <div class="now">
+          <span class="muted small">{m.label}{#if liveActive} · <span class="live">{t('chunks.live')}</span>{/if}</span>
+          <strong>{value(m)}</strong>
+          <span class="muted small">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</span>
+        </div>
+        <div class="switch" role="group" aria-label={t('chunks.history')}>
+          {#each RANGES as r}
+            <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
+          {/each}
+        </div>
       </div>
       {#if !history.points.length && !phases.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
       {/if}
       <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={now} height={chartHeight}
+        states={{ points: shownPoints.map((p) => linePoint(p, m)), phases, live: livePoint && linePoint(livePoint, m) }}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
-        refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
-        series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} onClose={() => (chart = null)} />
+        refs={[{ value: m.warn, label: t('chunks.warnLimit'), color: 'var(--value-warn)' }, { value: m.lock, label: t('chunks.lockLimit'), color: 'var(--bad)' }].filter((r) => r.value > 0)}
+        series={[{ key: m.key, label: m.label, color: 'var(--tn)' }]} onClose={() => (chart = null)} />
     </div>
   </div>
 {/if}
@@ -643,6 +654,7 @@
   }
 
   .big {
+    --tn: var(--good);
     display: grid;
     gap: 10px;
     justify-items: start;
@@ -651,6 +663,31 @@
 
   .big > :global(*:last-child) {
     justify-self: stretch;
+  }
+
+  /* Above the large chart: the value right now, in its colour, beside the range. */
+  .big-head {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    border-left: 4px solid var(--tn);
+  }
+
+  .now {
+    display: grid;
+    gap: 2px;
+  }
+
+  .now strong {
+    font-size: 2rem;
+    line-height: 1.1;
+    color: var(--tn);
   }
 
   .empty {
@@ -751,10 +788,14 @@
     margin: 0 0 8px;
   }
 
-  .metrics {
-    /* The state of one value: orange over its warn limit, red over its lock limit, dark red while the loader is locked. */
+  /* The state of one value: orange over its warn limit, red over its lock limit, dark red while the loader is locked. */
+  .metrics,
+  .overlay {
     --value-warn: #ee7f1b;
     --value-locked: color-mix(in srgb, var(--bad) 55%, #000);
+  }
+
+  .metrics {
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
@@ -768,7 +809,9 @@
     justify-content: stretch;
     width: 100%;
     gap: 5px;
-    padding: 10px 12px;
+    /* No padding below: the curve closes the tile. */
+    padding: 10px 12px 0;
+    overflow: hidden;
     border-radius: 10px;
     color: var(--text);
     font: inherit;
@@ -786,19 +829,31 @@
     cursor: default;
   }
 
-  .metric.off {
+  /* From edge to edge of the tile, the same height in all of them. */
+  .well {
+    height: 40px;
+    margin: 3px -12px 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    background: color-mix(in srgb, var(--tn) 7%, transparent);
+  }
+
+  .metric.off,
+  .big.off {
     --tn: var(--muted);
   }
 
-  .metric.locked {
+  .metric.locked,
+  .big.locked {
     --tn: var(--value-locked);
   }
 
-  .metric.warn {
+  .metric.warn,
+  .big.warn {
     --tn: var(--value-warn);
   }
 
-  .metric.bad {
+  .metric.bad,
+  .big.bad {
     --tn: var(--bad);
   }
 

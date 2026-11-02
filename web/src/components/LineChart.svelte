@@ -4,6 +4,7 @@
   // point in time with one tooltip for every series, arrow keys for keyboard users, a table view and a full-screen view (expand button).
   import { t } from '../lib/i18n.js';
   import { curve } from '../lib/curve.js';
+  import { stateEntries, statePieces } from '../lib/stateline.js';
   import LineChart from './LineChart.svelte';
 
   let {
@@ -16,6 +17,7 @@
     bands = [], // shaded stretches of time [{ from, to, label }], the line breaks there
     smooth = false, // a soft curve through the points instead of straight lines
     live = null, // where the line ends right now: drawn, but no measurement (not in the table or the tooltip)
+    states = null, // a line in the colours of its state instead of the series, see lib/stateline.js: { points, phases, live }
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
@@ -95,6 +97,10 @@
     return segments.filter((seg) => seg.length).map((seg) => stroke(seg, key)).join('');
   }
 
+  const stateLines = $derived(
+    states ? statePieces(stateEntries(states.points, states.phases, states.live), x, y, 3 * Math.max(20000, (t1 - t0) / 300)) : [],
+  );
+
   // Single series: a light wash under the line, closed down to the baseline.
   function area(key) {
     const base = y(0).toFixed(1);
@@ -168,7 +174,9 @@
           <span><i style="background: {s.color}"></i>{s.label}</span>
         {/each}
       {/if}
-      {#each [...new Set(bands.map((b) => b.label))] as label}<span><i class="band-key"></i>{label}</span>{/each}
+      {#each [...new Map(bands.map((b) => [b.label, b])).values()] as b}
+        <span><i class="band-key" style={b.color ? `background: ${b.color}` : ''}></i>{b.label}</span>
+      {/each}
     </div>
   {/if}
 
@@ -202,7 +210,7 @@
         {#each bands as b}
           {@const left = x(Math.max(b.from, t0))}
           {@const wide = Math.max(2, x(Math.min(b.to, t1)) - left)}
-          <rect class="band" x={left} y={pad.top} width={wide} height={innerH} />
+          <rect class="band" x={left} y={pad.top} width={wide} height={innerH} style={b.color ? `fill: ${b.color}` : ''} />
           {#if wide >= 34}<text class="axis" x={left + 6} y={pad.top + 14}>{b.label}</text>{/if}
         {/each}
         {#each ticks as v}
@@ -213,18 +221,24 @@
           <text class="axis" x={x(tt)} y={height - 6} text-anchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
         {/each}
         {#each refs as r}
-          <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} />
+          <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} style={r.color ? `stroke: ${r.color}` : ''} />
           <text class="axis" x={pad.left + 4} y={y(r.value) - 4}>{r.label}</text>
         {/each}
         <!-- Points just before the range are cut off at the edge of the plot. -->
         <clipPath id={clipId}><rect x={pad.left} y={0} width={innerW} {height} /></clipPath>
         <g clip-path="url(#{clipId})">
-          {#if series.length === 1}
-            <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
+          {#if states}
+            {#each stateLines as line}
+              <path d={line.d} class="line" style="stroke: {line.color}" />
+            {/each}
+          {:else}
+            {#if series.length === 1}
+              <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
+            {/if}
+            {#each series as s}
+              <path d={path(s.key)} class="line" style="stroke: {s.color}" />
+            {/each}
           {/if}
-          {#each series as s}
-            <path d={path(s.key)} class="line" style="stroke: {s.color}" />
-          {/each}
         </g>
         {#each endLabels as l}
           <text class="end" x={pad.left + innerW + 6} y={l.y + 4}>{format(l.value)}</text>
@@ -255,7 +269,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
