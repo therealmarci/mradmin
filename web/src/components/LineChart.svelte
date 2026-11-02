@@ -12,6 +12,7 @@
     format = (v) => String(v), // value -> text (with unit)
     yMax = null, // fixed top of the scale (e.g. 20 TPS, 100 %), otherwise from the data
     refs = [], // reference lines [{ value, label }]
+    bands = [], // shaded stretches of time [{ from, to, label }], the line breaks there
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
@@ -73,7 +74,7 @@
     for (let i = 1; i < points.length; i++) {
       const gap = gaps[i - 1];
       const step = Math.max(gaps[i - 2] ?? 0, gaps[i] ?? 0) || gap;
-      if (gap > step * 3) result.push([]);
+      if (gap > step * 3 || bands.some((b) => points[i - 1].time <= b.from && points[i].time >= b.to)) result.push([]);
       result.at(-1).push(points[i]);
     }
     return result;
@@ -190,6 +191,12 @@
         onpointerleave={() => (index = -1)}
         onkeydown={keys}
       >
+        {#each bands as b}
+          {@const left = x(Math.max(b.from, t0))}
+          {@const wide = Math.max(0, x(Math.min(b.to, t1)) - left)}
+          <rect class="band" x={left} y={pad.top} width={wide} height={innerH} />
+          {#if wide >= 34}<text class="axis" x={left + 6} y={pad.top + 14}>{b.label}</text>{/if}
+        {/each}
         {#each ticks as v}
           <line class="grid" x1={pad.left} x2={pad.left + innerW} y1={y(v)} y2={y(v)} />
           <text class="axis" x={pad.left - 6} y={y(v) + 4} text-anchor="end">{format(v)}</text>
@@ -236,7 +243,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
@@ -319,6 +326,11 @@
   svg:focus-visible {
     box-shadow: 0 0 0 2px var(--accent);
     border-radius: 6px;
+  }
+
+  .band {
+    fill: var(--muted);
+    opacity: 0.14;
   }
 
   .grid {

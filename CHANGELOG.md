@@ -11,7 +11,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Neu
 - **Chunkloader: Limit-Sperre aussetzen:** Auf der Seite eines Loaders setzt ein Admin die Sperre wegen überschrittener Grenzen für diesen Loader vorübergehend aus, höchstens 24 Stunden (Permission `mrchunks.admin.suspendlock`). Ein deswegen gesperrter Loader wird dabei entsperrt, die Aussetzung lässt sich vorzeitig beenden. Die Liste zeigt, bei welchen Loadern sie läuft. Braucht MRchunks ab der nächsten Version.
-- **Chunkloader: Diagramme der Messwerte:** Auf der Seite eines Loaders zeigt jede Messwert-Kachel ihren Verlauf als kleine Kurve. Ein Klick auf die Kachel öffnet das große Diagramm mit Warn- und Sperrgrenze, Zeitraum umschaltbar (1m, 10m, 30m, 1h, 6h, 12h). Bei langen Zeiträumen bleiben Spitzen sichtbar. Der Verlauf liegt in MRadmins Speicher (`storage.type`: Datei, SQLite oder MySQL) und übersteht Neustarts. Braucht MRchunks ab der nächsten Version.
+- **Chunkloader: Diagramme der Messwerte:** Auf der Seite eines Loaders zeigt jede Messwert-Kachel ihren Verlauf als kleine Kurve. Ein Klick auf die Kachel öffnet das große Diagramm mit Warn- und Sperrgrenze, Zeitraum umschaltbar (1m, 10m, 30m, 1h, 6h, 12h). Bei langen Zeiträumen bleiben Spitzen sichtbar. Der Verlauf liegt in MRadmins Speicher (`storage.type`: Datei, SQLite oder MySQL) und übersteht Neustarts. Ist der Loader aus, bleiben die Kacheln mit der letzten Messung sichtbar (grau), und die Diagramme zeigen die Zeit, in der er aus war, als graue Fläche mit „Aus“. Braucht MRchunks ab der nächsten Version.
 - **Modul-API 6 (`api-1.5.0`):** Plugins können eigene Messwerte über `moduleHistoryAdd` und `moduleHistory` in MRadmins Speicher ablegen.
 
 ### Behoben & geändert
