@@ -9,7 +9,7 @@
   import Toast from '../components/Toast.svelte';
   import LineChart from '../components/LineChart.svelte';
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
-  import StateLine from '../components/StateLine.svelte';
+  import ValueTile from '../components/ValueTile.svelte';
   import TimeNavigator from '../components/TimeNavigator.svelte';
 
   let { id, me } = $props();
@@ -423,21 +423,12 @@
           <p class="muted small">{t('chunks.ownLimits')}</p>
           <div class="metrics">
             {#each tileMetrics as m (m.key)}
-              <button class="metric {tileTone(m)}" class:plain={!history} onclick={() => openChart(m.key)} title={history ? t('chunks.historyOpen') : ''}>
-                <div class="mrow"><span>{m.label}</span><strong class="{tileTone(m)}-text">{value(m)} <small class="muted">/ {m.lock}</small></strong></div>
-                <div class="mbar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
-                  <div class="fill {tileTone(m)}" style="width: {share(m)}%"></div>
-                  {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
-                </div>
-                <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
-                <!-- Always there, so every tile has the same layout: the curve fills the bottom edge of the tile. -->
-                <div class="well">
-                  {#if history?.points.length > 1 || phases.length}
-                    <StateLine points={shownPoints.map((p) => linePoint(p, m))} {phases} live={livePoint && linePoint(livePoint, m)}
-                      from={rangeStart} to={viewTo} height={40} label={m.label} />
-                  {/if}
-                </div>
-              </button>
+              <ValueTile label={m.label} value={value(m)} suffix="/ {m.lock}" tone={tileTone(m)} title={history ? t('chunks.historyOpen') : ''}
+                share={share(m)} tick={m.lock > 0 && m.warn > 0 ? (m.warn / m.lock) * 100 : null}
+                barTitle="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
+                note="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
+                line={history?.points.length > 1 || phases.length > 0} points={shownPoints.map((p) => linePoint(p, m))} {phases}
+                live={livePoint && linePoint(livePoint, m)} from={rangeStart} to={viewTo} onclick={history ? () => openChart(m.key) : null} />
             {/each}
           </div>
         {:else}
@@ -867,13 +858,6 @@
     margin: 0 0 8px;
   }
 
-  /* The state of one value: orange over its warn limit, red over its lock limit, dark red while the loader is locked. */
-  .metrics,
-  .overlay {
-    --value-warn: #ee7f1b;
-    --value-locked: color-mix(in srgb, var(--bad) 55%, #000);
-  }
-
   .metrics {
     display: grid;
     gap: 10px;
@@ -881,101 +865,20 @@
     margin-top: 6px;
   }
 
-  .metric {
-    --tn: var(--good);
-    display: grid;
-    /* It is a button: not centred, and the text of the tile instead of the button's. */
-    justify-content: stretch;
-    width: 100%;
-    gap: 5px;
-    /* No padding below: the curve closes the tile. */
-    padding: 10px 12px 0;
-    overflow: hidden;
-    border-radius: 10px;
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--tn);
-  }
-
-  .metric:hover:not(.plain) {
-    background: color-mix(in srgb, var(--tn) 8%, var(--surface-2));
-  }
-
-  .metric.plain {
-    cursor: default;
-  }
-
-  /* From edge to edge of the tile, the same height in all of them. */
-  .well {
-    height: 40px;
-    margin: 3px -12px 0;
-    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    background: color-mix(in srgb, var(--tn) 7%, transparent);
-  }
-
-  .metric.off,
   .big.off {
     --tn: var(--muted);
   }
 
-  .metric.locked,
   .big.locked {
     --tn: var(--value-locked);
   }
 
-  .metric.warn,
   .big.warn {
     --tn: var(--value-warn);
   }
 
-  .metric.bad,
   .big.bad {
     --tn: var(--bad);
-  }
-
-  .mrow {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.88rem;
-  }
-
-  .mrow strong {
-    color: var(--tn);
-  }
-
-  .mrow small {
-    font-weight: 600;
-  }
-
-  .mbar {
-    position: relative;
-    height: 7px;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--border) 80%, transparent);
-    overflow: visible;
-  }
-
-  .fill {
-    height: 100%;
-    border-radius: 4px;
-    background: var(--tn);
-  }
-
-  .tick {
-    position: absolute;
-    top: -2px;
-    bottom: -2px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--value-warn);
-  }
-
-  .tiny {
-    font-size: 0.72rem;
   }
 
   .members {

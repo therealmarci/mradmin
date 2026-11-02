@@ -10,7 +10,7 @@
   import { MODULE_ICONS } from '../lib/icons.js';
   import DashTile from '../components/DashTile.svelte';
   import Carousel from '../components/Carousel.svelte';
-  import Sparkline from '../components/Sparkline.svelte';
+  import ValueTile from '../components/ValueTile.svelte';
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { poll } from '../lib/poll.js';
 
@@ -119,12 +119,25 @@
   const shownLatest = $derived(clock.shown(health?.points.at(-1)));
   const inMinute = $derived((health?.points ?? []).filter((x) => x.time >= clock.now - MINUTE));
 
-  const charts = [
-    { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
-    { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
-    { key: 'heapUsed', label: t('overview.ram'), color: 'var(--series-3)', format: (v) => mb(v) },
-    { key: 'players', label: t('health.players'), color: '#a855f7', format: (v) => String(Math.round(v ?? 0)) },
-  ];
+  // The four tiles: each with its own limits, tone (p) gives the state of a point.
+  const toneBy = (bad, warn) => (bad ? 'bad' : warn ? 'warn' : 'good');
+  const LINE = { good: 'var(--good)', warn: 'var(--value-warn)', bad: 'var(--bad)' };
+  const MSPT_WARN = 40;
+  const MSPT_LIMIT = 50;
+  const charts = $derived([
+    { key: 'tps', label: 'TPS', format: (v) => (v ?? 0).toFixed(1), suffix: '/ 20', tone: (p) => tpsTone(p.tps ?? 20),
+      share: (p) => ((p.tps ?? 0) / 20) * 100, note: () => t('home.h.tpsNote') },
+    { key: 'mspt', label: t('overview.mspt'), format: (v) => (v ?? 0).toFixed(1) + ' ms', suffix: '/ ' + MSPT_LIMIT,
+      tone: (p) => toneBy(p.mspt >= MSPT_LIMIT, p.mspt >= MSPT_WARN), share: (p) => ((p.mspt ?? 0) / MSPT_LIMIT) * 100,
+      tick: (MSPT_WARN / MSPT_LIMIT) * 100, note: () => t('home.h.msptNote', { warn: MSPT_WARN, limit: MSPT_LIMIT }) },
+    { key: 'heapUsed', label: t('overview.ram'), format: (v) => mb(v), suffix: '',
+      tone: (p) => toneBy(p.heapUsed >= p.heapMax * 0.95, p.heapUsed >= p.heapMax * 0.85),
+      share: (p) => (p.heapMax > 0 ? (p.heapUsed / p.heapMax) * 100 : 0), tick: 85,
+      note: (p) => t('health.max') + ' ' + mb(p.heapMax) },
+    { key: 'players', label: t('health.players'), format: (v) => String(Math.round(v ?? 0)), suffix: data?.server ? '/ ' + data.server.max : '',
+      tone: () => 'good', share: (p) => (data?.server?.max > 0 ? ((p.players ?? 0) / data.server.max) * 100 : 0), note: () => t('home.h.playersNote') },
+  ]);
+  const linePoint = (p, c) => ({ time: p.time, value: p[c.key], color: LINE[c.tone(p)] });
   // The latest values: the newest point of the monitor, TPS/MSPT/RAM from the overview (every 2 seconds).
   const now = $derived({
     ...(health?.points?.at(-1) ?? {}),
@@ -244,13 +257,11 @@
             <div class="h-chart">
               <div class="sparks">
                 {#each charts as c (c.key)}
-                  <div class="spark-card" style="--c: {c.color}">
-                    <div class="sc-head"><span>{c.label}</span><b>{c.format(shownLatest?.[c.key])}</b></div>
-                    <div class="spark-box">
-                      <Sparkline values={[...inMinute.map((x) => x[c.key]), ...(shownLatest ? [shownLatest[c.key]] : [])]}
-                        times={[...inMinute.map((x) => x.time), ...(shownLatest ? [clock.now] : [])]} from={clock.now - MINUTE} to={clock.now} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
-                    </div>
-                  </div>
+                  {@const point = shownLatest ?? {}}
+                  <ValueTile label={c.label} value={c.format(point[c.key])} suffix={c.suffix} tone={c.tone(point)} share={c.share(point)}
+                    tick={c.tick ?? null} note={c.note(point)} lineHeight={30} line={inMinute.length > 1} points={inMinute.map((x) => linePoint(x, c))}
+                    live={shownLatest && clock.now > shownLatest.time ? linePoint({ ...shownLatest, time: clock.now }, c) : null}
+                    from={clock.now - MINUTE} to={clock.now} tabindex={active ? 0 : -1} onclick={() => go('/health')} />
                 {/each}
               </div>
             </div>
@@ -506,35 +517,6 @@
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .spark-card {
-    display: grid;
-    gap: 2px;
-    padding: 6px 10px 5px;
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--c);
-  }
-
-  .sc-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.74rem;
-    font-weight: 700;
-  }
-
-  .sc-head span {
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .spark-box {
-    position: relative;
   }
 
   /* Further warnings of the same area as small lines. */
