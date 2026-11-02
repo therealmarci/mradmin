@@ -2,6 +2,7 @@ package at.marcelr.mradmin.mode;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.gui.HubMenu;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -10,6 +11,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -36,6 +38,19 @@ public final class AdminModeListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
         mode().quit(event.getPlayer());
+    }
+
+    /**
+     * World managers set the game mode of the world after every world change (Multiverse: enforce-gamemode). The admin
+     * mode must survive that - the player would be vulnerable with the admin inventory. /gamemode stays possible.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onGameModeChange(PlayerGameModeChangeEvent event) {
+        GameMode next = event.getNewGameMode();
+        if (event.getCause() == PlayerGameModeChangeEvent.Cause.PLUGIN && next != GameMode.CREATIVE
+                && next != GameMode.SPECTATOR && mode().holdsGameMode(event.getPlayer())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler

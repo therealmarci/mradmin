@@ -2,7 +2,7 @@ name: MRadmin
 version: '${version}'
 main: at.marcelr.mradmin.MRAdmin
 api-version: '${mcVersion}'
-softdepend: [LuckPerms, LibertyBans]
+softdepend: [LuckPerms, LibertyBans, Multiverse-Inventories]
 # Database drivers for storage.type sqlite/mysql - Paper downloads them on the first start (folder libraries/).
 libraries:
   - com.zaxxer:HikariCP:${hikariVersion}

@@ -364,6 +364,15 @@ Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integr
 
 ---
 
+### Mehrere Welten (Multiverse)
+MRadmin arbeitet mit beliebig vielen Welten. Multiverse-Core und Multiverse-Inventories sind nicht nötig, werden aber berücksichtigt:
+
+- **Admin-Modus und Multiverse-Core:** Multiverse setzt beim Weltwechsel den Spielmodus der Welt. Im Admin-Modus wird das abgewiesen, du bleibst in Creative bzw. Spectator. `/gamemode` funktioniert weiter.
+- **Admin-Modus und Multiverse-Inventories:** Solange der Admin-Modus läuft, tauscht Multiverse-Inventories das Inventar nicht. Beim Beenden kommt dein eigenes Inventar zurück.
+
+> [!WARNING]
+> Lass `admin-mode.return-to-start` mit Multiverse-Inventories auf `true`. Sonst bleibst du nach dem Beenden in der anderen Welt, und dein Inventar landet in deren Gruppe.
+
 ## Häufige Fragen
 **Ein Teammitglied wird bei der Wartung trotzdem gekickt.**
 Es braucht `mradmin.maintenance.bypass` (in `mradmin.groups.support` enthalten). Ohne LuckPerms prüft MRadmin die Rechte erst beim Join.

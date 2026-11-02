@@ -163,6 +163,13 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new MaintenanceListener(this), this);
         pm.registerEvents(new AdminModeListener(this), this);
+        if (pm.getPlugin("Multiverse-Inventories") != null) {
+            try {
+                pm.registerEvents(new at.marcelr.mradmin.mode.InventoriesHook(adminMode), this);
+            } catch (LinkageError e) {
+                getLogger().warning("This version of Multiverse-Inventories is not supported, admin mode ignores it: " + e);
+            }
+        }
         pm.registerEvents(new CreativeClearGuard(this), this);
         pm.registerEvents(menuListener, this);
         pm.registerEvents(this, this);

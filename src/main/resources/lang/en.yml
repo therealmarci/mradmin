@@ -357,6 +357,9 @@ gui-status-world-lore:
   - "<gray>Loaded chunks: <white><chunks>"
   - "<gray>Entities: <white><entities>"
   - "<gray>Players: <white><players>"
+gui-status-more-worlds: "<aqua>+<count> more worlds"
+gui-status-more-worlds-lore:
+  - "<gray><worlds>"
 gui-status-chunk: "<gold><count> entities"
 gui-status-chunk-lore:
   - "<gray><world> <white><x> <z>"

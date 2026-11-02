@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Admin-Modus und Multiverse:** Multiverse-Core setzte beim Weltwechsel den Spielmodus der Welt durch. Dadurch stand man im Admin-Modus plötzlich ungeschützt im Überlebensmodus. Das wird jetzt abgewiesen, `/gamemode` funktioniert weiter.
+- **Admin-Modus und Multiverse-Inventories:** Solange der Admin-Modus läuft, tauscht Multiverse-Inventories das Inventar nicht mehr. So gelangt das Admin-Inventar in keine Gruppe, und beim Beenden kommt das eigene Inventar zurück.
+- **Serverzustand mit vielen Welten:** Bei mehr als 9 Welten fehlten die übrigen im Menü. Jetzt stehen Welten mit Spielern vorne, die restlichen sind in einem Sammel-Eintrag aufgeführt.
+
 ## [1.0.3] - 2026-10-30
 
 ### Neu
