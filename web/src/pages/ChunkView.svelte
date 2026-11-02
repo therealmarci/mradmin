@@ -9,6 +9,7 @@
   import Toast from '../components/Toast.svelte';
   import LineChart from '../components/LineChart.svelte';
   import StateLine from '../components/StateLine.svelte';
+  import TimeNavigator from '../components/TimeNavigator.svelte';
 
   let { id, me } = $props();
 
@@ -141,6 +142,32 @@
       if (!paused) serverOffset = result.to - Date.now();
       history = { ...result, range };
     });
+    // A range only with enough data: otherwise the longest one there is, without changing what was chosen for later.
+    if (!rangeReady(range)) range = RANGES.findLast(rangeReady);
+  }
+
+  /** The shortest range always; the others once that much is stored. */
+  const rangeReady = (key) => key === RANGES[0] || !history?.oldest || Date.now() + serverOffset - history.oldest >= RANGE_MS[key];
+
+  // The whole stored time for the bar below the large chart: fetched while it is open.
+  let overview = $state(null);
+
+  $effect(() => {
+    if (!chart) return;
+    const load = async () => {
+      try {
+        overview = await moduleData('mrchunks', 'loaderHistory', { id, range: '12h' });
+      } catch {
+        // the bar just stays as it is
+      }
+    };
+    load();
+    const timer = setInterval(load, 60000);
+    return () => clearInterval(timer);
+  });
+
+  function jumpTo(middle) {
+    goTo(middle + RANGE_MS[range] / 2);
   }
 
   // Live view: while this page is open the server measures this loader more often (mrchunks.admin.live). The page stops
@@ -240,8 +267,10 @@
   }
 
   function chooseRange(key) {
+    // Paused the same moment stays in the middle: find it on a long range, then look closer on a short one.
+    const middle = viewTo - RANGE_MS[range] / 2;
     range = key;
-    if (paused) goTo(viewEnd);
+    if (paused) goTo(middle + RANGE_MS[key] / 2);
     try {
       sessionStorage.setItem('mradmin.chunks.range', key);
     } catch {
@@ -283,17 +312,15 @@
     shed: { key: 'shed', color: 'var(--muted)' },
     locked: { key: 'locked', color: 'var(--value-locked)' },
   };
+  const named = (b) => ({ ...b, label: t('chunks.status.' + PHASES[b.phase].key), color: PHASES[b.phase].color });
   // A phase that still runs ends now.
   const phases = $derived(
     (history?.phases ?? [])
-      .map((b) => ({
-        ...b,
-        to: !paused && b.to >= history.to ? now : b.to,
-        label: t('chunks.status.' + PHASES[b.phase].key),
-        color: PHASES[b.phase].color,
-      }))
+      .map((b) => named({ ...b, to: !paused && b.to >= history.to ? now : b.to }))
       .filter((b) => b.to > rangeStart && b.from < viewTo),
   );
+  const overviewFrom = $derived(Math.max(now - MAX_SPAN, overview?.oldest || now - MAX_SPAN));
+  const overviewPhases = $derived((overview?.phases ?? []).map((b) => named({ ...b, to: b.to >= overview.to ? now : b.to })));
   const running = $derived(!!history && !(history.phases ?? []).some((b) => b.to >= history.to));
   // The small line of one value: its colour only follows its own limits.
   const linePoint = (p, m) => {
@@ -501,7 +528,8 @@
           <button class="secondary" onclick={togglePause}>{paused ? '▶ ' + t('chunks.resume') : '⏸ ' + t('chunks.pause')}</button>
           <div class="switch" role="group" aria-label={t('chunks.history')}>
             {#each RANGES as r}
-              <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
+              <button class:active={range === r} disabled={!rangeReady(r)} title={rangeReady(r) ? '' : t('chunks.rangeTooLong')}
+                onclick={() => chooseRange(r)}>{r}</button>
             {/each}
           </div>
         </div>
@@ -516,6 +544,10 @@
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit'), color: 'var(--value-warn)' }, { value: m.lock, label: t('chunks.lockLimit'), color: 'var(--bad)' }].filter((r) => r.value > 0)}
         series={[{ key: m.key, label: m.label, color: 'var(--tn)' }]} onClose={() => (chart = null)} />
+      {#if overview}
+        <TimeNavigator from={overviewFrom} to={now} viewFrom={rangeStart} viewTo={viewTo} label={t('chunks.timeline')}
+          points={overview.points.map((p) => linePoint(p, m))} phases={overviewPhases} onjump={jumpTo} />
+      {/if}
     </div>
   </div>
 {/if}
@@ -716,7 +748,7 @@
     width: min(1400px, 100%);
   }
 
-  .big > :global(*:last-child) {
+  .big > :global(*) {
     justify-self: stretch;
   }
 
@@ -788,6 +820,11 @@
     padding: 5px 11px;
     border-radius: 9px;
     font-size: 0.85rem;
+  }
+
+  .switch button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
   }
 
   .switch button.active {
