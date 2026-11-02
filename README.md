@@ -184,6 +184,7 @@ Neben dem Team-Bereich hat jeder **Spieler** seine eigene Seite in der Weboberfl
 1. Die Weboberfläche muss laufen (`web.enabled`, `web.public-url`, siehe oben).
 2. In der Config `player-web.enabled: true`, dann `/mradmin reload`.
 3. Spieler brauchen `mradmin.web.self` - das steckt in `mradmin.player`.
+**Für das Team:** Wer im Team-Bereich angemeldet ist, kommt auf der eigenen Spieler-Seite mit dem Knopf **Zur eigenen Spielerseite** ohne Code zur Spielerseite. Das geht nur mit dem eigenen Konto, braucht ebenfalls `mradmin.web.self` und steht im Web-Protokoll.
 
 **Für Spieler:** Die Seite hat immer dieselbe Adresse (`<deine Adresse>/me`) - am besten als **Lesezeichen** speichern. Zum Anmelden fragt sie nach einem **6-stelligen Code**: `/web` im Spiel eingeben, der Chat zeigt den Link zur Seite und den Code (ein Klick auf den Code kopiert ihn). Der Code gilt 2 Minuten und nur einmal (`player-web.code-seconds`). Danach bleibt das Gerät **höchstens 14 Tage** angemeldet (`player-web.session-days`) und wird schon nach **7 Tagen ohne Besuch** abgemeldet (`player-web.idle-days`) - dann fragt die Seite einfach wieder nach einem Code. `/web devices` zeigt, auf wie vielen Geräten man angemeldet ist, `/web logout` meldet alle ab - einzelne Geräte gehen auch auf der Seite unter **Geräte** (Klick auf den eigenen Namen oben rechts), dort steht auch, wie lange die Anmeldung noch gilt.
 

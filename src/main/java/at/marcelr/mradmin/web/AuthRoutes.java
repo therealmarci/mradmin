@@ -294,6 +294,7 @@ public final class AuthRoutes {
         may.put("announce", plugin.feature(Feature.ANNOUNCE) && perms.has(account.id(), Perms.ANNOUNCE));
         may.put("announceTemplates", plugin.feature(Feature.ANNOUNCE) && perms.has(account.id(), Perms.ANNOUNCE_TEMPLATES));
         may.put("news", perms.has(account.id(), Perms.NEWS));
+        may.put("selfPage", plugin.settings().playerWeb().enabled() && perms.has(account.id(), Perms.WEB_SELF));
         // Modules (MRchunks, MRsleep, MRpvp ...): "<id>" = may see it, "<id><Key>" for each of its permission keys,
         // e.g. mrchunksManage. Every key also needs viewing - the routes check the same.
         plugin.modules().webModules().forEach((id, web) -> {

@@ -195,7 +195,6 @@
   });
 
   const viewTo = $derived(paused ? viewEnd : now);
-  const scrollSpan = $derived(MAX_SPAN - RANGE_MS[range]);
   const rangeStart = $derived(viewTo - RANGE_MS[range]);
   // The newest point on its way from the value before to the new one.
   const shown = $derived.by(() => {
@@ -487,13 +486,7 @@
             {/each}
           </div>
         </div>
-        {#if scrollSpan > 0}
-          <div class="timeline" title={t('chunks.timelineHint')}>
-            <input type="range" min="0" max={scrollSpan} step={Math.max(1000, Math.round(RANGE_MS[range] / 60))} value={scrollSpan - Math.min(scrollSpan, now - viewTo)}
-              aria-label={t('chunks.timeline')} oninput={(e) => goTo(now - (scrollSpan - Number(e.target.value)))} />
-            <span class="muted small">{paused ? dateTime(rangeStart) + ' – ' + dateTime(viewTo) : t('chunks.timelineHint')}</span>
-          </div>
-        {/if}
+        <div class="timeline muted small">{paused ? dateTime(rangeStart) + ' – ' + dateTime(viewTo) : t('chunks.timelineHint')}</div>
       </div>
       {#if !history.points.length && !phases.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
@@ -733,11 +726,6 @@
     flex-basis: 100%;
     display: grid;
     gap: 2px;
-  }
-
-  .timeline input {
-    width: 100%;
-    accent-color: var(--accent);
   }
 
   .resume {

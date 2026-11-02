@@ -97,8 +97,8 @@ public final class PlayerSessions {
     }
 
     /**
-     * Redeems a code (spaces and the like are ignored): a new session for this browser. Too many devices: the one
-     * used longest ago is signed out. Errors: code-invalid, rate-limit (too many wrong codes from everyone).
+     * Redeems a code (spaces and the like are ignored): a new session for this browser.
+     * Errors: code-invalid, rate-limit (too many wrong codes from everyone).
      */
     public synchronized Result redeem(String raw, String ip, String agent) {
         long now = System.currentTimeMillis();
@@ -114,11 +114,20 @@ public final class PlayerSessions {
             wrong.addLast(now);
             return new Result(null, null, "code-invalid");
         }
+        return open(c.player(), c.name(), ip, agent);
+    }
+
+    /**
+     * A new session for this browser. The caller has made sure who it is: with a code, or through their signed-in team
+     * account. Too many devices: the one used longest ago is signed out.
+     */
+    public synchronized Result open(UUID player, String name, String ip, String agent) {
+        long now = System.currentTimeMillis();
         String token = Secrets.token(32);
-        Session session = new Session(Secrets.token(9), Secrets.sha256(token), c.player(), c.name(), now, now, now,
+        Session session = new Session(Secrets.token(9), Secrets.sha256(token), player, name, now, now, now,
                 expiry(now, now), ip, agent == null ? "" : agent.length() > 200 ? agent.substring(0, 200) : agent);
         sessions.put(session.hash(), session);
-        List<Session> own = devices(c.player());
+        List<Session> own = devices(player);
         int max = plugin.settings().playerWeb().maxDevices();
         for (int i = max; i < own.size(); i++) {
             sessions.remove(own.get(i).hash());
