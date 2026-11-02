@@ -36,6 +36,19 @@
     return () => clearInterval(timer);
   });
 
+  // The team sign-in is enough: the server opens the own player page for this browser, without a code.
+  async function openSelfPage() {
+    busy = true;
+    error = '';
+    try {
+      await api('POST', '/me/player-page');
+      window.location.href = '/me';
+    } catch (e) {
+      error = errorText(e);
+      busy = false;
+    }
+  }
+
   async function act(action, body, confirmText) {
     if (confirmText && !confirm(confirmText)) return;
     busy = true;
@@ -154,6 +167,12 @@
           <div class="fact"><div class="flabel">{t('player.playtime')}</div><div class="fvalue">{duration(player.playtime)}</div></div>
         {/if}
       </div>
+
+      {#if self && me.may.selfPage}
+        <div class="actions">
+          <button disabled={busy} onclick={openSelfPage}>{t('player.openSelfPage')}</button>
+        </div>
+      {/if}
 
       {#if !self && player.online && (player.may.freeze || player.may.kick)}
         <div class="actions">

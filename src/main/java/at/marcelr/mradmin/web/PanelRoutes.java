@@ -79,6 +79,7 @@ public final class PanelRoutes {
 
         if (status && may(http, Perms.STATUS) && snapshot.get("server") instanceof Map<?, ?> s) {
             result.put("server", s);
+            result.put("uptime", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime());
             serverAlerts((Map<String, Object>) s, alerts);
         }
         if (status && may(http, Perms.STATUS_HEALTH)) {

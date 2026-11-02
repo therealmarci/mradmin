@@ -3,6 +3,8 @@
   // 2px lines, hairline gridlines, end labels when they do not collide, a crosshair that snaps to the nearest
   // point in time with one tooltip for every series, arrow keys for keyboard users, a table view and a full-screen view (expand button).
   import { t } from '../lib/i18n.js';
+  import { curve } from '../lib/curve.js';
+  import { stateEntries, statePieces } from '../lib/stateline.js';
   import LineChart from './LineChart.svelte';
 
   let {
@@ -12,6 +14,12 @@
     format = (v) => String(v), // value -> text (with unit)
     yMax = null, // fixed top of the scale (e.g. 20 TPS, 100 %), otherwise from the data
     refs = [], // reference lines [{ value, label }]
+    bands = [], // shaded stretches of time [{ from, to, label }], the line breaks there
+    smooth = false, // a soft curve through the points instead of straight lines
+    live = null, // where the line ends right now: drawn, but no measurement (not in the table or the tooltip)
+    states = null, // a line in the colours of its state instead of the series, see lib/stateline.js: { points, phases, live }
+    aligned = false, // ticks on whole times that move with the line (a chart whose range keeps moving)
+    onpan = null, // scrolling through time by wheel or dragging: called with the ms to go back (negative = forward)
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
@@ -22,6 +30,7 @@
 
   let expanded = $state(false);
   let bigHeight = $state(400);
+  const clipId = 'chart-' + Math.random().toString(36).slice(2, 8);
 
   function expand() {
     bigHeight = Math.max(260, Math.round(window.innerHeight * 0.62));
@@ -40,7 +49,8 @@
     new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit' } : seconds ? { ...clock, second: '2-digit' } : clock);
 
   const t0 = $derived(from ?? (points.length ? points[0].time : 0));
-  const t1 = $derived(Math.max(to ?? 0, points.length ? points.at(-1).time : 1));
+  // With scrolling there are points beyond the end of the range, otherwise the range grows up to the newest one.
+  const t1 = $derived(onpan ? to : Math.max(to ?? 0, points.length ? points.at(-1).time : 1));
   const innerW = $derived(Math.max(10, width - pad.left - pad.right));
   const innerH = $derived(height - pad.top - pad.bottom);
 
@@ -54,7 +64,10 @@
   const top = $derived.by(() => {
     if (yMax !== null) return yMax;
     let m = 0;
-    for (const p of points) for (const s of series) m = Math.max(m, p[s.key] ?? 0);
+    for (const p of points) {
+      if (onpan && (p.time < t0 || p.time > t1)) continue;
+      for (const s of series) m = Math.max(m, p[s.key] ?? 0);
+    }
     for (const r of refs) m = Math.max(m, r.value);
     return nice(m * 1.05);
   });
@@ -66,42 +79,47 @@
   // A gap of more than 3 steps (server offline) breaks the line instead of drawing across it. The step is the
   // larger neighbouring gap: a range mixes resolutions (5-minute points from before the last restart, then
   // 10-second or per-second ones), and the change between them must not count as a gap.
+  const drawn = $derived(live ? [...points, live] : points);
   const segments = $derived.by(() => {
-    if (points.length < 2) return [points];
-    const gaps = points.slice(1).map((p, i) => p.time - points[i].time);
-    const result = [[points[0]]];
-    for (let i = 1; i < points.length; i++) {
+    if (drawn.length < 2) return [drawn];
+    const gaps = drawn.slice(1).map((p, i) => p.time - drawn[i].time);
+    const result = [[drawn[0]]];
+    for (let i = 1; i < drawn.length; i++) {
       const gap = gaps[i - 1];
       const step = Math.max(gaps[i - 2] ?? 0, gaps[i] ?? 0) || gap;
-      if (gap > step * 3) result.push([]);
-      result.at(-1).push(points[i]);
+      if (gap > step * 3 || bands.some((b) => drawn[i - 1].time <= b.from && drawn[i].time >= b.to)) result.push([]);
+      result.at(-1).push(drawn[i]);
     }
     return result;
   });
 
-  function path(key) {
-    return segments
-      .filter((seg) => seg.length)
-      .map((seg) => seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.time).toFixed(1)},${y(p[key] ?? 0).toFixed(1)}`).join(''))
-      .join('');
+  function stroke(seg, key) {
+    const pts = seg.map((p) => [x(p.time), y(p[key] ?? 0)]);
+    const start = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    return start + (smooth ? curve(pts) : pts.slice(1).map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`)).join('');
   }
+
+  function path(key) {
+    return segments.filter((seg) => seg.length).map((seg) => stroke(seg, key)).join('');
+  }
+
+  const stateLines = $derived(
+    states ? statePieces(stateEntries(states.points, states.phases, states.live), x, y, 3 * Math.max(20000, (t1 - t0) / 300)) : [],
+  );
 
   // Single series: a light wash under the line, closed down to the baseline.
   function area(key) {
     const base = y(0).toFixed(1);
     return segments
       .filter((seg) => seg.length > 1)
-      .map((seg) => {
-        const line = seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.time).toFixed(1)},${y(p[key] ?? 0).toFixed(1)}`).join('');
-        return `${line}L${x(seg.at(-1).time).toFixed(1)},${base}L${x(seg[0].time).toFixed(1)},${base}Z`;
-      })
+      .map((seg) => `${stroke(seg, key)}L${x(seg.at(-1).time).toFixed(1)},${base}L${x(seg[0].time).toFixed(1)},${base}Z`)
       .join('');
   }
 
   // End labels only when they do not collide - otherwise the legend and the tooltip carry identity.
   const endLabels = $derived.by(() => {
     if (!points.length) return [];
-    const last = points.at(-1);
+    const last = drawn.at(-1);
     const labels = series.map((s) => ({ ...s, y: y(last[s.key] ?? 0), value: last[s.key] }));
     const sorted = [...labels].sort((a, b) => a.y - b.y);
     for (let i = 1; i < sorted.length; i++) if (sorted[i].y - sorted[i - 1].y < 14) return [];
@@ -122,9 +140,36 @@
     return Math.abs(points[lo].time - target) <= Math.abs(points[hi].time - target) ? lo : hi;
   }
 
+  let dragging = null;
+
+  function press(event) {
+    if (!onpan) return;
+    dragging = event.clientX;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
   function move(event) {
     const rect = event.currentTarget.getBoundingClientRect();
+    if (dragging !== null) {
+      const px = ((event.clientX - dragging) / rect.width) * width;
+      dragging = event.clientX;
+      index = -1;
+      onpan((px / innerW) * (t1 - t0));
+      return;
+    }
     index = nearest(((event.clientX - rect.left) / rect.width) * width);
+  }
+
+  // Not as an attribute: only an own listener may keep the wheel from scrolling the page.
+  function wheelPan(node) {
+    const wheel = (event) => {
+      if (!onpan) return;
+      event.preventDefault();
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      onpan(Math.sign(delta) * Math.min(1, Math.abs(delta) / 100) * (t1 - t0) * 0.1);
+    };
+    node.addEventListener('wheel', wheel, { passive: false });
+    return { destroy: () => node.removeEventListener('wheel', wheel) };
   }
 
   function keys(event) {
@@ -138,7 +183,17 @@
 
   const hover = $derived(index >= 0 && index < points.length ? points[index] : null);
   const tipLeft = $derived(hover ? Math.min(Math.max(x(hover.time) + 12, 0), width - 170) : 0);
-  const xTicks = $derived(points.length ? [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f) : []);
+  // With a moving range the ticks sit on whole times and move with the line, otherwise they split the range evenly.
+  const moving = $derived(aligned || !!onpan);
+  const TICK_STEPS = [10, 30, 60, 120, 300, 600, 1800, 3600, 7200, 14400, 28800, 86400, 172800, 432000].map((s) => s * 1000);
+  const xTicks = $derived.by(() => {
+    if (!points.length && !bands.length) return [];
+    if (!moving) return [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f);
+    const step = TICK_STEPS.find((s) => (t1 - t0) / s <= 6) ?? 432000000;
+    const ticks = [];
+    for (let tick = Math.ceil(t0 / step) * step; tick <= t1; tick += step) ticks.push(tick);
+    return ticks;
+  });
 </script>
 
 <section class="card chart">
@@ -155,15 +210,20 @@
       {/if}
     </div>
   </div>
-  {#if series.length > 1}
+  {#if series.length > 1 || bands.length}
     <div class="legend">
-      {#each series as s}
-        <span><i style="background: {s.color}"></i>{s.label}</span>
+      {#if series.length > 1}
+        {#each series as s}
+          <span><i style="background: {s.color}"></i>{s.label}</span>
+        {/each}
+      {/if}
+      {#each [...new Map(bands.map((b) => [b.label, b])).values()] as b}
+        <span><i class="band-key" style={b.color ? `background: ${b.color}` : ''}></i>{b.label}</span>
       {/each}
     </div>
   {/if}
 
-  {#if !points.length}
+  {#if !points.length && !bands.length}
     <p class="muted small empty">{t('health.noData')}</p>
   {:else if table}
     <div class="table">
@@ -186,27 +246,48 @@
         role="img"
         aria-label={title}
         tabindex="0"
+        class:pans={onpan}
+        use:wheelPan
+        onpointerdown={press}
+        onpointerup={() => (dragging = null)}
+        onpointercancel={() => (dragging = null)}
         onpointermove={move}
         onpointerleave={() => (index = -1)}
         onkeydown={keys}
       >
+        {#each bands as b}
+          {@const left = x(Math.max(b.from, t0))}
+          {@const wide = Math.max(2, x(Math.min(b.to, t1)) - left)}
+          <rect class="band" x={left} y={pad.top} width={wide} height={innerH} style={b.color ? `fill: ${b.color}` : ''} />
+          {#if wide >= 34}<text class="axis" x={left + 6} y={pad.top + 14}>{b.label}</text>{/if}
+        {/each}
         {#each ticks as v}
           <line class="grid" x1={pad.left} x2={pad.left + innerW} y1={y(v)} y2={y(v)} />
           <text class="axis" x={pad.left - 6} y={y(v) + 4} text-anchor="end">{format(v)}</text>
         {/each}
         {#each xTicks as tt, i}
-          <text class="axis" x={x(tt)} y={height - 6} text-anchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
+          <text class="axis" x={x(tt)} y={height - 6} text-anchor={moving ? 'middle' : i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
         {/each}
         {#each refs as r}
-          <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} />
+          <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} style={r.color ? `stroke: ${r.color}` : ''} />
           <text class="axis" x={pad.left + 4} y={y(r.value) - 4}>{r.label}</text>
         {/each}
-        {#if series.length === 1}
-          <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
-        {/if}
-        {#each series as s}
-          <path d={path(s.key)} class="line" style="stroke: {s.color}" />
-        {/each}
+        <!-- Points just before the range are cut off at the edge of the plot. -->
+        <clipPath id={clipId}><rect x={pad.left} y={0} width={innerW} {height} /></clipPath>
+        <g clip-path="url(#{clipId})">
+          {#if states}
+            {#each stateLines as line}
+              <path d={line.d} class="line" style="stroke: {line.color}" />
+            {/each}
+          {:else}
+            {#if series.length === 1}
+              <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
+            {/if}
+            {#each series as s}
+              <path d={path(s.key)} class="line" style="stroke: {s.color}" />
+            {/each}
+          {/if}
+        </g>
         {#each endLabels as l}
           <text class="end" x={pad.left + innerW + 6} y={l.y + 4}>{format(l.value)}</text>
         {/each}
@@ -236,7 +317,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {aligned} {onpan} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
@@ -319,6 +400,22 @@
   svg:focus-visible {
     box-shadow: 0 0 0 2px var(--accent);
     border-radius: 6px;
+  }
+
+  svg.pans {
+    cursor: grab;
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  .band {
+    fill: var(--muted);
+    opacity: 0.24;
+  }
+
+  .legend .band-key {
+    background: var(--muted);
+    opacity: 0.5;
   }
 
   .grid {

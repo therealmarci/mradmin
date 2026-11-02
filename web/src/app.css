@@ -10,6 +10,9 @@
   --good: #1f9d55;
   --warn: #c98a07;
   --bad: #d63c3c;
+  /* A measured value: orange over its warn limit, dark red while a chunk loader is locked. */
+  --value-warn: #ee7f1b;
+  --value-locked: color-mix(in srgb, var(--bad) 55%, #000);
   --radius: 14px;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 4px 16px rgb(16 24 40 / 6%);
   /* Chart colours (validated: categorical, CVD-safe in this order; see dataviz palette) */

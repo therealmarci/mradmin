@@ -115,7 +115,14 @@ public final class VanillaStats {
 
     /** Sets the current values of the online players (from {@link #readLive()}, before answering a request). */
     public void live(Map<UUID, Live> values) {
-        live = Map.copyOf(values);
+        Map<UUID, Live> withPeaks = new HashMap<>();
+        values.forEach((player, l) -> {
+            // The level counts as the highest one ever, not the current one.
+            Map<Kind, Double> v = new java.util.EnumMap<>(l.values());
+            v.computeIfPresent(Kind.XP_LEVEL, (k, level) -> (double) plugin.xpPeaks().seen(player, level.intValue()));
+            withPeaks.put(player, new Live(l.name(), v));
+        });
+        live = Map.copyOf(withPeaks);
     }
 
     /**
@@ -264,7 +271,8 @@ public final class VanillaStats {
                     continue;
                 }
                 for (Kind kind : Kind.values()) {
-                    double value = kind == Kind.XP_LEVEL ? PlayerDataLevel.read(new File(playerData, player + ".dat"))
+                    double value = kind == Kind.XP_LEVEL
+                            ? plugin.xpPeaks().seen(player, (int) PlayerDataLevel.read(new File(playerData, player + ".dat")))
                             : value(stats, kind);
                     if (value > 0) {
                         result.get(kind).add(new Entry(player, offline.getName(), value));

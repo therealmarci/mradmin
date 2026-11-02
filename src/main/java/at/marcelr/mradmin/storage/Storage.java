@@ -5,6 +5,7 @@ import at.marcelr.mradmin.Settings;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -66,6 +67,17 @@ public interface Storage {
 
     /** Deletes points older than {@code before} in the background. */
     void pruneHealth(long before);
+
+    // ---------------------------------------------------------- module history
+
+    /** Appends an entry of a module's own measurements (one line of text) in the background. */
+    void addModuleHistory(String module, long time, String data);
+
+    /** The entries since {@code since} (epoch ms), oldest first: time -> data. Blocking - only while enabling. */
+    Map<Long, String> loadModuleHistory(String module, long since);
+
+    /** Deletes a module's entries older than {@code before} in the background. */
+    void pruneModuleHistory(String module, long before);
 
     /** Size of MRadmin's data in bytes (-1 = unknown). Blocking - not on the server thread. */
     long sizeBytes();

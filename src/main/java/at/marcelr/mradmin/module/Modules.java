@@ -41,6 +41,10 @@ public final class Modules implements MRadminService {
     /** Registered modules by id. */
     private final Map<String, AdminModule> registered = new ConcurrentHashMap<>();
     private final WebItems items = new at.marcelr.mradmin.items.ItemCodec();
+    /** Old module history is removed at most this often. */
+    private static final long HISTORY_PRUNE_MILLIS = 3_600_000L;
+    /** module -> when its history was last cleaned up */
+    private final Map<String, Long> historyPruned = new ConcurrentHashMap<>();
 
     public Modules(MRAdmin plugin) {
         this.plugin = plugin;
@@ -146,6 +150,32 @@ public final class Modules implements MRadminService {
     public void resolve(String moduleId, String key, String note) {
         if (plugin.isEnabled() && plugin.feature(Feature.TICKETS)) {
             plugin.tickets().resolve(source(moduleId), key, note);
+        }
+    }
+
+    @Override
+    public void moduleHistoryAdd(String moduleId, long time, String data, long keepMillis) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
+        requireHistoryId(moduleId);
+        plugin.storage().addModuleHistory(moduleId, time, data.replace('\n', ' ').replace('\r', ' '));
+        if (time - historyPruned.getOrDefault(moduleId, 0L) >= HISTORY_PRUNE_MILLIS) {
+            historyPruned.put(moduleId, time);
+            plugin.storage().pruneModuleHistory(moduleId, time - keepMillis);
+        }
+    }
+
+    @Override
+    public Map<Long, String> moduleHistory(String moduleId, long since) {
+        requireHistoryId(moduleId);
+        return plugin.isEnabled() ? plugin.storage().loadModuleHistory(moduleId, since) : Map.of();
+    }
+
+    /** The id becomes part of a file name. */
+    private static void requireHistoryId(String moduleId) {
+        if (!moduleId.matches("[a-z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException("Invalid module id: " + moduleId);
         }
     }
 

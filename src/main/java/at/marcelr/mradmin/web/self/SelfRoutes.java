@@ -7,6 +7,7 @@ import at.marcelr.mradmin.api.SelfArea;
 import at.marcelr.mradmin.api.SelfViewer;
 import at.marcelr.mradmin.api.WebModule;
 import at.marcelr.mradmin.hook.Bans;
+import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.web.Http;
 import at.marcelr.mradmin.web.WebServer;
 
@@ -52,6 +53,7 @@ public final class SelfRoutes {
     public static void register(WebServer server) {
         SelfRoutes r = new SelfRoutes(server);
         server.open("POST", "/api/self/login", r::login);
+        server.route("POST", "/api/me/player-page", r::fromTeam);
         server.self("GET", "/api/self", r::me);
         server.self("POST", "/api/self/logout", r::logout);
         server.self("GET", "/api/self/devices", r::devices);
@@ -97,6 +99,34 @@ public final class SelfRoutes {
                 sessions().cookieSeconds(), plugin.settings().web().secure());
         plugin.getLogger().info(result.session().name() + " signed in to their own page in the web interface.");
         http.json(200, Map.of("name", result.session().name(), "uuid", player.toString()));
+    }
+
+    /**
+     * From the team area to the own player page without a code: the team sign-in (password and second factor) already
+     * proves who it is. Only for the signed-in account itself - the player comes from the session, never from the
+     * request - and with the same checks as a sign-in with a code.
+     */
+    private void fromTeam(Http http) throws Exception {
+        if (!plugin.settings().playerWeb().enabled()) {
+            throw new Http.WebException(404, "player-web-off");
+        }
+        var account = http.account();
+        UUID player = account.id();
+        if (!server.allow("me-login:" + http.ip(), 6)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        if (!server.permissions().has(player, Perms.WEB_SELF)) {
+            throw new Http.WebException(403, "no-self-permission");
+        }
+        if (banned(player, http.ip())) {
+            throw new Http.WebException(403, "player-banned");
+        }
+        PlayerSessions.Result result = sessions().open(player, account.name(), http.storedIp(), http.header("User-Agent"));
+        http.setCookie(WebServer.PLAYER_COOKIE, result.token(), sessions().cookieSeconds(), plugin.settings().web().secure());
+        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), player, account.name(), http.storedIp(),
+                "player-page", ""));
+        plugin.getLogger().info(account.name() + " went from the team area to their own page in the web interface.");
+        http.json(200, Map.of("name", account.name(), "uuid", player.toString()));
     }
 
     /**

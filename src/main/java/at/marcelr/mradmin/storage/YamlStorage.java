@@ -393,6 +393,77 @@ final class YamlStorage implements Storage {
         });
     }
 
+    // ---------------------------------------------------------- module history
+
+    private File historyFile(String module) {
+        return new File(folder, "history-" + module + ".log");
+    }
+
+    /** One line per entry: time, a tab, the data. */
+    @Override
+    public void addModuleHistory(String module, long time, String data) {
+        String line = time + "\t" + data + "\n";
+        File file = historyFile(module);
+        executor.execute(() -> {
+            try {
+                Files.writeString(file.toPath(), line, StandardCharsets.UTF_8,
+                        java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not write " + file.getName() + ": " + e.getMessage());
+            }
+        });
+    }
+
+    @Override
+    public Map<Long, String> loadModuleHistory(String module, long since) {
+        File file = historyFile(module);
+        Map<Long, String> result = new LinkedHashMap<>();
+        if (!file.exists()) {
+            return result;
+        }
+        try {
+            for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                int tab = line.indexOf('\t');
+                long time = historyTime(line);
+                if (tab > 0 && time >= since) {
+                    result.put(time, line.substring(tab + 1));
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Could not read " + file.getName() + ": " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public void pruneModuleHistory(String module, long before) {
+        File file = historyFile(module);
+        executor.execute(() -> {
+            if (!file.exists()) {
+                return;
+            }
+            try {
+                List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+                List<String> keep = lines.stream().filter(l -> historyTime(l) >= before).toList();
+                if (keep.size() < lines.size()) {
+                    write(file, keep.isEmpty() ? "" : String.join("\n", keep) + "\n");
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not clean up " + file.getName() + ": " + e.getMessage());
+            }
+        });
+    }
+
+    /** The time of a history line, 0 if it is broken (a line cut off by a crash). */
+    private static long historyTime(String line) {
+        int tab = line.indexOf('\t');
+        try {
+            return tab > 0 ? Long.parseLong(line.substring(0, tab)) : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     /** The "time" of a JSON line, 0 if it is broken (a line cut off by a crash). */
     private static long time(String line) {
         try {

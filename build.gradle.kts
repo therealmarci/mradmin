@@ -14,6 +14,7 @@ group = "at.marcelr"
 val pluginVersion = project.version.toString()
 val mcVersion = providers.gradleProperty("mcVersion").get()
 val paperApi = providers.gradleProperty("paperApi").get()
+val multiverseInventoriesVersion = "5.3.6"
 version = "mc$mcVersion-v$pluginVersion"
 
 val modrinthProjectId = providers.gradleProperty("modrinthProjectId").get()
@@ -34,6 +35,10 @@ val isPrerelease = pluginVersion.let { it.startsWith("0.") || it.contains("-") }
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    // Multiverse-Inventories (optional, nur zum Kompilieren).
+    maven("https://repo.onarandombox.com/multiverse-releases") {
+        content { includeGroup("org.mvplugins.multiverse.inventories") }
+    }
     // LibertyBans-API (optional, nur zum Kompilieren) und Omnibus, über das LibertyBans seine API bereitstellt.
     maven("https://mvn-repo.arim.space/affero-gpl3/")
     maven("https://mvn-repo.arim.space/lesser-gpl3/")
@@ -41,6 +46,7 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApi")
+    compileOnly("org.mvplugins.multiverse.inventories:multiverse-inventories:$multiverseInventoriesVersion") { isTransitive = false }
     // Die Modul-API (api/) steckt mit in der JAR - andere Plugins nutzen sie zur Laufzeit von hier.
     implementation(project(":api"))
     // Optional: Rechte schon vor dem Join prüfen (Wartungsmodus). Ohne LuckPerms wird erst beim Join gekickt.

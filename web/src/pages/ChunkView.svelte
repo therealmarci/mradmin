@@ -7,8 +7,26 @@
   import { STATUS } from '../lib/chunks.js';
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
+  import LineChart from '../components/LineChart.svelte';
+  import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
+  import ValueTile from '../components/ValueTile.svelte';
+  import TimeNavigator from '../components/TimeNavigator.svelte';
 
   let { id, me } = $props();
+
+  const RANGE_MS = { '1m': 60000, '10m': 600000, '30m': 1800000, '1h': 3600000, '6h': 21600000, '12h': 43200000 };
+  const RANGES = Object.keys(RANGE_MS);
+  // The storage can be blocked (private window): then the range is simply not remembered.
+  function savedRange() {
+    try {
+      const saved = sessionStorage.getItem('mradmin.chunks.range');
+      return RANGES.includes(saved) ? saved : '1h';
+    } catch {
+      return '1h';
+    }
+  }
+  let range = $state(savedRange());
+  let history = $state(null);
 
   let loader = $state(null);
   let error = $state('');
@@ -32,6 +50,202 @@
     return () => clearInterval(timer);
   });
 
+  // An answer for an older range (slow network) is dropped. MRchunks before the charts: no history, no section.
+  async function loadHistory() {
+    const asked = range;
+    const end = paused ? Math.round(viewEnd) : null;
+    try {
+      const result = await moduleData('mrchunks', 'loaderHistory', end === null ? { id, range: asked } : { id, range: asked, end });
+      if (asked === range && paused === (end !== null)) take(result);
+    } catch (e) {
+      // MRchunks before the charts answers 404; a short failure must not close a chart that is open.
+      if (e.status === 404) history = null;
+    }
+  }
+
+  $effect(() => {
+    id;
+    range;
+    untrack(loadHistory);
+    if (paused) return;
+    // A new measurement should show soon after it was taken; on long ranges one more point changes little.
+    const timer = setInterval(loadHistory, RANGE_MS[range] <= 600000 ? 5000 : 20000);
+    return () => clearInterval(timer);
+  });
+
+  // Timeline: the charts stand still at viewEnd and can be scrolled through what is stored, at most 12 hours. The server
+  // sends more than is shown, in a detail that falls with the range.
+  const MAX_SPAN = RANGE_MS['12h'];
+  let paused = $state(false);
+  let viewEnd = $state(0);
+  let panBusy = false;
+  let panAgain = false;
+
+  /** Whether the shown range comes near the edge of what is loaded. */
+  function needsData() {
+    const margin = RANGE_MS[range];
+    return !history || viewEnd - RANGE_MS[range] - history.from < margin || (history.to < now - 1000 && history.to - viewEnd < margin);
+  }
+
+  // One answer after the other: while scrolling the data follows, and no answers pile up.
+  async function fetchPan() {
+    if (panBusy) {
+      panAgain = true;
+      return;
+    }
+    panBusy = true;
+    await loadHistory();
+    panBusy = false;
+    if (panAgain) {
+      panAgain = false;
+      if (paused && needsData()) fetchPan();
+    }
+  }
+
+  /** The range is shown up to this time, within what is stored: no scrolling into nothing. */
+  function goTo(end) {
+    const first = Math.max(now - MAX_SPAN, history?.oldest || now);
+    viewEnd = Math.min(now, Math.max(first + RANGE_MS[range], end));
+    paused = true;
+    if (needsData()) fetchPan();
+  }
+
+  function togglePause() {
+    if (paused) paused = false;
+    else goTo(now);
+  }
+
+  // The charts only get new values every few seconds but should run smoothly: the time keeps moving in the browser, the
+  // line reaches up to now with the newest value, and a new measurement glides in instead of jumping.
+  const clock = new LiveClock();
+  const now = $derived(clock.now);
+
+  // Applies new data; if that brings a new newest point, the line glides there.
+  function change(apply) {
+    const last = allPoints.at(-1);
+    const sameRange = history?.range === range;
+    apply();
+    const next = allPoints.at(-1);
+    if (!paused && sameRange && last && next && next.time !== last.time) clock.glideFrom(last);
+  }
+
+  function take(result) {
+    change(() => {
+      if (!paused) clock.sync(result.to);
+      history = { ...result, range };
+    });
+    // A range only with enough data: otherwise the longest one there is, without changing what was chosen for later.
+    if (!rangeReady(range)) range = RANGES.findLast(rangeReady);
+  }
+
+  /** The shortest range always; the others once that much is stored. */
+  const rangeReady = (key) => key === RANGES[0] || !history?.oldest || now - history.oldest >= RANGE_MS[key];
+
+  // The whole stored time for the bar below the large chart: fetched while it is open.
+  let overview = $state(null);
+
+  $effect(() => {
+    if (!chart) return;
+    const load = async () => {
+      try {
+        overview = await moduleData('mrchunks', 'loaderHistory', { id, range: '12h' });
+      } catch {
+        // the bar just stays as it is
+      }
+    };
+    load();
+    const timer = setInterval(load, 60000);
+    return () => clearInterval(timer);
+  });
+
+  function jumpTo(middle) {
+    goTo(middle + RANGE_MS[range] / 2);
+  }
+
+  // Live view: while this page is open the server measures this loader more often (mrchunks.admin.live). The page stops
+  // asking in a tab in the background, then the server stops measuring. Without it everything stays as it is.
+  const LIVE_KEEP_MS = 120000;
+  let liveActive = $state(false);
+  let liveBuffer = $state([]);
+
+  $effect(() => {
+    id;
+    liveBuffer = [];
+    liveActive = false;
+    if (!me.may.mrchunksLive) return;
+    let stopped = false;
+    let timer;
+    async function tick() {
+      let wait = 2000;
+      if (!document.hidden) {
+        try {
+          const answer = await moduleData('mrchunks', 'loaderLive', { id });
+          liveActive = answer.live;
+          wait = answer.live ? answer.seconds * 1000 : 5000;
+          if (answer.point && answer.point.time !== liveBuffer.at(-1)?.time) {
+            change(() => {
+              liveBuffer = [...liveBuffer.filter((p) => p.time >= answer.point.time - LIVE_KEEP_MS), answer.point];
+            });
+          }
+        } catch {
+          // MRchunks without the live view, or the server is restarting.
+          liveActive = false;
+          wait = 30000;
+        }
+      }
+      if (!stopped) timer = setTimeout(tick, wait);
+    }
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  });
+
+  // The server keeps the live points too, so a reload loses nothing; here only the ones it has not sent yet are added.
+  const allPoints = $derived.by(() => {
+    const server = history?.points ?? [];
+    if (paused) return server;
+    const last = server.at(-1)?.time ?? 0;
+    return [...server, ...liveBuffer.filter((p) => p.time > last)];
+  });
+  // The tiles show the newest live value.
+  const tileMetrics = $derived.by(() => {
+    const newest = liveActive && loader?.active ? liveBuffer.at(-1) : null;
+    return (loader?.metrics ?? []).map((m) => (newest ? { ...m, value: newest[m.key] ?? m.value } : m));
+  });
+
+  $effect(() => clock.run(clockStep(RANGE_MS[range])));
+
+  const viewTo = $derived(paused ? viewEnd : now);
+  const rangeStart = $derived(viewTo - RANGE_MS[range]);
+  // The newest point on its way from the value before to the new one.
+  const shown = $derived(paused ? (allPoints.at(-1) ?? null) : clock.shown(allPoints.at(-1)));
+  const shownPoints = $derived(shown ? [...allPoints.slice(0, -1), shown] : []);
+
+  // The metric shown large (a click on its tile); Esc or a click beside it closes it.
+  let chart = $state(null);
+  let chartHeight = $state(400);
+  const chartMetric = $derived(chart && history ? tileMetrics.find((m) => m.key === chart) : null);
+
+  function openChart(key) {
+    if (!history) return;
+    chartHeight = Math.max(260, Math.round(window.innerHeight * 0.62));
+    chart = key;
+  }
+
+  function chooseRange(key) {
+    // Paused the same moment stays in the middle: find it on a long range, then look closer on a short one.
+    const middle = viewTo - RANGE_MS[range] / 2;
+    range = key;
+    if (paused) goTo(middle + RANGE_MS[key] / 2);
+    try {
+      sessionStorage.setItem('mradmin.chunks.range', key);
+    } catch {
+      // only a convenience
+    }
+  }
+
   async function act(action, extra = {}) {
     if (action === 'delete' && !confirm(t('chunks.deleteConfirm', { name: loader.name }))) return;
     busy = true;
@@ -43,7 +257,8 @@
         go('/chunks');
         return;
       }
-      message = t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
+      message = action === 'suspendLock' && extra.duration === '0' ? t('chunks.done.suspendEnd')
+        : t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
       await load();
     } catch (e) {
       error = errorText(e);
@@ -55,11 +270,41 @@
   // Share of the lock limit, for the bar; the warn limit is marked on it.
   const share = (m) => (m.lock > 0 ? Math.min(100, (m.value / m.lock) * 100) : 0);
   const tone = (m) => (m.lock > 0 && m.value >= m.lock ? 'bad' : m.warn > 0 && m.value >= m.warn ? 'warn' : 'good');
-  const value = (m) => (m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
+  // A loader that is off shows its last measurement, grey - and a dash if it was never measured.
+  const tileTone = (m) => (loader.lock ? 'locked' : !loader.active || loader.shed ? 'off' : tone(m));
+  const value = (m) => (!loader.measured ? '–' : m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
+  // The stretches in which the loader was not on: grey with their name in the large chart, in the colour of the state
+  // on the 0 line of the small ones.
+  const PHASES = {
+    off: { key: 'inactive', color: 'var(--muted)' },
+    shed: { key: 'shed', color: 'var(--muted)' },
+    locked: { key: 'locked', color: 'var(--value-locked)' },
+  };
+  const named = (b) => ({ ...b, label: t('chunks.status.' + PHASES[b.phase].key), color: PHASES[b.phase].color });
+  // A phase that still runs ends now.
+  const phases = $derived(
+    (history?.phases ?? [])
+      .map((b) => named({ ...b, to: !paused && b.to >= history.to ? now : b.to }))
+      .filter((b) => b.to > rangeStart && b.from < viewTo),
+  );
+  const overviewFrom = $derived(Math.max(now - MAX_SPAN, overview?.oldest || now - MAX_SPAN));
+  const overviewPhases = $derived((overview?.phases ?? []).map((b) => named({ ...b, to: b.to >= overview.to ? now : b.to })));
+  const running = $derived(!!history && !(history.phases ?? []).some((b) => b.to >= history.to));
+  // The small line of one value: its colour only follows its own limits.
+  const linePoint = (p, m) => {
+    const value = p[m.key];
+    const over = m.lock > 0 && value >= m.lock ? 'var(--bad)' : m.warn > 0 && value >= m.warn ? 'var(--value-warn)' : 'var(--good)';
+    return { time: p.time, value, color: over };
+  };
+  // Where the line ends right now: the newest value, held until the next measurement.
+  const livePoint = $derived(!paused && running && shown && now > shown.time ? { ...shown, time: now } : null);
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
   const conspicuousOnly = $derived(!!loader?.conspicuous && !!me.may.mrchunksToggleConspicuous && !me.may.mrchunksManage);
+  // A lock after repeated shutdowns cannot be suspended, only lifted (older MRchunks sends no durations).
+  const canSuspend = $derived(!!me.may.mrchunksSuspendLock && !!loader?.suspendDurations?.length && !loader?.lock?.repeated);
+  const span = (ms) => (ms % 3600000 ? Math.round(ms / 60000) + ' min' : ms / 3600000 + ' h');
 </script>
 
 <div class="page">
@@ -92,6 +337,12 @@
         <div class="lock shed">
           <b>{t('chunks.status.shed')}</b>
           {t('chunks.shedSince', { since: dateTime(loader.shed.since), back: dateTime(loader.shed.back) })}
+        </div>
+      {/if}
+      {#if loader.suspension}
+        <div class="lock suspended">
+          <b>{t('chunks.suspended')}</b>
+          {t('chunks.suspendedUntil', { until: dateTime(loader.suspension.until), by: loader.suspension.by })}
         </div>
       {/if}
 
@@ -131,6 +382,18 @@
           {/if}
         </div>
       {/if}
+
+      {#if canSuspend}
+        <div class="actions suspend">
+          <span class="muted small" title={t('chunks.suspendHint')}>{t(loader.lock ? 'chunks.suspendLocked' : 'chunks.suspend')}</span>
+          {#each loader.suspendDurations as duration (duration)}
+            <button class="secondary" onclick={() => act('suspendLock', { duration: String(duration) })} disabled={busy}>{span(duration)}</button>
+          {/each}
+          {#if loader.suspension}
+            <button class="secondary push" onclick={() => act('suspendLock', { duration: '0' })} disabled={busy}>{t('chunks.suspendEnd')}</button>
+          {/if}
+        </div>
+      {/if}
     </section>
 
     <div class="grid">
@@ -141,27 +404,37 @@
               stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
           </span>
           <h2>{t('chunks.activity')}</h2>
+          {#if paused}
+            <button class="secondary resume" onclick={togglePause} title={t('chunks.pausedHint')}>▶ {t('chunks.resume')}</button>
+          {:else if liveActive}
+            <span class="live" title={t('chunks.liveHint')}>{t('chunks.live')}</span>
+          {/if}
         </div>
         {#if loader.metrics}
           <p class="muted small">
-            {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
+            {#if loader.loadedChunks != null}
+              {t('chunks.measured', { ago: ago(loader.measured), loaded: loader.loadedChunks, total: loader.totalChunks })}
+            {:else if loader.measured}
+              {t('chunks.offLast', { ago: ago(loader.measured) })}
+            {:else}
+              {t('chunks.offNever')}
+            {/if}
           </p>
           <p class="muted small">{t('chunks.ownLimits')}</p>
           <div class="metrics">
-            {#each loader.metrics as m (m.key)}
-              <div class="metric {tone(m)}">
-                <div class="mrow"><span>{m.label}</span><strong class="{tone(m)}-text">{value(m)} <small class="muted">/ {m.lock}</small></strong></div>
-                <div class="mbar" title="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}">
-                  <div class="fill {tone(m)}" style="width: {share(m)}%"></div>
-                  {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
-                </div>
-                <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
-              </div>
+            {#each tileMetrics as m (m.key)}
+              <ValueTile label={m.label} value={value(m)} suffix="/ {m.lock}" tone={tileTone(m)} title={history ? t('chunks.historyOpen') : ''}
+                share={share(m)} tick={m.lock > 0 && m.warn > 0 ? (m.warn / m.lock) * 100 : null}
+                barTitle="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
+                note="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
+                line={history?.points.length > 1 || phases.length > 0} points={shownPoints.map((p) => linePoint(p, m))} {phases}
+                live={livePoint && linePoint(livePoint, m)} from={rangeStart} to={viewTo} onclick={history ? () => openChart(m.key) : null} />
             {/each}
           </div>
         {:else}
           <p class="muted">{t('chunks.noActivity')}</p>
         {/if}
+
       </section>
 
       <div class="side">
@@ -196,6 +469,47 @@
     <p class="muted">{t('common.loading')}</p>
   {/if}
 </div>
+
+<svelte:window onkeydown={(e) => chart && e.key === 'Escape' && (chart = null)} />
+
+{#if chartMetric}
+  {@const m = chartMetric}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="overlay" onpointerdown={(e) => e.target === e.currentTarget && (chart = null)}>
+    <div class="big {tileTone(m)}" role="dialog" aria-modal="true" aria-label={m.label}>
+      <div class="big-head">
+        <div class="now">
+          <span class="muted small">{m.label}{#if liveActive} · <span class="live">{t('chunks.live')}</span>{/if}</span>
+          <strong>{value(m)}</strong>
+          <span class="muted small">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</span>
+        </div>
+        <div class="controls">
+          <button class="secondary" onclick={togglePause}>{paused ? '▶ ' + t('chunks.resume') : '⏸ ' + t('chunks.pause')}</button>
+          <div class="switch" role="group" aria-label={t('chunks.history')}>
+            {#each RANGES as r}
+              <button class:active={range === r} disabled={!rangeReady(r)} title={rangeReady(r) ? '' : t('chunks.rangeTooLong')}
+                onclick={() => chooseRange(r)}>{r}</button>
+            {/each}
+          </div>
+        </div>
+        <div class="timeline muted small">{paused ? dateTime(rangeStart) + ' – ' + dateTime(viewTo) : t('chunks.timelineHint')}</div>
+      </div>
+      {#if !history.points.length && !phases.length}
+        <p class="empty small">{t('chunks.historyEmpty')}</p>
+      {/if}
+      <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={viewTo} height={chartHeight}
+        onpan={(ms) => goTo(viewTo - ms)}
+        states={{ points: shownPoints.map((p) => linePoint(p, m)), phases, live: livePoint && linePoint(livePoint, m) }}
+        seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
+        refs={[{ value: m.warn, label: t('chunks.warnLimit'), color: 'var(--value-warn)' }, { value: m.lock, label: t('chunks.lockLimit'), color: 'var(--bad)' }].filter((r) => r.value > 0)}
+        series={[{ key: m.key, label: m.label, color: 'var(--tn)' }]} onClose={() => (chart = null)} />
+      {#if overview}
+        <TimeNavigator from={overviewFrom} to={now} viewFrom={rangeStart} viewTo={viewTo} label={t('chunks.timeline')}
+          points={overview.points.map((p) => linePoint(p, m))} phases={overviewPhases} onjump={jumpTo} />
+      {/if}
+    </div>
+  </div>
+{/if}
 
 <style>
   .page {
@@ -299,6 +613,12 @@
     border-color: color-mix(in srgb, var(--warn) 35%, var(--border));
   }
 
+  .lock.suspended {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  }
+
   .facts {
     display: grid;
     gap: 8px;
@@ -364,6 +684,114 @@
     border-top: 1px solid var(--border);
   }
 
+  .actions.suspend {
+    align-items: center;
+  }
+
+  /* One value large, over the page */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 45%);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+  }
+
+  .big {
+    --tn: var(--good);
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+    width: min(1400px, 100%);
+  }
+
+  .big > :global(*) {
+    justify-self: stretch;
+  }
+
+  /* Above the large chart: the value right now, in its colour, beside the range. */
+  .big-head {
+    justify-self: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    border-left: 4px solid var(--tn);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .timeline {
+    flex-basis: 100%;
+    display: grid;
+    gap: 2px;
+  }
+
+  .resume {
+    margin-left: auto;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+  }
+
+  .now {
+    display: grid;
+    gap: 2px;
+  }
+
+  .now strong {
+    font-size: 2rem;
+    line-height: 1.1;
+    color: var(--tn);
+  }
+
+  .empty {
+    margin: 0;
+    padding: 6px 12px;
+    border-radius: 9px;
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  .switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .switch button {
+    background: transparent;
+    color: var(--muted);
+    padding: 5px 11px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+  }
+
+  .switch button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .switch button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
   .push {
     margin-left: auto;
   }
@@ -400,6 +828,23 @@
     border: 1px solid color-mix(in srgb, var(--cl) 30%, transparent);
   }
 
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--good);
+  }
+
+  .live::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--good);
+  }
+
   .count {
     font-size: 0.75rem;
     font-weight: 700;
@@ -420,69 +865,20 @@
     margin-top: 6px;
   }
 
-  .metric {
-    --tn: var(--good);
-    display: grid;
-    gap: 5px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--tn);
+  .big.off {
+    --tn: var(--muted);
   }
 
-  .metric.warn {
-    --tn: var(--warn);
+  .big.locked {
+    --tn: var(--value-locked);
   }
 
-  .metric.bad {
+  .big.warn {
+    --tn: var(--value-warn);
+  }
+
+  .big.bad {
     --tn: var(--bad);
-  }
-
-  .mrow {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.88rem;
-  }
-
-  .mrow small {
-    font-weight: 600;
-  }
-
-  .mbar {
-    position: relative;
-    height: 7px;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--border) 80%, transparent);
-    overflow: visible;
-  }
-
-  .fill {
-    height: 100%;
-    border-radius: 4px;
-    background: var(--good);
-  }
-
-  .fill.warn {
-    background: var(--warn);
-  }
-
-  .fill.bad {
-    background: var(--bad);
-  }
-
-  .tick {
-    position: absolute;
-    top: -2px;
-    bottom: -2px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--warn);
-  }
-
-  .tiny {
-    font-size: 0.72rem;
   }
 
   .members {

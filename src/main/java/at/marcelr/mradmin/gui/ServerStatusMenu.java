@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -68,8 +69,22 @@ public final class ServerStatusMenu extends Menu {
         set(6, Items.of(Material.REDSTONE).name(messages.item("gui-status-ram", tag("used", used), tag("max", max)))
                 .lore(messages.lore("gui-status-ram-lore", tag("percent", max == 0 ? 0 : used * 100 / max))).build());
 
-        List<World> worlds = Bukkit.getWorlds().stream().limit(9).toList();
-        int[] worldSlots = Layout.centered(1, worlds.size());
+        // One row: with more worlds than fit, those with players first and the rest named on the last item.
+        List<World> sorted = Bukkit.getWorlds();
+        boolean tooMany = sorted.size() > 9;
+        if (tooMany) {
+            sorted = sorted.stream().sorted(Comparator.comparingInt(World::getPlayerCount).reversed()).toList();
+        }
+        List<World> worlds = tooMany ? sorted.subList(0, 8) : sorted;
+        int[] worldSlots = Layout.centered(1, worlds.size() + (tooMany ? 1 : 0));
+        if (tooMany) {
+            List<World> rest = sorted.subList(8, sorted.size());
+            set(worldSlots[8], Items.of(Material.MAP)
+                    .name(messages.item("gui-status-more-worlds", tag("count", rest.size())))
+                    .lore(messages.lore("gui-status-more-worlds-lore",
+                            tag("worlds", rest.stream().map(World::getName).collect(Collectors.joining(", ")))))
+                    .build());
+        }
         for (int w = 0; w < worlds.size(); w++) {
             World world = worlds.get(w);
             Material icon = switch (world.getEnvironment()) {

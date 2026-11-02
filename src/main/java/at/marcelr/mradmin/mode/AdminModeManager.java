@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -42,6 +43,8 @@ public final class AdminModeManager {
     private final File folder;
     private final NamespacedKey compassKey;
     private final Map<UUID, SavedState> states = new ConcurrentHashMap<>();
+    /** Players whose state is being given back this very moment - their game mode may change. */
+    private final Set<UUID> restoring = ConcurrentHashMap.newKeySet();
     private BukkitTask compassTask;
 
     public AdminModeManager(MRAdmin plugin) {
@@ -84,6 +87,11 @@ public final class AdminModeManager {
 
     public boolean active(Player player) {
         return states.containsKey(player.getUniqueId());
+    }
+
+    /** Whether the player is in admin mode and has to stay in its game mode (not while it is ending). */
+    public boolean holdsGameMode(Player player) {
+        return active(player) && !restoring.contains(player.getUniqueId());
     }
 
     public Collection<SavedState> all() {
@@ -151,18 +159,23 @@ public final class AdminModeManager {
             return;
         }
         player.closeInventory();
-        state.apply(player);
         boolean teleported = true;
-        if (settings().returnToStart()) {
-            Location back = state.location();
-            if (back != null) {
-                player.teleport(back, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            } else {
-                teleported = false;
+        restoring.add(player.getUniqueId());
+        try {
+            state.apply(player);
+            if (settings().returnToStart()) {
+                Location back = state.location();
+                if (back != null) {
+                    player.teleport(back, PlayerTeleportEvent.TeleportCause.PLUGIN);
+                } else {
+                    teleported = false;
+                }
             }
+            // Apply once more after the teleport: changing worlds can reset flight and some effects.
+            state.apply(player);
+        } finally {
+            restoring.remove(player.getUniqueId());
         }
-        // Apply once more after the teleport: changing worlds can reset flight and some effects.
-        state.apply(player);
         states.remove(player.getUniqueId());
         File file = file(player.getUniqueId());
         if (file.exists() && !file.delete()) {
@@ -238,10 +251,14 @@ public final class AdminModeManager {
         return item;
     }
 
-    /** Gives the compass back if it is gone (thrown away in the creative inventory ...). */
+    /** Gives the compass back if it is gone (thrown away ...), or swaps it after admin-mode.compass-material changed. */
     void ensureCompass(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (isCompass(item)) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            if (isCompass(contents[i])) {
+                if (contents[i].getType() != settings().compass()) {
+                    player.getInventory().setItem(i, compass());
+                }
                 return;
             }
         }

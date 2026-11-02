@@ -52,6 +52,15 @@
     disconnect();
   });
 
+  // The team sign-in is enough for the own player page. If the server refuses, the page there asks for a code.
+  async function toSelfPage() {
+    try {
+      await api('POST', '/me/player-page');
+    } finally {
+      window.location.href = '/me';
+    }
+  }
+
   async function logout() {
     try {
       await api('POST', '/logout');
@@ -134,6 +143,7 @@
 {:else}
   <TopBar items={nav} current={section} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} live={live.connected}
     liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
+      ...(me.may.selfPage ? [{ label: t('player.openSelfPage'), icon: '🎮', onclick: toSelfPage }] : []),
       { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
       { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },
     ]} />

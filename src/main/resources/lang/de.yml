@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 16
+lang-version: 18
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -31,7 +31,7 @@ time-open-end: "offen"
 # Jede Zeile erscheint nur, wenn man den Befehl nutzen darf.
 help-header: "<prefix><gray>Befehle:"
 help-announce: "<gold>/mradmin announce <text|preset></gold> <dark_gray>- <gray>Ankündigung an alle <dark_gray>(Presets: <presets>)"
-help-mode: "<gold>/mradmin mode [on|off|list]</gold> <dark_gray>- <gray>Admin-Modus (Creative + Admin-Kompass mit Menü)"
+help-mode: "<gold>/mradmin mode [on|off|list]</gold> <dark_gray>- <gray>Admin-Modus (Creative + Menü-Item)"
 help-maintenance: "<gold>/mradmin maintenance [status|on|schedule|extend|off|refresh]</gold> <dark_gray>- <gray>Wartungsarbeiten"
 help-discord: "<gold>/mradmin discord [test [announce]]</gold> <dark_gray>- <gray>Status der Discord-Webhooks (Admin-Log und Ankündigungen)"
 help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>Konfiguration neu laden"
@@ -73,8 +73,8 @@ news-preview-more: "<prefix><gray>... und <white><count></white> weitere Neuigke
 news-preview-link: "<yellow><u>[Lesen]</u></yellow>"
 news-preview-hover: "<gray>Öffnet die ganze Nachricht im Browser"
 alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
-alert-title: "<red><b>⚠ <title>"
-alert-subtitle: "<white><text>"
+alert-title: "<red><b>ACHTUNG"
+alert-subtitle: "<white>Kritische Warnung"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
 web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url ist nicht gesetzt.'><yellow>Link geht nur auf diesem Rechner.</hover>"
@@ -133,7 +133,7 @@ announce-presets:
     discord: "⭐ **Event:** {args}"
 # --- Admin-Modus ---------------------------------------------------------------
 mode-usage: "<prefix><gray>Verwendung: <gold>/mradmin mode [on|off|list] [spieler]"
-mode-on: "<prefix><hover:show_text:'<gray>Inventar ist gespeichert.<newline>Rechtsklick mit dem Kompass: Admin-Menü<newline>Beenden: /mradmin mode off'><green>Admin-Modus <white>an</white></hover>"
+mode-on: "<prefix><hover:show_text:'<gray>Inventar ist gespeichert.<newline>Rechtsklick mit dem Menü-Item: Admin-Menü<newline>Beenden: /mradmin mode off'><green>Admin-Modus <white>an</white></hover>"
 mode-off: "<prefix><hover:show_text:'<gray>Alles wie vorher (<duration> im Admin-Modus)'><green>Admin-Modus <white>aus</white></hover>"
 mode-off-no-world: "<prefix><hover:show_text:'<gray>Welt <world> nicht geladen, du bleibst hier.<newline>Inventar und Co. sind wiederhergestellt.'><yellow>Admin-Modus aus, Welt fehlt</hover>"
 mode-resumed: "<prefix><hover:show_text:'<gray>Beenden: /mradmin mode off'><yellow>Noch im Admin-Modus <gray>(seit <duration>)</hover>"
@@ -149,7 +149,7 @@ mode-list-header: "<prefix><gray>Im Admin-Modus:"
 mode-list-entry: "<dark_gray>- <white><player></white> <gray>seit <duration>"
 mode-list-empty: "<prefix><gray>Niemand ist im Admin-Modus."
 mode-teleported: "<prefix><gray>Zu <white><player></white> teleportiert."
-mode-compass-name: "<gold><bold>Admin-Kompass"
+mode-compass-name: "<gold><bold>Admin-Menü"
 mode-compass-lore:
   - "<gray>Rechtsklick: Admin-Menü"
   - "<dark_gray>Teleport, Plugins, Wartung"
@@ -229,7 +229,7 @@ gui-switch-admin-on-lore:
   - "<gray>Inventar und XP gespeichert."
   - "<yellow>Klick: beenden <gray>(alles zurück)"
 gui-switch-admin-off-lore:
-  - "<gray>Creative + Kompass, Inventar gespeichert."
+  - "<gray>Creative + Menü-Item, Inventar gespeichert."
   - "<yellow>Klick: starten"
 gui-switch-staffchat: "<aqua><bold>Staff-Chat: <state>"
 gui-switch-staffchat-on-lore:
@@ -357,6 +357,9 @@ gui-status-world-lore:
   - "<gray>Geladene Chunks: <white><chunks>"
   - "<gray>Entities: <white><entities>"
   - "<gray>Spieler: <white><players>"
+gui-status-more-worlds: "<aqua>+<count> weitere Welten"
+gui-status-more-worlds-lore:
+  - "<gray><worlds>"
 gui-status-chunk: "<gold><count> Entities"
 gui-status-chunk-lore:
   - "<gray><world> <white><x> <z>"

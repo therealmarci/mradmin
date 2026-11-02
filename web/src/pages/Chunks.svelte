@@ -213,6 +213,9 @@
               {:else if l.worst && l.status === 'warn'}
                 <span class="note warn-text">{l.worst.metric}: {Math.round(l.worst.value)} ({t('chunks.warnLimit')} {Math.round(l.worst.warn)})</span>
               {/if}
+              {#if l.suspension}
+                <span class="note muted">{t('chunks.suspended')} · {dateTime(l.suspension.until)}</span>
+              {/if}
               {#if l.shed}
                 <span class="note warn-text">{t('chunks.shedBack', { back: dateTime(l.shed.back), since: ago(l.shed.since) })}</span>
               {/if}

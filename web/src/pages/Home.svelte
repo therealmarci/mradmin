@@ -1,6 +1,6 @@
 <script>
   // Start page of the team panel, in the look of the player area: greeting, a slideshow (the health monitor's last
-  // hour, then one banner per warning), one tile per area (server, tickets, the plugins, sleep, maintenance,
+  // minute, then one banner per warning), one tile per area (server, tickets, the plugins, sleep, maintenance,
   // versions) and the players online.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -10,7 +10,8 @@
   import { MODULE_ICONS } from '../lib/icons.js';
   import DashTile from '../components/DashTile.svelte';
   import Carousel from '../components/Carousel.svelte';
-  import Sparkline from '../components/Sparkline.svelte';
+  import ValueTile from '../components/ValueTile.svelte';
+  import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { poll } from '../lib/poll.js';
 
   let { me } = $props();
@@ -91,46 +92,52 @@
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The health monitor's last hour for the first slide (only with the right to see it): once a minute while the tab
-  // is visible, one point per minute (the average of its seconds).
+  // The health monitor's last minute for the first slide (only with the right to see it): every second while the
+  // tab is visible. The line reaches up to now and new values glide in, see lib/liveclock.svelte.js.
+  const MINUTE = 60_000;
+  const clock = new LiveClock();
   let health = $state(null);
   async function loadHealth() {
     try {
-      health = await api('GET', '/health?range=1h');
+      const result = await api('GET', '/health?range=1m');
+      const last = health?.points.at(-1);
+      const next = result.points.at(-1);
+      clock.sync(result.to);
+      health = result;
+      if (last && next && last.time !== next.time) clock.glideFrom(last);
     } catch {
-      health = null;
+      // the slide just stays as it is
     }
   }
   $effect(() => {
     if (!me.may.health) return;
     loadHealth();
-    return poll(loadHealth, 60_000);
+    return poll(loadHealth, 1000);
   });
+  $effect(() => (me.may.health ? clock.run(clockStep(MINUTE)) : undefined));
 
-  const MINUTE = 60_000;
-  const series = $derived.by(() => {
-    const minutes = new Map();
-    for (const point of health?.points ?? []) {
-      const key = Math.floor(point.time / MINUTE);
-      if (!minutes.has(key)) minutes.set(key, []);
-      minutes.get(key).push(point);
-    }
-    return [...minutes.values()].map((part) => {
-      const avg = { time: part.at(-1).time };
-      for (const key of Object.keys(part[0])) {
-        if (key === 'time') continue;
-        const vals = part.map((x) => x[key]).filter((v) => typeof v === 'number' && v >= 0);
-        avg[key] = vals.length ? vals.reduce((a, c) => a + c, 0) / vals.length : null;
-      }
-      return avg;
-    });
-  });
-  const charts = [
-    { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
-    { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
-    { key: 'heapUsed', label: t('overview.ram'), color: 'var(--series-3)', format: (v) => mb(v) },
-    { key: 'players', label: t('health.players'), color: '#a855f7', format: (v) => String(Math.round(v ?? 0)) },
-  ];
+  const shownLatest = $derived(clock.shown(health?.points.at(-1)));
+  const inMinute = $derived((health?.points ?? []).filter((x) => x.time >= clock.now - MINUTE));
+
+  // The four tiles: each with its own limits, tone (p) gives the state of a point.
+  const toneBy = (bad, warn) => (bad ? 'bad' : warn ? 'warn' : 'good');
+  const LINE = { good: 'var(--good)', warn: 'var(--value-warn)', bad: 'var(--bad)' };
+  const MSPT_WARN = 40;
+  const MSPT_LIMIT = 50;
+  const charts = $derived([
+    { key: 'tps', label: 'TPS', format: (v) => (v ?? 0).toFixed(1), suffix: '/ 20', tone: (p) => tpsTone(p.tps ?? 20),
+      share: (p) => ((p.tps ?? 0) / 20) * 100, note: () => t('home.h.tpsNote') },
+    { key: 'mspt', label: t('overview.mspt'), format: (v) => (v ?? 0).toFixed(1) + ' ms', suffix: '/ ' + MSPT_LIMIT,
+      tone: (p) => toneBy(p.mspt >= MSPT_LIMIT, p.mspt >= MSPT_WARN), share: (p) => ((p.mspt ?? 0) / MSPT_LIMIT) * 100,
+      tick: (MSPT_WARN / MSPT_LIMIT) * 100, note: () => t('home.h.msptNote', { warn: MSPT_WARN, limit: MSPT_LIMIT }) },
+    { key: 'heapUsed', label: t('overview.ram'), format: (v) => mb(v), suffix: '',
+      tone: (p) => toneBy(p.heapUsed >= p.heapMax * 0.95, p.heapUsed >= p.heapMax * 0.85),
+      share: (p) => (p.heapMax > 0 ? (p.heapUsed / p.heapMax) * 100 : 0), tick: 85,
+      note: (p) => t('health.max') + ' ' + mb(p.heapMax) },
+    { key: 'players', label: t('health.players'), format: (v) => String(Math.round(v ?? 0)), suffix: data?.server ? '/ ' + data.server.max : '',
+      tone: () => 'good', share: (p) => (data?.server?.max > 0 ? ((p.players ?? 0) / data.server.max) * 100 : 0), note: () => t('home.h.playersNote') },
+  ]);
+  const linePoint = (p, c) => ({ time: p.time, value: p[c.key], color: LINE[c.tone(p)] });
   // The latest values: the newest point of the monitor, TPS/MSPT/RAM from the overview (every 2 seconds).
   const now = $derived({
     ...(health?.points?.at(-1) ?? {}),
@@ -138,6 +145,37 @@
   });
   const healthTone = $derived(tpsTone(now.tps ?? 20));
 
+  // Beside the health tiles: what else the team wants to know at a glance. Only what this person may see, each
+  // line leads to its page.
+  function uptimeText(millis) {
+    const minutes = Math.floor(millis / 60000);
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    return days ? `${days} d ${hours} h` : hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+  }
+  const glance = $derived.by(() => {
+    const rows = [];
+    if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
+    if (data?.tickets) {
+      const { open, unread } = data.tickets;
+      rows.push({ key: 'tickets', label: t('overview.tickets'), value: unread ? t('home.g.ticketsNew', { open, unread }) : t('home.g.tickets', { open }),
+        tone: unread ? 'bad' : open ? 'warn' : '', page: '/tickets' });
+    }
+    for (const tile of data?.tiles ?? []) {
+      rows.push({ key: tile.id, label: tile.label, value: `${tile.value} ${tile.unit}`, tone: tile.tone === 'good' ? '' : tile.tone, page: tile.page });
+    }
+    if (data?.maintenance) {
+      const { phase, start } = data.maintenance;
+      rows.push({ key: 'maintenance', label: t('overview.maintenance'), value: phase === 'none' ? t('home.g.noMaintenance') : t('overview.phase.' + phase) + (start ? ' · ' + dateTime(start) : ''),
+        tone: phase === 'none' ? '' : phaseTone[phase], page: '/maintenance' });
+    }
+    if (data?.versions) {
+      const { updates, staged, restartAt } = data.versions;
+      rows.push({ key: 'versions', label: t('nav.versions'), value: restartAt ? t('home.versionsRestart') : staged ? t('home.versionsStaged') : updates ? t('home.versionsUpdates', { n: updates }) : t('home.g.current'),
+        tone: restartAt ? 'bad' : updates ? 'warn' : '', page: '/versions' });
+    }
+    return rows;
+  });
 
   // The slides: the health monitor first (with its own warnings), then one slide per area that has something to do -
   // all warnings of an area (e.g. unanswered and own tickets) together. The alerts come most serious first.
@@ -227,35 +265,34 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The slideshow: the health monitor first (TPS with the key figures and its last hour), then one banner
+    <!-- The slideshow: the health monitor first (TPS with the key figures and its last minute), then one banner
          per area that has something to do (each warning with its details). -->
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'health'}
-          {@const p = now}
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
-            <span class="when">{t('home.h.lastHour')}</span>
+            <span class="when">{t('home.h.lastMinute')}</span>
           </div>
           <div class="h-body">
-            <div class="h-main">
-              <div class="h-big"><strong class="{healthTone}-text">{(p.tps ?? 0).toFixed(1)}</strong><span>TPS</span></div>
-              <div class="chips">
-                <span>{t('overview.mspt')} <b>{(p.mspt ?? 0).toFixed(1)} ms</b></span>
-                <span>{t('overview.ram')} <b>{mb(p.heapUsed ?? data.server?.ramUsed)} / {mb(p.heapMax ?? data.server?.ramMax)}</b></span>
-                <span>{t('health.players')} <b>{data.server?.online ?? p.players ?? 0}</b></span>
-              </div>
-            </div>
+            <ul class="glance">
+              {#each glance as row (row.key)}
+                <li>
+                  <button tabindex={active ? 0 : -1} disabled={!row.page} onclick={() => go(row.page)}>
+                    <span>{row.label}</span><b class={row.tone ? row.tone + '-text' : ''}>{row.value}</b>
+                  </button>
+                </li>
+              {/each}
+            </ul>
             <div class="h-chart">
               <div class="sparks">
                 {#each charts as c (c.key)}
-                  <div class="spark-card" style="--c: {c.color}">
-                    <div class="sc-head"><span>{c.label}</span><b>{c.format(series.at(-1)?.[c.key])}</b></div>
-                    <div class="spark-box">
-                      <Sparkline values={series.map((x) => x[c.key])} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
-                    </div>
-                  </div>
+                  {@const point = shownLatest ?? {}}
+                  <ValueTile label={c.label} value={c.format(point[c.key])} suffix={c.suffix} tone={c.tone(point)} share={c.share(point)}
+                    tick={c.tick ?? null} note={c.note(point)} lineHeight={30} line={inMinute.length > 1} points={inMinute.map((x) => linePoint(x, c))}
+                    live={shownLatest && clock.now > shownLatest.time ? linePoint({ ...shownLatest, time: clock.now }, c) : null}
+                    from={clock.now - MINUTE} to={clock.now} tabindex={active ? 0 : -1} onclick={() => go('/health')} />
                 {/each}
               </div>
             </div>
@@ -302,12 +339,14 @@
     <div class="tiles">
       {#if data.server}
         {@const s = data.server}
-        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={s.tps[0].toFixed(1)} unit="TPS" tone={tpsTone(s.tps[0])}
+        <!-- Live from the health monitor, every second; without the right to see it from the overview. -->
+        {@const l = shownLatest ?? { tps: s.tps[0], mspt: s.mspt, heapUsed: s.ramUsed, heapMax: s.ramMax }}
+        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={l.tps.toFixed(1)} unit="TPS" tone={tpsTone(l.tps)}
           rows={[
             { label: t('overview.tps'), value: s.tps.map((v) => v.toFixed(1)).join(' / ') },
-            { label: t('overview.mspt'), value: s.mspt.toFixed(1) + ' ms', tone: msptTone(s.mspt), fill: s.mspt / 50 },
-            { label: t('overview.ram'), value: `${mb(s.ramUsed)} / ${mb(s.ramMax)}`, fill: share(s.ramUsed, s.ramMax),
-              tone: share(s.ramUsed, s.ramMax) > 0.9 ? 'warn' : '' },
+            { label: t('overview.mspt'), value: l.mspt.toFixed(1) + ' ms', tone: msptTone(l.mspt), fill: l.mspt / 50 },
+            { label: t('overview.ram'), value: `${mb(l.heapUsed)} / ${mb(l.heapMax)}`, fill: share(l.heapUsed, l.heapMax),
+              tone: share(l.heapUsed, l.heapMax) > 0.9 ? 'warn' : '' },
           ]}
           link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
       {/if}
@@ -475,31 +514,50 @@
   .h-body {
     display: grid;
     gap: 12px 24px;
-    grid-template-columns: auto minmax(160px, 1fr);
+    grid-template-columns: minmax(200px, 2fr) minmax(0, 3fr);
     align-items: center;
   }
 
-  .h-main {
+  /* Beside the tiles: one line per area, each a way to its page. */
+  .glance {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
-    gap: 10px;
+    gap: 2px;
   }
 
-  .h-big {
+  .glance button {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    width: 100%;
+    /* It fills the column: name on the left, value on the right. */
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.88rem;
+    text-align: left;
   }
 
-  .h-big strong {
-    font-size: 2.4rem;
-    line-height: 1;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+  .glance button:hover:not(:disabled) {
+    background: var(--surface-2);
   }
 
-  .h-big span {
+  .glance button:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  .glance span {
     color: var(--muted);
-    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .glance b {
+    text-align: right;
   }
 
   .h-chart {
@@ -511,35 +569,6 @@
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .spark-card {
-    display: grid;
-    gap: 2px;
-    padding: 6px 10px 5px;
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--surface-2) 85%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-left: 3px solid var(--c);
-  }
-
-  .sc-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.74rem;
-    font-weight: 700;
-  }
-
-  .sc-head span {
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .spark-box {
-    position: relative;
   }
 
   /* Further warnings of the same area as small lines. */

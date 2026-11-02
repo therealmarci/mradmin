@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 35
+config-version: 36
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -45,7 +45,7 @@ features:
   maintenance: true
   # Announcements: /mradmin announce and the announcement menu.
   announce: true
-  # Admin mode: /mradmin mode and the admin compass. Whoever is in admin mode when this is switched off gets their
+  # Admin mode: /mradmin mode and the admin menu item. Whoever is in admin mode when this is switched off gets their
   # inventory back immediately (offline: on the next join).
   admin-mode: true
   # Player tools in the player menu: teleport to players (also /mradmin tp), summon players, view inventory and
@@ -203,16 +203,18 @@ announce:
 #   4) ADMIN MODE
 # ------------------------------------------------------------------------------
 # /mradmin mode on   inventory, armour, XP, health, hunger, effects and position are saved,
-#                    you get into creative mode and only get the admin compass (menu: teleport, plugins, maintenance).
+#                    you get into creative mode and only get the admin menu item (right-click: teleport, plugins, maintenance).
 # /mradmin mode off  everything is restored exactly and you are back where you started.
 # The saved state is in plugins/MRadmin/admin-mode/ and also survives crashes and restarts.
 admin-mode:
-  # Game mode in admin mode: CREATIVE or SPECTATOR
+  # Game mode in admin mode: CREATIVE or SPECTATOR.
+  # Minecraft ignores inventory clicks of spectators: with SPECTATOR menus open but cannot be clicked.
   gamemode: CREATIVE
   # Teleport back to the starting point when ending it.
   return-to-start: true
-  # Teleport compass: material and slot in the hotbar (0-8).
-  compass-material: COMPASS
+  # Item that opens the admin menu: material and slot in the hotbar (0-8). Avoid items other plugins use,
+  # e.g. the compass (WorldEdit teleports on right-click).
+  compass-material: STRUCTURE_VOID
   compass-slot: 4
   # Do not drop / pick up items in admin mode (protects against creative items in survival).
   prevent-drop: true

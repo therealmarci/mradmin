@@ -2,6 +2,7 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import LineChart from '../components/LineChart.svelte';
+  import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { ICONS } from '../lib/icons.js';
 
   const RANGES = [
@@ -22,13 +23,26 @@
   let loading = $state(false);
   let live = $state(null);
 
+  // The charts flow between the answers: see lib/liveclock.svelte.js.
+  const clock = new LiveClock();
+  $effect(() => clock.run(clockStep(rangeMs)));
+
+  function take(result) {
+    const last = history?.points.at(-1);
+    const next = result.points.at(-1);
+    const sameRange = history?.range === result.range;
+    clock.sync(result.to);
+    history = result;
+    if (sameRange && last && next && last.time !== next.time) clock.glideFrom(last);
+  }
+
   // The range that was asked for - an answer for an older range (slow network) is dropped.
   async function loadHistory(first = false) {
     const asked = range;
     if (first) loading = true;
     try {
       const result = await api('GET', '/health?range=' + asked);
-      if (asked === range) history = result;
+      if (asked === range) take(result);
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -102,8 +116,13 @@
   // gcMax: the highest second of a combined point (points stored by older versions only have the average).
   const points = $derived((history?.points ?? []).map((p) => ({ ...p, gcMax: Math.max(p.gcMax ?? 0, p.gc ?? 0) })));
   // The chosen range in server time - the time axis covers it even where there are no points.
-  const from = $derived(history?.from ?? null);
-  const to = $derived(history?.to ?? null);
+  const rangeMs = $derived(RANGES.find((r) => r.key === range)?.ms ?? 3600e3);
+  const from = $derived(clock.now - rangeMs);
+  // The newest point on its way, and where the line ends right now. Not while the server does not answer.
+  const shown = $derived(clock.shown(points.at(-1)));
+  const shownPoints = $derived(shown ? [...points.slice(0, -1), shown] : []);
+  const livePoint = $derived(shown && clock.now > shown.time && clock.now - shown.time < rangeMs / 10 + 15000
+    ? { ...shown, time: clock.now } : null);
   const long = $derived(range === '7d' || range === '30d');
   const latest = $derived((perSecond ? points.at(-1) : live) ?? system?.latest);
 
@@ -210,38 +229,38 @@
   {/if}
 
   <div class="charts" class:refreshing={loading && history}>
-    <LineChart title={t('health.chart.tps')} {points} {from} {to} {long} seconds={range === '1m'} yMax={20} format={tps}
+    <LineChart title={t('health.chart.tps')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} yMax={20} format={tps}
       series={[{ key: 'tps', label: 'TPS', color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.mspt')} {points} {from} {to} {long} seconds={range === '1m'} format={ms}
+    <LineChart title={t('health.chart.mspt')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={ms}
       refs={[{ value: 50, label: t('health.budget') }]}
       series={[
         { key: 'mspt', label: t('health.avg'), color: 'var(--series-1)' },
         { key: 'msptP95', label: '95 %', color: 'var(--series-2)' },
         { key: 'msptMax', label: t('health.max'), color: 'var(--series-3)' },
       ]} />
-    <LineChart title={t('health.chart.cpu')} {points} {from} {to} {long} seconds={range === '1m'} yMax={100} format={pct}
+    <LineChart title={t('health.chart.cpu')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} yMax={100} format={pct}
       series={[
         { key: 'cpu', label: t('health.server'), color: 'var(--series-1)' },
         { key: 'cpuSystem', label: t('health.system'), color: 'var(--series-2)' },
       ]} />
-    <LineChart title={t('health.chart.ram')} {points} {from} {to} {long} seconds={range === '1m'} format={mb}
+    <LineChart title={t('health.chart.ram')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={mb}
       refs={latest ? [{ value: latest.heapMax, label: t('health.max') }] : []}
       series={[{ key: 'heapUsed', label: t('health.used'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.players')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.players')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'players', label: t('health.players'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.gc')} {points} {from} {to} {long} seconds={range === '1m'} format={gcMs}
+    <LineChart title={t('health.chart.gc')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={gcMs}
       series={[
         { key: 'gc', label: t('health.avg'), color: 'var(--series-1)' },
         { key: 'gcMax', label: t('health.peak'), color: 'var(--series-3)' },
       ]} />
-    <LineChart title={t('health.chart.chunks')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.chunks')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={num}
       series={[
         { key: 'chunks', label: t('health.loaded'), color: 'var(--series-1)' },
         ...(loaders ? [{ key: 'loaderChunks', label: t('health.ofLoaders'), color: 'var(--series-3)' }] : []),
       ]} />
-    <LineChart title={t('health.chart.ping')} {points} {from} {to} {long} seconds={range === '1m'} format={(v) => (v == null || v < 0 ? '–' : Math.round(v) + ' ms')}
+    <LineChart title={t('health.chart.ping')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={(v) => (v == null || v < 0 ? '–' : Math.round(v) + ' ms')}
       series={[{ key: 'ping', label: t('health.ping'), color: 'var(--series-1)' }]} />
-    <LineChart title={t('health.chart.entities')} {points} {from} {to} {long} seconds={range === '1m'} format={num}
+    <LineChart title={t('health.chart.entities')} points={shownPoints} live={livePoint} smooth aligned {from} to={clock.now} {long} seconds={range === '1m'} format={num}
       series={[{ key: 'entities', label: 'Entities', color: 'var(--series-1)' }]} />
   </div>
 

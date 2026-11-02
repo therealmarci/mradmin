@@ -247,11 +247,11 @@ public record Settings(
             log.warning("admin-mode.gamemode must be CREATIVE or SPECTATOR, using CREATIVE.");
             gameMode = GameMode.CREATIVE;
         }
-        Material compass = Material.matchMaterial(c.getString("admin-mode.compass-material", "COMPASS"));
+        Material compass = Material.matchMaterial(c.getString("admin-mode.compass-material", "STRUCTURE_VOID"));
         if (compass == null || !compass.isItem() || compass.isAir()) {
             log.warning("admin-mode.compass-material '" + c.getString("admin-mode.compass-material")
-                    + "' is not an item, using COMPASS.");
-            compass = Material.COMPASS;
+                    + "' is not an item, using STRUCTURE_VOID.");
+            compass = Material.STRUCTURE_VOID;
         }
         AdminModeSettings adminMode = new AdminModeSettings(
                 gameMode,
