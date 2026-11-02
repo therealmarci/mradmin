@@ -30,7 +30,7 @@ public interface MRadminService {
      * {@link WebModule#rankings}; 5: more building blocks for it - {@link SelfBlock.Cards}, {@link SelfBlock.Meters},
      * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}).
      */
-    int API_VERSION = 5;
+    int API_VERSION = 6;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -87,5 +87,23 @@ public interface MRadminService {
      */
     default @Nullable WebItems items() {
         return null;
+    }
+
+    /**
+     * Saves one entry of a module's own measurements with MRadmin's data (files or database, whatever
+     * {@code storage.type} says), written in the background (API version 6). Entries older than {@code keepMillis}
+     * are removed from time to time. Does nothing with an older MRadmin.
+     *
+     * @param data one line of text in the module's own format
+     */
+    default void moduleHistoryAdd(String moduleId, long time, String data, long keepMillis) {
+    }
+
+    /**
+     * The saved entries since {@code since}, oldest first: time -> data (API version 6). Blocking, so only while the
+     * plugin enables. Empty with an older MRadmin.
+     */
+    default Map<Long, String> moduleHistory(String moduleId, long since) {
+        return Map.of();
     }
 }

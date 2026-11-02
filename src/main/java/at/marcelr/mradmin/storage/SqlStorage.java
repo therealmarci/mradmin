@@ -118,8 +118,8 @@ final class SqlStorage implements Storage {
         // MariaDB / MySQL: data and indexes of MRadmin's tables (shared by all servers using them).
         try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
                 "SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.tables"
-                        + " WHERE table_schema = DATABASE() AND table_name IN (?, ?, ?, ?, ?, ?)")) {
-            String[] tables = {"schema_version", "tickets", "ticket_messages", "state", "audit_log", "health"};
+                        + " WHERE table_schema = DATABASE() AND table_name IN (?, ?, ?, ?, ?, ?, ?)")) {
+            String[] tables = {"schema_version", "tickets", "ticket_messages", "state", "audit_log", "health", "module_history"};
             for (int i = 0; i < tables.length; i++) {
                 ps.setString(i + 1, p + tables[i]);
             }
@@ -158,6 +158,8 @@ final class SqlStorage implements Storage {
                     + "ip VARCHAR(64), action VARCHAR(64) NOT NULL, detail TEXT)" + suffix);
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "health ("
                     + "server VARCHAR(64) NOT NULL, time BIGINT NOT NULL, data TEXT NOT NULL)" + suffix);
+            st.execute("CREATE TABLE IF NOT EXISTS " + p + "module_history ("
+                    + "server VARCHAR(64) NOT NULL, module VARCHAR(64) NOT NULL, time BIGINT NOT NULL, data TEXT NOT NULL)" + suffix);
         }
     }
 
@@ -488,6 +490,54 @@ final class SqlStorage implements Storage {
             try (PreparedStatement ps = c.prepareStatement("DELETE FROM " + p + "health WHERE server = ? AND time < ?")) {
                 ps.setString(1, server);
                 ps.setLong(2, before);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    // ---------------------------------------------------------- module history
+
+    @Override
+    public void addModuleHistory(String module, long time, String data) {
+        write("save the history of " + module, c -> {
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO " + p + "module_history (server, module, time, data) VALUES (?, ?, ?, ?)")) {
+                ps.setString(1, server);
+                ps.setString(2, module);
+                ps.setLong(3, time);
+                ps.setString(4, data);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    @Override
+    public Map<Long, String> loadModuleHistory(String module, long since) {
+        Map<Long, String> result = new LinkedHashMap<>();
+        try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
+                "SELECT time, data FROM " + p + "module_history WHERE server = ? AND module = ? AND time >= ? ORDER BY time")) {
+            ps.setString(1, server);
+            ps.setString(2, module);
+            ps.setLong(3, since);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.put(rs.getLong(1), rs.getString(2));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Could not load the history of " + module + ": " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public void pruneModuleHistory(String module, long before) {
+        write("clean up the history of " + module, c -> {
+            try (PreparedStatement ps = c.prepareStatement(
+                    "DELETE FROM " + p + "module_history WHERE server = ? AND module = ? AND time < ?")) {
+                ps.setString(1, server);
+                ps.setString(2, module);
+                ps.setLong(3, before);
                 ps.executeUpdate();
             }
         });

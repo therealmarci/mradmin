@@ -219,7 +219,10 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   Version 1 = `api-1.0.0`, Version 2 = `api-1.1.0` (`items()`), Version 3 = `api-1.2.0` (`tile()`, `pushKinds()`,
   `reportCategories()`, `loadedChunks()`, `isNpc()`), Version 4 = `api-1.3.0` (Spielerseite: `selfAreas`, `selfAction`,
   `selfPermissions`, `rankings`, `SelfArea`, `SelfBlock`, `SelfViewer`, `SelfRanking`), Version 5 = `api-1.4.0`
-  (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`; `Group` ab `api-1.4.1`).
+  (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`; `Group` ab `api-1.4.1`), Version 6 = `api-1.5.0`
+  (`moduleHistoryAdd`, `moduleHistory`: eigene Messwerte eines Moduls im Speicher von MRadmin ablegen - Dateien,
+  SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
+  Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

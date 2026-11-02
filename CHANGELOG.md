@@ -11,7 +11,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Neu
 - **Chunkloader: Limit-Sperre aussetzen:** Auf der Seite eines Loaders setzt ein Admin die Sperre wegen überschrittener Grenzen für diesen Loader vorübergehend aus, höchstens 24 Stunden (Permission `mrchunks.admin.suspendlock`). Ein deswegen gesperrter Loader wird dabei entsperrt, die Aussetzung lässt sich vorzeitig beenden. Die Liste zeigt, bei welchen Loadern sie läuft. Braucht MRchunks ab der nächsten Version.
-- **Chunkloader: Diagramme der Messwerte:** Auf der Seite eines Loaders zeigt jede Messwert-Kachel ihren Verlauf als kleine Kurve. Ein Klick auf die Kachel öffnet das große Diagramm mit Warn- und Sperrgrenze, Zeitraum umschaltbar (1m, 10m, 30m, 1h, 6h, 12h). Bei langen Zeiträumen bleiben Spitzen sichtbar. Braucht MRchunks ab der nächsten Version.
+- **Chunkloader: Diagramme der Messwerte:** Auf der Seite eines Loaders zeigt jede Messwert-Kachel ihren Verlauf als kleine Kurve. Ein Klick auf die Kachel öffnet das große Diagramm mit Warn- und Sperrgrenze, Zeitraum umschaltbar (1m, 10m, 30m, 1h, 6h, 12h). Bei langen Zeiträumen bleiben Spitzen sichtbar. Der Verlauf liegt in MRadmins Speicher (`storage.type`: Datei, SQLite oder MySQL) und übersteht Neustarts. Braucht MRchunks ab der nächsten Version.
+- **Modul-API 6 (`api-1.5.0`):** Plugins können eigene Messwerte über `moduleHistoryAdd` und `moduleHistory` in MRadmins Speicher ablegen.
 
 ### Behoben & geändert
 - **Admin-Modus: Strukturleere statt Kompass:** Der Admin-Kompass löste andere Plugins aus (WorldEdit teleportiert beim Rechtsklick mit dem Kompass). Das Menü-Item ist jetzt standardmäßig eine Strukturleere, heißt „Admin-Menü“ und lässt sich nicht platzieren. `admin-mode.compass-material` ist `STRUCTURE_VOID`; ersetzt wird nur der alte Standard `COMPASS` (`config-version` 36, `lang-version` 17). Wer gerade im Admin-Modus ist, bekommt das neue Item automatisch.
