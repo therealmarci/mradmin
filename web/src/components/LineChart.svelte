@@ -163,7 +163,7 @@
           <span><i style="background: {s.color}"></i>{s.label}</span>
         {/each}
       {/if}
-      {#if bands.length}<span><i class="band-key"></i>{bands[0].label}</span>{/if}
+      {#each [...new Set(bands.map((b) => b.label))] as label}<span><i class="band-key"></i>{label}</span>{/each}
     </div>
   {/if}
 

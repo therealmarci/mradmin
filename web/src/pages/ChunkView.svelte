@@ -8,7 +8,7 @@
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
   import LineChart from '../components/LineChart.svelte';
-  import Sparkline from '../components/Sparkline.svelte';
+  import StateLine from '../components/StateLine.svelte';
 
   let { id, me } = $props();
 
@@ -113,8 +113,19 @@
   // A loader that is off shows its last measurement, grey - and a dash if it was never measured.
   const tileTone = (m) => (loader.active ? tone(m) : 'off');
   const value = (m) => (!loader.measured ? '–' : m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
-  // The stretches in which the loader was off, for the charts.
-  const offBands = $derived((history?.off ?? []).map((b) => ({ ...b, label: t('chunks.status.inactive') })));
+  // The stretches in which the loader was not on: grey with their name in the large chart, in the colour of the state
+  // on the 0 line of the small ones.
+  const PHASES = { off: { key: 'inactive', color: 'var(--muted)' }, shed: { key: 'shed', color: 'var(--warn)' }, locked: { key: 'locked', color: 'var(--bad)' } };
+  const phases = $derived(
+    (history?.phases ?? []).map((b) => ({ ...b, label: t('chunks.status.' + PHASES[b.phase].key), color: PHASES[b.phase].color })),
+  );
+  // The small line of one value: green, or yellow while the loader was over a warn limit at that time.
+  const linePoints = (m) =>
+    history.points.map((p) => ({
+      time: p.time,
+      value: p[m.key],
+      color: loader.metrics.some((o) => o.warn > 0 && p[o.key] >= o.warn) ? 'var(--warn)' : 'var(--good)',
+    }));
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
@@ -241,12 +252,8 @@
                   <div class="fill {tileTone(m)}" style="width: {share(m)}%"></div>
                   {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
                 </div>
-                {#if history?.points.length > 1 || offBands.length}
-                  <div class="spark">
-                    <Sparkline values={history.points.map((p) => p[m.key])} times={history.points.map((p) => p.time)} from={history.from} to={history.to}
-                      bands={offBands} color="var(--tn)" height={28} label={m.label} />
-                    {#if !loader.active}<span class="off-note">{t('chunks.status.inactive')}</span>{/if}
-                  </div>
+                {#if history?.points.length > 1 || phases.length}
+                  <StateLine points={linePoints(m)} {phases} from={history.from} to={history.to} label={m.label} />
                 {/if}
                 <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
               </button>
@@ -303,10 +310,10 @@
           <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
         {/each}
       </div>
-      {#if !history.points.length && !offBands.length}
+      {#if !history.points.length && !phases.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
       {/if}
-      <LineChart title={m.label} points={history.points} bands={offBands} from={history.from} to={history.to} height={chartHeight}
+      <LineChart title={m.label} points={history.points} bands={phases} from={history.from} to={history.to} height={chartHeight}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
         series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} onClose={() => (chart = null)} />
@@ -624,21 +631,6 @@
 
   .metric.plain {
     cursor: default;
-  }
-
-  /* The dot of the sparkline is placed in here. */
-  .spark {
-    position: relative;
-  }
-
-  .off-note {
-    position: absolute;
-    top: 50%;
-    right: 6px;
-    transform: translateY(-50%);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--muted);
   }
 
   .metric.off {
