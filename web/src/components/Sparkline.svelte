@@ -2,24 +2,31 @@
   // A small chart without axes for tiles and slides: the course of one measure as a line with a soft area below,
   // an optional dashed limit (e.g. 50 ms per tick) and a dot at the latest value. The details are on the health page.
 
-  /** values: numbers in time order (null = gap, skipped); min/max: fixed scale, otherwise from the values. */
-  let { values = [], color = 'var(--accent)', min = 0, max = null, limit = null, height = 56, label = '' } = $props();
+  import { curve } from '../lib/curve.js';
+
+  /**
+   * values: numbers in time order (null = gap, skipped); min/max: fixed scale, otherwise from the values.
+   * times + from + to: place the values by time instead of evenly, as a soft curve.
+   */
+  let {
+    values = [], color = 'var(--accent)', min = 0, max = null, limit = null, height = 56, label = '',
+    times = null, from = 0, to = 0,
+  } = $props();
 
   const W = 200;
 
   const clean = $derived(values.map((v) => (v == null || !Number.isFinite(v) || v < 0 ? null : v)));
   const top = $derived(Math.max(max ?? 0, ...clean.filter((v) => v !== null), limit ?? 0, min + 1e-9) || 1);
-  const x = (i) => (clean.length < 2 ? W : (i / (clean.length - 1)) * W);
+  const x = (i) => (times ? ((times[i] - from) / Math.max(1, to - from)) * W : clean.length < 2 ? W : (i / (clean.length - 1)) * W);
   const y = (v) => height - 3 - ((v - min) / (top - min)) * (height - 6);
 
-  const line = $derived(
-    clean.map((v, i) => (v === null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`)).filter(Boolean).join(' '),
-  );
-  const area = $derived.by(() => {
-    const pts = clean.map((v, i) => (v === null ? null : [x(i), y(v)])).filter(Boolean);
-    if (pts.length < 2) return '';
-    return `M${pts[0][0].toFixed(1)},${height} ` + pts.map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`).join(' ') + ` L${pts.at(-1)[0].toFixed(1)},${height} Z`;
+  const pts = $derived(clean.map((v, i) => (v === null ? null : [x(i), y(v)])).filter(Boolean));
+  const line = $derived.by(() => {
+    if (!pts.length) return '';
+    const start = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    return start + (times ? curve(pts) : pts.slice(1).map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`)).join(' ');
   });
+  const area = $derived(pts.length < 2 ? '' : `${line} L${pts.at(-1)[0].toFixed(1)},${height} L${pts[0][0].toFixed(1)},${height} Z`);
   const last = $derived.by(() => {
     for (let i = clean.length - 1; i >= 0; i--) if (clean[i] !== null) return [x(i), y(clean[i])];
     return null;
@@ -39,7 +46,7 @@
     <line class="limit" x1="0" x2={W} y1={y(limit)} y2={y(limit)} />
   {/if}
   {#if area}<path d={area} fill="url(#{id})" />{/if}
-  {#if line}<polyline points={line} fill="none" stroke={color} stroke-width="2" vector-effect="non-scaling-stroke"
+  {#if line}<path d={line} fill="none" stroke={color} stroke-width="2" vector-effect="non-scaling-stroke"
       stroke-linejoin="round" stroke-linecap="round" />{/if}
 </svg>
 {#if last}

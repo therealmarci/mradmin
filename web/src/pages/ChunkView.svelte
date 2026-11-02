@@ -8,6 +8,7 @@
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
   import LineChart from '../components/LineChart.svelte';
+  import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import StateLine from '../components/StateLine.svelte';
   import TimeNavigator from '../components/TimeNavigator.svelte';
 
@@ -116,13 +117,8 @@
 
   // The charts only get new values every few seconds but should run smoothly: the time keeps moving in the browser, the
   // line reaches up to now with the newest value, and a new measurement glides in instead of jumping.
-  const BLEND_MS = 800;
-  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  let now = $state(Date.now());
-  let serverOffset = 0;
-  let blend = $state(1);
-  let blendStart = 0;
-  let before = null;
+  const clock = new LiveClock();
+  const now = $derived(clock.now);
 
   // Applies new data; if that brings a new newest point, the line glides there.
   function change(apply) {
@@ -130,16 +126,12 @@
     const sameRange = history?.range === range;
     apply();
     const next = allPoints.at(-1);
-    if (!calm && !paused && sameRange && last && next && next.time !== last.time) {
-      before = last;
-      blendStart = performance.now();
-      blend = 0;
-    }
+    if (!paused && sameRange && last && next && next.time !== last.time) clock.glideFrom(last);
   }
 
   function take(result) {
     change(() => {
-      if (!paused) serverOffset = result.to - Date.now();
+      if (!paused) clock.sync(result.to);
       history = { ...result, range };
     });
     // A range only with enough data: otherwise the longest one there is, without changing what was chosen for later.
@@ -147,7 +139,7 @@
   }
 
   /** The shortest range always; the others once that much is stored. */
-  const rangeReady = (key) => key === RANGES[0] || !history?.oldest || Date.now() + serverOffset - history.oldest >= RANGE_MS[key];
+  const rangeReady = (key) => key === RANGES[0] || !history?.oldest || now - history.oldest >= RANGE_MS[key];
 
   // The whole stored time for the bar below the large chart: fetched while it is open.
   let overview = $state(null);
@@ -223,36 +215,12 @@
     return (loader?.metrics ?? []).map((m) => (newest ? { ...m, value: newest[m.key] ?? m.value } : m));
   });
 
-  $effect(() => {
-    // One pixel of the large chart: moving more often would not show.
-    const step = calm ? 1000 : Math.min(5000, Math.max(50, RANGE_MS[range] / 1200));
-    let frame;
-    let last = 0;
-    const loop = (time) => {
-      if (blend < 1) blend = Math.min(1, (time - blendStart) / BLEND_MS);
-      if (blend < 1 || time - last >= step) {
-        last = time;
-        now = Date.now() + serverOffset;
-      }
-      frame = requestAnimationFrame(loop);
-    };
-    frame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(frame);
-  });
+  $effect(() => clock.run(clockStep(RANGE_MS[range])));
 
   const viewTo = $derived(paused ? viewEnd : now);
   const rangeStart = $derived(viewTo - RANGE_MS[range]);
   // The newest point on its way from the value before to the new one.
-  const shown = $derived.by(() => {
-    const last = allPoints.at(-1);
-    if (!last || !before || blend >= 1 || paused) return last ?? null;
-    const eased = blend * (2 - blend);
-    const mixed = { time: last.time };
-    for (const key of Object.keys(last)) {
-      if (key !== 'time') mixed[key] = (before[key] ?? 0) + (last[key] - (before[key] ?? 0)) * eased;
-    }
-    return mixed;
-  });
+  const shown = $derived(paused ? (allPoints.at(-1) ?? null) : clock.shown(allPoints.at(-1)));
   const shownPoints = $derived(shown ? [...allPoints.slice(0, -1), shown] : []);
 
   // The metric shown large (a click on its tile); Esc or a click beside it closes it.

@@ -18,6 +18,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 - **Modul-API 6 (`api-1.5.0`):** Plugins können eigene Messwerte über `moduleHistoryAdd` und `moduleHistory` in MRadmins Speicher ablegen.
 
 ### Behoben & geändert
+- **Health-Seite und Übersicht laufen flüssig:** Die Diagramme laufen jetzt wie die der Chunkloader: Die Zeit läuft weiter, die Linie ist eine weiche Kurve bis zum aktuellen Zeitpunkt, neue Werte gleiten hinein. Die Zeitachse steht auf ganzen Uhrzeiten und wandert mit. Die Punkte der Health-Seite werden nach der Uhrzeit zusammengefasst, damit sie beim Nachladen nicht mehr springen.
 - **Admin-Modus: Strukturleere statt Kompass:** Der Admin-Kompass löste andere Plugins aus (WorldEdit teleportiert beim Rechtsklick mit dem Kompass). Das Menü-Item ist jetzt standardmäßig eine Strukturleere, heißt „Admin-Menü“ und lässt sich nicht platzieren. `admin-mode.compass-material` ist `STRUCTURE_VOID`; ersetzt wird nur der alte Standard `COMPASS` (`config-version` 36, `lang-version` 17). Wer gerade im Admin-Modus ist, bekommt das neue Item automatisch.
 - **Admin-Modus und Multiverse:** Multiverse-Core setzte beim Weltwechsel den Spielmodus der Welt durch. Dadurch stand man im Admin-Modus plötzlich ungeschützt im Überlebensmodus. Das wird jetzt abgewiesen, `/gamemode` funktioniert weiter.
 - **Admin-Modus und Multiverse-Inventories:** Solange der Admin-Modus läuft, tauscht Multiverse-Inventories das Inventar nicht mehr. So gelangt das Admin-Inventar in keine Gruppe, und beim Beenden kommt das eigene Inventar zurück.

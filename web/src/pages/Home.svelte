@@ -11,6 +11,7 @@
   import DashTile from '../components/DashTile.svelte';
   import Carousel from '../components/Carousel.svelte';
   import Sparkline from '../components/Sparkline.svelte';
+  import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { poll } from '../lib/poll.js';
 
   let { me } = $props();
@@ -107,6 +108,29 @@
     return poll(loadHealth, 60_000);
   });
 
+  // The line reaches up to now and the newest value glides in, see lib/liveclock.svelte.js.
+  const HOUR = 3_600_000;
+  const clock = new LiveClock();
+  let latest = $state(null);
+  async function loadLatest() {
+    try {
+      const point = await api('GET', '/health/latest');
+      if (!point?.time) return;
+      if (latest && latest.time !== point.time) clock.glideFrom(latest);
+      clock.sync(point.time);
+      latest = point;
+    } catch {
+      // the line just stays
+    }
+  }
+  $effect(() => {
+    if (!me.may.health) return;
+    loadLatest();
+    return poll(loadLatest, 2000);
+  });
+  $effect(() => (me.may.health ? clock.run(clockStep(HOUR)) : undefined));
+  const shownLatest = $derived(clock.shown(latest));
+
   const MINUTE = 60_000;
   const series = $derived.by(() => {
     const minutes = new Map();
@@ -125,6 +149,7 @@
       return avg;
     });
   });
+  const inHour = $derived(series.filter((x) => x.time >= clock.now - HOUR));
   const charts = [
     { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
     { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
@@ -251,9 +276,10 @@
               <div class="sparks">
                 {#each charts as c (c.key)}
                   <div class="spark-card" style="--c: {c.color}">
-                    <div class="sc-head"><span>{c.label}</span><b>{c.format(series.at(-1)?.[c.key])}</b></div>
+                    <div class="sc-head"><span>{c.label}</span><b>{c.format((shownLatest ?? series.at(-1))?.[c.key])}</b></div>
                     <div class="spark-box">
-                      <Sparkline values={series.map((x) => x[c.key])} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
+                      <Sparkline values={[...inHour.map((x) => x[c.key]), ...(shownLatest ? [shownLatest[c.key]] : [])]}
+                        times={[...inHour.map((x) => x.time), ...(shownLatest ? [clock.now] : [])]} from={clock.now - HOUR} to={clock.now} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
                     </div>
                   </div>
                 {/each}

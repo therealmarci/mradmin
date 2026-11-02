@@ -244,13 +244,14 @@ public final class HealthMonitor {
         if (points.size() <= max) {
             return points;
         }
-        List<Point> result = new ArrayList<>(max);
-        double per = points.size() / (double) max;
-        for (int i = 0; i < max; i++) {
-            int from = (int) Math.floor(i * per);
-            int to = (int) Math.min(points.size(), Math.floor((i + 1) * per));
-            if (to > from) {
-                result.add(combine(points.subList(from, to)));
+        // By the clock, not by position: otherwise every new point moves all the others in a running chart.
+        long step = Math.max(1, millis / max);
+        List<Point> result = new ArrayList<>(max + 1);
+        int start = 0;
+        for (int i = 1; i <= points.size(); i++) {
+            if (i == points.size() || points.get(i).time() / step != points.get(start).time() / step) {
+                result.add(combine(points.subList(start, i)));
+                start = i;
             }
         }
         return result;

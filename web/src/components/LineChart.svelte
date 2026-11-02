@@ -18,6 +18,7 @@
     smooth = false, // a soft curve through the points instead of straight lines
     live = null, // where the line ends right now: drawn, but no measurement (not in the table or the tooltip)
     states = null, // a line in the colours of its state instead of the series, see lib/stateline.js: { points, phases, live }
+    aligned = false, // ticks on whole times that move with the line (a chart whose range keeps moving)
     onpan = null, // scrolling through time by wheel or dragging: called with the ms to go back (negative = forward)
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
@@ -182,12 +183,13 @@
 
   const hover = $derived(index >= 0 && index < points.length ? points[index] : null);
   const tipLeft = $derived(hover ? Math.min(Math.max(x(hover.time) + 12, 0), width - 170) : 0);
-  // With scrolling the ticks sit on whole times and move with the line, otherwise they split the range evenly.
-  const TICK_STEPS = [10, 30, 60, 120, 300, 600, 1800, 3600, 7200].map((s) => s * 1000);
+  // With a moving range the ticks sit on whole times and move with the line, otherwise they split the range evenly.
+  const moving = $derived(aligned || !!onpan);
+  const TICK_STEPS = [10, 30, 60, 120, 300, 600, 1800, 3600, 7200, 14400, 28800, 86400, 172800, 432000].map((s) => s * 1000);
   const xTicks = $derived.by(() => {
     if (!points.length && !bands.length) return [];
-    if (!onpan) return [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f);
-    const step = TICK_STEPS.find((s) => (t1 - t0) / s <= 6) ?? 7200000;
+    if (!moving) return [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f);
+    const step = TICK_STEPS.find((s) => (t1 - t0) / s <= 6) ?? 432000000;
     const ticks = [];
     for (let tick = Math.ceil(t0 / step) * step; tick <= t1; tick += step) ticks.push(tick);
     return ticks;
@@ -264,7 +266,7 @@
           <text class="axis" x={pad.left - 6} y={y(v) + 4} text-anchor="end">{format(v)}</text>
         {/each}
         {#each xTicks as tt, i}
-          <text class="axis" x={x(tt)} y={height - 6} text-anchor={onpan ? 'middle' : i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
+          <text class="axis" x={x(tt)} y={height - 6} text-anchor={moving ? 'middle' : i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
         {/each}
         {#each refs as r}
           <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} style={r.color ? `stroke: ${r.color}` : ''} />
@@ -315,7 +317,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {onpan} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {aligned} {onpan} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
