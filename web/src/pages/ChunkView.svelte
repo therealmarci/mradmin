@@ -230,11 +230,15 @@
   const share = (m) => (m.lock > 0 ? Math.min(100, (m.value / m.lock) * 100) : 0);
   const tone = (m) => (m.lock > 0 && m.value >= m.lock ? 'bad' : m.warn > 0 && m.value >= m.warn ? 'warn' : 'good');
   // A loader that is off shows its last measurement, grey - and a dash if it was never measured.
-  const tileTone = (m) => (loader.active ? tone(m) : 'off');
+  const tileTone = (m) => (loader.lock ? 'locked' : !loader.active || loader.shed ? 'off' : tone(m));
   const value = (m) => (!loader.measured ? '–' : m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
   // The stretches in which the loader was not on: grey with their name in the large chart, in the colour of the state
   // on the 0 line of the small ones.
-  const PHASES = { off: { key: 'inactive', color: 'var(--muted)' }, shed: { key: 'shed', color: 'var(--warn)' }, locked: { key: 'locked', color: 'var(--bad)' } };
+  const PHASES = {
+    off: { key: 'inactive', color: 'var(--muted)' },
+    shed: { key: 'shed', color: 'var(--muted)' },
+    locked: { key: 'locked', color: 'var(--value-locked)' },
+  };
   // A phase that still runs ends now.
   const phases = $derived(
     (history?.phases ?? []).map((b) => ({
@@ -245,12 +249,12 @@
     })),
   );
   const running = $derived(!!history && !(history.phases ?? []).some((b) => b.to >= history.to));
-  // The small line of one value: green, or yellow while the loader was over a warn limit at that time.
-  const linePoint = (p, m) => ({
-    time: p.time,
-    value: p[m.key],
-    color: loader.metrics.some((o) => o.warn > 0 && p[o.key] >= o.warn) ? 'var(--warn)' : 'var(--good)',
-  });
+  // The small line of one value: its colour only follows its own limits.
+  const linePoint = (p, m) => {
+    const value = p[m.key];
+    const over = m.lock > 0 && value >= m.lock ? 'var(--bad)' : m.warn > 0 && value >= m.warn ? 'var(--value-warn)' : 'var(--good)';
+    return { time: p.time, value, color: over };
+  };
   // Where the line ends right now: the newest value, held until the next measurement.
   const livePoint = $derived(running && shown && now > shown.time ? { ...shown, time: now } : null);
   // MRchunks before the chunk budget sends no size.
@@ -748,6 +752,9 @@
   }
 
   .metrics {
+    /* The state of one value: orange over its warn limit, red over its lock limit, dark red while the loader is locked. */
+    --value-warn: #ee7f1b;
+    --value-locked: color-mix(in srgb, var(--bad) 55%, #000);
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
@@ -783,12 +790,12 @@
     --tn: var(--muted);
   }
 
-  .fill.off {
-    background: var(--muted);
+  .metric.locked {
+    --tn: var(--value-locked);
   }
 
   .metric.warn {
-    --tn: var(--warn);
+    --tn: var(--value-warn);
   }
 
   .metric.bad {
@@ -800,6 +807,10 @@
     justify-content: space-between;
     gap: 8px;
     font-size: 0.88rem;
+  }
+
+  .mrow strong {
+    color: var(--tn);
   }
 
   .mrow small {
@@ -817,15 +828,7 @@
   .fill {
     height: 100%;
     border-radius: 4px;
-    background: var(--good);
-  }
-
-  .fill.warn {
-    background: var(--warn);
-  }
-
-  .fill.bad {
-    background: var(--bad);
+    background: var(--tn);
   }
 
   .tick {
@@ -834,7 +837,7 @@
     bottom: -2px;
     width: 2px;
     border-radius: 1px;
-    background: var(--warn);
+    background: var(--value-warn);
   }
 
   .tiny {
