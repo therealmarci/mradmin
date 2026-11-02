@@ -339,12 +339,14 @@
     <div class="tiles">
       {#if data.server}
         {@const s = data.server}
-        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={s.tps[0].toFixed(1)} unit="TPS" tone={tpsTone(s.tps[0])}
+        <!-- Live from the health monitor, every second; without the right to see it from the overview. -->
+        {@const l = shownLatest ?? { tps: s.tps[0], mspt: s.mspt, heapUsed: s.ramUsed, heapMax: s.ramMax }}
+        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={l.tps.toFixed(1)} unit="TPS" tone={tpsTone(l.tps)}
           rows={[
             { label: t('overview.tps'), value: s.tps.map((v) => v.toFixed(1)).join(' / ') },
-            { label: t('overview.mspt'), value: s.mspt.toFixed(1) + ' ms', tone: msptTone(s.mspt), fill: s.mspt / 50 },
-            { label: t('overview.ram'), value: `${mb(s.ramUsed)} / ${mb(s.ramMax)}`, fill: share(s.ramUsed, s.ramMax),
-              tone: share(s.ramUsed, s.ramMax) > 0.9 ? 'warn' : '' },
+            { label: t('overview.mspt'), value: l.mspt.toFixed(1) + ' ms', tone: msptTone(l.mspt), fill: l.mspt / 50 },
+            { label: t('overview.ram'), value: `${mb(l.heapUsed)} / ${mb(l.heapMax)}`, fill: share(l.heapUsed, l.heapMax),
+              tone: share(l.heapUsed, l.heapMax) > 0.9 ? 'warn' : '' },
           ]}
           link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
       {/if}
