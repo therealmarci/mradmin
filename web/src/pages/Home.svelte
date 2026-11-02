@@ -145,6 +145,37 @@
   });
   const healthTone = $derived(tpsTone(now.tps ?? 20));
 
+  // Beside the health tiles: what else the team wants to know at a glance. Only what this person may see, each
+  // line leads to its page.
+  function uptimeText(millis) {
+    const minutes = Math.floor(millis / 60000);
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    return days ? `${days} d ${hours} h` : hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`;
+  }
+  const glance = $derived.by(() => {
+    const rows = [];
+    if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
+    if (data?.tickets) {
+      const { open, unread } = data.tickets;
+      rows.push({ key: 'tickets', label: t('overview.tickets'), value: unread ? t('home.g.ticketsNew', { open, unread }) : t('home.g.tickets', { open }),
+        tone: unread ? 'bad' : open ? 'warn' : '', page: '/tickets' });
+    }
+    for (const tile of data?.tiles ?? []) {
+      rows.push({ key: tile.id, label: tile.label, value: `${tile.value} ${tile.unit}`, tone: tile.tone === 'good' ? '' : tile.tone, page: tile.page });
+    }
+    if (data?.maintenance) {
+      const { phase, start } = data.maintenance;
+      rows.push({ key: 'maintenance', label: t('overview.maintenance'), value: phase === 'none' ? t('home.g.noMaintenance') : t('overview.phase.' + phase) + (start ? ' · ' + dateTime(start) : ''),
+        tone: phase === 'none' ? '' : phaseTone[phase], page: '/maintenance' });
+    }
+    if (data?.versions) {
+      const { updates, staged, restartAt } = data.versions;
+      rows.push({ key: 'versions', label: t('nav.versions'), value: restartAt ? t('home.versionsRestart') : staged ? t('home.versionsStaged') : updates ? t('home.versionsUpdates', { n: updates }) : t('home.g.current'),
+        tone: restartAt ? 'bad' : updates ? 'warn' : '', page: '/versions' });
+    }
+    return rows;
+  });
 
   // The slides: the health monitor first (with its own warnings), then one slide per area that has something to do -
   // all warnings of an area (e.g. unanswered and own tickets) together. The alerts come most serious first.
@@ -239,21 +270,21 @@
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'health'}
-          {@const p = now}
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
             <span class="when">{t('home.h.lastMinute')}</span>
           </div>
           <div class="h-body">
-            <div class="h-main">
-              <div class="h-big"><strong class="{healthTone}-text">{(p.tps ?? 0).toFixed(1)}</strong><span>TPS</span></div>
-              <div class="chips">
-                <span>{t('overview.mspt')} <b>{(p.mspt ?? 0).toFixed(1)} ms</b></span>
-                <span>{t('overview.ram')} <b>{mb(p.heapUsed ?? data.server?.ramUsed)} / {mb(p.heapMax ?? data.server?.ramMax)}</b></span>
-                <span>{t('health.players')} <b>{data.server?.online ?? p.players ?? 0}</b></span>
-              </div>
-            </div>
+            <ul class="glance">
+              {#each glance as row (row.key)}
+                <li>
+                  <button tabindex={active ? 0 : -1} disabled={!row.page} onclick={() => go(row.page)}>
+                    <span>{row.label}</span><b class={row.tone ? row.tone + '-text' : ''}>{row.value}</b>
+                  </button>
+                </li>
+              {/each}
+            </ul>
             <div class="h-chart">
               <div class="sparks">
                 {#each charts as c (c.key)}
@@ -481,31 +512,50 @@
   .h-body {
     display: grid;
     gap: 12px 24px;
-    grid-template-columns: auto minmax(160px, 1fr);
+    grid-template-columns: minmax(200px, 2fr) minmax(0, 3fr);
     align-items: center;
   }
 
-  .h-main {
+  /* Beside the tiles: one line per area, each a way to its page. */
+  .glance {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
-    gap: 10px;
+    gap: 2px;
   }
 
-  .h-big {
+  .glance button {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    width: 100%;
+    /* It fills the column: name on the left, value on the right. */
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.88rem;
+    text-align: left;
   }
 
-  .h-big strong {
-    font-size: 2.4rem;
-    line-height: 1;
-    font-weight: 800;
-    letter-spacing: -0.02em;
+  .glance button:hover:not(:disabled) {
+    background: var(--surface-2);
   }
 
-  .h-big span {
+  .glance button:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+
+  .glance span {
     color: var(--muted);
-    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .glance b {
+    text-align: right;
   }
 
   .h-chart {

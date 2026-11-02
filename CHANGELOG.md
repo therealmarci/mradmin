@@ -19,6 +19,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Behoben & geändert
 - **Übersicht: Kacheln wie bei den Chunkloadern:** Die vier Kacheln der ersten Folie haben denselben Aufbau wie die Messwert-Kacheln: Name und Wert, Balken, Grenzen, die Kurve als Abschluss, Farbe nach Zustand. Ein Klick öffnet die Health-Seite.
+- **Übersicht: Kurzüberblick statt TPS-Bereich:** Links neben den vier Kacheln steht jetzt eine kurze Liste: Laufzeit, offene Tickets, je eine Zeile pro Plugin, nächste Wartung und Updates. Jede Zeile führt zur passenden Seite und erscheint nur mit dem nötigen Recht.
 - **Übersicht zeigt immer die letzte Minute:** Die vier Diagramme der ersten Folie zeigen jetzt die letzte Minute, jede Sekunde neu, statt der letzten Stunde.
 - **Kritische Warnungen passen auf den Bildschirm:** Groß im Spiel steht nur noch „ACHTUNG“ und darunter „Kritische Warnung“, der eigentliche Text kommt im Chat, auch wenn `player-web.news.alerts.chat` aus ist (`lang-version` 18).
 - **XP-Level in den Statistiken ist der Höchststand:** Die Statistik zählt jetzt das höchste Level, das ein Spieler je hatte. Wer mit Level 300 stirbt, bleibt mit 300 in der Rangliste, bis ihn jemand überholt. Gemerkt wird das ab diesem Update, bei Spielern von vorher gilt zunächst ihr aktuelles Level.
