@@ -1,21 +1,23 @@
 <script>
   // A small chart without axes for one value of a chunk loader: the line takes the colour of the state the loader was
   // in at that time and falls to 0 while the loader was off, whatever the reason. The details are in the large chart.
+  import { curve } from '../lib/curve.js';
 
   /**
    * points: [{ time, value, color }] in time order; phases: [{ from, to, color }] in which the line lies on 0;
-   * from/to: the range shown.
+   * live: the same as a point, where the line ends right now (null while the loader is off); from/to: the range shown.
    */
-  let { points = [], phases = [], from = 0, to = 0, height = 28, label = '' } = $props();
+  let { points = [], phases = [], live = null, from = 0, to = 0, height = 28, label = '' } = $props();
 
   const W = 200;
   // Without an entry for this long the server was away: the line breaks instead of crossing that time.
   const MAX_GAP = $derived(3 * Math.max(20000, (to - from) / 300));
 
-  const measured = $derived(points.filter((p) => !phases.some((b) => p.time >= b.from && p.time < b.to)));
-  const top = $derived(Math.max(1e-9, ...measured.map((p) => p.value)));
-  const x = (ms) => ((Math.min(to, Math.max(from, ms)) - from) / Math.max(1, to - from)) * W;
-  const y = (v) => height - 2 - (v / top) * (height - 4);
+  const all = $derived(live ? [...points, live] : points);
+  const measured = $derived(all.filter((p) => !phases.some((b) => p.time >= b.from && p.time < b.to)));
+  const top = $derived(Math.max(1e-9, ...measured.filter((p) => p.time >= from).map((p) => p.value)));
+  const x = (ms) => ((ms - from) / Math.max(1, to - from)) * W;
+  const y = (v) => height - 2 - (Math.min(v, top) / top) * (height - 4);
 
   // Everything in time order; a phase is its start and end on the 0 line.
   const entries = $derived(
@@ -28,22 +30,33 @@
     ].sort((a, b) => a.time - b.time),
   );
 
+  // Stretches without a break, each drawn as one curve.
+  const runs = $derived.by(() => {
+    const result = [];
+    entries.forEach((b, i) => {
+      const a = entries[i - 1];
+      if (a && (b.time - a.time <= MAX_GAP || (a.phase && a.phase === b.phase))) result.at(-1).push(b);
+      else result.push([b]);
+    });
+    return result;
+  });
+
   // Pieces of one colour. A stretch between two entries has the colour of the later one: the fall already shows the
   // new state, the rise the state after the phase.
   const lines = $derived.by(() => {
     const result = [];
-    for (let i = 1; i < entries.length; i++) {
-      const a = entries[i - 1];
-      const b = entries[i];
-      if (b.time - a.time > MAX_GAP && !(a.phase && a.phase === b.phase)) continue;
-      const point = `${x(b.time).toFixed(1)},${y(b.value).toFixed(1)}`;
-      const open = result.at(-1);
-      if (open && open.color === b.color && open.end === a) {
-        open.points += ' ' + point;
-        open.end = b;
-      } else {
-        result.push({ color: b.color, points: `${x(a.time).toFixed(1)},${y(a.value).toFixed(1)} ${point}`, end: b });
-      }
+    for (const run of runs) {
+      const pieces = curve(run.map((e) => [x(e.time), y(e.value)]));
+      let open = null;
+      pieces.forEach((piece, i) => {
+        const color = run[i + 1].color;
+        if (open && open.color === color) {
+          open.d += piece;
+        } else {
+          open = { color, d: `M${x(run[i].time).toFixed(1)},${y(run[i].value).toFixed(1)}${piece}` };
+          result.push(open);
+        }
+      });
     }
     return result;
   });
@@ -51,7 +64,7 @@
 
 <svg viewBox="0 0 {W} {height}" preserveAspectRatio="none" style="height: {height}px" role="img" aria-label={label}>
   {#each lines as line}
-    <polyline points={line.points} fill="none" stroke={line.color} stroke-width="2" vector-effect="non-scaling-stroke"
+    <path d={line.d} fill="none" stroke={line.color} stroke-width="2" vector-effect="non-scaling-stroke"
       stroke-linejoin="round" stroke-linecap="round" />
   {/each}
 </svg>
@@ -60,6 +73,7 @@
   svg {
     display: block;
     width: 100%;
-    overflow: visible;
+    /* The entries just before the range are cut off at the edge. */
+    overflow: hidden;
   }
 </style>

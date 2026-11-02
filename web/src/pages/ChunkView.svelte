@@ -12,7 +12,8 @@
 
   let { id, me } = $props();
 
-  const RANGES = ['1m', '10m', '30m', '1h', '6h', '12h'];
+  const RANGE_MS = { '1m': 60000, '10m': 600000, '30m': 1800000, '1h': 3600000, '6h': 21600000, '12h': 43200000 };
+  const RANGES = Object.keys(RANGE_MS);
   // The storage can be blocked (private window): then the range is simply not remembered.
   function savedRange() {
     try {
@@ -52,7 +53,7 @@
     const asked = range;
     try {
       const result = await moduleData('mrchunks', 'loaderHistory', { id, range: asked });
-      if (asked === range) history = result;
+      if (asked === range) take(result);
     } catch {
       history = null;
     }
@@ -62,9 +63,64 @@
     id;
     range;
     untrack(loadHistory);
-    const timer = setInterval(loadHistory, 20000);
+    // A new measurement should show soon after it was taken; on long ranges one more point changes little.
+    const timer = setInterval(loadHistory, RANGE_MS[range] <= 3600000 ? 5000 : 20000);
     return () => clearInterval(timer);
   });
+
+  // The charts only get new values every few seconds but should run smoothly: the time keeps moving in the browser, the
+  // line reaches up to now with the newest value, and a new measurement glides in instead of jumping.
+  const BLEND_MS = 800;
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  let now = $state(Date.now());
+  let serverOffset = 0;
+  let blend = $state(1);
+  let blendStart = 0;
+  let before = null;
+
+  function take(result) {
+    const last = history?.points.at(-1);
+    const next = result.points.at(-1);
+    const fresh = !calm && last && next && history.range === range && next.time !== last.time;
+    if (fresh) {
+      before = last;
+      blendStart = performance.now();
+      blend = 0;
+    }
+    serverOffset = result.to - Date.now();
+    history = { ...result, range };
+  }
+
+  $effect(() => {
+    // One pixel of the large chart: moving more often would not show.
+    const step = calm ? 1000 : Math.min(5000, Math.max(50, RANGE_MS[range] / 1200));
+    let frame;
+    let last = 0;
+    const loop = (time) => {
+      if (blend < 1) blend = Math.min(1, (time - blendStart) / BLEND_MS);
+      if (blend < 1 || time - last >= step) {
+        last = time;
+        now = Date.now() + serverOffset;
+      }
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  });
+
+  const rangeStart = $derived(now - RANGE_MS[range]);
+  // The newest point on its way from the value before to the new one.
+  const shown = $derived.by(() => {
+    const last = history?.points.at(-1);
+    if (!last || !before || blend >= 1) return last ?? null;
+    const eased = blend * (2 - blend);
+    const mixed = { time: last.time };
+    for (const key of Object.keys(last)) {
+      if (key !== 'time') mixed[key] = (before[key] ?? 0) + (last[key] - (before[key] ?? 0)) * eased;
+    }
+    return mixed;
+  });
+  const shownPoints = $derived(shown ? [...history.points.slice(0, -1), shown] : []);
 
   // The metric shown large (a click on its tile); Esc or a click beside it closes it.
   let chart = $state(null);
@@ -116,16 +172,24 @@
   // The stretches in which the loader was not on: grey with their name in the large chart, in the colour of the state
   // on the 0 line of the small ones.
   const PHASES = { off: { key: 'inactive', color: 'var(--muted)' }, shed: { key: 'shed', color: 'var(--warn)' }, locked: { key: 'locked', color: 'var(--bad)' } };
+  // A phase that still runs ends now.
   const phases = $derived(
-    (history?.phases ?? []).map((b) => ({ ...b, label: t('chunks.status.' + PHASES[b.phase].key), color: PHASES[b.phase].color })),
+    (history?.phases ?? []).map((b) => ({
+      ...b,
+      to: b.to >= history.to ? now : b.to,
+      label: t('chunks.status.' + PHASES[b.phase].key),
+      color: PHASES[b.phase].color,
+    })),
   );
+  const running = $derived(!!history && !(history.phases ?? []).some((b) => b.to >= history.to));
   // The small line of one value: green, or yellow while the loader was over a warn limit at that time.
-  const linePoints = (m) =>
-    history.points.map((p) => ({
-      time: p.time,
-      value: p[m.key],
-      color: loader.metrics.some((o) => o.warn > 0 && p[o.key] >= o.warn) ? 'var(--warn)' : 'var(--good)',
-    }));
+  const linePoint = (p, m) => ({
+    time: p.time,
+    value: p[m.key],
+    color: loader.metrics.some((o) => o.warn > 0 && p[o.key] >= o.warn) ? 'var(--warn)' : 'var(--good)',
+  });
+  // Where the line ends right now: the newest value, held until the next measurement.
+  const livePoint = $derived(running && shown && now > shown.time ? { ...shown, time: now } : null);
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
@@ -253,7 +317,8 @@
                   {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
                 </div>
                 {#if history?.points.length > 1 || phases.length}
-                  <StateLine points={linePoints(m)} {phases} from={history.from} to={history.to} label={m.label} />
+                  <StateLine points={shownPoints.map((p) => linePoint(p, m))} {phases} live={livePoint && linePoint(livePoint, m)}
+                    from={rangeStart} to={now} label={m.label} />
                 {/if}
                 <div class="muted tiny">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</div>
               </button>
@@ -313,7 +378,7 @@
       {#if !history.points.length && !phases.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
       {/if}
-      <LineChart title={m.label} points={history.points} bands={phases} from={history.from} to={history.to} height={chartHeight}
+      <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={now} height={chartHeight}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
         series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} onClose={() => (chart = null)} />

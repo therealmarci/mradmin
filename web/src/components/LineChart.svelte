@@ -3,6 +3,7 @@
   // 2px lines, hairline gridlines, end labels when they do not collide, a crosshair that snaps to the nearest
   // point in time with one tooltip for every series, arrow keys for keyboard users, a table view and a full-screen view (expand button).
   import { t } from '../lib/i18n.js';
+  import { curve } from '../lib/curve.js';
   import LineChart from './LineChart.svelte';
 
   let {
@@ -13,6 +14,8 @@
     yMax = null, // fixed top of the scale (e.g. 20 TPS, 100 %), otherwise from the data
     refs = [], // reference lines [{ value, label }]
     bands = [], // shaded stretches of time [{ from, to, label }], the line breaks there
+    smooth = false, // a soft curve through the points instead of straight lines
+    live = null, // where the line ends right now: drawn, but no measurement (not in the table or the tooltip)
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
@@ -23,6 +26,7 @@
 
   let expanded = $state(false);
   let bigHeight = $state(400);
+  const clipId = 'chart-' + Math.random().toString(36).slice(2, 8);
 
   function expand() {
     bigHeight = Math.max(260, Math.round(window.innerHeight * 0.62));
@@ -67,24 +71,28 @@
   // A gap of more than 3 steps (server offline) breaks the line instead of drawing across it. The step is the
   // larger neighbouring gap: a range mixes resolutions (5-minute points from before the last restart, then
   // 10-second or per-second ones), and the change between them must not count as a gap.
+  const drawn = $derived(live ? [...points, live] : points);
   const segments = $derived.by(() => {
-    if (points.length < 2) return [points];
-    const gaps = points.slice(1).map((p, i) => p.time - points[i].time);
-    const result = [[points[0]]];
-    for (let i = 1; i < points.length; i++) {
+    if (drawn.length < 2) return [drawn];
+    const gaps = drawn.slice(1).map((p, i) => p.time - drawn[i].time);
+    const result = [[drawn[0]]];
+    for (let i = 1; i < drawn.length; i++) {
       const gap = gaps[i - 1];
       const step = Math.max(gaps[i - 2] ?? 0, gaps[i] ?? 0) || gap;
-      if (gap > step * 3 || bands.some((b) => points[i - 1].time <= b.from && points[i].time >= b.to)) result.push([]);
-      result.at(-1).push(points[i]);
+      if (gap > step * 3 || bands.some((b) => drawn[i - 1].time <= b.from && drawn[i].time >= b.to)) result.push([]);
+      result.at(-1).push(drawn[i]);
     }
     return result;
   });
 
+  function stroke(seg, key) {
+    const pts = seg.map((p) => [x(p.time), y(p[key] ?? 0)]);
+    const start = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    return start + (smooth ? curve(pts) : pts.slice(1).map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`)).join('');
+  }
+
   function path(key) {
-    return segments
-      .filter((seg) => seg.length)
-      .map((seg) => seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.time).toFixed(1)},${y(p[key] ?? 0).toFixed(1)}`).join(''))
-      .join('');
+    return segments.filter((seg) => seg.length).map((seg) => stroke(seg, key)).join('');
   }
 
   // Single series: a light wash under the line, closed down to the baseline.
@@ -92,17 +100,14 @@
     const base = y(0).toFixed(1);
     return segments
       .filter((seg) => seg.length > 1)
-      .map((seg) => {
-        const line = seg.map((p, i) => `${i ? 'L' : 'M'}${x(p.time).toFixed(1)},${y(p[key] ?? 0).toFixed(1)}`).join('');
-        return `${line}L${x(seg.at(-1).time).toFixed(1)},${base}L${x(seg[0].time).toFixed(1)},${base}Z`;
-      })
+      .map((seg) => `${stroke(seg, key)}L${x(seg.at(-1).time).toFixed(1)},${base}L${x(seg[0].time).toFixed(1)},${base}Z`)
       .join('');
   }
 
   // End labels only when they do not collide - otherwise the legend and the tooltip carry identity.
   const endLabels = $derived.by(() => {
     if (!points.length) return [];
-    const last = points.at(-1);
+    const last = drawn.at(-1);
     const labels = series.map((s) => ({ ...s, y: y(last[s.key] ?? 0), value: last[s.key] }));
     const sorted = [...labels].sort((a, b) => a.y - b.y);
     for (let i = 1; i < sorted.length; i++) if (sorted[i].y - sorted[i - 1].y < 14) return [];
@@ -211,12 +216,16 @@
           <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} />
           <text class="axis" x={pad.left + 4} y={y(r.value) - 4}>{r.label}</text>
         {/each}
-        {#if series.length === 1}
-          <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
-        {/if}
-        {#each series as s}
-          <path d={path(s.key)} class="line" style="stroke: {s.color}" />
-        {/each}
+        <!-- Points just before the range are cut off at the edge of the plot. -->
+        <clipPath id={clipId}><rect x={pad.left} y={0} width={innerW} {height} /></clipPath>
+        <g clip-path="url(#{clipId})">
+          {#if series.length === 1}
+            <path d={area(series[0].key)} class="wash" style="fill: {series[0].color}" />
+          {/if}
+          {#each series as s}
+            <path d={path(s.key)} class="line" style="stroke: {s.color}" />
+          {/each}
+        </g>
         {#each endLabels as l}
           <text class="end" x={pad.left + innerW + 6} y={l.y + 4}>{format(l.value)}</text>
         {/each}
@@ -246,7 +255,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
