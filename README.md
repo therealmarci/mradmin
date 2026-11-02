@@ -14,7 +14,7 @@
 ## Was kann MRadmin?
 - **Wartungsarbeiten:** Während einer Wartung kommt nur das Team auf den Server. Geplante Wartungen kommen auf Wunsch live aus **Uptime Kuma**, vorher läuft eine **Bossbar mit Countdown**.
 - **Tickets & Reports:** Spieler melden Regelverstöße, Bugs und Fragen mit `/report` über ein Menü. Das Team antwortet im Spiel oder im Web - wie in einem Chat.
-- **Admin-Modus:** Creative und ein Teleport-Kompass. Beim Beenden ist alles wieder exakt wie vorher - Inventar, XP, Leben, Position.
+- **Admin-Modus:** Creative und ein Menü-Item. Beim Beenden ist alles wieder exakt wie vorher - Inventar, XP, Leben, Position.
 - **Spieler-Werkzeuge:** hinteleportieren, herholen, Inventar und Enderchest ansehen, einfrieren, kicken.
 - **Ankündigungen** auf dem Bildschirm aller Spieler, mit Vorlagen (z.B. fürs Restart-Script) und auf Wunsch im Community-Discord.
 - **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
@@ -46,7 +46,7 @@ Alles, was du nicht brauchst, schaltest du unter `features` in der Config ab (`/
 features:
   maintenance: true    # Wartungsmodus inkl. Uptime Kuma
   announce: true       # Ankündigungen
-  admin-mode: true     # Admin-Modus und Kompass
+  admin-mode: true     # Admin-Modus und Menü-Item
   teleport: true       # zu Spielern teleportieren
   summon: true         # Spieler herholen
   inventory: true      # Inventar/Enderchest ansehen
@@ -61,7 +61,7 @@ Eine ausgeschaltete Funktion verschwindet komplett aus Befehlen, Menüs und Web.
 ---
 
 ## Admin-Dashboard
-**`/mradmin`** (oder Rechtsklick mit dem Admin-Kompass) öffnet das Dashboard:
+**`/mradmin`** (oder Rechtsklick mit dem Menü-Item) öffnet das Dashboard:
 - **Live-Kacheln** für Spieler, Server, Wartung und Tickets. Darunter zeigt eine farbige Scheibe den Zustand, z.B. TPS (grün ab 19,5, gelb ab 15), Wartung (gelb = geplant, rot = aktiv), Tickets (rot = warten auf Antwort).
 - **Ankündigen:** die eigenen Vorlagen als Knöpfe (die eingebauten aus der Sprachdatei stehen nicht im Menü), „Eigener Text“ öffnet einen Dialog.
 - **Plugin-Knöpfe:** Admin-Menüs der anderen MRtechnology-Plugins mit Live-Infos. Eigene Knöpfe (z.B. für Chunky) gehen über `admin-mode.menu.buttons`.
@@ -70,14 +70,14 @@ Eine ausgeschaltete Funktion verschwindet komplett aus Befehlen, Menüs und Web.
 Fehlt eine Permission, fehlt einfach der Knopf. Alle Befehle zeigt `/mradmin help`.
 
 ## Admin-Modus
-- **`/mradmin mode on`** (oder der Schalter im Dashboard): Inventar, Rüstung, XP, Leben, Hunger, Effekte, Flugstatus und Position werden gespeichert. Danach bist du im Creative-Modus mit dem **Admin-Kompass**.
+- **`/mradmin mode on`** (oder der Schalter im Dashboard): Inventar, Rüstung, XP, Leben, Hunger, Effekte, Flugstatus und Position werden gespeichert. Danach bist du im Creative-Modus mit dem **Menü-Item** (Strukturleere, `admin-mode.compass-material`).
 - **`/mradmin mode off`:** Alles wird exakt wiederhergestellt, und du landest wieder am Ausgangspunkt.
 - Gespeichert wird **vor** jeder Änderung - auch ein Absturz verliert nichts. Du bist danach einfach noch im Admin-Modus.
 - Im Admin-Modus kann man nichts fallen lassen oder aufheben, damit keine Creative-Items ins Survival gelangen.
 - `/mradmin mode list` zeigt, wer im Admin-Modus ist. `/mradmin mode off <spieler>` beendet ihn für andere.
 
 ## Spieler-Menü & Serverzustand
-**Spieler-Menü** (Kompass → Spieler teleportieren → Kopf anklicken, oder `/mradmin player <spieler>`):
+**Spieler-Menü** (Menü-Item → Spieler teleportieren → Kopf anklicken, oder `/mradmin player <spieler>`):
 - Infos: Position, Spielmodus, Leben, Ping, Spielzeit, erster Join
 - **Hinteleportieren** und **zu mir holen** (Shift-Klick auf einen Kopf teleportiert direkt)
 - **Inventar** und **Enderchest** ansehen - live und nur lesend
@@ -248,7 +248,7 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 
 | Befehl | Was er tut | Permission |
 |---|---|---|
-| `/mradmin` (`/mra`) | Admin-Dashboard (Kompass-Hub) · `/mradmin help` zeigt alle Befehle | `mradmin.dashboard` |
+| `/mradmin` (`/mra`) | Admin-Dashboard · `/mradmin help` zeigt alle Befehle | `mradmin.dashboard` |
 | `/report [spieler]` (`/melden`, `/ticket`, `/support`) | Ticket-Menü: Spieler melden, Fehler melden, sonstige Anliegen, eigene Tickets | `mradmin.tickets.create` |
 | `/web [devices\|logout]` (`/me`) | Link und 6-stelliger Code für die eigene Spielerseite · eigene Geräte · abmelden | `mradmin.web.self` |
 | `/sc [nachricht]` | Staff-Chat (ohne Nachricht: an/aus) | `mradmin.staffchat` |
@@ -313,7 +313,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `features` · `integrations` | Funktionen und Plugin-Verbindungen an/aus |
 | `maintenance` · `uptime-kuma` | Ablauf der Wartung, Anbindung an Uptime Kuma |
 | `announce` · `discord-announce` | Ankündigungen im Spiel und im Community-Discord |
-| `admin-mode` · `gui` | Admin-Modus, Kompass, eigene Dashboard-Knöpfe |
+| `admin-mode` · `gui` | Admin-Modus, Menü-Item, eigene Dashboard-Knöpfe |
 | `tickets` | Kategorien, Cooldowns, Limits, wie lange geschlossene Tickets bleiben |
 | `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
@@ -379,6 +379,12 @@ Es braucht `mradmin.maintenance.bypass` (in `mradmin.groups.support` enthalten).
 
 **Ich war im Admin-Modus, und der Server ist abgestürzt.**
 Nichts verloren - du bist nach dem Neustart einfach noch im Admin-Modus. `/mradmin mode off` stellt alles wieder her. Die Dateien in `plugins/MRadmin/admin-mode/` bitte nicht löschen.
+
+**Ein Rechtsklick mit dem Menü-Item löst ein anderes Plugin aus.**
+Stell in `admin-mode.compass-material` ein Item ein, das kein anderes Plugin nutzt. Der Kompass ist zum Beispiel das Navigationswerkzeug von WorldEdit und teleportiert dich beim Rechtsklick - darum ist seit dieser Version die Strukturleere (`STRUCTURE_VOID`) der Standard. Sie lässt sich nicht platzieren.
+
+**Im Spectator-Modus kann ich in Menüs nichts anklicken.**
+Das ist normal: Minecraft verwirft Inventar-Klicks von Zuschauern, bevor ein Plugin sie sieht. Wechsle für das Menü kurz in Creative (`/gamemode creative`). Aus demselben Grund eignet sich `admin-mode.gamemode: SPECTATOR` nur, wenn du ohne Menüs arbeitest. Die Befehle und die Weboberfläche funktionieren auch dann.
 
 **In der Weboberfläche stehen bei Items nur Kürzel statt Bildern.**
 MRadmin konnte die Bilder nicht von Mojang laden (die Konsole sagt beim Start, warum - meist kein Internet am Server) oder `web.item-icons` steht auf `false`. Nach dem Beheben `/mradmin reload` - geladen wird nur einmal pro Minecraft-Version.

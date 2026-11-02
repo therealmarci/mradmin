@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(16, Map.ofEntries(
+    private final Messages messages = new Messages(17, Map.ofEntries(
+            // 17: the admin item is no compass any more.
+            Map.entry(17, Set.of("help-mode", "mode-on", "mode-compass-name", "gui-switch-admin-off-lore")),
             Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
                     "maintenance-motd")),
             Map.entry(3, Set.of("help-discord", "announce-usage", "discord-test-hint", "announce-presets.update.subtitle",

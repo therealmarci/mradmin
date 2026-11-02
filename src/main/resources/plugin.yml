@@ -181,7 +181,7 @@ permissions:
     description: "Web interface: create, change and delete announcement templates (page Communication)."
     default: op
   mradmin.mode:
-    description: /mradmin mode - admin mode for yourself (the compass opens the dashboard).
+    description: /mradmin mode - admin mode for yourself (the menu item opens the dashboard).
     default: op
     children:
       mradmin.dashboard: true

@@ -55,13 +55,17 @@ public final class AdminModeListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || !mode().isCompass(event.getItem())) {
+        if (!mode().isCompass(event.getItem())) {
             return;
         }
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
+        // Also in the off hand: the item may be a block and must never be placed.
         event.setCancelled(true);
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         Player player = event.getPlayer();
         if (!player.hasPermission(AdminModeManager.PERM_USE)) {
             plugin.messages().send(player, "no-permission");

@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 16
+lang-version: 17
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -31,7 +31,7 @@ time-open-end: "open"
 # Every line only appears if the player may use that command.
 help-header: "<prefix><gray>Commands:"
 help-announce: "<gold>/mradmin announce <text|preset></gold> <dark_gray>- <gray>announcement to everyone <dark_gray>(presets: <presets>)"
-help-mode: "<gold>/mradmin mode [on|off|list]</gold> <dark_gray>- <gray>admin mode (creative + admin compass with menu)"
+help-mode: "<gold>/mradmin mode [on|off|list]</gold> <dark_gray>- <gray>admin mode (creative + menu item)"
 help-maintenance: "<gold>/mradmin maintenance [status|on|schedule|extend|off|refresh]</gold> <dark_gray>- <gray>maintenance"
 help-discord: "<gold>/mradmin discord [test [announce]]</gold> <dark_gray>- <gray>status of the Discord webhooks (admin log and announcements)"
 help-reload: "<gold>/mradmin reload</gold> <dark_gray>- <gray>reload the configuration"
@@ -133,7 +133,7 @@ announce-presets:
     discord: "⭐ **Event:** {args}"
 # --- Admin mode ----------------------------------------------------------------
 mode-usage: "<prefix><gray>Usage: <gold>/mradmin mode [on|off|list] [player]"
-mode-on: "<prefix><hover:show_text:'<gray>Inventory is saved.<newline>Right-click the compass: admin menu<newline>Leave: /mradmin mode off'><green>Admin mode <white>on</white></hover>"
+mode-on: "<prefix><hover:show_text:'<gray>Inventory is saved.<newline>Right-click the menu item: admin menu<newline>Leave: /mradmin mode off'><green>Admin mode <white>on</white></hover>"
 mode-off: "<prefix><hover:show_text:'<gray>Everything as before (<duration> in admin mode)'><green>Admin mode <white>off</white></hover>"
 mode-off-no-world: "<prefix><hover:show_text:'<gray>World <world> not loaded, you stay here.<newline>Inventory etc. are restored.'><yellow>Admin mode off, world missing</hover>"
 mode-resumed: "<prefix><hover:show_text:'<gray>Leave: /mradmin mode off'><yellow>Still in admin mode <gray>(for <duration>)</hover>"
@@ -149,7 +149,7 @@ mode-list-header: "<prefix><gray>In admin mode:"
 mode-list-entry: "<dark_gray>- <white><player></white> <gray>for <duration>"
 mode-list-empty: "<prefix><gray>Nobody is in admin mode."
 mode-teleported: "<prefix><gray>Teleported to <white><player></white>."
-mode-compass-name: "<gold><bold>Admin compass"
+mode-compass-name: "<gold><bold>Admin menu"
 mode-compass-lore:
   - "<gray>Right-click: admin menu"
   - "<dark_gray>Teleport, plugins, maintenance"
@@ -229,7 +229,7 @@ gui-switch-admin-on-lore:
   - "<gray>Inventory and XP saved."
   - "<yellow>Click: leave <gray>(everything back)"
 gui-switch-admin-off-lore:
-  - "<gray>Creative + compass, inventory saved."
+  - "<gray>Creative + menu item, inventory saved."
   - "<yellow>Click: start"
 gui-switch-staffchat: "<aqua><bold>Staff chat: <state>"
 gui-switch-staffchat-on-lore:

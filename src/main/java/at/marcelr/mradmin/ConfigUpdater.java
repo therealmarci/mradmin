@@ -45,7 +45,7 @@ public final class ConfigUpdater {
  * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
  * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
      */
-    public static final int CURRENT_VERSION = 35;
+    public static final int CURRENT_VERSION = 36;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -173,6 +173,10 @@ public final class ConfigUpdater {
                     }
                     template.set("player-web.rankings.statistics", list);
                 }
+            }
+            // v36: right-clicking a compass triggers other plugins (WorldEdit teleports); only the old default is replaced.
+            if (version < 36 && "COMPASS".equalsIgnoreCase(existing.getString("admin-mode.compass-material"))) {
+                template.set("admin-mode.compass-material", "STRUCTURE_VOID");
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

@@ -251,10 +251,14 @@ public final class AdminModeManager {
         return item;
     }
 
-    /** Gives the compass back if it is gone (thrown away in the creative inventory ...). */
+    /** Gives the compass back if it is gone (thrown away ...), or swaps it after admin-mode.compass-material changed. */
     void ensureCompass(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (isCompass(item)) {
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            if (isCompass(contents[i])) {
+                if (contents[i].getType() != settings().compass()) {
+                    player.getInventory().setItem(i, compass());
+                }
                 return;
             }
         }
