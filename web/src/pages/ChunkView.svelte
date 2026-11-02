@@ -7,8 +7,22 @@
   import { STATUS } from '../lib/chunks.js';
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
+  import LineChart from '../components/LineChart.svelte';
 
   let { id, me } = $props();
+
+  const RANGES = ['1m', '10m', '30m', '1h', '6h', '12h'];
+  // The storage can be blocked (private window): then the range is simply not remembered.
+  function savedRange() {
+    try {
+      const saved = sessionStorage.getItem('mradmin.chunks.range');
+      return RANGES.includes(saved) ? saved : '1h';
+    } catch {
+      return '1h';
+    }
+  }
+  let range = $state(savedRange());
+  let history = $state(null);
 
   let loader = $state(null);
   let error = $state('');
@@ -31,6 +45,34 @@
     const timer = setInterval(load, 5000);
     return () => clearInterval(timer);
   });
+
+  // An answer for an older range (slow network) is dropped. MRchunks before the charts: no history, no section.
+  async function loadHistory() {
+    const asked = range;
+    try {
+      const result = await moduleData('mrchunks', 'loaderHistory', { id, range: asked });
+      if (asked === range) history = result;
+    } catch {
+      history = null;
+    }
+  }
+
+  $effect(() => {
+    id;
+    range;
+    untrack(loadHistory);
+    const timer = setInterval(loadHistory, 20000);
+    return () => clearInterval(timer);
+  });
+
+  function chooseRange(key) {
+    range = key;
+    try {
+      sessionStorage.setItem('mradmin.chunks.range', key);
+    } catch {
+      // only a convenience
+    }
+  }
 
   async function act(action, extra = {}) {
     if (action === 'delete' && !confirm(t('chunks.deleteConfirm', { name: loader.name }))) return;
@@ -183,6 +225,31 @@
           </div>
         {:else}
           <p class="muted">{t('chunks.noActivity')}</p>
+        {/if}
+
+        {#if loader.metrics && history}
+          <div class="history">
+            <div class="h-head">
+              <h3>{t('chunks.history')}</h3>
+              <div class="switch" role="group" aria-label={t('chunks.history')}>
+                {#each RANGES as r}
+                  <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
+                {/each}
+              </div>
+            </div>
+            {#if history.points.length}
+              <div class="charts">
+                {#each loader.metrics as m (m.key)}
+                  <LineChart title={m.label} points={history.points} from={history.from} to={history.to} height={170}
+                    seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
+                    refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
+                    series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} />
+                {/each}
+              </div>
+            {:else}
+              <p class="muted small">{t('chunks.historyEmpty')}</p>
+            {/if}
+          </div>
         {/if}
       </section>
 
@@ -394,6 +461,59 @@
 
   .actions.suspend {
     align-items: center;
+  }
+
+  /* Measurements over time, one chart per value */
+  .history {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  .h-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .h-head h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 4px;
+    gap: 4px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .switch button {
+    background: transparent;
+    color: var(--muted);
+    padding: 5px 11px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+  }
+
+  .switch button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  .charts {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
   }
 
   .push {
