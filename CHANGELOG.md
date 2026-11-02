@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Chunkloader: Limit-Sperre aussetzen:** Auf der Seite eines Loaders setzt ein Admin die Sperre wegen überschrittener Grenzen für diesen Loader vorübergehend aus, höchstens 24 Stunden (Permission `mrchunks.admin.suspendlock`). Ein deswegen gesperrter Loader wird dabei entsperrt, die Aussetzung lässt sich vorzeitig beenden. Die Liste zeigt, bei welchen Loadern sie läuft. Braucht MRchunks ab der nächsten Version.
+
 ### Behoben & geändert
 - **Admin-Modus und Multiverse:** Multiverse-Core setzte beim Weltwechsel den Spielmodus der Welt durch. Dadurch stand man im Admin-Modus plötzlich ungeschützt im Überlebensmodus. Das wird jetzt abgewiesen, `/gamemode` funktioniert weiter.
 - **Admin-Modus und Multiverse-Inventories:** Solange der Admin-Modus läuft, tauscht Multiverse-Inventories das Inventar nicht mehr. So gelangt das Admin-Inventar in keine Gruppe, und beim Beenden kommt das eigene Inventar zurück.

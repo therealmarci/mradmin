@@ -43,7 +43,8 @@
         go('/chunks');
         return;
       }
-      message = t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
+      message = action === 'suspendLock' && extra.duration === '0' ? t('chunks.done.suspendEnd')
+        : t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
       await load();
     } catch (e) {
       error = errorText(e);
@@ -60,6 +61,9 @@
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
   const conspicuousOnly = $derived(!!loader?.conspicuous && !!me.may.mrchunksToggleConspicuous && !me.may.mrchunksManage);
+  // A lock after repeated shutdowns cannot be suspended, only lifted (older MRchunks sends no durations).
+  const canSuspend = $derived(!!me.may.mrchunksSuspendLock && !!loader?.suspendDurations?.length && !loader?.lock?.repeated);
+  const span = (ms) => (ms % 3600000 ? Math.round(ms / 60000) + ' min' : ms / 3600000 + ' h');
 </script>
 
 <div class="page">
@@ -92,6 +96,12 @@
         <div class="lock shed">
           <b>{t('chunks.status.shed')}</b>
           {t('chunks.shedSince', { since: dateTime(loader.shed.since), back: dateTime(loader.shed.back) })}
+        </div>
+      {/if}
+      {#if loader.suspension}
+        <div class="lock suspended">
+          <b>{t('chunks.suspended')}</b>
+          {t('chunks.suspendedUntil', { until: dateTime(loader.suspension.until), by: loader.suspension.by })}
         </div>
       {/if}
 
@@ -128,6 +138,18 @@
           {/if}
           {#if me.may.mrchunksManage}
             <button class="danger push" onclick={() => act('delete')} disabled={busy}>{t('chunks.delete')}</button>
+          {/if}
+        </div>
+      {/if}
+
+      {#if canSuspend}
+        <div class="actions suspend">
+          <span class="muted small" title={t('chunks.suspendHint')}>{t(loader.lock ? 'chunks.suspendLocked' : 'chunks.suspend')}</span>
+          {#each loader.suspendDurations as duration (duration)}
+            <button class="secondary" onclick={() => act('suspendLock', { duration: String(duration) })} disabled={busy}>{span(duration)}</button>
+          {/each}
+          {#if loader.suspension}
+            <button class="secondary push" onclick={() => act('suspendLock', { duration: '0' })} disabled={busy}>{t('chunks.suspendEnd')}</button>
           {/if}
         </div>
       {/if}
@@ -299,6 +321,12 @@
     border-color: color-mix(in srgb, var(--warn) 35%, var(--border));
   }
 
+  .lock.suspended {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  }
+
   .facts {
     display: grid;
     gap: 8px;
@@ -362,6 +390,10 @@
     gap: 8px;
     padding-top: 14px;
     border-top: 1px solid var(--border);
+  }
+
+  .actions.suspend {
+    align-items: center;
   }
 
   .push {
