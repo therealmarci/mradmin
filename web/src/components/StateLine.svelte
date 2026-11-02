@@ -11,7 +11,7 @@
   const W = 200;
 
   const entries = $derived(stateEntries(points, phases, live));
-  const top = $derived(Math.max(1e-9, ...entries.filter((e) => e.time >= from).map((e) => e.value)));
+  const top = $derived(Math.max(1e-9, ...entries.filter((e) => e.time >= from && e.time <= to).map((e) => e.value)));
   const x = (ms) => ((ms - from) / Math.max(1, to - from)) * W;
   const y = (v) => height - 3 - (Math.min(v, top) / top) * (height - 7);
   const lines = $derived(statePieces(entries, x, y, 3 * Math.max(20000, (to - from) / 300)));

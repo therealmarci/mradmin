@@ -18,6 +18,7 @@
     smooth = false, // a soft curve through the points instead of straight lines
     live = null, // where the line ends right now: drawn, but no measurement (not in the table or the tooltip)
     states = null, // a line in the colours of its state instead of the series, see lib/stateline.js: { points, phases, live }
+    onpan = null, // scrolling through time by wheel or dragging: called with the ms to go back (negative = forward)
     long = false, // range longer than a day: dates on the x axis
     seconds = false, // short range: times with seconds
     height = 190,
@@ -47,7 +48,8 @@
     new Date(ms).toLocaleString(undefined, long ? { day: '2-digit', month: '2-digit' } : seconds ? { ...clock, second: '2-digit' } : clock);
 
   const t0 = $derived(from ?? (points.length ? points[0].time : 0));
-  const t1 = $derived(Math.max(to ?? 0, points.length ? points.at(-1).time : 1));
+  // With scrolling there are points beyond the end of the range, otherwise the range grows up to the newest one.
+  const t1 = $derived(onpan ? to : Math.max(to ?? 0, points.length ? points.at(-1).time : 1));
   const innerW = $derived(Math.max(10, width - pad.left - pad.right));
   const innerH = $derived(height - pad.top - pad.bottom);
 
@@ -61,7 +63,10 @@
   const top = $derived.by(() => {
     if (yMax !== null) return yMax;
     let m = 0;
-    for (const p of points) for (const s of series) m = Math.max(m, p[s.key] ?? 0);
+    for (const p of points) {
+      if (onpan && (p.time < t0 || p.time > t1)) continue;
+      for (const s of series) m = Math.max(m, p[s.key] ?? 0);
+    }
     for (const r of refs) m = Math.max(m, r.value);
     return nice(m * 1.05);
   });
@@ -134,9 +139,36 @@
     return Math.abs(points[lo].time - target) <= Math.abs(points[hi].time - target) ? lo : hi;
   }
 
+  let dragging = null;
+
+  function press(event) {
+    if (!onpan) return;
+    dragging = event.clientX;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
   function move(event) {
     const rect = event.currentTarget.getBoundingClientRect();
+    if (dragging !== null) {
+      const px = ((event.clientX - dragging) / rect.width) * width;
+      dragging = event.clientX;
+      index = -1;
+      onpan((px / innerW) * (t1 - t0));
+      return;
+    }
     index = nearest(((event.clientX - rect.left) / rect.width) * width);
+  }
+
+  // Not as an attribute: only an own listener may keep the wheel from scrolling the page.
+  function wheelPan(node) {
+    const wheel = (event) => {
+      if (!onpan) return;
+      event.preventDefault();
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      onpan(Math.sign(delta) * Math.min(1, Math.abs(delta) / 100) * (t1 - t0) * 0.1);
+    };
+    node.addEventListener('wheel', wheel, { passive: false });
+    return { destroy: () => node.removeEventListener('wheel', wheel) };
   }
 
   function keys(event) {
@@ -203,6 +235,11 @@
         role="img"
         aria-label={title}
         tabindex="0"
+        class:pans={onpan}
+        use:wheelPan
+        onpointerdown={press}
+        onpointerup={() => (dragging = null)}
+        onpointercancel={() => (dragging = null)}
         onpointermove={move}
         onpointerleave={() => (index = -1)}
         onkeydown={keys}
@@ -269,7 +306,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="overlay" onclick={(e) => e.target === e.currentTarget && (expanded = false)}>
     <div class="big" role="dialog" aria-modal="true" aria-label={title}>
-      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {long} {seconds} {from} {to} height={bigHeight}
+      <LineChart {title} {points} {series} {format} {yMax} {refs} {bands} {smooth} {live} {states} {onpan} {long} {seconds} {from} {to} height={bigHeight}
         onClose={() => (expanded = false)} />
     </div>
   </div>
@@ -352,6 +389,11 @@
   svg:focus-visible {
     box-shadow: 0 0 0 2px var(--accent);
     border-radius: 6px;
+  }
+
+  svg.pans {
+    cursor: grab;
+    touch-action: pan-y;
   }
 
   .band {

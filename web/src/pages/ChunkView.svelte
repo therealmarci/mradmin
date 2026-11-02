@@ -51,9 +51,10 @@
   // An answer for an older range (slow network) is dropped. MRchunks before the charts: no history, no section.
   async function loadHistory() {
     const asked = range;
+    const end = paused ? Math.round(viewEnd) : null;
     try {
-      const result = await moduleData('mrchunks', 'loaderHistory', { id, range: asked });
-      if (asked === range) take(result);
+      const result = await moduleData('mrchunks', 'loaderHistory', end === null ? { id, range: asked } : { id, range: asked, end });
+      if (asked === range && paused === (end !== null)) take(result);
     } catch {
       history = null;
     }
@@ -63,10 +64,35 @@
     id;
     range;
     untrack(loadHistory);
+    if (paused) return;
     // A new measurement should show soon after it was taken; on long ranges one more point changes little.
     const timer = setInterval(loadHistory, RANGE_MS[range] <= 600000 ? 5000 : 20000);
     return () => clearInterval(timer);
   });
+
+  // Timeline: the charts stand still at viewEnd and can be scrolled through the stored 12 hours. The server sends a
+  // fixed number of points per range, so the detail falls with the range.
+  const MAX_SPAN = RANGE_MS['12h'];
+  let paused = $state(false);
+  let viewEnd = $state(0);
+  let panTimer;
+
+  /** The range is shown up to this time, within what is stored. */
+  function goTo(end) {
+    viewEnd = Math.min(now, Math.max(now - MAX_SPAN + RANGE_MS[range], end));
+    paused = true;
+    // One range is loaded on both sides: only near its edge new data is needed.
+    const margin = RANGE_MS[range] / 4;
+    if (!history || viewEnd - RANGE_MS[range] - history.from < margin || (history.to < now - margin && history.to - viewEnd < margin)) {
+      clearTimeout(panTimer);
+      panTimer = setTimeout(loadHistory, 120);
+    }
+  }
+
+  function togglePause() {
+    if (paused) paused = false;
+    else goTo(now);
+  }
 
   // The charts only get new values every few seconds but should run smoothly: the time keeps moving in the browser, the
   // line reaches up to now with the newest value, and a new measurement glides in instead of jumping.
@@ -84,7 +110,7 @@
     const sameRange = history?.range === range;
     apply();
     const next = allPoints.at(-1);
-    if (!calm && sameRange && last && next && next.time !== last.time) {
+    if (!calm && !paused && sameRange && last && next && next.time !== last.time) {
       before = last;
       blendStart = performance.now();
       blend = 0;
@@ -93,7 +119,7 @@
 
   function take(result) {
     change(() => {
-      serverOffset = result.to - Date.now();
+      if (!paused) serverOffset = result.to - Date.now();
       history = { ...result, range };
     });
   }
@@ -141,6 +167,7 @@
   // The server keeps the live points too, so a reload loses nothing; here only the ones it has not sent yet are added.
   const allPoints = $derived.by(() => {
     const server = history?.points ?? [];
+    if (paused) return server;
     const last = server.at(-1)?.time ?? 0;
     return [...server, ...liveBuffer.filter((p) => p.time > last)];
   });
@@ -167,11 +194,13 @@
     return () => cancelAnimationFrame(frame);
   });
 
-  const rangeStart = $derived(now - RANGE_MS[range]);
+  const viewTo = $derived(paused ? viewEnd : now);
+  const scrollSpan = $derived(MAX_SPAN - RANGE_MS[range]);
+  const rangeStart = $derived(viewTo - RANGE_MS[range]);
   // The newest point on its way from the value before to the new one.
   const shown = $derived.by(() => {
     const last = allPoints.at(-1);
-    if (!last || !before || blend >= 1) return last ?? null;
+    if (!last || !before || blend >= 1 || paused) return last ?? null;
     const eased = blend * (2 - blend);
     const mixed = { time: last.time };
     for (const key of Object.keys(last)) {
@@ -194,6 +223,7 @@
 
   function chooseRange(key) {
     range = key;
+    if (paused) goTo(viewEnd);
     try {
       sessionStorage.setItem('mradmin.chunks.range', key);
     } catch {
@@ -237,12 +267,14 @@
   };
   // A phase that still runs ends now.
   const phases = $derived(
-    (history?.phases ?? []).map((b) => ({
-      ...b,
-      to: b.to >= history.to ? now : b.to,
-      label: t('chunks.status.' + PHASES[b.phase].key),
-      color: PHASES[b.phase].color,
-    })),
+    (history?.phases ?? [])
+      .map((b) => ({
+        ...b,
+        to: !paused && b.to >= history.to ? now : b.to,
+        label: t('chunks.status.' + PHASES[b.phase].key),
+        color: PHASES[b.phase].color,
+      }))
+      .filter((b) => b.to > rangeStart && b.from < viewTo),
   );
   const running = $derived(!!history && !(history.phases ?? []).some((b) => b.to >= history.to));
   // The small line of one value: its colour only follows its own limits.
@@ -252,7 +284,7 @@
     return { time: p.time, value, color: over };
   };
   // Where the line ends right now: the newest value, held until the next measurement.
-  const livePoint = $derived(running && shown && now > shown.time ? { ...shown, time: now } : null);
+  const livePoint = $derived(!paused && running && shown && now > shown.time ? { ...shown, time: now } : null);
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
@@ -359,7 +391,11 @@
               stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
           </span>
           <h2>{t('chunks.activity')}</h2>
-          {#if liveActive}<span class="live" title={t('chunks.liveHint')}>{t('chunks.live')}</span>{/if}
+          {#if paused}
+            <button class="secondary resume" onclick={togglePause} title={t('chunks.pausedHint')}>▶ {t('chunks.resume')}</button>
+          {:else if liveActive}
+            <span class="live" title={t('chunks.liveHint')}>{t('chunks.live')}</span>
+          {/if}
         </div>
         {#if loader.metrics}
           <p class="muted small">
@@ -385,7 +421,7 @@
                 <div class="well">
                   {#if history?.points.length > 1 || phases.length}
                     <StateLine points={shownPoints.map((p) => linePoint(p, m))} {phases} live={livePoint && linePoint(livePoint, m)}
-                      from={rangeStart} to={now} height={40} label={m.label} />
+                      from={rangeStart} to={viewTo} height={40} label={m.label} />
                   {/if}
                 </div>
               </button>
@@ -443,16 +479,27 @@
           <strong>{value(m)}</strong>
           <span class="muted small">{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}</span>
         </div>
-        <div class="switch" role="group" aria-label={t('chunks.history')}>
-          {#each RANGES as r}
-            <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
-          {/each}
+        <div class="controls">
+          <button class="secondary" onclick={togglePause}>{paused ? '▶ ' + t('chunks.resume') : '⏸ ' + t('chunks.pause')}</button>
+          <div class="switch" role="group" aria-label={t('chunks.history')}>
+            {#each RANGES as r}
+              <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
+            {/each}
+          </div>
         </div>
+        {#if scrollSpan > 0}
+          <div class="timeline" title={t('chunks.timelineHint')}>
+            <input type="range" min="0" max={scrollSpan} step={Math.max(1000, Math.round(RANGE_MS[range] / 60))} value={scrollSpan - Math.min(scrollSpan, now - viewTo)}
+              aria-label={t('chunks.timeline')} oninput={(e) => goTo(now - (scrollSpan - Number(e.target.value)))} />
+            <span class="muted small">{paused ? dateTime(rangeStart) + ' – ' + dateTime(viewTo) : t('chunks.timelineHint')}</span>
+          </div>
+        {/if}
       </div>
       {#if !history.points.length && !phases.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
       {/if}
-      <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={now} height={chartHeight}
+      <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={viewTo} height={chartHeight}
+        onpan={(ms) => goTo(viewTo - ms)}
         states={{ points: shownPoints.map((p) => linePoint(p, m)), phases, live: livePoint && linePoint(livePoint, m) }}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit'), color: 'var(--value-warn)' }, { value: m.lock, label: t('chunks.lockLimit'), color: 'var(--bad)' }].filter((r) => r.value > 0)}
@@ -673,6 +720,30 @@
     border-radius: 14px;
     background: var(--surface);
     border-left: 4px solid var(--tn);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .timeline {
+    flex-basis: 100%;
+    display: grid;
+    gap: 2px;
+  }
+
+  .timeline input {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
+  .resume {
+    margin-left: auto;
+    padding: 3px 10px;
+    font-size: 0.78rem;
   }
 
   .now {
