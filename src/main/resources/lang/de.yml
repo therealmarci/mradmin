@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 17
+lang-version: 18
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -73,8 +73,8 @@ news-preview-more: "<prefix><gray>... und <white><count></white> weitere Neuigke
 news-preview-link: "<yellow><u>[Lesen]</u></yellow>"
 news-preview-hover: "<gray>Öffnet die ganze Nachricht im Browser"
 alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
-alert-title: "<red><b>⚠ <title>"
-alert-subtitle: "<white><text>"
+alert-title: "<red><b>ACHTUNG"
+alert-subtitle: "<white>Kritische Warnung"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
 web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url ist nicht gesetzt.'><yellow>Link geht nur auf diesem Rechner.</hover>"

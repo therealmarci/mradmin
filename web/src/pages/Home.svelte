@@ -1,6 +1,6 @@
 <script>
   // Start page of the team panel, in the look of the player area: greeting, a slideshow (the health monitor's last
-  // hour, then one banner per warning), one tile per area (server, tickets, the plugins, sleep, maintenance,
+  // minute, then one banner per warning), one tile per area (server, tickets, the plugins, sleep, maintenance,
   // versions) and the players online.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -92,64 +92,33 @@
   const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
-  // The health monitor's last hour for the first slide (only with the right to see it): once a minute while the tab
-  // is visible, one point per minute (the average of its seconds).
+  // The health monitor's last minute for the first slide (only with the right to see it): every second while the
+  // tab is visible. The line reaches up to now and new values glide in, see lib/liveclock.svelte.js.
+  const MINUTE = 60_000;
+  const clock = new LiveClock();
   let health = $state(null);
   async function loadHealth() {
     try {
-      health = await api('GET', '/health?range=1h');
+      const result = await api('GET', '/health?range=1m');
+      const last = health?.points.at(-1);
+      const next = result.points.at(-1);
+      clock.sync(result.to);
+      health = result;
+      if (last && next && last.time !== next.time) clock.glideFrom(last);
     } catch {
-      health = null;
+      // the slide just stays as it is
     }
   }
   $effect(() => {
     if (!me.may.health) return;
     loadHealth();
-    return poll(loadHealth, 60_000);
+    return poll(loadHealth, 1000);
   });
+  $effect(() => (me.may.health ? clock.run(clockStep(MINUTE)) : undefined));
 
-  // The line reaches up to now and the newest value glides in, see lib/liveclock.svelte.js.
-  const HOUR = 3_600_000;
-  const clock = new LiveClock();
-  let latest = $state(null);
-  async function loadLatest() {
-    try {
-      const point = await api('GET', '/health/latest');
-      if (!point?.time) return;
-      if (latest && latest.time !== point.time) clock.glideFrom(latest);
-      clock.sync(point.time);
-      latest = point;
-    } catch {
-      // the line just stays
-    }
-  }
-  $effect(() => {
-    if (!me.may.health) return;
-    loadLatest();
-    return poll(loadLatest, 2000);
-  });
-  $effect(() => (me.may.health ? clock.run(clockStep(HOUR)) : undefined));
-  const shownLatest = $derived(clock.shown(latest));
+  const shownLatest = $derived(clock.shown(health?.points.at(-1)));
+  const inMinute = $derived((health?.points ?? []).filter((x) => x.time >= clock.now - MINUTE));
 
-  const MINUTE = 60_000;
-  const series = $derived.by(() => {
-    const minutes = new Map();
-    for (const point of health?.points ?? []) {
-      const key = Math.floor(point.time / MINUTE);
-      if (!minutes.has(key)) minutes.set(key, []);
-      minutes.get(key).push(point);
-    }
-    return [...minutes.values()].map((part) => {
-      const avg = { time: part.at(-1).time };
-      for (const key of Object.keys(part[0])) {
-        if (key === 'time') continue;
-        const vals = part.map((x) => x[key]).filter((v) => typeof v === 'number' && v >= 0);
-        avg[key] = vals.length ? vals.reduce((a, c) => a + c, 0) / vals.length : null;
-      }
-      return avg;
-    });
-  });
-  const inHour = $derived(series.filter((x) => x.time >= clock.now - HOUR));
   const charts = [
     { key: 'tps', label: 'TPS', color: 'var(--series-1)', max: 20, format: (v) => (v ?? 0).toFixed(1) },
     { key: 'mspt', label: t('overview.mspt'), color: 'var(--series-2)', limit: 50, format: (v) => (v ?? 0).toFixed(1) + ' ms' },
@@ -252,7 +221,7 @@
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
-    <!-- The slideshow: the health monitor first (TPS with the key figures and its last hour), then one banner
+    <!-- The slideshow: the health monitor first (TPS with the key figures and its last minute), then one banner
          per area that has something to do (each warning with its details). -->
     <Carousel {slides} seconds={8} label={t('home.slides')}>
       {#snippet slide(s, i, active)}
@@ -261,7 +230,7 @@
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
-            <span class="when">{t('home.h.lastHour')}</span>
+            <span class="when">{t('home.h.lastMinute')}</span>
           </div>
           <div class="h-body">
             <div class="h-main">
@@ -276,10 +245,10 @@
               <div class="sparks">
                 {#each charts as c (c.key)}
                   <div class="spark-card" style="--c: {c.color}">
-                    <div class="sc-head"><span>{c.label}</span><b>{c.format((shownLatest ?? series.at(-1))?.[c.key])}</b></div>
+                    <div class="sc-head"><span>{c.label}</span><b>{c.format(shownLatest?.[c.key])}</b></div>
                     <div class="spark-box">
-                      <Sparkline values={[...inHour.map((x) => x[c.key]), ...(shownLatest ? [shownLatest[c.key]] : [])]}
-                        times={[...inHour.map((x) => x.time), ...(shownLatest ? [clock.now] : [])]} from={clock.now - HOUR} to={clock.now} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
+                      <Sparkline values={[...inMinute.map((x) => x[c.key]), ...(shownLatest ? [shownLatest[c.key]] : [])]}
+                        times={[...inMinute.map((x) => x.time), ...(shownLatest ? [clock.now] : [])]} from={clock.now - MINUTE} to={clock.now} color={c.color} max={c.max} limit={c.limit} height={28} label={c.label} />
                     </div>
                   </div>
                 {/each}

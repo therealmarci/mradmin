@@ -220,7 +220,7 @@ passiert, hängt vom Stil in Kuma ab:
 
 | Stil in Kuma | Farbe | Im Spiel |
 |---|---|---|
-| danger | rot | neu: Chat + Titel an alle; beim Join im Chat, solange angeheftet |
+| danger | rot | neu: Chat an alle, dazu groß „ACHTUNG / Kritische Warnung“; beim Join im Chat, solange angeheftet |
 | warning | gelb | neu: Chat an alle (kein Titel); beim Join im Chat, solange angeheftet |
 | info, primary, light, dark | blau | einmal pro Spieler im Chat, wie eine Neuigkeit |
 

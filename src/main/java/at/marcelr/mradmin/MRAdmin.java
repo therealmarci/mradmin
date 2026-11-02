@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(17, Map.ofEntries(
+    private final Messages messages = new Messages(18, Map.ofEntries(
+            // 18: only a short warning fills the screen, the text comes in the chat.
+            Map.entry(18, Set.of("alert-title", "alert-subtitle")),
             // 17: the admin item is no compass any more.
             Map.entry(17, Set.of("help-mode", "mode-on", "mode-compass-name", "gui-switch-admin-off-lore")),
             Map.entry(2, Set.of("maintenance-title-line", "maintenance-announced", "maintenance-started", "maintenance-kick",
@@ -97,6 +99,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private final DiscordWebhook discord = new DiscordWebhook(this);
     private DiscordAnnouncer discordAnnounce;
     private at.marcelr.mradmin.news.NewsDelivery newsDelivery;
+    private at.marcelr.mradmin.web.self.XpPeaks xpPeaks;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
@@ -163,6 +166,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         menuListener = new MenuListener(this);
 
         var pm = getServer().getPluginManager();
+        xpPeaks = new at.marcelr.mradmin.web.self.XpPeaks(this);
+        xpPeaks.start();
         pm.registerEvents(new MaintenanceListener(this), this);
         pm.registerEvents(new AdminModeListener(this), this);
         if (pm.getPlugin("Multiverse-Inventories") != null) {
@@ -198,6 +203,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (xpPeaks != null) {
+            xpPeaks.stop();
+        }
         if (menuListener != null) {
             menuListener.stop();
             menuListener.closeAll();
@@ -406,6 +414,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public TicketManager tickets() {
         return tickets;
+    }
+
+    public at.marcelr.mradmin.web.self.XpPeaks xpPeaks() {
+        return xpPeaks;
     }
 
     public Storage storage() {

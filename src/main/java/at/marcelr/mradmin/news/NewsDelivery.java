@@ -280,15 +280,19 @@ public final class NewsDelivery implements Listener {
                 "warning".equals(incident.level())));
     }
 
-    /** Chat line (always, if alerts.chat) and, if {@code title}, the title on the screen (alerts.title). */
+    /**
+     * Chat line (if alerts.chat) and, if {@code title}, a short warning on the screen (alerts.title): a long text does
+     * not fit there. Its text then always comes in the chat, otherwise the warning would say nothing.
+     */
     private void show(Player player, String title, String text, String link, boolean showTitle, boolean warning) {
         Messages m = plugin.messages();
-        if (settings().alertChat()) {
+        boolean onScreen = showTitle && settings().alertTitle();
+        if (settings().alertChat() || onScreen) {
             m.send(player, warning ? "warning-chat" : "alert-chat", tag("title", title), tag("text", text),
                     tag("link", linkButton(link)));
         }
-        if (showTitle && settings().alertTitle()) {
-            player.showTitle(Title.title(m.get("alert-title", tag("title", title)), m.get("alert-subtitle", tag("text", text)),
+        if (onScreen) {
+            player.showTitle(Title.title(m.get("alert-title"), m.get("alert-subtitle"),
                     Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(6), Duration.ofMillis(800))));
         }
     }

@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 17
+lang-version: 18
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -73,8 +73,8 @@ news-preview-more: "<prefix><gray>... and <white><count></white> more news. <lin
 news-preview-link: "<yellow><u>[Read]</u></yellow>"
 news-preview-hover: "<gray>Opens the whole post in the browser"
 alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
-alert-title: "<red><b>⚠ <title>"
-alert-subtitle: "<white><text>"
+alert-title: "<red><b>ATTENTION"
+alert-subtitle: "<white>Critical warning"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
 web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url is not set.'><yellow>The link only works on this machine.</hover>"
