@@ -182,7 +182,16 @@
 
   const hover = $derived(index >= 0 && index < points.length ? points[index] : null);
   const tipLeft = $derived(hover ? Math.min(Math.max(x(hover.time) + 12, 0), width - 170) : 0);
-  const xTicks = $derived(points.length || bands.length ? [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f) : []);
+  // With scrolling the ticks sit on whole times and move with the line, otherwise they split the range evenly.
+  const TICK_STEPS = [10, 30, 60, 120, 300, 600, 1800, 3600, 7200].map((s) => s * 1000);
+  const xTicks = $derived.by(() => {
+    if (!points.length && !bands.length) return [];
+    if (!onpan) return [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f);
+    const step = TICK_STEPS.find((s) => (t1 - t0) / s <= 6) ?? 7200000;
+    const ticks = [];
+    for (let tick = Math.ceil(t0 / step) * step; tick <= t1; tick += step) ticks.push(tick);
+    return ticks;
+  });
 </script>
 
 <section class="card chart">
@@ -255,7 +264,7 @@
           <text class="axis" x={pad.left - 6} y={y(v) + 4} text-anchor="end">{format(v)}</text>
         {/each}
         {#each xTicks as tt, i}
-          <text class="axis" x={x(tt)} y={height - 6} text-anchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
+          <text class="axis" x={x(tt)} y={height - 6} text-anchor={onpan ? 'middle' : i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{axisTime(tt)}</text>
         {/each}
         {#each refs as r}
           <line class="ref" x1={pad.left} x2={pad.left + innerW} y1={y(r.value)} y2={y(r.value)} style={r.color ? `stroke: ${r.color}` : ''} />
@@ -394,6 +403,7 @@
   svg.pans {
     cursor: grab;
     touch-action: pan-y;
+    user-select: none;
   }
 
   .band {

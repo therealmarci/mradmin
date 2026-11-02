@@ -55,8 +55,9 @@
     try {
       const result = await moduleData('mrchunks', 'loaderHistory', end === null ? { id, range: asked } : { id, range: asked, end });
       if (asked === range && paused === (end !== null)) take(result);
-    } catch {
-      history = null;
+    } catch (e) {
+      // MRchunks before the charts answers 404; a short failure must not close a chart that is open.
+      if (e.status === 404) history = null;
     }
   }
 
@@ -70,23 +71,41 @@
     return () => clearInterval(timer);
   });
 
-  // Timeline: the charts stand still at viewEnd and can be scrolled through the stored 12 hours. The server sends a
-  // fixed number of points per range, so the detail falls with the range.
+  // Timeline: the charts stand still at viewEnd and can be scrolled through what is stored, at most 12 hours. The server
+  // sends more than is shown, in a detail that falls with the range.
   const MAX_SPAN = RANGE_MS['12h'];
   let paused = $state(false);
   let viewEnd = $state(0);
-  let panTimer;
+  let panBusy = false;
+  let panAgain = false;
 
-  /** The range is shown up to this time, within what is stored. */
-  function goTo(end) {
-    viewEnd = Math.min(now, Math.max(now - MAX_SPAN + RANGE_MS[range], end));
-    paused = true;
-    // One range is loaded on both sides: only near its edge new data is needed.
-    const margin = RANGE_MS[range] / 4;
-    if (!history || viewEnd - RANGE_MS[range] - history.from < margin || (history.to < now - margin && history.to - viewEnd < margin)) {
-      clearTimeout(panTimer);
-      panTimer = setTimeout(loadHistory, 120);
+  /** Whether the shown range comes near the edge of what is loaded. */
+  function needsData() {
+    const margin = RANGE_MS[range];
+    return !history || viewEnd - RANGE_MS[range] - history.from < margin || (history.to < now - 1000 && history.to - viewEnd < margin);
+  }
+
+  // One answer after the other: while scrolling the data follows, and no answers pile up.
+  async function fetchPan() {
+    if (panBusy) {
+      panAgain = true;
+      return;
     }
+    panBusy = true;
+    await loadHistory();
+    panBusy = false;
+    if (panAgain) {
+      panAgain = false;
+      if (paused && needsData()) fetchPan();
+    }
+  }
+
+  /** The range is shown up to this time, within what is stored: no scrolling into nothing. */
+  function goTo(end) {
+    const first = Math.max(now - MAX_SPAN, history?.oldest || now);
+    viewEnd = Math.min(now, Math.max(first + RANGE_MS[range], end));
+    paused = true;
+    if (needsData()) fetchPan();
   }
 
   function togglePause() {
@@ -470,7 +489,7 @@
 {#if chartMetric}
   {@const m = chartMetric}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="overlay" onclick={(e) => e.target === e.currentTarget && (chart = null)}>
+  <div class="overlay" onpointerdown={(e) => e.target === e.currentTarget && (chart = null)}>
     <div class="big {tileTone(m)}" role="dialog" aria-modal="true" aria-label={m.label}>
       <div class="big-head">
         <div class="now">

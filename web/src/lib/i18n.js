@@ -844,7 +844,7 @@ const texts = {
     'player.vitals': 'Leben · Hunger · Level',
     'player.firstPlayed': 'Erster Besuch',
     'player.playtime': 'Spielzeit',
-    'player.openSelfPage': 'Zur eigenen Spielerseite',
+    'player.openSelfPage': 'Zur Spielerseite',
     'player.freeze': 'Einfrieren',
     'player.unfreeze': 'Auftauen',
     'player.kick': 'Kicken',
