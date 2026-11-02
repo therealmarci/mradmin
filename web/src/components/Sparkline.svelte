@@ -3,24 +3,30 @@
   // an optional dashed limit (e.g. 50 ms per tick) and a dot at the latest value. The details are on the health page.
 
   /**
-   * values: numbers in time order (null = gap, skipped; with gaps the line breaks there and the stretch is shaded);
-   * min/max: fixed scale, otherwise from the values.
+   * values: numbers in time order (null = gap, skipped); min/max: fixed scale, otherwise from the values.
+   * times + from + to: place the values by time instead of evenly; bands: shaded stretches of time [{ from, to }], the
+   * line breaks there.
    */
-  let { values = [], color = 'var(--accent)', min = 0, max = null, limit = null, height = 56, label = '', gaps = false } = $props();
+  let {
+    values = [], color = 'var(--accent)', min = 0, max = null, limit = null, height = 56, label = '',
+    times = null, from = 0, to = 0, bands = [],
+  } = $props();
 
   const W = 200;
 
   const clean = $derived(values.map((v) => (v == null || !Number.isFinite(v) || v < 0 ? null : v)));
   const top = $derived(Math.max(max ?? 0, ...clean.filter((v) => v !== null), limit ?? 0, min + 1e-9) || 1);
-  const x = (i) => (clean.length < 2 ? W : (i / (clean.length - 1)) * W);
+  const at = (ms) => (Math.min(to, Math.max(from, ms)) - from) / Math.max(1, to - from) * W;
+  const x = (i) => (times ? at(times[i]) : clean.length < 2 ? W : (i / (clean.length - 1)) * W);
   const y = (v) => height - 3 - ((v - min) / (top - min)) * (height - 6);
 
-  // The stretches of points that are joined: all of them, or with gaps only the ones between two nulls.
+  // The stretches of points that are joined: all of them, unless a band lies between two points.
   const runs = $derived.by(() => {
     const result = [[]];
     clean.forEach((v, i) => {
-      if (v !== null) result.at(-1).push([x(i), y(v)]);
-      else if (gaps && result.at(-1).length) result.push([]);
+      if (v === null) return;
+      if (times && i && bands.some((b) => times[i - 1] <= b.from && times[i] >= b.to)) result.push([]);
+      result.at(-1).push([x(i), y(v)]);
     });
     return result.filter((run) => run.length);
   });
@@ -31,19 +37,8 @@
       .map((run) => `M${run[0][0].toFixed(1)},${height} ` + run.map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`).join(' ') + ` L${run.at(-1)[0].toFixed(1)},${height} Z`)
       .join(' '),
   );
-  const shades = $derived.by(() => {
-    const result = [];
-    let start = -1;
-    clean.forEach((v, i) => {
-      if (v === null && start < 0) start = i;
-      else if (v !== null && start >= 0) {
-        result.push([x(start), x(i)]);
-        start = -1;
-      }
-    });
-    if (start >= 0) result.push([x(start), W]);
-    return gaps ? result : [];
-  });
+  // A short phase stays visible: at least 2 of the 200 units.
+  const shades = $derived(bands.map((b) => [at(b.from), Math.max(2, at(b.to) - at(b.from))]));
   const last = $derived.by(() => {
     for (let i = clean.length - 1; i >= 0; i--) if (clean[i] !== null) return [x(i), y(clean[i])];
     return null;
@@ -62,8 +57,8 @@
   {#if limit !== null && limit <= top}
     <line class="limit" x1="0" x2={W} y1={y(limit)} y2={y(limit)} />
   {/if}
-  {#each shades as [from, to]}
-    <rect class="shade" x={from} width={Math.max(0, to - from)} y="0" {height} />
+  {#each shades as [left, wide]}
+    <rect class="shade" x={left} width={wide} y="0" {height} />
   {/each}
   {#if area}<path d={area} fill="url(#{id})" />{/if}
   {#each lines as line}
@@ -85,7 +80,7 @@
 
   .shade {
     fill: var(--muted);
-    opacity: 0.18;
+    opacity: 0.28;
   }
 
   .limit {

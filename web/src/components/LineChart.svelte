@@ -139,7 +139,7 @@
 
   const hover = $derived(index >= 0 && index < points.length ? points[index] : null);
   const tipLeft = $derived(hover ? Math.min(Math.max(x(hover.time) + 12, 0), width - 170) : 0);
-  const xTicks = $derived(points.length ? [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f) : []);
+  const xTicks = $derived(points.length || bands.length ? [0, 0.25, 0.5, 0.75, 1].map((f) => t0 + (t1 - t0) * f) : []);
 </script>
 
 <section class="card chart">
@@ -156,15 +156,18 @@
       {/if}
     </div>
   </div>
-  {#if series.length > 1}
+  {#if series.length > 1 || bands.length}
     <div class="legend">
-      {#each series as s}
-        <span><i style="background: {s.color}"></i>{s.label}</span>
-      {/each}
+      {#if series.length > 1}
+        {#each series as s}
+          <span><i style="background: {s.color}"></i>{s.label}</span>
+        {/each}
+      {/if}
+      {#if bands.length}<span><i class="band-key"></i>{bands[0].label}</span>{/if}
     </div>
   {/if}
 
-  {#if !points.length}
+  {#if !points.length && !bands.length}
     <p class="muted small empty">{t('health.noData')}</p>
   {:else if table}
     <div class="table">
@@ -193,7 +196,7 @@
       >
         {#each bands as b}
           {@const left = x(Math.max(b.from, t0))}
-          {@const wide = Math.max(0, x(Math.min(b.to, t1)) - left)}
+          {@const wide = Math.max(2, x(Math.min(b.to, t1)) - left)}
           <rect class="band" x={left} y={pad.top} width={wide} height={innerH} />
           {#if wide >= 34}<text class="axis" x={left + 6} y={pad.top + 14}>{b.label}</text>{/if}
         {/each}
@@ -330,7 +333,12 @@
 
   .band {
     fill: var(--muted);
-    opacity: 0.14;
+    opacity: 0.24;
+  }
+
+  .legend .band-key {
+    background: var(--muted);
+    opacity: 0.5;
   }
 
   .grid {

@@ -113,21 +113,8 @@
   // A loader that is off shows its last measurement, grey - and a dash if it was never measured.
   const tileTone = (m) => (loader.active ? tone(m) : 'off');
   const value = (m) => (!loader.measured ? '–' : m.rate ? m.value.toFixed(1) + '/s' : String(Math.round(m.value)));
-  // What the charts draw: the real measurements, and the stretches in which the loader was off as bands.
-  const measured = $derived(history ? history.points.filter((p) => !p.off) : []);
-  const offBands = $derived.by(() => {
-    const bands = [];
-    let from = null;
-    for (const p of history?.points ?? []) {
-      if (p.off) from ??= p.time;
-      else if (from !== null) {
-        bands.push({ from, to: p.time, label: t('chunks.status.inactive') });
-        from = null;
-      }
-    }
-    if (from !== null) bands.push({ from, to: history.to, label: t('chunks.status.inactive') });
-    return bands;
-  });
+  // The stretches in which the loader was off, for the charts.
+  const offBands = $derived((history?.off ?? []).map((b) => ({ ...b, label: t('chunks.status.inactive') })));
   // MRchunks before the chunk budget sends no size.
   const sized = $derived(loader?.reach != null);
   // Support: switch the loader and its dummy only while it is over a warn limit (mrchunks.admin.toggle.conspicuous).
@@ -254,9 +241,10 @@
                   <div class="fill {tileTone(m)}" style="width: {share(m)}%"></div>
                   {#if m.lock > 0 && m.warn > 0}<div class="tick" style="left: {(m.warn / m.lock) * 100}%"></div>{/if}
                 </div>
-                {#if history?.points.length > 1}
+                {#if history?.points.length > 1 || offBands.length}
                   <div class="spark">
-                    <Sparkline values={history.points.map((p) => p[m.key] ?? null)} color="var(--tn)" height={28} label={m.label} gaps />
+                    <Sparkline values={history.points.map((p) => p[m.key])} times={history.points.map((p) => p.time)} from={history.from} to={history.to}
+                      bands={offBands} color="var(--tn)" height={28} label={m.label} />
                     {#if !loader.active}<span class="off-note">{t('chunks.status.inactive')}</span>{/if}
                   </div>
                 {/if}
@@ -315,10 +303,10 @@
           <button class:active={range === r} onclick={() => chooseRange(r)}>{r}</button>
         {/each}
       </div>
-      {#if !history.points.length}
+      {#if !history.points.length && !offBands.length}
         <p class="empty small">{t('chunks.historyEmpty')}</p>
       {/if}
-      <LineChart title={m.label} points={measured} bands={offBands} from={history.from} to={history.to} height={chartHeight}
+      <LineChart title={m.label} points={history.points} bands={offBands} from={history.from} to={history.to} height={chartHeight}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit') }, { value: m.lock, label: t('chunks.lockLimit') }].filter((r) => r.value > 0)}
         series={[{ key: m.key, label: m.label, color: 'var(--series-1)' }]} onClose={() => (chart = null)} />
