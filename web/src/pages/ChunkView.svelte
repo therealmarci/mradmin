@@ -64,7 +64,7 @@
     range;
     untrack(loadHistory);
     // A new measurement should show soon after it was taken; on long ranges one more point changes little.
-    const timer = setInterval(loadHistory, RANGE_MS[range] <= 3600000 ? 5000 : 20000);
+    const timer = setInterval(loadHistory, RANGE_MS[range] <= 600000 ? 5000 : 20000);
     return () => clearInterval(timer);
   });
 
@@ -100,7 +100,7 @@
 
   // Live view: while this page is open the server measures this loader more often (mrchunks.admin.live). The page stops
   // asking in a tab in the background, then the server stops measuring. Without it everything stays as it is.
-  const LIVE_KEEP_MS = 900000;
+  const LIVE_KEEP_MS = 120000;
   let liveActive = $state(false);
   let liveBuffer = $state([]);
 
@@ -138,15 +138,11 @@
     };
   });
 
-  // The server's points with the finer live points in their place. On long ranges they would only be a thick line, there
-  // the newest one is enough.
+  // The server keeps the live points too, so a reload loses nothing; here only the ones it has not sent yet are added.
   const allPoints = $derived.by(() => {
     const server = history?.points ?? [];
-    const first = liveBuffer[0]?.time;
-    if (first === undefined) return server;
-    const newest = liveBuffer.at(-1);
-    if (RANGE_MS[range] > 3600000) return server.at(-1)?.time < newest.time ? [...server, newest] : server;
-    return [...server.filter((p) => p.time < first), ...liveBuffer, ...server.filter((p) => p.time > newest.time)];
+    const last = server.at(-1)?.time ?? 0;
+    return [...server, ...liveBuffer.filter((p) => p.time > last)];
   });
   // The tiles show the newest live value.
   const tileMetrics = $derived.by(() => {
