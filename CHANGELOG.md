@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Chunkloader-Diagramme ab 1 Stunde durchgehend:** Ab dem Zeitraum 1h war die Linie in den Kacheln, im großen Diagramm und in der Zeitleiste gestrichelt. Die Lücken-Erkennung richtet sich jetzt nach dem Detailgrad des Zeitraums (kommt von MRchunks; mit älterem MRchunks bleibt es wie bisher).
+
 ## [1.1.0] - 2026-11-02
 
 ### Neu

@@ -5,12 +5,12 @@
 
   /**
    * value/suffix: the big text and a small one after it; share: the bar in percent; tick: a mark on it in percent;
-   * note: the small line; tone: good | warn | bad | off | locked; points/phases/live/from/to: see StateLine, line: whether
+   * note: the small line; tone: good | warn | bad | off | locked; points/phases/live/from/to/gap: see StateLine, line: whether
    * there is something to draw (the space stays); lineHeight: height of the curve; onclick: the tile is clickable.
    */
   let {
     label, value, suffix = '', share = 0, tick = null, note = '', tone = 'good', title = '', barTitle = '',
-    points = [], phases = [], live = null, from = 0, to = 0, line = true, lineHeight = 40, onclick = null, tabindex = 0,
+    points = [], phases = [], live = null, from = 0, to = 0, gap = null, line = true, lineHeight = 40, onclick = null, tabindex = 0,
   } = $props();
 </script>
 
@@ -23,7 +23,7 @@
   <div class="muted tiny">{note}</div>
   <!-- Always there, so every tile has the same layout: the curve fills the bottom edge of the tile. -->
   <div class="well" style="height: {lineHeight}px">
-    {#if line}<StateLine {points} {phases} {live} {from} {to} height={lineHeight} {label} />{/if}
+    {#if line}<StateLine {points} {phases} {live} {from} {to} {gap} height={lineHeight} {label} />{/if}
   </div>
 </button>
 

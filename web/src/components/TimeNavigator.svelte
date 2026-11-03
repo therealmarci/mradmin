@@ -4,8 +4,8 @@
   import StateLine from './StateLine.svelte';
   import { dateTime } from '../lib/format.js';
 
-  /** from/to: all of the time; viewFrom/viewTo: the part shown; points/phases: see StateLine; onjump(ms): new middle. */
-  let { from, to, viewFrom, viewTo, points = [], phases = [], label = '', onjump } = $props();
+  /** from/to: all of the time; viewFrom/viewTo: the part shown; points/phases/gap: see StateLine; onjump(ms): new middle. */
+  let { from, to, viewFrom, viewTo, points = [], phases = [], gap = null, label = '', onjump } = $props();
 
   let dragging = false;
   const percent = (ms) => Math.min(100, Math.max(0, ((ms - from) / Math.max(1, to - from)) * 100));
@@ -38,7 +38,7 @@
   <div class="strip" role="slider" tabindex="0" aria-label={label} aria-valuemin={from} aria-valuemax={to}
     aria-valuenow={viewTo} onpointerdown={press} onpointermove={(e) => dragging && jump(e)}
     onpointerup={() => (dragging = false)} onpointercancel={() => (dragging = false)} onkeydown={keys}>
-    <StateLine {points} {phases} {from} {to} height={40} {label} />
+    <StateLine {points} {phases} {from} {to} {gap} height={40} {label} />
     <span class="part" style="left: {left}%; width: {width}%"></span>
   </div>
   <div class="ends muted"><span>{dateTime(from)}</span><span>{dateTime(to)}</span></div>
