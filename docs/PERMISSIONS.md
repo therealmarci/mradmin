@@ -33,6 +33,7 @@ brauchst du; Zeilen für fehlende Plugins schaden nicht.
 /lp group default permission set mrpvp.player true
 /lp group default permission set mrsleep.player true
 /lp group default permission set mrtoolbar.player true
+/lp group default permission set mrwaypoints.player true
 
 # Support
 /lp group supporter permission set mradmin.groups.support true
@@ -40,6 +41,7 @@ brauchst du; Zeilen für fehlende Plugins schaden nicht.
 /lp group supporter permission set mrpvp.groups.support true
 /lp group supporter permission set mrsleep.groups.support true
 /lp group supporter permission set mrtoolbar.groups.support true
+/lp group supporter permission set mrwaypoints.groups.support true
 
 # Staff
 /lp group staff permission set mradmin.groups.staff true
@@ -47,6 +49,7 @@ brauchst du; Zeilen für fehlende Plugins schaden nicht.
 /lp group staff permission set mrpvp.groups.staff true
 /lp group staff permission set mrsleep.groups.staff true
 /lp group staff permission set mrtoolbar.groups.staff true
+/lp group staff permission set mrwaypoints.groups.staff true
 
 # Admin
 /lp group admin permission set mradmin.groups.admin true
@@ -54,6 +57,7 @@ brauchst du; Zeilen für fehlende Plugins schaden nicht.
 /lp group admin permission set mrpvp.groups.admin true
 /lp group admin permission set mrsleep.groups.admin true
 /lp group admin permission set mrtoolbar.groups.admin true
+/lp group admin permission set mrwaypoints.groups.admin true
 ```
 
 Teammitglieder kommen dann einfach in ihre Gruppe: `/lp user Steve parent set staff`.
@@ -67,6 +71,7 @@ Teammitglieder kommen dann einfach in ihre Gruppe: `/lp user Steve parent set st
 | **MRpvp** | Admin-Menü, alle Runden ansehen, auffällige Runden prüfen und werten, zusehen, Duelle abbrechen und Sieger bestimmen, pausieren, Spieler-Verwaltung | + Kits und Arenen bearbeiten, sperren | + Statistik zurücksetzen, gesicherte Stände zurückgeben, Standard wiederherstellen, Reload |
 | **MRsleep** | Admin-Menü, Status, Teleport, Bypass bis 30 Min, Sperre bis 1 Tag | + Bypass und Sperre bis 1 Tag, Blockaden aufheben, Cooldown zurücksetzen | + ohne Grenze, dauerhaft sperren, Reload |
 | **MRtoolbar** | Admin-Menü, Gürtel anderer ansehen | + `/mrtoolbar debug` | + Reload |
+| **MRwaypoints** | MRwaypoints im Dashboard, Seite Wegpunkte im Web ansehen | + in jeder Kategorie Wegpunkte anlegen, alle bearbeiten und löschen, ohne Limit | + zu Wegpunkten teleportieren, Kategorien im Web verwalten, Reload |
 
 Die Zeiten bei MRsleep stellst du unter `limits` in dessen `config.yml` ein. Die LibertyBans-Rechte bringen die MRadmin-Gruppen mit (Support: `libertybans.commands`, `libertybans.list.history|banlist|mutelist`; Staff: `libertybans.kick|mute|warn.do.target.uuid`, `mute|warn.undo.target.uuid`; Admin: `libertybans.ban.do|undo.target.uuid`) - sie gelten auch für die LibertyBans-Befehle im Spiel. Sperren in den Plugins (Duelle, `/nosleep`, Chunkloader) sind davon getrennt.
 

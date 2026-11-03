@@ -18,6 +18,7 @@
   import Chunks from './pages/Chunks.svelte';
   import ChunkView from './pages/ChunkView.svelte';
   import Sleep from './pages/Sleep.svelte';
+  import Waypoints from './pages/Waypoints.svelte';
   import Pvp from './pages/Pvp.svelte';
   import PvpGame from './pages/PvpGame.svelte';
   import PvpKits from './pages/PvpKits.svelte';
@@ -106,6 +107,7 @@
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
+          ...(me.may.mrwaypoints ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
           ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
@@ -183,6 +185,8 @@
       {/if}
     {:else if route.path === '/pvp' && me.may.mrpvp}
       <Pvp {me} />
+    {:else if route.path === '/waypoints' && me.may.mrwaypoints}
+      <Waypoints {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
     {:else}

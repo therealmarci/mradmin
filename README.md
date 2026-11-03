@@ -398,11 +398,11 @@ Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integratione
 ---
 
 ## Zusammenarbeit mit anderen Plugins
-MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
+MRadmin, MRsleep, MRchunks, MRtoolbar, MRpvp und MRwaypoints laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
 - **Dashboard:** ein Knopf je Plugin mit Live-Infos.
 - **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
 - **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
-- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader** und **Duelle** für die Spieler selbst.
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf**, **Duelle** und **Wegpunkte** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader**, **Duelle** und **Wegpunkte** für die Spieler selbst.
 
 **MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
 
