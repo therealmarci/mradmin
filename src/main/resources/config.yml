@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 38
+config-version: 39
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -810,5 +810,8 @@ map:
     auto-install: true
     # Download new squaremap versions into plugins/update/ - Paper installs them on the next restart.
     auto-update: true
+    # After squaremap was installed or updated: render every world on the map completely once (all generated chunks,
+    # in the background), so the pictures match the new version. Worlds without pictures are always rendered.
+    full-render: true
     # How often MRadmin asks Modrinth (hours).
     check-hours: 12

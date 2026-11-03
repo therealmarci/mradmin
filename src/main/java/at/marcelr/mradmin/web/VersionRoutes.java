@@ -76,6 +76,13 @@ public final class VersionRoutes {
             p.put("downloading", e.downloading);
             p.put("error", e.error);
             p.put("checksum", e.latest != null && e.latest.sha256() != null);
+            if (e.name.equals(plugin.getName()) && plugin.map() != null) {
+                // squaremap belongs to MRadmin (it renders the map, MRadmin installs and updates it).
+                Map<String, Object> squaremap = new LinkedHashMap<>();
+                squaremap.put("version", plugin.map().version());
+                squaremap.put("staged", plugin.map().staged());
+                p.put("squaremap", squaremap);
+            }
             plugins.add(p);
         }
         Map<String, Object> restart = new LinkedHashMap<>();

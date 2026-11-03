@@ -9,10 +9,11 @@ import org.bukkit.configuration.file.FileConfiguration;
  * @param hideModuleWorlds keep worlds a module owns (e.g. MRpvp's arena world) off the map
  * @param autoInstall      install squaremap from Modrinth if it is missing
  * @param autoUpdate       download new squaremap versions (installed on the next start)
+ * @param fullRender       render every world completely once after squaremap was installed or updated
  * @param checkHours       how often Modrinth is asked
  */
 public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideModuleWorlds, boolean autoInstall,
-                          boolean autoUpdate, int checkHours) {
+                          boolean autoUpdate, boolean fullRender, int checkHours) {
 
     public static MapSettings from(FileConfiguration c) {
         return new MapSettings(
@@ -21,6 +22,7 @@ public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideMo
                 c.getBoolean("map.hide-module-worlds", true),
                 c.getBoolean("map.squaremap.auto-install", true),
                 c.getBoolean("map.squaremap.auto-update", true),
+                c.getBoolean("map.squaremap.full-render", true),
                 Math.clamp(c.getInt("map.squaremap.check-hours", 12), 1, 168));
     }
 }

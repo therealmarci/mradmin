@@ -48,8 +48,9 @@ public final class ConfigUpdater {
  * 37: the web map (map) moved from MRchunks to MRadmin - MRchunks' squaremap settings are taken over.
  * 38: squaremap only renders, MRadmin shows the map (player page): map.squaremap (auto-install, auto-update,
  * check-hours); the settings of squaremap's own page (address, reverse-proxy, chunk-grid, layers ...) are gone.
+ * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
      */
-    public static final int CURRENT_VERSION = 38;
+    public static final int CURRENT_VERSION = 39;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

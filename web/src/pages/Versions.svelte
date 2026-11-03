@@ -187,6 +187,9 @@
               <div><span class="muted">{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}</div>
               <div><span class="muted">{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
               {#if p.mod}<div><span class="muted">{t('versions.mod')}</span>{p.mod.version}</div>{/if}
+              {#if p.squaremap && (p.squaremap.version || p.squaremap.staged)}
+                <div><span class="muted">{t('versions.squaremap')}</span>{p.squaremap.version ?? '–'}{#if p.squaremap.staged && p.squaremap.staged !== p.squaremap.version} → {p.squaremap.staged}{/if}</div>
+              {/if}
             </div>
             <div class="actions">
               {#if p.error}<div class="error small">{p.error === 'no-release' ? t('versions.noRelease') : p.error}</div>{/if}

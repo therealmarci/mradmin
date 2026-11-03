@@ -121,11 +121,28 @@ public final class MapService {
         }
     }
 
-    /** A full render of every world squaremap shows that has no pictures yet - squaremap renders in the background. */
+    /**
+     * A full render (all generated chunks, squaremap renders in the background) of every world on the map - once after
+     * squaremap was installed or updated (map.squaremap.full-render; the version rendered last is kept in
+     * map-render.yml), otherwise only of worlds without pictures yet.
+     */
     private void renderMissing() {
         Path tiles = tilesDir();
         if (tiles == null) {
             return;
+        }
+        java.io.File memory = new java.io.File(plugin.getDataFolder(), "map-render.yml");
+        var rendered = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(memory);
+        String version = String.valueOf(version());
+        boolean all = settings().fullRender() && !version.equals(rendered.getString("rendered-version"));
+        if (all) {
+            plugin.getLogger().info("squaremap " + version + " is new (installed or updated) - full render of all worlds.");
+            rendered.set("rendered-version", version);
+            try {
+                rendered.save(memory);
+            } catch (IOException e) {
+                plugin.getLogger().warning("Could not save map-render.yml: " + e.getMessage());
+            }
         }
         for (World world : Bukkit.getWorlds()) {
             try {
@@ -136,7 +153,9 @@ public final class MapService {
                 return;
             }
             Path folder = tiles.resolve(world.getKey().asString().replace(':', '_'));
-            if (!hasPictures(folder)) {
+            if (all) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "squaremap fullrender " + world.getKey().asString());
+            } else if (!hasPictures(folder)) {
                 plugin.getLogger().info("No map pictures of " + world.getName() + " yet - starting a full render (squaremap).");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "squaremap fullrender " + world.getKey().asString());
             }
