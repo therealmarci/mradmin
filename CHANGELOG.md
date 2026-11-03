@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Webkarte (squaremap) in MRadmin:** MRadmin bindet squaremap jetzt selbst an (vorher MRchunks) und zeichnet darauf die Ebenen der anderen Plugins, z.B. die Chunkloader von MRchunks. Beim Start richtet MRadmin die squaremap-Config passend ein (schnelle Aktualisierung, keine Spieler auf der Karte, Dimensionsnamen, Nether von innen), fügt das Chunkraster hinzu und lässt Welten von Plugins (die Arena-Welt von MRpvp) von der Karte (`map.hide-module-worlds`). Einstellungen unter `map` (config-version 37) - beim Update werden die Werte aus der MRchunks-Config übernommen. Einzelne Ebenen abschalten oder ausblenden: `map.layers.off` / `map.layers.hidden` (z.B. `mrchunks:inactive`).
+- **`/mradmin map`:** Spieler bekommen den Link zur Webkarte (`mradmin.map`, in `mradmin.player`), Admins sehen Status und alle Ebenen der Plugins und richten squaremap mit `/mradmin map setup` neu ein (`mradmin.map.admin`, in `mradmin.groups.admin`).
+- **Modul-API 7 (`api-1.6.0`):** Plugins liefern Kartenebenen über `AdminModule#mapLayers()` / `mapIcons()` (`MapLayer`, `MapMarker`), melden Änderungen mit `MRadminService#mapChanged` und holen Links mit `mapUrl()` / `mapUrl(world, x, z)`.
+
 ### Behoben & geändert
 - **Chunkloader-Diagramme ab 1 Stunde durchgehend:** Ab dem Zeitraum 1h war die Linie in den Kacheln, im großen Diagramm und in der Zeitleiste gestrichelt. Die Lücken-Erkennung richtet sich jetzt nach dem Detailgrad des Zeitraums (kommt von MRchunks; mit älterem MRchunks bleibt es wie bisher).
 

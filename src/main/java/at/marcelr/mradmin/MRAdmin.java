@@ -110,6 +110,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private FreezeManager freeze;
     private TicketManager tickets;
     private Modules modules;
+    private at.marcelr.mradmin.map.MapService map;
     private Storage storage;
     private WebServer web;
     private HealthMonitor health;
@@ -155,6 +156,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         modules = new Modules(this);
         // Before the other plugins enable (they softdepend on MRadmin) - they register their modules then.
         modules.offer();
+        map = new at.marcelr.mradmin.map.MapService(this);
         staffChat = new StaffChat(this);
         maintenance = new MaintenanceManager(this);
         discordAnnounce.loadState();
@@ -222,6 +224,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (versions != null) {
             versions.shutdown();
         }
+        if (map != null) {
+            map.stop();
+        }
         if (updateChecker != null) {
             updateChecker.stop();
         }
@@ -287,6 +292,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         versions.start();
         menuListener.start();
         newsDelivery.incidents().start();
+        // After all plugins are enabled: their modules bring the layers of the web map.
+        Bukkit.getScheduler().runTask(this, map::start);
     }
 
     private void loadConfiguration() {
@@ -447,6 +454,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     }
 
     /** The plugins MRadmin works with (module API and old hooks). */
+    public at.marcelr.mradmin.map.MapService map() {
+        return map;
+    }
+
     public Modules modules() {
         return modules;
     }

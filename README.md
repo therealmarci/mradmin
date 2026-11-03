@@ -7,7 +7,7 @@
 | Auf einen Blick | |
 |---|---|
 | Server | Paper 26.3 (oder ein Fork wie Purpur), Java 25 |
-| Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma und LibertyBans optional |
+| Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma, LibertyBans und [squaremap](https://modrinth.com/plugin/squaremap) (Webkarte) optional |
 | Sprachen | Deutsch, Englisch - jeder Spieler automatisch in der Sprache seines Minecraft-Clients |
 | Status | stabil (1.x) |
 
@@ -20,6 +20,7 @@
 - **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
 - **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
 - **Spielerseite im Web (`/web`):** Jeder Spieler bekommt seine eigene Seite - eigene Tickets, Ranglisten und alles, was die anderen Plugins anbieten (z.B. Chunkloader verwalten, Duell-Statistik). Als Lesezeichen speicherbar, Deutsch und Englisch.
+- **Webkarte:** squaremap passend eingerichtet, mit Chunkraster und den Ebenen der anderen Plugins (z.B. Chunkloader).
 - **Versionen & Updates:** alle MRtechnology-Plugins mit ihren Updates im Web, Updates per Klick herunterladen (Installation beim nächsten Neustart) und den Server mit Countdown neu starten.
 - **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
@@ -246,6 +247,55 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 
 ---
 
+## Webkarte (squaremap)
+Ist **[squaremap](https://modrinth.com/plugin/squaremap)** installiert, eine Webkarte mit echtem Minecraft-Gelände, zeichnet MRadmin darauf die **Ebenen der anderen Plugins**, z.B. die Chunkloader von MRchunks. Ohne squaremap gibt es keine Webkarte - alles andere funktioniert trotzdem.
+
+> [!NOTE]
+> Bis MRadmin 1.1 hat MRchunks die Karte selbst angebunden. Beim Update übernimmt MRadmin dessen Einstellungen (Adresse, Raster …) automatisch - aktualisiere MRadmin und MRchunks gemeinsam.
+
+1. squaremap in `plugins/` legen und den Server neu starten. **MRadmin erkennt es und richtet es passend ein:** schnelle Aktualisierung, keine Spieler auf der Karte, Weltauswahl Overworld/Nether/End, Nether von innen statt der Bedrock-Decke. Welten, die einem Plugin gehören (z.B. die Arena-Welt von MRpvp), lässt MRadmin von der Karte (`map.hide-module-worlds`). Bei jedem Start prüft MRadmin, ob diese Einstellungen noch aktuell sind, und bringt fehlende oder von ihm selbst geschriebene Werte auf den neuesten Stand. **Was du selbst in `plugins/squaremap/config.yml` änderst, bleibt.** `/mradmin map setup` überschreibt auch deine Änderungen, `map.auto-configure: false` lässt die squaremap-Config ganz in Ruhe.
+2. **Einmal alles rendern**, damit bestehende Gebiete erscheinen:
+   ```text
+   /squaremap fullrender minecraft:overworld
+   /squaremap fullrender minecraft:the_nether
+   /squaremap fullrender minecraft:the_end
+   ```
+3. **Adresse festlegen** (`map.address`), damit Spieler mit `/mradmin map` (und z.B. dem Knopf **Webkarte** in MRchunks) einen funktionierenden Link bekommen. Leer lassen = MRadmin ermittelt sie selbst (`http://<server-ip>:8080/`). Port 8080 muss dann beim Hoster freigegeben sein.
+
+**Ebenen der Plugins:** `/mradmin map` zeigt Admins (`mradmin.map.admin`) alle Ebenen mit ihrem Namen, z.B. `mrchunks:active`. Einzelne schaltest du unter `map.layers.off` ganz ab oder blendest sie mit `map.layers.hidden` standardmäßig aus - Besucher schalten sie dann oben links im Ebenen-Menü ein. Wie eine Ebene aussieht (Farben, Tooltips), stellt das jeweilige Plugin ein, bei MRchunks unter `map-layer`.
+
+**Chunkraster:** Chunk-Linien, Regionsgrenzen und Koordinaten als eigene Ebene (`map.chunk-grid`).
+
+<details>
+<summary>Eigene Domain, Reverse Proxy (nginx, Caddy, Cloudflare Tunnel)</summary>
+
+| `address` | `reverse-proxy` | Link |
+|---|---|---|
+| `""` (Standard) | – | automatisch → `http://1.2.3.4:8080/` |
+| `map.deinserver.de` | `false` | `http://map.deinserver.de:8080/` |
+| `map.deinserver.de` | `true` | `https://map.deinserver.de/` |
+| `https://deinserver.de/karte/` | egal | genau so, z.B. für einen Proxy mit Pfad |
+
+Der Proxy leitet auf squaremaps Port weiter. Läuft er auf demselben Rechner, lass squaremap nur lokal lauschen (`internal-webserver.bind: 127.0.0.1` in `plugins/squaremap/config.yml`). Beispiel nginx:
+
+```nginx
+server {
+    server_name map.deinserver.de;
+    # listen 443 ssl; + Zertifikat (z.B. per certbot)
+    location / {
+        proxy_pass http://127.0.0.1:8080/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Unter einem Pfad: `location /karte/ { proxy_pass http://127.0.0.1:8080/; }` und in MRadmin `map.address: "https://deinserver.de/karte/"`. Die öffentliche IP wird nur ermittelt, wenn weder `address` noch `server-ip` gesetzt ist - abschaltbar mit `map.detect-public-ip: false`.
+</details>
+
+---
+
 ## Befehle
 
 | Befehl | Was er tut | Permission |
@@ -264,6 +314,7 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 | `/mradmin mail test <adresse>` | Test-Mail über den eingestellten SMTP-Server | `mradmin.web.manage` |
 | `/mradmin discord [test]` | Discord-Status · Testnachricht | `mradmin.admin.discord` |
 | `/mradmin storage` | Speicher-Status (yaml, sqlite, mysql) | `mradmin.admin.storage` |
+| `/mradmin map [setup]` | Link zur Webkarte · für Admins Status und Ebenen der Plugins, squaremap neu einrichten | `mradmin.map` · `mradmin.map.admin` |
 | `/mradmin reload` · `version` | Config und Sprachdateien neu laden · Version | `mradmin.admin.reload` · `mradmin.version` |
 
 ## Permissions
@@ -271,10 +322,10 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 
 | Gruppe | Enthält |
 |---|---|
-| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin version` |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Webkarte · `/mradmin version` |
 | `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen (ohne „Jetzt prüfen“), Web-Konsole ansehen |
 | `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
-| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
+| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, Webkarte einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
 
 Die Gruppen bringen auch die nötigen **LibertyBans**-Rechte mit (falls installiert): Support sieht Strafen, Verlauf und die Bann- und Mute-Listen (`libertybans.commands`, `libertybans.list.*`), Staff darf kicken, muten und verwarnen, nur Admins bannen. Diese Rechte gelten dann auch für die LibertyBans-Befehle im Spiel.
 
@@ -298,6 +349,7 @@ Standard ist `op`, außer anders angegeben.
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
+| Webkarte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.admin` (Status, Ebenen, `/mradmin map setup`) |
 | Versionen & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
@@ -322,6 +374,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
+| `map` | Webkarte squaremap: Einrichtung, Adresse und Reverse-Proxy, Spieler ausblenden, Welten von Plugins ausblenden, Ebenen der Plugins an/aus (`layers`), Chunkraster |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 
 **Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
@@ -358,6 +411,7 @@ MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. 
 | Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
 | Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
 | In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Chunkloader auf der Webkarte, die Arena-Welt nicht | squaremap + MRchunks / MRpvp |
 | Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
 
 Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integrations` (z.B. `mrsleep: false`). Die Konsole zeigt beim Start, welche Plugins verbunden sind. Für Entwickler: [docs/MODULE-API.md](docs/MODULE-API.md).

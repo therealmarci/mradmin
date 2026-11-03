@@ -44,8 +44,10 @@ public final class ConfigUpdater {
  * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
  * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
  * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
+ * 36: admin item STRUCTURE_VOID instead of a compass.
+ * 37: the web map (map) moved from MRchunks to MRadmin - MRchunks' squaremap settings are taken over.
      */
-    public static final int CURRENT_VERSION = 36;
+    public static final int CURRENT_VERSION = 37;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -178,6 +180,9 @@ public final class ConfigUpdater {
             if (version < 36 && "COMPASS".equalsIgnoreCase(existing.getString("admin-mode.compass-material"))) {
                 template.set("admin-mode.compass-material", "STRUCTURE_VOID");
             }
+            if (version < 37) {
+                takeOverMap(plugin, template);
+            }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.
             template.options().width(10_000);
@@ -189,6 +194,51 @@ public final class ConfigUpdater {
                     + carried + " settings carried over, backup: " + backup.getName() + ").");
         } catch (IOException | InvalidConfigurationException e) {
             plugin.getLogger().log(Level.WARNING, "Could not update config.yml: " + e.getMessage());
+        }
+    }
+
+    /** squaremap settings of MRchunks (until its 1.1) that are now map.* in MRadmin. */
+    private static final java.util.List<String> MAP_KEYS = java.util.List.of("enabled", "auto-configure", "hide-players",
+            "update-seconds", "address", "reverse-proxy", "detect-public-ip", "chunk-grid.enabled",
+            "chunk-grid.default-visible", "chunk-grid.color", "chunk-grid.opacity", "chunk-grid.min-chunk-pixels",
+            "chunk-grid.region-lines", "chunk-grid.region-color", "chunk-grid.labels");
+
+    /**
+     * v37: the web map moved from MRchunks to MRadmin. Takes over MRchunks' squaremap section - from its config.yml,
+     * or, if MRchunks already updated itself and dropped the section, from the newest backup it kept of it.
+     */
+    private static void takeOverMap(MRAdmin plugin, YamlConfiguration template) {
+        File folder = new File(plugin.getDataFolder().getParentFile(), "MRchunks");
+        java.util.List<File> candidates = new java.util.ArrayList<>();
+        candidates.add(new File(folder, "config.yml"));
+        File[] backups = folder.listFiles((dir, name) -> name.matches("config\\.v\\d+\\.backup\\.yml"));
+        if (backups != null) {
+            java.util.Arrays.sort(backups, java.util.Comparator.comparingInt(
+                    (File f) -> Integer.parseInt(f.getName().replaceAll("\\D", ""))).reversed());
+            candidates.addAll(java.util.List.of(backups));
+        }
+        for (File candidate : candidates) {
+            if (!candidate.isFile()) {
+                continue;
+            }
+            YamlConfiguration old = new YamlConfiguration();
+            try {
+                old.loadFromString(stripBom(Files.readString(candidate.toPath(), StandardCharsets.UTF_8)));
+            } catch (IOException | InvalidConfigurationException e) {
+                continue;
+            }
+            if (!old.isConfigurationSection("squaremap")) {
+                continue;
+            }
+            int taken = 0;
+            for (String key : MAP_KEYS) {
+                if (old.contains("squaremap." + key)) {
+                    template.set("map." + key, old.get("squaremap." + key));
+                    taken++;
+                }
+            }
+            plugin.getLogger().info("Took over " + taken + " web map settings from MRchunks (" + candidate.getName() + ").");
+            return;
         }
     }
 

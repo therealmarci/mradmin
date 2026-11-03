@@ -115,6 +115,26 @@ public interface AdminModule {
         return -1;
     }
 
+    // ------------------------------------------------------------ web map
+
+    /**
+     * The module's layers on the web map (squaremap through MRadmin), e.g. MRchunks' chunk loaders. MRadmin asks for
+     * them every {@code map.update-seconds} and soon after {@link MRadminService#mapChanged}; the layers are drawn
+     * from scratch every time. Main thread - keep it reasonably cheap. Worlds the module owns ({@link #ownsWorld}) are
+     * left off the map. Since API 7.
+     */
+    default List<MapLayer> mapLayers() {
+        return List.of();
+    }
+
+    /**
+     * Pictures for {@link MapMarker.Icon}, by key (e.g. "loader"). Asked whenever MRadmin (re)builds the map, the same
+     * keys every time. Since API 7.
+     */
+    default Map<String, java.awt.image.BufferedImage> mapIcons() {
+        return Map.of();
+    }
+
     // ---------------------------------------------------------------- web
 
     /**

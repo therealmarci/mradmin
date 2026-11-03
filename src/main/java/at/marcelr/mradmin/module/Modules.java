@@ -172,6 +172,25 @@ public final class Modules implements MRadminService {
         return plugin.isEnabled() ? plugin.storage().loadModuleHistory(moduleId, since) : Map.of();
     }
 
+    @Override
+    public void mapChanged(String moduleId) {
+        if (plugin.isEnabled() && plugin.map() != null) {
+            plugin.map().refreshSoon();
+        }
+    }
+
+    @Override
+    public @Nullable String mapUrl() {
+        String url = plugin.isEnabled() && plugin.map() != null ? plugin.map().url() : "";
+        return url.isEmpty() ? null : url;
+    }
+
+    @Override
+    public @Nullable String mapUrl(World world, int x, int z) {
+        String url = plugin.isEnabled() && plugin.map() != null ? plugin.map().url(world, x, z) : "";
+        return url.isEmpty() ? null : url;
+    }
+
     /** The id becomes part of a file name. */
     private static void requireHistoryId(String moduleId) {
         if (!moduleId.matches("[a-z0-9_-]{1,64}")) {

@@ -37,7 +37,7 @@ Alle Typen liegen im Paket `at.marcelr.mradmin.api` (Teilprojekt `api/`).
 
 **`gradle.properties`**
 ```properties
-mradminApi=api-1.2.0
+mradminApi=api-1.6.0
 ```
 
 **`build.gradle.kts`**
@@ -213,6 +213,38 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   sie auf der Statistik-Seite neben den Minecraft-Statistiken, lässt ausgetragene Spieler weg, zeigt die besten
   (`player-web.rankings.top`) und den eigenen Platz.
 
+## Webkarte (`mapLayers`, ab API 7)
+
+MRadmin bindet squaremap an (wenn installiert) und zeichnet die Ebenen der Module. Ein Modul liefert nur Daten, kein
+squaremap-Typ kommt im Plugin vor:
+
+```java
+@Override
+public List<MapLayer> mapLayers() {            // Hauptthread, alle map.update-seconds und nach mapChanged
+    return List.of(new MapLayer("active", "Chunk loaders", false, 0, List.of(
+            new MapMarker.Area("loader_12", world.getUID(), 0, 0, 32, 32,
+                    new MapMarker.Style(0x2ECC71, 0.9, 2, 0x2ECC71, 0.25), "Farm", "<b>Farm</b>"),
+            new MapMarker.Icon("loader_icon_12", world.getUID(), 16.5, 16.5, "loader", 16, "Farm", ""))));
+}
+
+@Override
+public Map<String, BufferedImage> mapIcons() { // einmal pro (Neu-)Aufbau der Karte
+    return Map.of("loader", icon());
+}
+```
+
+- **Ebene** (`MapLayer`): `id` (stabil, klein), Name in der Server-Sprache, standardmäßig ausgeblendet, Reihenfolge
+  (`priority`, kleiner = weiter oben), alle Marker in allen Welten. In squaremap heißt sie `mradmin_<modul>_<id>`, in
+  MRadmins Config `<modul>:<id>` (`map.layers.off` / `map.layers.hidden`, `/mradmin map` listet sie).
+- **Marker** (`MapMarker`): `Area` = Rechteck in Blockkoordinaten (max exklusiv), `Icon` = Bild aus `mapIcons()` an
+  einer Stelle. Die Welt ist ihre UUID. Tooltips (`hover`, `click`) sind **HTML** - Spieler- und Loader-Namen selbst
+  escapen.
+- **Änderung melden:** `service.mapChanged(id)` - MRadmin zeichnet im nächsten Tick neu (mehrere Aufrufe = einmal).
+- **Links:** `service.mapUrl()` (Karte allgemein) und `service.mapUrl(world, x, z)` (zentriert, `?world=…&zoom=4`), je
+  `null` ohne Karte oder bekannte Adresse.
+- **Welten von Modulen** (`ownsWorld`) lässt MRadmin mit `map.hide-module-worlds` von der Karte.
+- Vorher `service.apiVersion() >= 7` prüfen - ein älteres MRadmin kennt die Methoden nicht.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -222,7 +254,8 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`; `Group` ab `api-1.4.1`), Version 6 = `api-1.5.0`
   (`moduleHistoryAdd`, `moduleHistory`: eigene Messwerte eines Moduls im Speicher von MRadmin ablegen - Dateien,
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
-  Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader).
+  Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
+  `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged`, `mapUrl`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -28,9 +28,11 @@ public interface MRadminService {
      * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}; 4: the player area -
      * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions},
      * {@link WebModule#rankings}; 5: more building blocks for it - {@link SelfBlock.Cards}, {@link SelfBlock.Meters},
-     * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}).
+     * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}; 6: module
+     * history - {@link #moduleHistoryAdd}, {@link #moduleHistory}; 7: the web map - {@link AdminModule#mapLayers},
+     * {@link AdminModule#mapIcons}, {@link #mapChanged}, {@link #mapUrl()}, {@link #mapUrl(World, int, int)}).
      */
-    int API_VERSION = 6;
+    int API_VERSION = 7;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -105,5 +107,24 @@ public interface MRadminService {
      */
     default Map<Long, String> moduleHistory(String moduleId, long since) {
         return Map.of();
+    }
+
+    // ------------------------------------------------- web map (since API 7)
+
+    /**
+     * Something on the module's map layers changed - MRadmin draws them again soon (several calls in one tick lead to
+     * one update). Does nothing without a map or with an older MRadmin.
+     */
+    default void mapChanged(String moduleId) {
+    }
+
+    /** Public link to the web map for players, or null if there is none (no squaremap, address unknown). */
+    default @Nullable String mapUrl() {
+        return null;
+    }
+
+    /** Link to the web map centred on a place, or null if there is none or the world is not on the map. */
+    default @Nullable String mapUrl(World world, int x, int z) {
+        return null;
     }
 }

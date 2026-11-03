@@ -134,6 +134,7 @@ public final class MRAdminCommand implements TabExecutor {
                     storage(sender);
                 }
             }
+            case "map", "karte" -> map(sender, args);
             case "version", "ver" -> {
                 // For players too (in mradmin.player).
                 if (sender.hasPermission("mradmin.version")) {
@@ -183,7 +184,60 @@ public final class MRAdminCommand implements TabExecutor {
         if (sender.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
             messages().send(sender, "help-staffchat");
         }
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.MAP_ADMIN)) {
+            messages().send(sender, "help-map-admin");
+        } else if (sender.hasPermission(at.marcelr.mradmin.Perms.MAP)) {
+            messages().send(sender, "help-map");
+        }
         messages().send(sender, "help-version");
+    }
+
+    /**
+     * /mradmin map - link to the web map (players); with mradmin.map.admin also the squaremap status and the plugins'
+     * layers. /mradmin map setup - apply the recommended squaremap settings again.
+     */
+    private void map(CommandSender sender, String[] args) {
+        var map = plugin.map();
+        boolean admin = sender.hasPermission(at.marcelr.mradmin.Perms.MAP_ADMIN);
+        if (args.length > 1 && args[1].equalsIgnoreCase("setup")) {
+            if (!check(sender, at.marcelr.mradmin.Perms.MAP_ADMIN)) {
+                return;
+            }
+            if (!map.squaremapInstalled()) {
+                messages().send(sender, "map-squaremap-missing");
+                return;
+            }
+            map.runSetup(sender, true);
+            return;
+        }
+        if (!admin && !check(sender, at.marcelr.mradmin.Perms.MAP)) {
+            return;
+        }
+        String url = map.url();
+        if (!admin) {
+            if (url.isEmpty()) {
+                messages().send(sender, "map-unavailable");
+            } else {
+                messages().send(sender, "map-link", tag("link", mapLink(url)));
+            }
+            return;
+        }
+        if (!map.active()) {
+            messages().send(sender, "map-status-off", tag("status", map.status()));
+            return;
+        }
+        messages().send(sender, "map-status-on",
+                tag("link", url.isEmpty() ? messages().get("map-url-unknown") : mapLink(url)));
+        if (map.layers().isEmpty()) {
+            messages().send(sender, "map-layers-none");
+        }
+        map.layers().forEach((id, name) -> messages().send(sender, "map-layer-" + map.layerState(id),
+                tag("id", id), tag("name", name)));
+    }
+
+    private net.kyori.adventure.text.Component mapLink(String url) {
+        return messages().get("map-link-label", tag("url", url))
+                .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(url));
     }
 
     // --------------------------------------------------------------- menus
@@ -584,6 +638,9 @@ public final class MRAdminCommand implements TabExecutor {
         if (args.length == 1) {
             if (sender.hasPermission("mradmin.version")) {
                 options.add("version");
+            }
+            if (sender.hasPermission(at.marcelr.mradmin.Perms.MAP) || sender.hasPermission(at.marcelr.mradmin.Perms.MAP_ADMIN)) {
+                options.add("map");
             }
             addIf(sender, PERM_ANNOUNCE, Feature.ANNOUNCE, options, "announce");
             addIf(sender, AdminModeManager.PERM_USE, Feature.ADMIN_MODE, options, "mode");

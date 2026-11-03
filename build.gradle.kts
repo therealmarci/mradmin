@@ -49,6 +49,8 @@ dependencies {
     compileOnly("org.mvplugins.multiverse.inventories:multiverse-inventories:$multiverseInventoriesVersion") { isTransitive = false }
     // Die Modul-API (api/) steckt mit in der JAR - andere Plugins nutzen sie zur Laufzeit von hier.
     implementation(project(":api"))
+    // Optional: Webkarte squaremap mit den Ebenen der Plugins. Wird nur genutzt, wenn squaremap installiert ist.
+    compileOnly("xyz.jpenilla:squaremap-api:1.4.3")
     // Optional: Rechte schon vor dem Join prüfen (Wartungsmodus). Ohne LuckPerms wird erst beim Join gekickt.
     compileOnly("net.luckperms:api:5.5")
     // Optional: Banns, Mutes, Warns und Kicks über LibertyBans auf der Spielerseite im Web. Ohne LibertyBans fehlt der Teil.
