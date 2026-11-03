@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 18
+lang-version: 19
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -851,37 +851,34 @@ mail-contact-closed-body: |-
 
   Der ganze Verlauf: <link>
 
-# --- Webkarte (squaremap) --------------------------------------------------------
-help-map: "<gold>/mradmin map</gold> <dark_gray>- <gray>Link zur Webkarte"
-help-map-admin: "<gold>/mradmin map [setup]</gold> <dark_gray>- <gray>Webkarte: Status, Ebenen der Plugins, squaremap neu einrichten"
-# Namen der Dimensionen in der Welt-Auswahl (werden bei der Einrichtung von squaremap gesetzt).
+# --- Karte (squaremap rendert, MRadmin zeigt) -------------------------------------
+help-map: "<gold>/mradmin map</gold> <dark_gray>- <gray>Link zur Karte auf deiner Spielerseite"
+help-map-admin: "<gold>/mradmin map [setup]</gold> <dark_gray>- <gray>Karte: Zustand von squaremap, squaremap neu einrichten"
+# Namen der Dimensionen in der Welt-Auswahl der Karte (werden bei der Einrichtung von squaremap gesetzt).
 map-dimension-overworld: "Overworld"
 map-dimension-nether: "Nether"
 map-dimension-end: "End"
-# Name des Chunkrasters im Ebenen-Menü der Karte.
-map-grid-label: "Chunkraster"
-map-link: "<prefix><gray>Webkarte: <link>"
+map-link: "<prefix><gray>Karte: <link>"
 map-link-label: "<aqua><u><url></u></aqua>"
-map-unavailable: "<prefix><gray>Für diesen Server gibt es gerade keine öffentliche Webkarte."
-map-status-on: "<prefix><green>Webkarte aktiv <gray>(squaremap): <link>"
-map-status-off: "<prefix><hover:show_text:'<gray>https://modrinth.com/plugin/squaremap'><gray>Keine Webkarte: squaremap ist <white><status></white></hover>"
-map-url-unknown: "<gray>Adresse unbekannt - trage map.address ein"
+map-unavailable: "<prefix><hover:show_text:'<gray>Es braucht squaremap, die Spielerseite und web.public-url'><gray>Gerade gibt es keine Karte</hover>"
+map-no-link: "<gray>kein Link - player-web und web.public-url fehlen"
+map-status-on: "<prefix><green>Karte aktiv <gray>(squaremap <version>): <link>"
+map-status-off: "<prefix><hover:show_text:'<gray>MRadmin installiert squaremap selbst (map.squaremap.auto-install)'><gray>Keine Karte: squaremap ist <white><status></white></hover>"
+map-staged: "<prefix><hover:show_text:'<gray>Von MRadmin heruntergeladen, wird beim nächsten Neustart aktiv'><gold>squaremap <version> wartet auf einen Neustart</hover>"
+map-install-failed: "<prefix><hover:show_text:'<gray><reason>'><red>squaremap konnte nicht automatisch installiert werden</hover>"
 map-squaremap-missing: "<prefix><red>squaremap ist nicht installiert."
-map-layers-none: "<gray>  Noch keine Ebenen - die Plugins melden sich nach dem Start."
-map-layer-on: "<gray>  <green>●</green> <white><name></white> <dark_gray>(<id>)"
-map-layer-hidden: "<gray>  <hover:show_text:'<gray>map.layers.hidden - Besucher schalten sie im Ebenen-Menü ein'><yellow>●</yellow> <white><name></white> <dark_gray>(<id>, ausgeblendet)</hover>"
-map-layer-off: "<gray>  <hover:show_text:'<gray>map.layers.off - wird nicht gezeichnet'><red>●</red> <white><name></white> <dark_gray>(<id>, aus)</hover>"
 map-setup-done: "<prefix><hover:show_text:'<gray><changes>'><green>squaremap eingerichtet, wird neu geladen</hover>"
 map-setup-nothing: "<prefix><gray>squaremap ist bereits passend eingerichtet."
 map-setup-failed: "<prefix><red>squaremap konnte nicht eingerichtet werden: <white><reason>"
 map-setup-change-interval: "Karte aktualisiert alle 5 Sekunden"
 map-setup-change-tracker: "keine Spieler-Standorte auf der Karte"
-map-setup-change-sidebar: "Welt-Auswahl immer sichtbar"
+map-setup-change-webserver: "eigene Webseite von squaremap aus (die Karte zeigt MRadmin)"
 map-setup-change-name: "<world> heißt \"<name>\""
 map-setup-change-nether: "<world> wird von innen gezeigt"
 map-setup-change-hidden: "<world> nicht auf der Karte (gehört einem Plugin)"
 map-setup-change-removed: "alte Einstellung <setting> entfernt"
 map-state-active: "aktiv"
 map-state-missing: "nicht installiert"
+map-state-installed: "installiert, aktiv nach dem nächsten Neustart"
 map-state-disabled: "in der Config ausgeschaltet"
 map-state-error: "Fehler: <error>"

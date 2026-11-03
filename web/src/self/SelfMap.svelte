@@ -37,6 +37,12 @@
     return () => clearTimeout(timer);
   });
 
+  // ?world=minecraft:overworld&x=..&z=.. from links in game (e.g. the web map button of /chunkloader).
+  const params = new URLSearchParams(window.location.search);
+  const initial = params.has('world') && params.has('x') && params.has('z')
+    ? { world: params.get('world'), x: Number(params.get('x')), z: Number(params.get('z')) }
+    : null;
+
   const tileUrl = (folder, zoom, x, z) => `/api/self/map/tiles/${folder}/${zoom}/${x}_${z}.png`;
 
   async function action(module, layer, id, args) {
@@ -62,7 +68,7 @@
   <Toast text={message} />
   {#if data}
     {#if data.worlds.length}
-      <MapView worlds={data.worlds} layers={data.layers} {tileUrl} onaction={action} storageKey="mradmin.self.map" />
+      <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map" />
     {:else}
       <p class="muted">{t('map.noWorlds')}</p>
     {/if}

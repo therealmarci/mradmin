@@ -172,11 +172,12 @@ public final class Modules implements MRadminService {
         return plugin.isEnabled() ? plugin.storage().loadModuleHistory(moduleId, since) : Map.of();
     }
 
+    /**
+     * squaremap's own page is off after MRadmin 1.1 - nothing is drawn there any more (the map of the player page
+     * asks the modules itself).
+     */
     @Override
     public void mapChanged(String moduleId) {
-        if (plugin.isEnabled() && plugin.map() != null) {
-            plugin.map().refreshSoon();
-        }
     }
 
     @Override

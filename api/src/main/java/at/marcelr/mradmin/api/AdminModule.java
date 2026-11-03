@@ -118,19 +118,17 @@ public interface AdminModule {
     // ------------------------------------------------------------ web map
 
     /**
-     * The module's layers on the web map (squaremap through MRadmin), e.g. MRchunks' chunk loaders. MRadmin asks for
-     * them every {@code map.update-seconds} and soon after {@link MRadminService#mapChanged}; the layers are drawn
-     * from scratch every time. Main thread - keep it reasonably cheap. Worlds the module owns ({@link #ownsWorld}) are
-     * left off the map. Since API 7.
+     * <b>Not shown any more after MRadmin 1.1</b> (squaremap only renders, its own page is off) - the map of the player
+     * page asks {@link WebModule#selfMap}. Kept so modules built for API 7 still load. Was: the module's layers on the
+     * web map, e.g. MRchunks' chunk loaders. Since API 7.
      */
     default List<MapLayer> mapLayers() {
         return List.of();
     }
 
     /**
-     * Pictures for {@link MapMarker.Icon}, by key (e.g. "loader"). Asked when MRadmin (re)builds the map and again
-     * whenever a marker names a key it does not know yet - a changed picture therefore needs a new key (e.g. with the
-     * colour in it). Since API 7.
+     * Pictures for {@link MapMarker.Icon} of {@link #mapLayers()} - like those not used any more after MRadmin 1.1.
+     * Since API 7.
      */
     default Map<String, java.awt.image.BufferedImage> mapIcons() {
         return Map.of();

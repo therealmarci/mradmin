@@ -3,9 +3,10 @@
   // pixel; "extra" levels enlarge further). Drag to move, wheel or +/- to zoom, click on a marker for its details,
   // right-click (long press on phones) for actions - on a marker its own, on a free spot those "here" of the layers.
   // The page gives worlds and layers and runs the actions (onaction); this component only draws and asks.
+  import { untrack } from 'svelte';
   import { t } from '../lib/i18n.js';
 
-  let { worlds = [], layers = [], tileUrl, onaction, storageKey = 'mradmin.map' } = $props();
+  let { worlds = [], layers = [], tileUrl, onaction, storageKey = 'mradmin.map', initial = null } = $props();
 
   const TILE = 512;
 
@@ -19,10 +20,13 @@
   }
   const saved = remembered();
 
-  let worldKey = $state(saved.world ?? null);
-  let zoom = $state(saved.zoom ?? null);
-  let cx = $state(saved.x ?? null);
-  let cz = $state(saved.z ?? null);
+  // A link to a place (e.g. a chunk loader in game: ?world=...&x=...&z=...) wins over what the browser remembers.
+  // Only the place at the start counts, later changes of the prop do not move the map.
+  const start = untrack(() => initial);
+  let worldKey = $state(start?.world ?? saved.world ?? null);
+  let zoom = $state(start ? 99 : saved.zoom ?? null);
+  let cx = $state(start?.x ?? saved.x ?? null);
+  let cz = $state(start?.z ?? saved.z ?? null);
   let hidden = $state(new Set(saved.hidden ?? []));
   let width = $state(600);
   let height = $state(420);
@@ -34,6 +38,13 @@
   let broken = $state(new Set());
 
   const world = $derived(worlds.find((w) => w.key === worldKey) ?? worlds[0] ?? null);
+
+  // Zoom of a link (99 = "as close as useful") or of the browser kept within what the world offers.
+  $effect(() => {
+    if (world && zoom !== null && zoom > world.zoomMax + world.zoomExtra) {
+      zoom = world.zoomMax;
+    }
+  });
 
   // A world that is gone, or the first visit: start at its spawn with its default zoom.
   $effect(() => {

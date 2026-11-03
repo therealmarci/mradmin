@@ -193,8 +193,8 @@ public final class MRAdminCommand implements TabExecutor {
     }
 
     /**
-     * /mradmin map - link to the web map (players); with mradmin.map.admin also the squaremap status and the plugins'
-     * layers. /mradmin map setup - apply the recommended squaremap settings again.
+     * /mradmin map - link to the map of the player page (players); with mradmin.map.admin also the state of squaremap
+     * (version, waiting update, installation problem). /mradmin map setup - apply the recommended squaremap settings again.
      */
     private void map(CommandSender sender, String[] args) {
         var map = plugin.map();
@@ -224,15 +224,16 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (!map.active()) {
             messages().send(sender, "map-status-off", tag("status", map.status()));
-            return;
+        } else {
+            messages().send(sender, "map-status-on", tag("version", String.valueOf(map.version())),
+                    tag("link", url.isEmpty() ? messages().get("map-no-link") : mapLink(url)));
         }
-        messages().send(sender, "map-status-on",
-                tag("link", url.isEmpty() ? messages().get("map-url-unknown") : mapLink(url)));
-        if (map.layers().isEmpty()) {
-            messages().send(sender, "map-layers-none");
+        if (map.staged() != null) {
+            messages().send(sender, "map-staged", tag("version", map.staged()));
         }
-        map.layers().forEach((id, name) -> messages().send(sender, "map-layer-" + map.layerState(id),
-                tag("id", id), tag("name", name)));
+        if (!map.installError().isEmpty()) {
+            messages().send(sender, "map-install-failed", tag("reason", map.installError()));
+        }
     }
 
     private net.kyori.adventure.text.Component mapLink(String url) {

@@ -43,8 +43,14 @@ final class SquaremapSetup {
         this.marker = new File(plugin.getDataFolder(), "squaremap-setup.yml");
     }
 
-    /** One recommended value and how it is described in the log and to the admin. */
-    private record Want(Object value, Change label) {
+    /**
+     * One recommended value and how it is described in the log and to the admin. {@code stock}: squaremap's own
+     * default - a key MRadmin starts managing later still holds it on servers set up before, that is no change by hand.
+     */
+    private record Want(Object value, Change label, Object stock) {
+        Want(Object value, Change label) {
+            this(value, label, null);
+        }
     }
 
     /** squaremap names worlds by their key and replaces dots, which it splits paths on. */
@@ -58,7 +64,8 @@ final class SquaremapSetup {
         want.put("world-settings.default.map.render.background.interval-seconds",
                 new Want(5, new Change("map-setup-change-interval")));
         want.put("world-settings.default.player-tracker.enabled", new Want(false, new Change("map-setup-change-tracker")));
-        want.put("settings.ui.sidebar.pinned", new Want("pinned", new Change("map-setup-change-sidebar")));
+        // Only MRadmin shows the map (player page) - squaremap's own web page and server stay off.
+        want.put("settings.internal-webserver.enabled", new Want(false, new Change("map-setup-change-webserver"), true));
         for (World world : Bukkit.getWorlds()) {
             String base = worldPath(world);
             if (settings.hideModuleWorlds() && plugin.modules().worldOwner(world) != null) {
@@ -179,7 +186,8 @@ final class SquaremapSetup {
                 now.put(path, want.value());
                 continue;
             }
-            boolean ours = current == null || (before.containsKey(path) && same(before.get(path), current));
+            boolean ours = current == null || (before.containsKey(path) && same(before.get(path), current))
+                    || (!before.containsKey(path) && want.stock() != null && same(want.stock(), current));
             if (!ours && !force && !first) {
                 continue; // changed by hand - stays
             }

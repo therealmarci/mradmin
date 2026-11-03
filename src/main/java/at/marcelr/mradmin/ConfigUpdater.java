@@ -46,8 +46,10 @@ public final class ConfigUpdater {
  * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
  * 36: admin item STRUCTURE_VOID instead of a compass.
  * 37: the web map (map) moved from MRchunks to MRadmin - MRchunks' squaremap settings are taken over.
+ * 38: squaremap only renders, MRadmin shows the map (player page): map.squaremap (auto-install, auto-update,
+ * check-hours); the settings of squaremap's own page (address, reverse-proxy, chunk-grid, layers ...) are gone.
      */
-    public static final int CURRENT_VERSION = 37;
+    public static final int CURRENT_VERSION = 38;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -197,11 +199,8 @@ public final class ConfigUpdater {
         }
     }
 
-    /** squaremap settings of MRchunks (until its 1.1) that are now map.* in MRadmin. */
-    private static final java.util.List<String> MAP_KEYS = java.util.List.of("enabled", "auto-configure", "hide-players",
-            "update-seconds", "address", "reverse-proxy", "detect-public-ip", "chunk-grid.enabled",
-            "chunk-grid.default-visible", "chunk-grid.color", "chunk-grid.opacity", "chunk-grid.min-chunk-pixels",
-            "chunk-grid.region-lines", "chunk-grid.region-color", "chunk-grid.labels");
+    /** squaremap settings of MRchunks (until its 1.1) that are still map.* in MRadmin. */
+    private static final java.util.List<String> MAP_KEYS = java.util.List.of("enabled", "auto-configure");
 
     /**
      * v37: the web map moved from MRchunks to MRadmin. Takes over MRchunks' squaremap section - from its config.yml,

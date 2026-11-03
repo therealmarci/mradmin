@@ -113,18 +113,21 @@ public interface MRadminService {
     // ------------------------------------------------- web map (since API 7)
 
     /**
-     * Something on the module's map layers changed - MRadmin draws them again soon (several calls in one tick lead to
-     * one update). Does nothing without a map or with an older MRadmin.
+     * Something on the module's map layers changed. Without effect after MRadmin 1.1 - the map of the player page
+     * loads them again by itself; kept so modules built for API 7 still load.
      */
     default void mapChanged(String moduleId) {
     }
 
-    /** Public link to the web map for players, or null if there is none (no squaremap, address unknown). */
+    /**
+     * Link to the map of the player page (web.public-url + /me/map), or null if there is none (no squaremap, no
+     * address, no player page). With {@link #mapUrl(World, int, int)} centred on a place.
+     */
     default @Nullable String mapUrl() {
         return null;
     }
 
-    /** Link to the web map centred on a place, or null if there is none or the world is not on the map. */
+    /** Link to the map of the player page centred on a place, or null if there is none or the world is not on it. */
     default @Nullable String mapUrl(World world, int x, int z) {
         return null;
     }
