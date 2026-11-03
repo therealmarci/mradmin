@@ -39,7 +39,7 @@
   {/if}
 {/snippet}
 
-<header class="top">
+<header class="top mr-topbar">
   <nav class="desktop">
     {#each items as item (item.path)}
       <button class="link" class:active={current === item.path} aria-current={current === item.path ? 'page' : undefined}

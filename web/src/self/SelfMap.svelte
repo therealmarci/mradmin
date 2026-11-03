@@ -1,7 +1,8 @@
 <script>
   // Tab "Map" of the player's own page: MRadmin's own map over squaremap's pictures with the layers the plugins offer
   // this player (MRwaypoints' waypoints, MRchunks' chunk loaders ...). Their actions go back to the plugin, which checks
-  // everything again and answers with the reason if it refuses.
+  // everything again and answers with the reason if it refuses. The map fills the whole screen below the bar at the
+  // top (and above the bar at the bottom on phones), without a page head.
   import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { poll } from '../lib/poll.js';
@@ -10,15 +11,16 @@
   import Toast from '../components/Toast.svelte';
 
   let data = $state(null);
-  let error = $state('');
-  let message = $state('');
+  let loadError = $state('');
+  // A new object per result, so the same text shows the bubble again.
+  let toast = $state({ text: '', tone: 'good' });
 
   async function load() {
     try {
       data = await api('GET', `/self/map?lang=${lang}`);
-      error = '';
+      loadError = '';
     } catch (e) {
-      error = errorText(e);
+      loadError = errorText(e);
     }
   }
 
@@ -28,13 +30,28 @@
     return poll(load, 15_000);
   });
 
+  // Room between the bar at the top and (phone) the bar at the bottom; the page itself does not scroll here.
+  let top = $state(0);
+  let bottom = $state(0);
+
   $effect(() => {
-    if (!message && !error) return;
-    const timer = setTimeout(() => {
-      message = '';
-      error = '';
-    }, 5000);
-    return () => clearTimeout(timer);
+    const measure = () => {
+      top = document.querySelector('.mr-topbar')?.getBoundingClientRect().bottom ?? 0;
+      const bar = document.querySelector('.mr-tabbar');
+      bottom = bar && getComputedStyle(bar).position === 'fixed' ? Math.max(0, window.innerHeight - bar.getBoundingClientRect().top) : 0;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const el of document.querySelectorAll('.mr-topbar, .mr-tabbar')) observer.observe(el);
+    window.addEventListener('resize', measure);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+      document.body.style.overflow = overflow;
+    };
   });
 
   // ?world=minecraft:overworld&x=..&z=.. from links in game (e.g. the web map button of /chunkloader).
@@ -46,49 +63,59 @@
   const tileUrl = (folder, zoom, x, z) => `/api/self/map/tiles/${folder}/${zoom}/${x}_${z}.png`;
 
   async function action(module, layer, id, args) {
-    error = '';
     try {
       await api('POST', '/self/map/action', { module, layer, action: id, args, lang });
-      message = t('map.done');
+      toast = { text: t('map.done'), tone: 'good' };
       await load();
     } catch (e) {
-      error = errorText(e);
+      toast = { text: errorText(e), tone: 'bad' };
     }
   }
 </script>
 
-<div class="page">
-  <header class="head">
-    <div>
-      <h1>{t('map.title')}</h1>
-      <p class="muted">{t('map.subtitle')}</p>
+<div class="full" style="top:{top}px;bottom:{bottom}px" aria-label={t('map.title')}>
+  {#if data?.worlds.length}
+    <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map" />
+  {:else}
+    <div class="state">
+      {#if loadError}
+        <div class="error">{loadError}</div>
+      {:else if data}
+        <p class="muted">{t('map.noWorlds')}</p>
+      {:else}
+        <p class="muted">{t('common.loading')}</p>
+      {/if}
     </div>
-  </header>
-  {#if error}<div class="error">{error}</div>{/if}
-  <Toast text={message} />
-  {#if data}
-    {#if data.worlds.length}
-      <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map" />
-    {:else}
-      <p class="muted">{t('map.noWorlds')}</p>
-    {/if}
-  {:else if !error}
-    <p class="muted">{t('common.loading')}</p>
   {/if}
+  {#if data?.worlds.length && loadError}<div class="lost error">{loadError}</div>{/if}
 </div>
+{#key toast}<Toast text={toast.text} tone={toast.tone} seconds={toast.tone === 'bad' ? 6 : 4} />{/key}
 
 <style>
-  .page {
+  .full {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 1;
+  }
+
+  .state {
     display: grid;
-    gap: 14px;
+    place-items: center;
+    height: 100%;
+    padding: 16px;
+    text-align: center;
   }
 
-  .head h1 {
-    margin: 0;
-    font-size: 1.4rem;
-  }
-
-  .head p {
-    margin: 2px 0 0;
+  /* The map stays usable when one reload fails; the reason floats on top until the next one works. */
+  .lost {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    translate: -50% 0;
+    z-index: 8;
+    max-width: min(90%, 480px);
+    box-shadow: var(--shadow);
+    background: var(--surface);
   }
 </style>
