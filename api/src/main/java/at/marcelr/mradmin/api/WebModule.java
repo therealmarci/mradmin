@@ -150,8 +150,9 @@ public interface WebModule {
 
     /**
      * An action of the map was used: {@code layer} and {@code action} as given there, {@code args} with "marker" (the
-     * marker's id) or "world", "x", "z" (the spot, for {@link SelfMapLayer#here()}), "value" from an input and "on"
-     * from a toggle. Check everything again - the same rules and permissions as in game. Main thread.
+     * marker's id) or "world", "x", "z" (the spot, for {@link SelfMapLayer#here()}), "value" from an input, "choice"
+     * from a selection (API 9) and "on" from a toggle. Check everything again - the same rules and permissions as in
+     * game. Main thread.
      * @return null if done, otherwise the reason in the viewer's language (shown to the player)
      */
     default @Nullable String selfMapAction(SelfViewer viewer, String layer, String action, Map<String, String> args) {

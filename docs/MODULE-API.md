@@ -37,7 +37,7 @@ Alle Typen liegen im Paket `at.marcelr.mradmin.api` (Teilprojekt `api/`).
 
 **`gradle.properties`**
 ```properties
-mradminApi=api-1.7.0
+mradminApi=api-1.8.0
 ```
 
 **`build.gradle.kts`**
@@ -254,7 +254,12 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
 - **`toggle`:** ein Schalter in der Ebenenliste (z.B. MRwaypoints: „in Xaero“).
 - Reine Texte in `viewer.lang()`. MRadmin prüft `mradmin.web.self` und Sperren, alles andere prüft das Modul in
   `selfMapAction` selbst (wie in `selfAction`). Aktionen sind auf 60 pro Minute begrenzt.
-- Routen: `GET /api/self/map`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `POST /api/self/map/action`.
+- **Ab API 9** (`api-1.8.0`, vorher `apiVersion() >= 9` prüfen, sonst die alten Konstruktoren nutzen):
+  - `group` (7. Wert von `SelfMapLayer`): Überschrift in der Ebenenliste, Ebenen mit gleicher Gruppe stehen zusammen (leer = Name des Plugins).
+  - `Action.choice` = `SelfMapLayer.Choice(label, value, options)` mit `Option(id, label, color)`: eine Auswahl im selben Dialog wie `input`, kommt als Argument `choice` an (MRwaypoints: Kategorie beim Erstellen und Bearbeiten).
+  - `Action.icon`: Symbol im Menü - `plus`, `edit`, `trash`, `power`, `compass`, `eye` oder leer. Aktionen mit `tone` `bad` stehen rot am Ende des Menüs.
+  - MRadmin selbst zeichnet zusätzlich Spieler (eigene Position, andere Online-Spieler) und das Chunkraster (`map.player-page`) - dafür braucht ein Modul nichts.
+- Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `POST /api/self/map/action`.
 
 ## Versionen
 
@@ -267,7 +272,7 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

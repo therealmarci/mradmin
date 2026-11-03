@@ -200,7 +200,7 @@ Was auf der Seite steht, hängt davon ab, was installiert ist:
 | **Statistik** | zwei Reiter: **Persönlich** (jeder eigene Wert mit Platz, Medaille für die Top 3 und Vergleich zum Besten) und **Server** (Summen aller Spieler, Ranglisten mit Siegertreppchen - Auswahl unter `player-web.rankings` - und von den Plugins). Wer nicht in Ranglisten stehen will, trägt sich dort aus. | `player-web.rankings.enabled` |
 | **Chunkloader** | Kopf mit Budget und Warnungen; jeder Loader als Karte (Status, Größe, Auslastung, An/Aus-Knopf), ein Klick zeigt seine Grenzwerte wie in der Team-Ansicht und alle Aktionen (umbenennen, Dummy, löschen); Mitglieder mit Kopf und Entfernen-Knopf, Einladen per Formular (Spieler, für welchen Loader, Dauer); Größe nur im Spiel. | MRchunks |
 | **Duelle** | eigene Duell-Statistik und letzte Runden, Duell-Ranglisten auf der Statistik-Seite | MRpvp |
-| **Karte** | MRadmins eigene Karte im Vollbild (Bilder von squaremap, siehe [Karte](#karte-squaremap)): Suche nach Punkten, Ebenen ein- und ausblenden, Welt wählen, ziehen, zoomen (am Handy auch mit zwei Fingern); ein Klick auf einen Punkt zeigt seine Einzelheiten. Die Plugins bringen ihre Ebenen mit - z.B. alle Server-Wegpunkte (MRwaypoints) und die eigenen Chunkloader (MRchunks). **Rechtsklick** (am Handy lange drücken) auf einen Punkt zeigt seine Aktionen (eigenen Wegpunkt umbenennen oder löschen, Wegweiser im Spiel starten, Chunkloader an/aus), auf eine freie Stelle z.B. „Wegpunkt hier erstellen“. Die Bilder liest MRadmin selbst aus squaremaps Ordner - squaremaps eigene Webseite braucht man dafür nicht. | squaremap (+ MRwaypoints, MRchunks für deren Ebenen) |
+| **Karte** | MRadmins eigene Karte im Vollbild (Bilder von squaremap, siehe [Karte](#karte-squaremap)): Suche nach Punkten, Ebenen gegliedert ein- und ausblenden, Chunkraster, Welt wählen, ziehen, zoomen (am Handy auch mit zwei Fingern); ein Klick auf einen Punkt zeigt seine Einzelheiten. Wer online ist, sieht sich selbst und die anderen Spieler, die Karte öffnet an seinem Standort und folgt ihm auf Wunsch („Mir folgen“). Die Plugins bringen ihre Ebenen mit - z.B. alle Server-Wegpunkte (MRwaypoints) und die eigenen Chunkloader (MRchunks). **Rechtsklick** (am Handy lange drücken) auf einen Punkt zeigt seine Aktionen (eigenen Wegpunkt umbenennen oder löschen, Wegweiser im Spiel starten, Chunkloader an/aus), auf eine freie Stelle z.B. „Wegpunkt hier erstellen“. Die Bilder liest MRadmin selbst aus squaremaps Ordner - squaremaps eigene Webseite braucht man dafür nicht. | squaremap (+ MRwaypoints, MRchunks für deren Ebenen) |
 
 Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler (LibertyBans) kommen nicht hinein. Jedes Plugin prüft bei jeder Aktion dieselben Permissions und Regeln wie im Spiel.
 
@@ -259,6 +259,9 @@ Die Spielerseite hat einen Tab **Karte** mit echtem Minecraft-Gelände. Darauf z
 
 Die Karte gibt es **nur in MRadmin** - squaremaps eigene Webseite (Port 8080) ist aus, du brauchst keinen Port freizugeben und keinen eigenen Proxy. Die Kartenbilder liefert MRadmin selbst aus, nur an angemeldete Spieler. Dafür muss die Spielerseite eingeschaltet sein (`player-web.enabled`) und `web.public-url` stimmen, damit `/mradmin map` einen Link geben kann.
 
+> [!TIP]
+> **Spieler auf der Karte** (man selbst und die anderen Online-Spieler), Öffnen am eigenen Standort, „Mir folgen“ und das Chunkraster stellst du unter `map.player-page` ein. Für ein Manhunt z.B. `map.player-page.players.others: false` - dann sieht jeder nur sich selbst. Spieler im Admin-Modus, im Zuschauermodus und unsichtbare Spieler sehen andere nie (abschaltbar), in `players.hidden-worlds` genannte Welten zeigen niemanden. Andere Spieler sieht nur, wer `mradmin.map.players` hat.
+
 `/mradmin map` gibt Spielern den Link zur Karte. Admins (`mradmin.map.admin`) sehen dort zusätzlich die squaremap-Version und ob ein Update auf den Neustart wartet oder die Installation fehlgeschlagen ist.
 
 > [!NOTE]
@@ -292,7 +295,7 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 
 | Gruppe | Enthält |
 |---|---|
-| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Karte · `/mradmin version` |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Karte, andere Spieler darauf (`mradmin.map.players`) · `/mradmin version` |
 | `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen (ohne „Jetzt prüfen“), Web-Konsole ansehen |
 | `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
 | `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
@@ -319,7 +322,7 @@ Standard ist `op`, außer anders angegeben.
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
-| Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`) |
+| Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.players` (andere Online-Spieler auf der Karte der Spielerseite) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`) |
 | Versionen & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
@@ -344,7 +347,7 @@ Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
 | `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
-| `map` | Karte der Spielerseite: squaremap automatisch installieren, aktualisieren und einrichten, Welten von Plugins ausblenden |
+| `map` | Karte der Spielerseite: squaremap automatisch installieren, aktualisieren und einrichten, Welten von Plugins ausblenden; `player-page`: Spieler auf der Karte, Chunkraster, Öffnen am Standort, „Mir folgen“ |
 | `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 
 **Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.

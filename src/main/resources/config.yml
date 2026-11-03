@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 39
+config-version: 40
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -815,3 +815,25 @@ map:
     full-render: true
     # How often MRadmin asks Modrinth (hours).
     check-hours: 12
+  # The map of the player page (tab "Map"), besides the layers the plugins bring.
+  player-page:
+    # Open the map where the player stands while they are online (a link to a spot wins, e.g. from /chunkloader).
+    open-at-player: true
+    # Button "follow": the map keeps the player in the middle while they walk (only while online).
+    follow: true
+    # Layer "Chunk grid": lines along the chunk borders, switched on by each player in the layer list.
+    chunk-grid: true
+    players:
+      # The player sees themselves on the map (head with the direction they look).
+      self: true
+      # The player sees the other online players (also needs the permission mradmin.map.players).
+      # false e.g. for a manhunt.
+      others: true
+      # How often the positions are updated while the map is open (seconds, 1-60).
+      update-seconds: 2
+      # Never shown to others: players in admin mode, in spectator mode, invisible players.
+      hide-admin-mode: true
+      hide-spectators: true
+      hide-invisible: true
+      # Worlds in which other players are not shown (keys like minecraft:the_nether).
+      hidden-worlds: []

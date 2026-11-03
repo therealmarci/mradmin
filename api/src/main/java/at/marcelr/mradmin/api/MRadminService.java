@@ -31,9 +31,11 @@ public interface MRadminService {
      * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}; 6: module
      * history - {@link #moduleHistoryAdd}, {@link #moduleHistory}; 7: the web map - {@link AdminModule#mapLayers},
      * {@link AdminModule#mapIcons}, {@link #mapChanged}, {@link #mapUrl()}, {@link #mapUrl(World, int, int)}; 8: the map of
-     * the player's page - {@link WebModule#selfMap}, {@link WebModule#selfMapAction}, {@link SelfMapLayer}).
+     * the player's page - {@link WebModule#selfMap}, {@link WebModule#selfMapAction}, {@link SelfMapLayer}; 9: groups,
+     * selections and symbols there - {@link SelfMapLayer#group}, {@link SelfMapLayer.Action#choice},
+     * {@link SelfMapLayer.Action#icon}).
      */
-    int API_VERSION = 8;
+    int API_VERSION = 9;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

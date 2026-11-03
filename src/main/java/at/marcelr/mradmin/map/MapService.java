@@ -170,7 +170,7 @@ public final class MapService {
         }
     }
 
-    private MapSettings settings() {
+    public MapSettings settings() {
         if (settings == null) {
             settings = MapSettings.from(plugin.getConfig());
         }

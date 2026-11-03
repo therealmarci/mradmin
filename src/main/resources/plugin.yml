@@ -37,13 +37,14 @@ permissions:
   # The same in every MRtechnology plugin: <plugin>.player for players, <plugin>.groups.support / staff / admin for
   # the team - each group contains the one below. The single permissions further down stay usable on their own.
   mradmin.player:
-    description: "Player: /report - open tickets and view, answer and close your own; /web - own page in the web interface; /mradmin map - link to the web map; /mradmin version."
+    description: "Player: /report - open tickets and view, answer and close your own; /web - own page in the web interface; /mradmin map - link to the web map, other players on it; /mradmin version."
     default: op
     children:
       mradmin.version: true
       mradmin.tickets.create: true
       mradmin.web.self: true
       mradmin.map: true
+      mradmin.map.players: true
   mradmin.groups.support:
     description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, admin mode, web interface, view maintenance and join during it, view versions and the web console."
     default: op
@@ -261,6 +262,9 @@ permissions:
   # ------------------------------------------------------------ Web map
   mradmin.map:
     description: /mradmin map - link to the web map (squaremap).
+    default: op
+  mradmin.map.players:
+    description: "Map of the player page: see the other online players (map.player-page.players.others)."
     default: op
   mradmin.map.admin:
     description: "/mradmin map [setup] - status of the web map and the plugins' layers, set up squaremap again."

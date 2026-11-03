@@ -30,6 +30,24 @@
     return poll(load, 15_000);
   });
 
+  // Where the player and the others stand - only if the server offers it (map.player-page), as often as it says.
+  let positions = $state(null);
+  const every = $derived(data?.page?.positions ? Math.max(1, data.page.updateSeconds ?? 2) * 1000 : 0);
+
+  async function locate() {
+    try {
+      positions = await api('GET', '/self/map/players');
+    } catch {
+      // the next round tries again; the map stays usable without positions
+    }
+  }
+
+  $effect(() => {
+    if (!every) return;
+    untrack(locate);
+    return poll(locate, every);
+  });
+
   // Room between the bar at the top and (phone) the bar at the bottom; the page itself does not scroll here.
   let top = $state(0);
   let bottom = $state(0);
@@ -75,7 +93,8 @@
 
 <div class="full" style="top:{top}px;bottom:{bottom}px" aria-label={t('map.title')}>
   {#if data?.worlds.length}
-    <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map" />
+    <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map"
+      page={data.page ?? {}} {positions} />
   {:else}
     <div class="state">
       {#if loadError}
