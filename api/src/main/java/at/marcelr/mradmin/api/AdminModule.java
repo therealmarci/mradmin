@@ -128,8 +128,9 @@ public interface AdminModule {
     }
 
     /**
-     * Pictures for {@link MapMarker.Icon}, by key (e.g. "loader"). Asked whenever MRadmin (re)builds the map, the same
-     * keys every time. Since API 7.
+     * Pictures for {@link MapMarker.Icon}, by key (e.g. "loader"). Asked when MRadmin (re)builds the map and again
+     * whenever a marker names a key it does not know yet - a changed picture therefore needs a new key (e.g. with the
+     * colour in it). Since API 7.
      */
     default Map<String, java.awt.image.BufferedImage> mapIcons() {
         return Map.of();

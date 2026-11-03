@@ -182,12 +182,16 @@ public final class MapService implements Listener {
             if (layers.isEmpty()) {
                 continue;
             }
-            Map<String, BufferedImage> own = icons.computeIfAbsent(moduleId, id -> {
+            Map<String, BufferedImage> cached = icons.get(moduleId);
+            if (cached == null || missingIcon(moduleId, layers, cached)) {
+                // First time, or a marker names a picture not seen yet (e.g. a new category) - ask the module again.
                 Map<String, BufferedImage> named = new HashMap<>();
                 plugin.modules().call(module, module::mapIcons, Map.<String, BufferedImage>of())
-                        .forEach((key, image) -> named.put(iconKey(id, key), image));
-                return named;
-            });
+                        .forEach((key, image) -> named.put(iconKey(moduleId, key), image));
+                icons.put(moduleId, named);
+                cached = named;
+            }
+            Map<String, BufferedImage> own = cached;
             pictures.putAll(own);
             for (MapLayer layer : layers) {
                 String id = moduleId + ":" + safe(layer.id());
@@ -209,6 +213,17 @@ public final class MapService implements Listener {
         } catch (LinkageError | RuntimeException e) {
             plugin.getLogger().log(Level.WARNING, "squaremap: could not update the markers", e);
         }
+    }
+
+    private static boolean missingIcon(String moduleId, List<MapLayer> layers, Map<String, BufferedImage> icons) {
+        for (MapLayer layer : layers) {
+            for (MapMarker marker : layer.markers()) {
+                if (marker instanceof MapMarker.Icon icon && !icons.containsKey(iconKey(moduleId, icon.icon()))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Icon markers name the module's own key; squaremap knows the icon under mradmin_&lt;module&gt;_&lt;key&gt;. */
