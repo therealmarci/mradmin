@@ -136,4 +136,25 @@ public interface WebModule {
     default List<SelfRanking> rankings(String lang) {
         return List.of();
     }
+
+    // ------------------------------------------- map of the player's page (since API 8)
+
+    /**
+     * The module's layers on the map of the player's own page (tab "Map") - only what {@code viewer.player()} may see,
+     * with the actions they may use. Main thread, asked when the map loads and every few seconds while it is open -
+     * keep it reasonably cheap.
+     */
+    default List<SelfMapLayer> selfMap(SelfViewer viewer) {
+        return List.of();
+    }
+
+    /**
+     * An action of the map was used: {@code layer} and {@code action} as given there, {@code args} with "marker" (the
+     * marker's id) or "world", "x", "z" (the spot, for {@link SelfMapLayer#here()}), "value" from an input and "on"
+     * from a toggle. Check everything again - the same rules and permissions as in game. Main thread.
+     * @return null if done, otherwise the reason in the viewer's language (shown to the player)
+     */
+    default @Nullable String selfMapAction(SelfViewer viewer, String layer, String action, Map<String, String> args) {
+        return "?";
+    }
 }

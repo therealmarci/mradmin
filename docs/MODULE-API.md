@@ -37,7 +37,7 @@ Alle Typen liegen im Paket `at.marcelr.mradmin.api` (Teilprojekt `api/`).
 
 **`gradle.properties`**
 ```properties
-mradminApi=api-1.6.0
+mradminApi=api-1.7.0
 ```
 
 **`build.gradle.kts`**
@@ -245,6 +245,38 @@ public Map<String, BufferedImage> mapIcons() { // einmal pro (Neu-)Aufbau der Ka
 - **Welten von Modulen** (`ownsWorld`) lässt MRadmin mit `map.hide-module-worlds` von der Karte.
 - Vorher `service.apiVersion() >= 7` prüfen - ein älteres MRadmin kennt die Methoden nicht.
 
+## Karte der Spielerseite (`selfMap`, ab API 8)
+
+Der Tab **Karte** der Spielerseite ist MRadmins eigene Karte über den Bildern, die squaremap rendert (MRadmin liest sie
+aus squaremaps Ordner). Jedes Modul bringt Ebenen **für genau diesen Spieler** mit:
+
+```java
+@Override
+public List<SelfMapLayer> selfMap(SelfViewer viewer) {          // Hauptthread, beim Laden und alle paar Sekunden
+    return List.of(new SelfMapLayer("shops", "Shops", "#FFB300",
+            List.of(new SelfMapLayer.Marker("12", "minecraft:overworld", 250, 150, 0, 0, "Test-Shop", "",
+                    List.of("Shops", "250 -60 150"),
+                    List.of(new SelfMapLayer.Action("delete", "Löschen", "bad", "Wirklich löschen?", null)))),
+            List.of(new SelfMapLayer.Action("create", "Wegpunkt hier erstellen", "good", null,
+                    new SelfBlock.Input("Name", "", 32))),
+            new SelfMapLayer.Toggle("in Xaero: an", true, "xaero")));
+}
+
+@Override
+public String selfMapAction(SelfViewer viewer, String layer, String action, Map<String, String> args) {
+    // args: "marker" (Marker-Aktion) bzw. "world", "x", "z" (Rechtsklick auf freie Stelle), "value" (Eingabe), "on" (Schalter)
+    return null; // oder der Grund in viewer.lang()
+}
+```
+
+- **Marker:** Punkt (`width`/`length` 0) oder Fläche ab (x, z), Welt als Schlüssel (`minecraft:overworld`), Farbe leer =
+  Farbe der Ebene, `details` = Zeilen beim Anklicken, `actions` = Rechtsklick-Menü.
+- **`here`:** Aktionen für einen Rechtsklick auf eine freie Stelle der Karte.
+- **`toggle`:** ein Schalter in der Ebenenliste (z.B. MRwaypoints: „in Xaero“).
+- Reine Texte in `viewer.lang()`. MRadmin prüft `mradmin.web.self` und Sperren, alles andere prüft das Modul in
+  `selfMapAction` selbst (wie in `selfAction`). Aktionen sind auf 60 pro Minute begrenzt.
+- Routen: `GET /api/self/map`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `POST /api/self/map/action`.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -255,7 +287,8 @@ public Map<String, BufferedImage> mapIcons() { // einmal pro (Neu-)Aufbau der Ka
   (`moduleHistoryAdd`, `moduleHistory`: eigene Messwerte eines Moduls im Speicher von MRadmin ablegen - Dateien,
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
-  `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged`, `mapUrl`).
+  `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged`, `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
+  `selfMapAction`, `SelfMapLayer`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

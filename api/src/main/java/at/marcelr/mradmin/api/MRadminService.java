@@ -30,9 +30,10 @@ public interface MRadminService {
      * {@link WebModule#rankings}; 5: more building blocks for it - {@link SelfBlock.Cards}, {@link SelfBlock.Meters},
      * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}; 6: module
      * history - {@link #moduleHistoryAdd}, {@link #moduleHistory}; 7: the web map - {@link AdminModule#mapLayers},
-     * {@link AdminModule#mapIcons}, {@link #mapChanged}, {@link #mapUrl()}, {@link #mapUrl(World, int, int)}).
+     * {@link AdminModule#mapIcons}, {@link #mapChanged}, {@link #mapUrl()}, {@link #mapUrl(World, int, int)}; 8: the map of
+     * the player's page - {@link WebModule#selfMap}, {@link WebModule#selfMapAction}, {@link SelfMapLayer}).
      */
-    int API_VERSION = 7;
+    int API_VERSION = 8;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

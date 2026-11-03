@@ -217,6 +217,11 @@ final class SquaremapBridge {
         return MapAddress.build(settings.address(), settings.reverseProxy(), webAddress, Bukkit.getIp(), publicIp, port);
     }
 
+    /** squaremap's rendered map pictures: tiles/&lt;world&gt;/&lt;zoom&gt;/&lt;x&gt;_&lt;z&gt;.png, plus settings.json per world. */
+    Path tilesDir() {
+        return api.webDir().resolve("tiles");
+    }
+
     /** Whether squaremap shows the world. */
     boolean onMap(World world) {
         return api.getWorldIfEnabled(BukkitAdapter.worldIdentifier(world)).isPresent();

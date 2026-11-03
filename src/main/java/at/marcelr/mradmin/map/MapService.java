@@ -310,6 +310,62 @@ public final class MapService implements Listener {
         });
     }
 
+    // ------------------------------------------------- map of the player page
+
+    /** squaremap's tile folder, or null without an active squaremap. */
+    public java.nio.file.@Nullable Path tilesDir() {
+        try {
+            return squaremap == null ? null : squaremap.tilesDir();
+        } catch (LinkageError | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The worlds squaremap renders, for MRadmin's own map: key ("minecraft:overworld"), tile folder name, display
+     * name, zoom levels (default, max = 1 block per pixel, extra = enlarged beyond that) and spawn. Read from
+     * squaremap's settings.json files; empty without squaremap.
+     */
+    public List<Map<String, Object>> worlds() {
+        java.nio.file.Path tiles = tilesDir();
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (tiles == null) {
+            return result;
+        }
+        try {
+            var all = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(tiles.resolve("settings.json")))
+                    .getAsJsonObject().getAsJsonArray("worlds");
+            for (var element : all) {
+                var w = element.getAsJsonObject();
+                String folder = w.get("name").getAsString();
+                java.nio.file.Path own = tiles.resolve(folder).resolve("settings.json");
+                if (!folder.matches("[a-z0-9_.-]+") || !java.nio.file.Files.isRegularFile(own)) {
+                    continue;
+                }
+                var s = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(own)).getAsJsonObject();
+                var zoom = s.getAsJsonObject("zoom");
+                var spawn = s.getAsJsonObject("spawn");
+                Map<String, Object> map = new LinkedHashMap<>();
+                // squaremap names the folder after the world key with "_" instead of ":".
+                World world = Bukkit.getWorlds().stream()
+                        .filter(b -> b.getKey().asString().replace(':', '_').equals(folder)).findFirst().orElse(null);
+                map.put("key", world != null ? world.getKey().asString() : folder.replaceFirst("_", ":"));
+                map.put("folder", folder);
+                map.put("name", w.has("display_name") ? w.get("display_name").getAsString() : folder);
+                map.put("type", w.has("type") ? w.get("type").getAsString() : "normal");
+                map.put("zoomDefault", zoom.get("def").getAsInt());
+                map.put("zoomMax", zoom.get("max").getAsInt());
+                map.put("zoomExtra", zoom.get("extra").getAsInt());
+                map.put("spawnX", spawn.get("x").getAsInt());
+                map.put("spawnZ", spawn.get("z").getAsInt());
+                result.add(map);
+            }
+        } catch (IOException | RuntimeException e) {
+            plugin.getLogger().fine("squaremap settings not readable yet: " + e);
+        }
+        return result;
+    }
+
     // ------------------------------------------------------------ status
 
     public boolean active() {

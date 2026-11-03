@@ -15,6 +15,7 @@
   import TopBar from '../components/TopBar.svelte';
   import { MODULE_ICONS } from '../lib/icons.js';
   import SelfNews from './SelfNews.svelte';
+  import SelfMap from './SelfMap.svelte';
 
   // null = not signed in, undefined = still asking, otherwise {uuid, name, areas}
   let player = $state(undefined);
@@ -59,6 +60,7 @@
   const nav = $derived([
     { path: '/me', label: t('self.nav.home'), icon: 'home' },
     ...(player?.areas ?? []).map((a) => ({ path: `/me/${a.module}/${a.id}`, label: a.title, icon: MODULE_ICONS[a.module] ?? a.icon })),
+    ...(player?.map ? [{ path: '/me/map', label: t('self.nav.map'), icon: 'pin' }] : []),
     ...(player?.news ? [{ path: '/me/news', label: t('self.nav.news'), icon: 'news' }] : []),
     ...(player?.tickets ? [{ path: '/me/tickets', label: t('self.nav.tickets'), icon: 'ticket' }] : []),
     ...(player?.stats ? [{ path: '/me/stats', label: t('self.nav.stats'), icon: 'chart' }] : []),
@@ -80,6 +82,8 @@
   <main>
     {#if route.path === '/me/devices'}
       <SelfDevices />
+    {:else if route.path === '/me/map' && player.map}
+      <SelfMap />
     {:else if route.path === '/me/news' && player.news}
       <SelfNews />
     {:else if route.path === '/me/stats' && player.stats}

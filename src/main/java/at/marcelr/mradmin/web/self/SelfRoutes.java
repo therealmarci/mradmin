@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/self/devices/{id}/revoke    signs one of them out
  *  GET  /api/self/areas/{module}/{area}?lang=de          one area of a plugin (built from SelfBlocks)
  *  POST /api/self/areas/{module}/{area}/action {action, args, lang}   a button of it -> 400 {message} on refusal
- *  (tickets: {@link SelfTickets}, rankings: {@link SelfStats}, news slideshow: {@link SelfNews})
+ *  (tickets: {@link SelfTickets}, rankings: {@link SelfStats}, news slideshow: {@link SelfNews}, map: {@link SelfMap})
  * </pre>
  * Every request checks again that the player still has mradmin.web.self and is not banned (LibertyBans).
  */
@@ -44,6 +44,7 @@ public final class SelfRoutes {
     private SelfTickets tickets;
     private SelfStats stats;
     private SelfNews news;
+    private SelfMap map;
 
     private SelfRoutes(WebServer server) {
         this.server = server;
@@ -66,6 +67,8 @@ public final class SelfRoutes {
         r.stats.register();
         r.news = new SelfNews(server, r, r.tickets);
         r.news.register();
+        r.map = new SelfMap(server, r);
+        r.map.register();
     }
 
     private PlayerSessions sessions() {
@@ -194,6 +197,7 @@ public final class SelfRoutes {
         result.put("tickets", tickets.available(s.player()));
         result.put("stats", stats.available());
         result.put("news", news.available());
+        result.put("map", map.available());
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
         result.put("personal", stats.personal(s.player(), lang));
         http.json(200, result);
