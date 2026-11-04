@@ -65,6 +65,9 @@ public final class VersionRoutes {
         require(http, mayView(server, http.account().id()));
         VersionManager versions = plugin.versions();
         List<Map<String, Object>> plugins = new ArrayList<>();
+        // Plugins whose config.yml can be edited here (only for mradmin.config).
+        java.util.Set<String> configurable = ConfigRoutes.may(server, http.account().id())
+                ? server.sync(() -> plugin.configEditor().targets().keySet()) : java.util.Set.of();
         for (VersionManager.Entry e : versions.list()) {
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("name", e.name);
@@ -78,6 +81,7 @@ public final class VersionRoutes {
             p.put("pending", e.pending);
             p.put("notLoaded", e.notLoaded);
             p.put("installable", e.installable());
+            p.put("config", configurable.contains(e.name));
             p.put("downloading", e.downloading);
             p.put("error", e.error);
             p.put("checksum", e.latest != null && e.latest.sha256() != null);

@@ -158,4 +158,14 @@ public interface WebModule {
     default @Nullable String selfMapAction(SelfViewer viewer, String layer, String action, Map<String, String> args) {
         return "?";
     }
+
+    // ------------------------------------------------ config in the web interface (since API 12)
+
+    /**
+     * The module's config file for the web interface (page Plugins), or null if it cannot be edited there. Asked on the
+     * main thread whenever the page loads - return the same files every time.
+     */
+    default @Nullable WebConfig webConfig() {
+        return null;
+    }
 }

@@ -67,6 +67,7 @@ public final class Perms {
     // web map (squaremap)
     public static final String MAP = "mradmin.map";
     public static final String MAP_ADMIN = "mradmin.map.admin";
+    public static final String CONFIG = "mradmin.config";
 
     private Perms() {
     }

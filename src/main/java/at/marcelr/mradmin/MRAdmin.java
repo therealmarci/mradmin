@@ -107,6 +107,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private AdminModeManager adminMode;
     private UpdateChecker updateChecker;
     private at.marcelr.mradmin.versions.VersionManager versions;
+    private final at.marcelr.mradmin.config.ConfigEditor configEditor = new at.marcelr.mradmin.config.ConfigEditor(this);
     private at.marcelr.mradmin.versions.RestartManager restarts;
     private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
@@ -140,6 +141,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.NewsRoutes.register(web);
         at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.MapRoutes.register(web);
+        at.marcelr.mradmin.web.ConfigRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
@@ -459,6 +461,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     /** The plugins MRadmin works with (module API and old hooks). */
     public at.marcelr.mradmin.map.MapService map() {
         return map;
+    }
+
+    /** The config files the web interface may edit. */
+    public at.marcelr.mradmin.config.ConfigEditor configEditor() {
+        return configEditor;
     }
 
     public Modules modules() {

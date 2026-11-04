@@ -96,8 +96,9 @@
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
   // /pvp/kits = list, /pvp/kits/<id> = one kit, /pvp/new-kit[/<copy of>] = new kit
   const kitMatch = $derived(route.path.match(/^\/pvp\/(kits|new-kit)(?:\/([a-z0-9_-]+))?$/));
-  // /plugins = all plugins, /plugins/<name> = one plugin (the old address /versions leads to the list)
-  const pluginName = $derived(route.path.match(/^\/plugins\/([A-Za-z0-9_-]+)$/)?.[1] ?? null);
+  // /plugins = all plugins, /plugins/<name>[/config] = one plugin (the old address /versions leads to the list)
+  const pluginMatch = $derived(route.path.match(/^\/plugins\/([A-Za-z0-9_-]+)(?:\/(config))?$/));
+  const pluginName = $derived(pluginMatch?.[1] ?? null);
   $effect(() => {
     if (route.path === '/versions') go('/plugins', true);
   });
@@ -175,7 +176,7 @@
     {:else if route.path === '/players' && me.may.players}
       <Players />
     {:else if pluginName && me.may.versions}
-      {#key pluginName}<PluginView name={pluginName} />{/key}
+      {#key pluginName}<PluginView name={pluginName} tab={pluginMatch[2] ?? null} />{/key}
     {:else if route.path === '/plugins' && me.may.versions}
       <Plugins />
     {:else if route.path === '/maintenance' && me.may.maintenance}

@@ -81,6 +81,8 @@ dependencies {
 
     // Für die Tests des Uptime-Kuma-Parsers (auf dem Server bringt Paper Gson mit).
     testImplementation("com.google.code.gson:gson:2.13.1")
+    // Für die Tests des Config-Editors (YamlConfiguration).
+    testImplementation("io.papermc.paper:paper-api:$paperApi")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

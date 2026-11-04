@@ -267,6 +267,15 @@ Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` 
   Version der anderen Plugins; nicht installierte kennt MRadmin aus einer festen Liste (`versions/Catalog.java`).
   Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit `mradmin.versions.install`,
   höchstens einmal pro Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+- **Konfiguration** (`mradmin.config`, Reiter auf der Seite eines Plugins, `/plugins/<name>/config`): die `config.yml`
+  des Plugins als Formular. Links die Abschnitte und eine Suche (Name, Erklärung oder Schlüssel), rechts je Einstellung
+  Name, kurze Erklärung und das passende Bedienelement; „Neustart nötig“ markiert Werte, die erst nach einem Neustart
+  wirken, „Standard“ setzt auf den mitgelieferten Wert zurück, abhängige Felder erscheinen nur, wenn sie etwas
+  bewirken. Geänderte Felder sind gelb markiert, die Leiste unten zeigt die Zahl der Änderungen. Speichern: MRadmin
+  prüft alle Werte (bei einem Fehler wird nichts gespeichert und das Feld rot markiert), schreibt die Datei und lässt
+  das Plugin neu laden; ein Fehler beim Neuladen erscheint als roter Hinweis. Hat jemand die Datei inzwischen von Hand
+  geändert, kommt „Neu laden“ statt Speichern. Geheimnisse (Webhook-URLs, Passwörter) zeigt die Seite nie, nur ob sie
+  gesetzt sind. Welche Plugins das können, steht in `docs/MODULE-API.md` (`webConfig`, ab API 12) - derzeit MRsleep.
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur

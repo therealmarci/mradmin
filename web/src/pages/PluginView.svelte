@@ -9,8 +9,9 @@
   import { ICONS } from '../lib/icons.js';
   import { pluginIcon, pluginDescription, pluginState, pluginError } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
+  import ConfigEditor from '../components/ConfigEditor.svelte';
 
-  let { name } = $props();
+  let { name, tab = null } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -51,6 +52,7 @@
   }
 
   const st = $derived(p ? pluginState(p) : null);
+  const showConfig = $derived(tab === 'config' && !!p?.config);
 </script>
 
 <div class="page">
@@ -74,43 +76,56 @@
       <span class="state"><span class="dot"></span>{st.text}</span>
     </header>
 
-    <section class="box">
-      <h2>{t('plugins.tab.version')}</h2>
-      <div class="facts">
-        <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}</div>
-        <div><span>{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}{#if p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}</div>
-        <div><span>{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
-        <div><span>Minecraft</span>{p.minecraft}</div>
-        {#if p.mod}<div><span>{t('versions.mod')}</span>{p.mod.version}</div>{/if}
-        {#if p.squaremap && (p.squaremap.version || p.squaremap.staged)}
-          <div><span>{t('versions.squaremap')}</span>{p.squaremap.version ?? '–'}{#if p.squaremap.staged && p.squaremap.staged !== p.squaremap.version} → {p.squaremap.staged}{/if}</div>
-        {/if}
+    {#if p.config}
+      <div class="tabs" role="tablist">
+        <a role="tab" href={'/plugins/' + p.name} aria-selected={!showConfig} class:on={!showConfig}
+          onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name, true); }}>{t('plugins.tab.overview')}</a>
+        <a role="tab" href={'/plugins/' + p.name + '/config'} aria-selected={showConfig} class:on={showConfig}
+          onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name + '/config', true); }}>{t('plugins.tab.config')}</a>
       </div>
+    {/if}
 
-      {#if pluginError(p)}<div class="error small">{pluginError(p)}</div>{/if}
-
-      <div class="row">
-        {#if p.update && data.may.install}
-          {#if p.checksum}
-            <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: p.latest.version })}</button>
-          {:else}
-            <span class="muted small">{t('versions.noChecksum')}</span>
+    {#if showConfig}
+      <ConfigEditor plugin={p.name} />
+    {:else}
+      <section class="box">
+        <h2>{t('plugins.tab.version')}</h2>
+        <div class="facts">
+          <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}</div>
+          <div><span>{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}{#if p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}</div>
+          <div><span>{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
+          <div><span>Minecraft</span>{p.minecraft}</div>
+          {#if p.mod}<div><span>{t('versions.mod')}</span>{p.mod.version}</div>{/if}
+          {#if p.squaremap && (p.squaremap.version || p.squaremap.staged)}
+            <div><span>{t('versions.squaremap')}</span>{p.squaremap.version ?? '–'}{#if p.squaremap.staged && p.squaremap.staged !== p.squaremap.version} → {p.squaremap.staged}{/if}</div>
           {/if}
+        </div>
+  
+        {#if pluginError(p)}<div class="error small">{pluginError(p)}</div>{/if}
+  
+        <div class="row">
+          {#if p.update && data.may.install}
+            {#if p.checksum}
+              <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: p.latest.version })}</button>
+            {:else}
+              <span class="muted small">{t('versions.noChecksum')}</span>
+            {/if}
+          {/if}
+          {#if p.staged}<span class="muted small">{t('plugins.stagedHint')}</span>{/if}
+          <span class="links">
+            <a href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
+            {#if p.latest}<a href={p.latest.page} target="_blank" rel="noopener noreferrer">GitHub ↗</a>{/if}
+          </span>
+        </div>
+  
+        {#if p.latest?.notes}
+          <details open={p.update || !!p.staged}>
+            <summary>{t('versions.notes', { version: p.latest.version })}</summary>
+            <div class="notes">{@html markdown(p.latest.notes)}</div>
+          </details>
         {/if}
-        {#if p.staged}<span class="muted small">{t('plugins.stagedHint')}</span>{/if}
-        <span class="links">
-          <a href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
-          {#if p.latest}<a href={p.latest.page} target="_blank" rel="noopener noreferrer">GitHub ↗</a>{/if}
-        </span>
-      </div>
-
-      {#if p.latest?.notes}
-        <details open={p.update || !!p.staged}>
-          <summary>{t('versions.notes', { version: p.latest.version })}</summary>
-          <div class="notes">{@html markdown(p.latest.notes)}</div>
-        </details>
-      {/if}
-    </section>
+      </section>
+    {/if}
   {:else if data}
     <p class="muted">{t('plugins.notFound')}</p>
   {:else if !error}
@@ -221,6 +236,30 @@
     height: 8px;
     border-radius: 50%;
     background: var(--tn, var(--muted));
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    justify-self: start;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .tabs a {
+    padding: 7px 16px;
+    border-radius: 9px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+  }
+
+  .tabs a.on {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .box {

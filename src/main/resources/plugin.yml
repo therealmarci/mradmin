@@ -107,6 +107,7 @@ permissions:
       mradmin.admin.discord: true
       mradmin.admin.update: true
       mradmin.versions.install: true
+      mradmin.config: true
       mradmin.server.restart: true
       mradmin.web.console.execute: true
       mradmin.map.admin: true
@@ -249,6 +250,9 @@ permissions:
     default: op
   mradmin.versions.view:
     description: "Web interface: page Plugins - all MRtechnology plugins, their versions and updates (view only)."
+    default: op
+  mradmin.config:
+    description: "Web interface: view and change the config.yml of MRadmin and the other MRtechnology plugins in the browser (saved and reloaded right away)."
     default: op
   mradmin.versions.install:
     description: "Web interface: check for updates now, download updates and install missing MRtechnology plugins (loaded on the next start)."

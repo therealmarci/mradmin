@@ -263,6 +263,65 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
 - **Ab API 11** (`api-1.10.0`, vorher `apiVersion() >= 11` prüfen): `Marker.card` (eine `SelfBlock.Card` wie im eigenen Bereich, am besten ohne `details`) und `Marker.area` (Id des Bereichs). Ein Klick auf den Punkt zeigt dann die Kachel statt der `details`; ihre Knöpfe gehen an `selfAction(viewer, area, …)`, „Einstellungen öffnen“ führt zu `/me/<modul>/<area>#card=<id>` (die Seite öffnet dort diese Kachel). MRchunks: Auslastung, Ein/Aus, Dummy.
 - Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `GET /api/self/map/stamps`, `GET /api/self/map/worlds`, `POST /api/self/map/action`.
 
+## Konfiguration im Browser (`webConfig`, ab API 12)
+
+Seite **Plugins → <Plugin> → Konfiguration** (Recht `mradmin.config`). Ein Modul gibt seine `config.yml` frei:
+
+```java
+@Override
+public @Nullable WebConfig webConfig() {
+    return new WebConfig(new File(plugin.getDataFolder(), "config.yml"),
+            resource("web-config.yml"),   // Formular (unten)
+            resource("config.yml"),       // mitgelieferte Config: Standardwerte, Zeilen von Tabellen
+            by -> {                       // nach dem Speichern, Hauptthread - wie der Reload-Befehl
+                plugin.reload();
+                plugin.discord().log("admin-reload", "admin", by);
+            });
+}
+```
+
+MRadmin liest die Datei neu, prüft die Prüfsumme (Datei inzwischen geändert → 409 `config-changed`), prüft jede Änderung
+gegen das Formular (nur Schlüssel des Formulars, Typ und Grenzen), legt die alte Datei als `config.backup-web.yml` ab,
+schreibt die neue in einem Schritt (UTF-8 mit BOM, Kommentare und Reihenfolge bleiben) und ruft dann `reload` auf.
+Bearbeiten per Datei bleibt möglich. Ein Plugin, das für ältere MRadmin-Versionen baut, braucht keine Prüfung - ältere
+MRadmin rufen `webConfig()` nie auf.
+
+**Formular** (`src/main/resources/web-config.yml`, englische Kommentare, Texte DE/EN):
+
+```yaml
+sections:
+  - id: sleep
+    name: {de: Schlafen, en: Sleeping}
+    help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
+    fields:
+      - key: sleep.percentage          # Schlüssel in config.yml
+        type: int                      # Typ, siehe unten
+        min: 0
+        max: 100
+        unit: {de: "%", en: "%"}
+        name: {de: Anteil der Schläfer, en: Share of sleepers}
+        help: {de: "...", en: "..."}
+        restart: false                 # true = wirkt erst nach einem Neustart (Hinweis im Web)
+        when: sleep.enabled            # nur zeigen, wenn: "key" (Schalter an), "!key" (aus), "key=a|b" (Wert)
+```
+
+| `type` | Bedienung | Weitere Angaben |
+|---|---|---|
+| `bool` | Schalter | |
+| `int`, `decimal` | Zahlenfeld | `min`, `max`, `unit` |
+| `string`, `text` | Eingabezeile / mehrzeilig | `max-length` (Standard 2000) |
+| `secret` | „gesetzt“ / „leer“, neuer Wert per Knopf - der Wert geht nie an den Browser | `max-length` |
+| `choice` | bis 4 kurze Werte als Umschalter, sonst Auswahlliste | `options`: Liste aus `{value, de, en}` oder einfachen Werten |
+| `color` | Farbwähler + `#RRGGBB` | |
+| `duration` | Dauer wie `15m`, `1h30m`, `2d` (Zahl = Minuten), mit Klartext daneben | `permanent: true` erlaubt `permanent` |
+| `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent` |
+| `worlds` | Welten des Servers zum Anklicken | |
+| `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name}`, `rows`: Name je Zeile |
+
+- **Texte mit Komma** in der Kurzschreibweise `{de: …, en: …}` immer in Anführungszeichen setzen, sonst schneidet YAML den Text am Komma ab.
+- Jeder Wert der `config.yml` (außer `config-version`) braucht ein Feld - ein Test im Plugin prüft das (Muster: `WebConfigFormTest` in MRsleep).
+- Routen: `GET /api/config/<Plugin>`, `POST /api/config/<Plugin>` `{version, changes}` → `{changed, restart, reloadError, version, sections}`; ungültiger Wert: 400 `{error, field}`.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -274,7 +333,7 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

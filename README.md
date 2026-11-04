@@ -21,7 +21,7 @@
 - **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
 - **Spielerseite im Web (`/web`):** Jeder Spieler bekommt seine eigene Seite - eigene Tickets, Ranglisten und alles, was die anderen Plugins anbieten (z.B. Chunkloader verwalten, Duell-Statistik). Als Lesezeichen speicherbar, Deutsch und Englisch.
 - **Karte:** eigene Karte auf der Spielerseite mit den Ebenen der anderen Plugins (z.B. Chunkloader, Wegpunkte) - squaremap rendert sie, MRadmin installiert, aktualisiert und richtet es selbst ein.
-- **Plugins & Updates:** alle MRtechnology-Plugins im Web - installierte mit ihren Updates (per Klick herunterladen, Installation beim nächsten Neustart), nicht installierte direkt installieren, den Server mit Countdown neu starten.
+- **Plugins, Updates & Einstellungen:** alle MRtechnology-Plugins im Web - im Browser einstellen (config.yml als Formular, sofort neu geladen), installierte mit ihren Updates (per Klick herunterladen, Installation beim nächsten Neustart), nicht installierte direkt installieren, den Server mit Countdown neu starten.
 - **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
 ## Schnellstart
@@ -209,6 +209,7 @@ Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler 
 ### Plugins & Updates
 In der Weboberfläche unter **Plugins** (Seite „Plugin-Konfiguration“) siehst du **alle MRtechnology-Plugins**: oben die auf deinem Server mit installierter und neuester Version und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
 - **Installieren:** Nicht installierte Plugins installierst du mit einem Klick. MRadmin lädt das offizielle Release für deine Minecraft-Version (nur mit passender Prüfsumme) nach `plugins/` - **geladen wird es beim nächsten Neustart**. Gibt es bisher nur Vorabversionen (z.B. MRpvp 0.x), wird die neueste davon angeboten.
+- **Einstellen im Browser:** Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration**: alle Einstellungen der `config.yml` als Formular mit Erklärungen (Deutsch/Englisch). Speichern prüft jeden Wert, schreibt die Datei (Kommentare bleiben, die alte Datei liegt als `config.backup-web.yml` daneben) und lädt das Plugin sofort neu - ohne Befehl, ohne Neustart. Von Hand bearbeiten geht weiterhin. Permission `mradmin.config` (in `mradmin.groups.admin`). Verfügbar für Plugins, die das schon können (derzeit MRsleep).
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Plugins bzw. `/<plugin> version`.
 - **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
 - **Server neu starten:** Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein heruntergeladenes Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
@@ -302,7 +303,7 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 | `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Karte, andere Spieler darauf (`mradmin.map.players`) · `/mradmin version` |
 | `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Seite Plugins ansehen (ohne „Jetzt prüfen“), Web-Konsole ansehen |
 | `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
-| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
+| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Plugins im Browser einstellen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
 
 Die Gruppen bringen auch die nötigen **LibertyBans**-Rechte mit (falls installiert): Support sieht Strafen, Verlauf und die Bann- und Mute-Listen (`libertybans.commands`, `libertybans.list.*`), Staff darf kicken, muten und verwarnen, nur Admins bannen. Diese Rechte gelten dann auch für die LibertyBans-Befehle im Spiel.
 
@@ -327,7 +328,7 @@ Standard ist `op`, außer anders angegeben.
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
 | Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.players` (andere Online-Spieler auf der Karte der Spielerseite) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`, Schalter Karte / Spieler auf der Karte im Adminportal) |
-| Plugins & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen, installieren) · `mradmin.server.restart` (neu starten) |
+| Plugins & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen, installieren) · `mradmin.config` (Konfiguration im Browser) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
 </details>

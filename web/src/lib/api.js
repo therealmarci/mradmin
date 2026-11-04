@@ -36,6 +36,8 @@ export async function api(method, path, body) {
       signedOut();
     }
     const error = new ApiError(res.status, data?.error ?? 'server', data?.message);
+    // A field of a form that does not fit (config editor).
+    error.field = data?.field;
     error.value = data?.value;
     throw error;
   }

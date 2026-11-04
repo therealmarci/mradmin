@@ -34,9 +34,10 @@ public interface MRadminService {
      * the player's page - {@link WebModule#selfMap}, {@link WebModule#selfMapAction}, {@link SelfMapLayer}; 9: groups,
      * selections and symbols there - {@link SelfMapLayer#group}, {@link SelfMapLayer.Action#choice},
      * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
-     * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}).
+     * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
+     * {@link WebModule#webConfig}, {@link WebConfig}).
      */
-    int API_VERSION = 11;
+    int API_VERSION = 12;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
