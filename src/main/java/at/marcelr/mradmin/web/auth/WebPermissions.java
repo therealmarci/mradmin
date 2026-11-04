@@ -47,6 +47,7 @@ public final class WebPermissions {
     /** After a reload or permission change: ask again. */
     public void clear() {
         cache.clear();
+        defaultsUntil = 0;
     }
 
     private boolean check(UUID player, String permission) {
@@ -72,10 +73,58 @@ public final class WebPermissions {
         return byDefault(permission, offline.isOp());
     }
 
-    /** The default from the plugin.yml (true, op, not op, false); unknown permissions only for operators. */
-    private static boolean byDefault(String permission, boolean op) {
-        org.bukkit.permissions.Permission perm = Bukkit.getPluginManager().getPermission(permission);
-        return perm == null ? op : perm.getDefault().getValue(op);
+    /**
+     * Like Bukkit for a player without permissions of their own: the plugin.yml defaults (true, op, not op, false)
+     * together with the children they bring - an operator gets e.g. mradmin.web.console.execute through
+     * mradmin.groups.admin (default op), although that one is "default: false" itself. Unknown permissions only
+     * for operators.
+     */
+    private boolean byDefault(String permission, boolean op) {
+        Boolean value = defaults(op).get(permission.toLowerCase(Locale.ROOT));
+        if (value != null) {
+            return value;
+        }
+        return Bukkit.getPluginManager().getPermission(permission) == null && op;
+    }
+
+    private volatile java.util.Map<String, Boolean> opDefaults;
+    private volatile java.util.Map<String, Boolean> playerDefaults;
+    private volatile long defaultsUntil;
+
+    /** All permissions an operator (or a normal player) has by default, children included; built again every minute. */
+    private java.util.Map<String, Boolean> defaults(boolean op) {
+        long now = System.currentTimeMillis();
+        if (now > defaultsUntil || opDefaults == null) {
+            opDefaults = resolve(true);
+            playerDefaults = resolve(false);
+            defaultsUntil = now + CACHE_MILLIS;
+        }
+        return op ? opDefaults : playerDefaults;
+    }
+
+    private static java.util.Map<String, Boolean> resolve(boolean op) {
+        java.util.Map<String, Boolean> out = new java.util.HashMap<>();
+        for (org.bukkit.permissions.Permission perm : Bukkit.getPluginManager().getDefaultPermissions(op)) {
+            out.put(perm.getName().toLowerCase(Locale.ROOT), true);
+            children(perm.getChildren(), true, out, 0);
+        }
+        return java.util.Map.copyOf(out);
+    }
+
+    /** As in Bukkit's PermissibleBase: a child is set to its value, inverted below a parent that is false. */
+    private static void children(java.util.Map<String, Boolean> children, boolean parent, java.util.Map<String, Boolean> out, int depth) {
+        if (depth > 32) {
+            return;
+        }
+        for (java.util.Map.Entry<String, Boolean> child : children.entrySet()) {
+            boolean value = child.getValue() == parent;
+            String name = child.getKey().toLowerCase(Locale.ROOT);
+            out.put(name, value);
+            org.bukkit.permissions.Permission perm = Bukkit.getPluginManager().getPermission(name);
+            if (perm != null) {
+                children(perm.getChildren(), value, out, depth + 1);
+            }
+        }
     }
 
     /**
