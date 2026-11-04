@@ -1,59 +1,67 @@
 <script>
-  // Page Log as a log viewer: search, time range and Live/Pause on top; the sources on the left
-  // (components/LogLayout.svelte), one row per entry on the right (components/LogList.svelte), all in one list by time.
+  // Page Log: search, sources, time range and Live/Pause on top; below the activity chart (components/LogChart.svelte,
+  // drag or click = look at a stretch of time) and the table with pages (components/LogTable.svelte, 50 per page).
   // Sources: MRadmin and every plugin (the events of their Discord logs) and the web interface - mradmin.web.audit -
   // and the console output ("console", mradmin.web.console.view; older days from Paper's log files). LogRoutes.java.
-  // Live: events come with "log" on the event stream (lib/live.svelte.js), console lines once a second from
-  // /console/tail (memory); paused, new entries wait above the list. Commands: page Console (admins only).
+  // Live (first page, no stretch chosen, not paused): events come with "log" on the event stream (lib/live.svelte.js),
+  // console lines once a second from /console/tail; otherwise they are only counted ("n new - show").
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { ICONS, moduleHue } from '../lib/icons.js';
   import { live } from '../lib/live.svelte.js';
-  import LogLayout from '../components/LogLayout.svelte';
-  import LogFilter from '../components/LogFilter.svelte';
-  import LogList from '../components/LogList.svelte';
+  import LogChart from '../components/LogChart.svelte';
+  import LogTable from '../components/LogTable.svelte';
+  import SourcePicker from '../components/SourcePicker.svelte';
 
   let { me } = $props();
 
+  const SIZE = 50;
+  const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
+  // bars of the chart per range: 1 min, 30 min, 2 h, 4 h
+  const BUCKETS = { '1h': 60, '24h': 48, '7d': 84, '14d': 84 };
+  const CONSOLE = { info: '#8B95A5', warn: '#F59E0B', error: '#E5484D' };
+
   let entries = $state([]);
-  let queued = $state([]);
+  let total = $state(0);
+  let page = $state(0);
+  let chart = $state(null);
   let names = $state({});
   let counts = $state({});
-  let more = $state(false);
   let error = $state('');
   let loading = $state(false);
   let selected = $state([]);
   let query = $state('');
   let range = $state('24h');
   let paused = $state(false);
-  // number of the newest console line seen (for /console/tail)
+  let stretch = $state(null);
+  let pending = $state(0);
   let consoleSeq = 0;
+  let rangeStart = 0;
 
-  const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
-  const CONSOLE = { info: '#8B95A5', warn: '#F59E0B', error: '#E5484D' };
+  const following = $derived(!paused && page === 0 && !stretch);
   const wants = (source) => !selected.length || selected.includes(source);
 
-  function params(extra = {}) {
-    const p = new URLSearchParams({ limit: '200', since: String(Date.now() - RANGES[range]), ...extra });
+  function params(extra) {
+    const p = new URLSearchParams({ limit: String(SIZE), ...extra });
     if (selected.length) p.set('sources', selected.join(','));
     if (query.trim()) p.set('q', query.trim());
     return p;
   }
 
-  async function load(older = false) {
+  /** Chart and first page over the whole range (after a filter changed). */
+  async function loadAll() {
     loading = true;
     try {
-      if (!older && me?.may?.console) {
-        // Only the number of the newest console line - from there the live lines follow.
-        consoleSeq = (await api('GET', '/console/tail?after=9000000000000000')).last;
-      }
-      const extra = older && entries.length ? { before: String(entries.at(-1).time) } : { counts: '1' };
-      const data = await api('GET', '/logs?' + params(extra));
-      entries = older ? [...entries, ...data.entries] : data.entries;
-      if (!older) queued = [];
+      if (me?.may?.console) consoleSeq = (await api('GET', '/console/tail?after=9000000000000000')).last;
+      rangeStart = Date.now() - RANGES[range];
+      const data = await api('GET', '/logs?' + params({ since: String(rangeStart), buckets: String(BUCKETS[range]) }));
+      page = 0;
+      stretch = null;
+      pending = 0;
+      apply(data);
+      chart = data.chart ?? null;
+      counts = data.counts;
       names = data.sources;
-      if (data.counts) counts = data.counts;
-      more = data.more;
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -62,43 +70,91 @@
     }
   }
 
+  /** One page of the range or of the chosen stretch (the chart stays). */
+  async function loadPage(p) {
+    loading = true;
+    try {
+      const data = await api('GET', '/logs?' + params({
+        since: String(stretch?.from ?? rangeStart),
+        until: String(stretch?.to ?? 0),
+        offset: String(p * SIZE),
+      }));
+      page = p;
+      apply(data);
+      error = '';
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      loading = false;
+    }
+  }
+
+  function apply(data) {
+    entries = data.entries;
+    total = data.total;
+    if (page === 0 && !stretch) pending = 0;
+  }
+
+  function choose(s) {
+    stretch = s;
+    pending = 0;
+    loadPage(0);
+  }
+
   const key = (e) => e.time + '|' + e.source + '|' + e.event + '|' + e.text;
 
-  /** New entries on top (or waiting while paused), counted for the filter list. */
+  /** New entries: on top of the first page while following, otherwise only counted. Chart and counts go along. */
   function add(fresh) {
     if (!fresh.length) return;
     const next = { ...counts };
     for (const e of fresh) next[e.source] = (next[e.source] ?? 0) + 1;
     counts = next;
-    if (paused) queued = [...fresh, ...queued];
-    else entries = [...fresh, ...entries];
+    if (chart?.bars?.length) {
+      const bars = chart.bars.map((b) => [...b]);
+      for (const e of fresh) {
+        const i = Math.min(bars.length - 1, Math.max(0, Math.floor((e.time - chart.start) / chart.step)));
+        bars[i][e.source !== 'console' ? 0 : e.event === 'warn' ? 2 : e.event === 'error' ? 3 : 1]++;
+      }
+      chart = { ...chart, bars };
+    }
+    if (following) {
+      entries = [...fresh, ...entries].slice(0, SIZE);
+      total += fresh.length;
+    } else {
+      pending += fresh.length;
+    }
   }
 
-  /** Events newer than the newest one shown or waiting (same filters, without the console). */
+  /** Events newer than the newest one known (without the console - that comes from /console/tail). */
+  let newest = 0;
+  $effect(() => {
+    const first = entries.find((e) => e.source !== 'console');
+    if (first && first.time > newest) newest = first.time;
+  });
   async function loadNew() {
-    const newest = [...queued, ...entries].find((e) => e.source !== 'console');
-    if (loading || !newest) return load();
+    if (loading) return;
+    const sources = (selected.length ? selected : Object.keys(names)).filter((s) => s !== 'console');
+    if (!sources.length) return;
     try {
-      const sources = (selected.length ? selected : Object.keys(names)).filter((s) => s !== 'console');
-      if (!sources.length) return;
-      const p = params({ since: String(newest.time) });
+      const since = newest || rangeStart;
+      const p = params({ since: String(since), limit: '100' });
       p.set('sources', sources.join(','));
       const data = await api('GET', '/logs?' + p);
-      const seen = new Set([...queued, ...entries].filter((e) => e.time === newest.time).map(key));
-      add(data.entries.filter((e) => !seen.has(key(e))));
+      const seen = new Set(entries.filter((e) => e.time === since).map(key));
+      const fresh = data.entries.filter((e) => !seen.has(key(e)));
+      if (fresh.length) newest = Math.max(newest, fresh[0].time);
+      add(fresh);
       names = { ...names, ...data.sources };
     } catch (e) {
       error = errorText(e);
     }
   }
 
-  /** New console lines from memory (cheap, once a second). */
   async function pollConsole() {
     if (loading || document.hidden || !me?.may?.console) return;
     try {
       const result = await api('GET', '/console/tail?after=' + consoleSeq);
       if (result.last < consoleSeq) {
-        // The server was restarted.
         consoleSeq = 0;
         return;
       }
@@ -117,11 +173,6 @@
     }
   }
 
-  function showQueued() {
-    entries = [...queued, ...entries];
-    queued = [];
-  }
-
   // Again when a filter changes (the text after a short pause).
   let timer;
   $effect(() => {
@@ -129,16 +180,14 @@
     range;
     const q = query;
     clearTimeout(timer);
-    timer = setTimeout(() => load(), q ? 300 : 0);
+    timer = setTimeout(loadAll, q ? 300 : 0);
   });
-  // A short pause collects bursts (many events in one second) into one request.
   let liveTimer;
   $effect(() => {
     if (!live.log.tick) return;
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => !document.hidden && loadNew(), 250);
   });
-  // Without the event stream (connection lost): every 15 seconds.
   $effect(() => {
     if (live.connected) return;
     const id = setInterval(() => !document.hidden && loadNew(), 15000);
@@ -149,8 +198,13 @@
     const id = setInterval(pollConsole, 1000);
     return () => clearInterval(id);
   });
+  // The chart moves on: every 5 minutes anew (while following).
   $effect(() => {
-    if (!paused && queued.length) showQueued();
+    const id = setInterval(() => following && !document.hidden && loadAll(), 300000);
+    return () => clearInterval(id);
+  });
+  $effect(() => {
+    if (!paused && pending && page === 0 && !stretch) loadPage(0);
   });
 
   const label = (s) =>
@@ -158,7 +212,7 @@
   const color = (s) =>
     s === 'web' ? '#3b82f6' : s === 'mradmin' ? 'var(--accent)' : s === 'console' ? '#8b95a5' : `hsl(${moduleHue(s)} 62% 55%)`;
 
-  const filterItems = $derived(
+  const sourceItems = $derived(
     Object.keys(names).map((s) => ({ key: s, label: label(s), color: color(s), count: counts[s] ?? 0 })),
   );
 
@@ -171,12 +225,16 @@
       .replace(/`([^`]+)`/g, '<code>$1</code>');
   }
 
-  const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const long = $derived(range === '7d' || range === '14d');
+  const clock = (ms) =>
+    long
+      ? new Date(ms).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      : new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   // "[12:00:00] [Server thread/WARN]: text" (files) or "[12:00:00 WARN]: text" (console): time and level have their
   // own columns, the row shows only the text.
   const PREFIX = /^\[(\d{2}:\d{2}:\d{2})(?: [A-Z]+)?\](?: \[[^\]]*\])?:?\s?/;
 
-  // Stable keys (new entries come on top): the same entry twice gets a counter.
+  // Stable keys: the same entry twice gets a counter.
   const rows = $derived.by(() => {
     const seen = new Map();
     return entries.map((e) => {
@@ -188,7 +246,7 @@
       return {
         key: n ? k + '|' + n : k,
         time: e.time,
-        clock: console ? (m ? m[1] : '') : clock(e.time),
+        clock: console && !m ? '' : clock(e.time),
         badge: { label: label(e.source), color: color(e.source) },
         accent: e.color,
         text: console ? (m ? e.text.slice(m[0].length) : e.text) : render(e.text),
@@ -197,7 +255,7 @@
         tag: console ? t('logs.level.' + e.event) : e.event,
         details: console
           ? [
-              { label: t('logs.detail.time'), value: new Date(e.time).toLocaleDateString() + (m ? ' ' + m[1] : '') },
+              { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
               { label: t('logs.detail.line'), value: e.text },
             ]
           : [
@@ -208,6 +266,14 @@
       };
     });
   });
+
+  const stretchText = $derived(
+    stretch
+      ? new Date(stretch.from).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
+          ' - ' +
+          new Date(stretch.to).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '',
+  );
 </script>
 
 <div class="page">
@@ -220,10 +286,10 @@
       <h1>{t('logs.title')}</h1>
       <p class="muted">{t('logs.subtitle')}</p>
     </div>
-    <button type="button" class="live" class:paused aria-pressed={paused} title={t(paused ? 'logs.resume' : 'logs.pause')}
+    <button type="button" class="live" class:paused={!following} aria-pressed={paused} title={t(paused ? 'logs.resume' : following ? 'logs.pause' : 'logs.notlive.hint')}
       onclick={() => (paused = !paused)}>
       <span class="pulse" aria-hidden="true"></span>
-      {t(paused ? 'logs.paused' : 'logs.live')}
+      {t(paused ? 'logs.paused' : following ? 'logs.live' : 'logs.notlive')}
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
         {#if paused}<path d="M7 5v14l12-7z" />{:else}<path d="M7 5h3v14H7zM14 5h3v14h-3z" />{/if}
       </svg>
@@ -231,6 +297,7 @@
   </header>
 
   <div class="toolbar">
+    <SourcePicker items={sourceItems} bind:selected />
     <label class="search">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -244,12 +311,24 @@
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
-  <LogLayout active={selected.length}>
-    {#snippet filters()}
-      <LogFilter title={t('logs.sources')} items={filterItems} bind:selected />
-    {/snippet}
-    <LogList {rows} {more} {loading} empty={t('logs.empty')} pending={queued.length} onmore={() => load(true)} onshow={showQueued} />
-  </LogLayout>
+
+  {#if chart}
+    <LogChart {chart} selection={stretch} onselect={choose} />
+  {/if}
+
+  {#if stretch || pending}
+    <div class="notes">
+      {#if stretch}
+        <span class="chip">{t('logs.stretch', { range: stretchText })}
+          <button type="button" aria-label={t('logs.stretch.clear')} onclick={() => choose(null)}>✕</button></span>
+      {/if}
+      {#if pending}
+        <button type="button" class="newer" onclick={() => { paused = false; stretch = null; loadPage(0); }}>{t('logs.pending', { n: pending })}</button>
+      {/if}
+    </div>
+  {/if}
+
+  <LogTable {rows} {total} {page} size={SIZE} {loading} empty={t('logs.empty')} onpage={loadPage} />
 </div>
 
 <style>
@@ -400,6 +479,47 @@
     background: var(--surface);
     color: var(--text);
     box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  }
+
+  .notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 12px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--accent);
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .chip button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    color: inherit;
+    font-size: 0.72rem;
+  }
+
+  .newer {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.84rem;
+    font-weight: 700;
   }
 
   @container (max-width: 640px) {

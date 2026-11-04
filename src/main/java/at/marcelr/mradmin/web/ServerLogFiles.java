@@ -43,6 +43,8 @@ final class ServerLogFiles {
 
     public static final int MAX_DAYS = 14;
     public static final List<String> LEVELS = List.of("info", "warn", "error");
+    /** Parsed finished days, see read(). */
+    private static final java.util.Map<String, java.lang.ref.SoftReference<List<Line>>> DAYS = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Pattern GZ = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})-(\\d+)\\.log\\.gz");
     private static final Pattern TIME = Pattern.compile("^\\[(\\d{2}):(\\d{2}):(\\d{2})");
     private static final Pattern LEVEL = Pattern.compile("^(?:\\[\\d{2}:\\d{2}:\\d{2}\\] )?\\[[^\\]]*?[/ ](INFO|WARN|ERROR|FATAL|DEBUG|TRACE)\\]");
@@ -136,6 +138,19 @@ final class ServerLogFiles {
         if (day.equals(today) && Files.isRegularFile(latest)) {
             files.add(latest);
         }
+        // Finished days do not change any more: kept (softly, the memory may take them back) for paging and searching.
+        StringBuilder sig = new StringBuilder(folder + "|" + day + "|" + links + "|" + ips);
+        for (Path file : files) {
+            sig.append('|').append(file.getFileName()).append(':').append(Files.size(file));
+        }
+        String cacheKey = sig.toString();
+        if (!day.equals(today)) {
+            java.lang.ref.SoftReference<List<Line>> ref = DAYS.get(cacheKey);
+            List<Line> cached = ref == null ? null : ref.get();
+            if (cached != null) {
+                return cached;
+            }
+        }
         long dayStart = start(day);
         List<Line> out = new ArrayList<>();
         long second = dayStart;
@@ -166,7 +181,43 @@ final class ServerLogFiles {
                 // a broken or still written .gz - skip the rest of it
             }
         }
+        if (!day.equals(today)) {
+            DAYS.keySet().removeIf(k -> k.startsWith(folder + "|" + day + "|"));
+            DAYS.put(cacheKey, new java.lang.ref.SoftReference<>(List.copyOf(out)));
+        }
         return out;
+    }
+
+    /**
+     * Every line from {@code since} up to (not including) {@code until} that contains the text, newest first - for
+     * counting, the activity chart and one page of the page Log at once. {@code visit} returns false to stop.
+     */
+    void scan(LocalDate today, long since, long until, String query, boolean links, boolean ips,
+              java.util.function.Predicate<Line> visit) throws IOException {
+        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        LocalDate first = today.minusDays(MAX_DAYS - 1L);
+        LocalDate from = LocalDate.ofInstant(java.time.Instant.ofEpochMilli(Math.max(0, since)), zone);
+        if (from.isBefore(first)) {
+            from = first;
+        }
+        for (LocalDate day = today; !day.isBefore(from); day = day.minusDays(1)) {
+            if (start(day) >= until) {
+                continue;
+            }
+            List<Line> lines = read(day, today, links, ips);
+            for (int i = lines.size() - 1; i >= 0; i--) {
+                Line line = lines.get(i);
+                if (line.time() < since) {
+                    return;
+                }
+                if (line.key() >= until || (!q.isEmpty() && !line.text().toLowerCase(Locale.ROOT).contains(q))) {
+                    continue;
+                }
+                if (!visit.test(line)) {
+                    return;
+                }
+            }
+        }
     }
 
     private long start(LocalDate day) {

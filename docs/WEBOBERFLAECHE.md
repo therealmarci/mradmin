@@ -300,10 +300,12 @@ Unter **Konto → Benachrichtigungen**.
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
 ## Protokoll (`mradmin.web.audit`)
-Alles, was auf dem Server passiert ist, auf einer Seite. Oben Reiter, Suche, Zeitraum (1 Std. bis 14 Tage) und
-**Live/Anhalten**, links die Filter mit Anzahl, rechts eine Zeile pro Eintrag (neueste oben, nach Tagen gegliedert) -
-ein Klick klappt den ganzen Text und die Einzelheiten auf. Angehalten warten neue Einträge über der Liste. Am Handy
-liegen die Filter hinter dem Knopf **Filter**.
+Alles, was auf dem Server passiert ist, auf einer Seite. Oben Quellen (Menü, mehrere gleichzeitig), Suche, Zeitraum
+(1 Std. bis 14 Tage) und **Live/Anhalten**. Darunter das **Aktivitätsdiagramm**: Balken über den Zeitraum, gestapelt
+nach Ereignissen, Konsole, Warnungen und Fehlern; Ziehen oder ein Klick auf einen Balken zeigt nur diesen Ausschnitt
+(✕ hebt ihn auf). Darunter die **Tabelle** mit 50 Einträgen pro Seite und Seitenzahlen („1-50 von 873“) - ein Klick
+klappt den ganzen Text und die Einzelheiten auf. Live läuft auf Seite 1 ohne Ausschnitt; sonst zählt die Seite neue
+Einträge nur („3 neue Einträge - anzeigen“).
 
 - **Ereignisse:** dieselben Ereignisse, die MRadmin und die anderen MRtechnology-Plugins in ihre Discord-Logs
   schicken (auch wenn Discord aus ist), in der Farbe aus `discord.events`, dazu jede Aktion in der Weboberfläche
