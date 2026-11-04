@@ -66,6 +66,13 @@
   let phoneLayers = $state(false);
   let dialog = $state(null);
   let phone = $state(false);
+  /** Panels the player moved: id -> {c: corner tl|tr|bl|br, x, y: distance from that corner's edges}. */
+  let layout = $state(saved.layout ?? {});
+  /** Measured size of every panel (to keep moved ones inside the map). */
+  let sizes = $state({});
+  /** The panel being dragged right now: {id, left, top, ox, oy}. */
+  let moving = $state(null);
+  let copied = $state(false);
 
   $effect(() => {
     const media = window.matchMedia('(max-width: 759px)');
@@ -98,7 +105,7 @@
   $effect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify({ world: worldKey, zoom, x: cx, z: cz, hidden: [...hidden], layersOpen,
-        grid, collapsed: [...collapsed] }));
+        grid, collapsed: [...collapsed], layout }));
     } catch {
       // private mode
     }
@@ -212,6 +219,84 @@
   }
 
   const rowOn = (row) => (row.grid ? grid : !hidden.has(row.key));
+
+  /** The switch of a whole group: all on -> all off, otherwise all on. */
+  function toggleAll(g) {
+    const on = !g.rows.every(rowOn);
+    const next = new Set(hidden);
+    for (const row of g.rows) {
+      if (row.grid) grid = on;
+      else if (on) next.delete(row.key);
+      else next.add(row.key);
+    }
+    hidden = next;
+  }
+
+  /** What a plugin's switch is about, without its state ("in Xaero: on" -> "in Xaero"). */
+  const toggleName = (label) => label.split(':')[0].trim();
+
+  // ---------------------------------------------------------------- arrangement of the panels
+
+  const SNAP = 8;
+  /** Closer than this to an edge = right at the edge (with the usual gap). */
+  const EDGE = 28;
+  const GAP = 12;
+
+  /** Where a panel stands: the default from the CSS, a moved one from the layout, kept inside the map. */
+  function dockStyle(id) {
+    if (phone) return id === 'search' ? `right:${GAP + (sizes.world?.w ?? 0) + 8}px` : '';
+    if (moving?.id === id) return `left:${moving.left}px;top:${moving.top}px;right:auto;bottom:auto`;
+    const p = layout[id];
+    if (!p) return '';
+    const s = sizes[id] ?? { w: 0, h: 0 };
+    const x = Math.max(0, Math.min(p.x, width - s.w));
+    const y = Math.max(0, Math.min(p.y, height - s.h));
+    const h = p.c[1] === 'l' ? `left:${x}px;right:auto` : `right:${x}px;left:auto`;
+    const v = p.c[0] === 't' ? `top:${y}px;bottom:auto` : `bottom:${y}px;top:auto`;
+    return `${h};${v}`;
+  }
+
+  /** A moved panel at the bottom opens its lists upwards. */
+  const atBottom = (id) => !phone && layout[id]?.c?.[0] === 'b';
+
+  function measure(node, id) {
+    const observer = new ResizeObserver(() => {
+      sizes = { ...sizes, [id]: { w: node.offsetWidth, h: node.offsetHeight } };
+    });
+    observer.observe(node);
+    return { destroy: () => observer.disconnect() };
+  }
+
+  function grab(e, id) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const dock = e.currentTarget.closest('.dock');
+    const outer = dock.parentElement.getBoundingClientRect();
+    const r = dock.getBoundingClientRect();
+    moving = { id, left: r.left - outer.left, top: r.top - outer.top, ox: e.clientX - r.left, oy: e.clientY - r.top, outer };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function dragDock(e) {
+    if (!moving) return;
+    const s = sizes[moving.id] ?? { w: 0, h: 0 };
+    moving.left = Math.max(0, Math.min(e.clientX - moving.outer.left - moving.ox, width - s.w));
+    moving.top = Math.max(0, Math.min(e.clientY - moving.outer.top - moving.oy, height - s.h));
+  }
+
+  /** Dropped: anchored to the nearest corner, on a grid of 8 px, close to an edge right at it. */
+  function dropDock() {
+    if (!moving) return;
+    const { id, left, top } = moving;
+    const s = sizes[id] ?? { w: 0, h: 0 };
+    const c = (top + s.h / 2 < height / 2 ? 't' : 'b') + (left + s.w / 2 < width / 2 ? 'l' : 'r');
+    const snap = (v) => (v < EDGE ? GAP : Math.round(v / SNAP) * SNAP);
+    const x = snap(c[1] === 'l' ? left : width - left - s.w);
+    const y = snap(c[0] === 't' ? top : height - top - s.h);
+    layout = { ...layout, [id]: { c, x, y } };
+    moving = null;
+  }
 
   // ---------------------------------------------------------------- chunk grid
 
@@ -605,6 +690,55 @@
     zoom = world.zoomDefault;
   }
 
+  /** The cross hair: to the player (also into their world), without a position to the spawn. */
+  function aim() {
+    const self = drawn.find((d) => d.self) ?? me;
+    if (!self || !worlds.some((w) => w.key === self.world)) {
+      toSpawn();
+      return;
+    }
+    if (self.world !== worldKey) {
+      worldKey = self.world;
+      zoom = worlds.find((w) => w.key === self.world).zoomDefault;
+    }
+    cx = self.x;
+    cz = self.z;
+  }
+
+  /** The selected marker: its spot, the distance to the player (same world) and centring on it. */
+  const spot = $derived(selected ? {
+    x: Math.floor(selected.x + (selected.width > 0 ? selected.width / 2 : 0)),
+    z: Math.floor(selected.z + (selected.width > 0 ? selected.length / 2 : 0)),
+  } : null);
+  const distance = $derived.by(() => {
+    const self = drawn.find((d) => d.self) ?? me;
+    if (!spot || !self || self.world !== selected.world) return null;
+    return Math.round(Math.hypot(self.x - spot.x, self.z - spot.z));
+  });
+
+  function centerOn() {
+    if (!spot) return;
+    follow = false;
+    cx = spot.x;
+    cz = spot.z;
+  }
+
+  async function copySpot() {
+    try {
+      await navigator.clipboard.writeText(`${spot.x} ${spot.z}`);
+      copied = true;
+      setTimeout(() => (copied = false), 1500);
+    } catch {
+      // no clipboard (http, old browser) - nothing to do
+    }
+  }
+
+  /** A plugin's lines "Label: value" as two columns, other lines as they are. */
+  function line(text) {
+    const i = text.indexOf(': ');
+    return i > 0 && i < 28 ? { key: text.slice(0, i), value: text.slice(i + 2) } : { value: text };
+  }
+
   function keys(e) {
     if (e.key !== 'Escape') return;
     if (dialog) closeDialog(null);
@@ -625,21 +759,27 @@
   {#each groups as g (g.key)}
     {@const open = !collapsed.has(g.key)}
     {@const onCount = g.rows.filter(rowOn).length}
+    {@const toggles = [...new Set(g.rows.filter((r) => r.layer?.toggle).map((r) => toggleName(r.layer.toggle.label)))]}
     <div class="lgroup">
-      <button class="ghead" aria-expanded={open} onclick={() => toggleGroup(g.key)}>
-        <span class="caret small-caret" class:up={open} aria-hidden="true">▾</span>
-        <span class="gt">{g.title}</span>
-        <span class="count">{onCount}/{g.rows.length}</span>
-      </button>
+      <div class="ghead">
+        <button class="gopen" aria-expanded={open} onclick={() => toggleGroup(g.key)}>
+          <span class="small-caret" class:up={open} aria-hidden="true">▸</span>
+          <span class="gt">{g.title}</span>
+          <span class="count">{onCount}/{g.rows.length}</span>
+        </button>
+        <button class="check" class:on={onCount === g.rows.length} class:some={onCount > 0 && onCount < g.rows.length}
+          aria-label={t('map.allOn')} title={t('map.allOn')} onclick={() => toggleAll(g)}>
+          {onCount === g.rows.length ? '✓' : onCount > 0 ? '–' : ''}
+        </button>
+      </div>
       {#if open}
         <div class="gbody">
           {#each g.rows as row (row.key)}
             {@const on = rowOn(row)}
-            <div class="lrow" style="--c:{row.color ?? 'var(--muted)'}">
-              <button class="lname" class:off={!on} aria-pressed={on} onclick={() => toggleRow(row)}>
-                <span class="check" aria-hidden="true">{#if on}✓{/if}</span>
+            <div class="lrow" class:off={!on} style="--c:{row.color ?? 'var(--muted)'}">
+              <button class="lname" aria-pressed={on} onclick={() => toggleRow(row)}>
                 {#if row.grid}
-                  <svg class="gicon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <svg class="gicon" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
                     <path d="M1 5.5h14M1 10.5h14M5.5 1v14M10.5 1v14" />
                   </svg>
                 {:else}
@@ -651,23 +791,27 @@
                 {:else if row.count !== null && row.count !== undefined}
                   <span class="count">{row.count}</span>
                 {/if}
+                <span class="check" class:on aria-hidden="true">{#if on}✓{/if}</span>
               </button>
               {#if row.layer?.toggle}
                 {@const l = row.layer}
                 <button class="ltoggle" class:on={l.toggle.on} disabled={busy} aria-pressed={l.toggle.on}
-                  onclick={() => run(l, { id: l.toggle.action }, { on: String(!l.toggle.on) })}>
-                  <span>{l.toggle.label}</span><span class="knob" aria-hidden="true"></span>
-                </button>
+                  aria-label={l.toggle.label} title={l.toggle.label}
+                  onclick={() => run(l, { id: l.toggle.action }, { on: String(!l.toggle.on) })}></button>
+              {:else if toggles.length}
+                <span class="ltoggle none" aria-hidden="true"></span>
               {/if}
             </div>
           {/each}
+          {#if toggles.length}
+            <p class="legend"><span class="ltoggle on" aria-hidden="true"></span>= {toggles.join(', ')}</p>
+          {/if}
         </div>
       {/if}
     </div>
   {:else}
     <p class="muted small empty">{t('map.noLayers')}</p>
   {/each}
-  <p class="muted hint">{t('map.hint')}</p>
 {/snippet}
 
 {#snippet glyph(name, size = 16)}
@@ -715,49 +859,73 @@
     {/each}
   </div>
 
-  <!-- top: search + layers on the left, world on the right -->
-  <div class="top">
-    <div class="col">
-      <div class="panel search" class:open={searchFocus && query.trim()}>
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
+  {#snippet handle(id)}
+    {#if !phone}
+      <button class="handle" aria-label={t('map.drag')} title={t('map.drag')} onpointerdown={(e) => grab(e, id)}
+        onpointermove={dragDock} onpointerup={dropDock} onpointercancel={dropDock}>
+        <svg viewBox="0 0 16 6" width="16" height="6" aria-hidden="true">
+          <circle cx="2" cy="1.5" r="1.2" /><circle cx="8" cy="1.5" r="1.2" /><circle cx="14" cy="1.5" r="1.2" />
+          <circle cx="2" cy="4.5" r="1.2" /><circle cx="8" cy="4.5" r="1.2" /><circle cx="14" cy="4.5" r="1.2" />
         </svg>
-        <input type="search" placeholder={t('map.search')} bind:value={query} onfocus={() => (searchFocus = true)}
-          onblur={() => setTimeout(() => (searchFocus = false), 150)}
-          onkeydown={(e) => { if (e.key === 'Enter' && results.length) goTo(results[0]); }} />
-        {#if query}<button class="clear" aria-label={t('common.close')} onclick={() => (query = '')}>✕</button>{/if}
-      </div>
-      {#if searchFocus && query.trim()}
-        <div class="panel results" transition:fade={{ duration: 100 }}>
-          {#each results as m (markerKey(m))}
-            <button class="result" style="--c:{m.color}" onmousedown={(e) => e.preventDefault()} onclick={() => goTo(m)}>
-              <span class="dot" aria-hidden="true"></span>
-              <span class="rt">{m.label}</span>
-              <span class="rs">{m.layer.name}{m.world !== worldKey ? ' · ' + worldName(m.world) : ''}</span>
-            </button>
-          {:else}
-            <p class="muted small empty">{t('map.noResults')}</p>
-          {/each}
-        </div>
-      {/if}
+      </button>
+    {/if}
+  {/snippet}
 
-      {#if !phone}
-        <div class="panel layers">
-          <button class="phead" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="m12 3 9 5-9 5-9-5 9-5z" /><path d="m3 13 9 5 9-5" />
-            </svg>
-            <strong>{t('map.layers')}</strong>
-            <span class="caret" class:up={layersOpen} aria-hidden="true">▾</span>
-          </button>
-          {#if layersOpen}
-            <div class="pbody" transition:fly={{ y: -6, duration: 140 }}>{@render layerList()}</div>
-          {/if}
-        </div>
-      {/if}
+  <!-- floating panels: each can be dragged by its handle (not on phones) and snaps to the corners -->
+  <div class="dock d-search" class:moving={moving?.id === 'search'} class:up={atBottom('search')} style={dockStyle('search')}
+    use:measure={'search'}>
+    {@render handle('search')}
+    <div class="panel search">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
+      </svg>
+      <input type="search" placeholder={t('map.search')} bind:value={query} onfocus={() => (searchFocus = true)}
+        onblur={() => setTimeout(() => (searchFocus = false), 150)}
+        onkeydown={(e) => { if (e.key === 'Enter' && results.length) goTo(results[0]); }} />
+      {#if query}<button class="clear" aria-label={t('common.close')} onclick={() => (query = '')}>✕</button>{/if}
     </div>
+    {#if searchFocus && query.trim()}
+      <div class="panel results" transition:fade={{ duration: 100 }}>
+        {#each results as m (markerKey(m))}
+          <button class="result" style="--c:{m.color}" onmousedown={(e) => e.preventDefault()} onclick={() => goTo(m)}>
+            <span class="dot" aria-hidden="true"></span>
+            <span class="rt">{m.label}</span>
+            <span class="rs">{m.layer.name}{m.world !== worldKey ? ' · ' + worldName(m.world) : ''}</span>
+          </button>
+        {:else}
+          <p class="muted small empty">{t('map.noResults')}</p>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
-    {#if worlds.length > 1}
+  {#if !phone}
+    <div class="dock d-layers" class:moving={moving?.id === 'layers'} style={dockStyle('layers')} use:measure={'layers'}>
+      {@render handle('layers')}
+      <div class="panel layers">
+        <button class="phead" aria-expanded={layersOpen} title={t('map.hint')} onclick={() => (layersOpen = !layersOpen)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="m12 3 9 5-9 5-9-5 9-5z" /><path d="m3 13 9 5 9-5" />
+          </svg>
+          <strong>{t('map.layers')}</strong>
+          <span class="caret" class:up={layersOpen} aria-hidden="true">▾</span>
+        </button>
+        {#if layersOpen}
+          <div class="pbody" transition:fly={{ y: -6, duration: 140 }}>
+            {@render layerList()}
+            {#if Object.keys(layout).length}
+              <button class="reset" onclick={() => (layout = {})}>{t('map.resetLayout')}</button>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  {#if worlds.length > 1}
+    <div class="dock d-world" class:moving={moving?.id === 'world'} class:up={atBottom('world')} style={dockStyle('world')}
+      use:measure={'world'}>
+      {@render handle('world')}
       <div class="worldbox">
         <button class="panel pill" aria-haspopup="listbox" aria-expanded={worldOpen} onclick={() => (worldOpen = !worldOpen)}>
           <span class="wdot {world?.type ?? ''}" aria-hidden="true"></span>
@@ -774,68 +942,118 @@
           </div>
         {/if}
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
-  <!-- bottom right: zoom -->
-  <div class="controls">
-    {#if phone}
-      <button class="panel round" class:on={phoneLayers} aria-label={t('map.layers')} onclick={() => { phoneLayers = !phoneLayers; selectedKey = null; }}>
+  <!-- from top to bottom: (phone: layers) to me, follow, zoom in, zoom out -->
+  <div class="dock d-controls" class:moving={moving?.id === 'controls'} style={dockStyle('controls')} use:measure={'controls'}>
+    {@render handle('controls')}
+    <div class="controls">
+      {#if phone}
+        <button class="panel round" class:on={phoneLayers} aria-label={t('map.layers')} onclick={() => { phoneLayers = !phoneLayers; selectedKey = null; }}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="m12 3 9 5-9 5-9-5 9-5z" /><path d="m3 13 9 5 9-5" />
+          </svg>
+        </button>
+      {/if}
+      <button class="panel round" aria-label={t(me ? 'map.toMe' : 'map.spawn')} title={t(me ? 'map.toMe' : 'map.spawn')} onclick={aim}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="m12 3 9 5-9 5-9-5 9-5z" /><path d="m3 13 9 5 9-5" />
+          <circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="1.5" fill="currentColor" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
         </svg>
       </button>
-    {/if}
-    {#if page.follow && me}
-      <button class="panel round" class:on={follow} aria-pressed={follow} aria-label={t(follow ? 'map.followOff' : 'map.follow')}
-        title={t(follow ? 'map.followOff' : 'map.follow')} onclick={toggleFollow}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill={follow ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2"
-          stroke-linejoin="round" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg>
-      </button>
-    {/if}
-    <div class="panel zoom">
-      <button aria-label={t('map.zoomIn')} title={t('map.zoomIn')} disabled={zoom >= maxZoom} onclick={() => zoomBy(1)}>+</button>
-      <span class="sep"></span>
-      <button aria-label={t('map.zoomOut')} title={t('map.zoomOut')} disabled={zoom <= 0} onclick={() => zoomBy(-1)}>−</button>
+      {#if page.follow && me}
+        <button class="panel round" class:on={follow} aria-pressed={follow} aria-label={t(follow ? 'map.followOff' : 'map.follow')}
+          title={t(follow ? 'map.followOff' : 'map.follow')} onclick={toggleFollow}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill={follow ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2"
+            stroke-linejoin="round" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8-8-2z" /></svg>
+        </button>
+      {/if}
+      <div class="panel zoom">
+        <button aria-label={t('map.zoomIn')} title={t('map.zoomIn')} disabled={zoom >= maxZoom} onclick={() => zoomBy(1)}>+</button>
+        <span class="sep"></span>
+        <button aria-label={t('map.zoomOut')} title={t('map.zoomOut')} disabled={zoom <= 0} onclick={() => zoomBy(-1)}>−</button>
+      </div>
     </div>
-    <button class="panel round" aria-label={t('map.spawn')} title={t('map.spawn')} onclick={toSpawn}>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="1.5" fill="currentColor" />
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-      </svg>
-    </button>
   </div>
 
-  {#if cursor && !phone}
-    <div class="panel coords">X {cursor.x} <span class="muted">·</span> Z {cursor.z}</div>
+  {#if !phone}
+    <div class="dock d-coords" class:moving={moving?.id === 'coords'} style={dockStyle('coords')} use:measure={'coords'}>
+      {@render handle('coords')}
+      <div class="panel coords">
+        {#if cursor}X {cursor.x} <span class="muted">·</span> Z {cursor.z}{:else}<span class="muted">X – · Z –</span>{/if}
+      </div>
+    </div>
   {/if}
 
   <!-- the selected marker; a sheet from below on phones -->
   {#if selected}
-    <div class="panel detail" style="--c:{selected.color}" transition:fly={{ y: phone ? 220 : 12, duration: 200 }}>
-      {#if phone}<span class="grip" aria-hidden="true"></span>{/if}
-      <div class="dhead">
-        <span class="dot big" aria-hidden="true"></span>
-        <div class="dtitle">
-          <strong>{selected.label}</strong>
-          <span class="muted small">{selected.layer.name}</span>
+    <div class="dock d-detail" class:moving={moving?.id === 'detail'} style={dockStyle('detail')} use:measure={'detail'}
+      transition:fly={{ y: phone ? 220 : 12, duration: 200 }}>
+      {@render handle('detail')}
+      <div class="panel detail" style="--c:{selected.color || selected.layer.color || 'var(--accent)'}">
+        {#if phone}<span class="grip" aria-hidden="true"></span>{/if}
+        <div class="dhead">
+          <span class="dbadge" aria-hidden="true">
+            {#if selected.width > 0}
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+            {:else}
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" />
+              </svg>
+            {/if}
+          </span>
+          <div class="dtitle">
+            <strong>{selected.label}</strong>
+            <span class="crumb">{selected.layer.group || selected.layer.module} <span aria-hidden="true">›</span> {selected.layer.name}</span>
+          </div>
+          <button class="x" aria-label={t('map.center')} title={t('map.center')} onclick={centerOn}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="6" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            </svg>
+          </button>
+          <button class="x" aria-label={t('common.close')} onclick={() => (selectedKey = null)}>✕</button>
         </div>
-        <button class="x" aria-label={t('common.close')} onclick={() => (selectedKey = null)}>✕</button>
-      </div>
-      {#if selected.details.length}
-        <ul class="dlines">
-          {#each selected.details as line}<li>{line}</li>{/each}
-        </ul>
-      {/if}
-      {#if selected.actions.length}
-        <div class="dactions">
-          {#each [...selected.actions].sort((a, b) => (a.tone === 'bad') - (b.tone === 'bad')) as a (a.id)}
-            <button class="act {a.tone}" disabled={busy} onclick={() => run(selected.layer, a, { marker: selected.id })}>
-              {#if ICONS[a.icon]}{@render glyph(a.icon, 15)}{/if}{a.label}
-            </button>
+
+        <div class="facts">
+          <button class="fact spotline" title={t('map.copy')} onclick={copySpot}>
+            <span class="fk">{worldName(selected.world)}</span>
+            <span class="fv mono">X {spot.x} · Z {spot.z}</span>
+            <span class="copy" aria-hidden="true">{copied ? '✓' : '⧉'}</span>
+          </button>
+          {#if distance !== null}
+            <div class="fact"><span class="fk">{t('map.distance')}</span><span class="fv">{t('map.away', { n: distance.toLocaleString() })}</span></div>
+          {/if}
+          {#if selected.width > 0}
+            <div class="fact"><span class="fk">{t('map.area')}</span><span class="fv">{t('map.size', { w: selected.width, l: selected.length })}</span></div>
+          {/if}
+          {#each selected.details as text}
+            {@const l = line(text)}
+            <div class="fact" class:wide={!l.key}>
+              {#if l.key}<span class="fk">{l.key}</span>{/if}<span class="fv">{l.value}</span>
+            </div>
           {/each}
         </div>
-      {/if}
+
+        {#if selected.actions.length}
+          {@const parts = split(selected.actions.map((a) => ({ layer: selected.layer, action: a })))}
+          <div class="dactions">
+            {#each parts.items as i (i.action.id)}
+              <button class="mitem {i.action.tone}" disabled={busy} onclick={() => run(selected.layer, i.action, { marker: selected.id })}>
+                <span class="micon">{#if ICONS[i.action.icon]}{@render glyph(i.action.icon, 15)}{/if}</span>{i.action.label}
+              </button>
+            {/each}
+            {#if parts.danger.length}
+              {#if parts.items.length}<span class="msep" aria-hidden="true"></span>{/if}
+              {#each parts.danger as i (i.action.id)}
+                <button class="mitem bad" disabled={busy} onclick={() => run(selected.layer, i.action, { marker: selected.id })}>
+                  <span class="micon">{#if ICONS[i.action.icon]}{@render glyph(i.action.icon, 15)}{/if}</span>{i.action.label}
+                </button>
+              {/each}
+            {/if}
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 
@@ -1062,28 +1280,116 @@
     color: var(--text);
   }
 
-  .top {
+  /* every floating panel sits in a dock: default places here, moved ones get them inline */
+  .dock {
     position: absolute;
+    z-index: 4;
+  }
+
+  .dock.moving {
+    z-index: 8;
+    opacity: 0.92;
+    filter: drop-shadow(0 10px 24px rgb(0 0 0 / 0.35));
+  }
+
+  .d-search {
     top: var(--gap);
     left: var(--gap);
+    width: 300px;
+    z-index: 6;
+  }
+
+  .d-layers {
+    top: calc(var(--gap) + 56px);
+    left: var(--gap);
+  }
+
+  .d-world {
+    top: var(--gap);
     right: var(--gap);
-    z-index: 4;
+    z-index: 6;
+  }
+
+  .d-controls {
+    right: var(--gap);
+    bottom: var(--gap);
+  }
+
+  .d-coords {
+    right: calc(var(--gap) + 54px);
+    bottom: var(--gap);
+  }
+
+  .d-detail {
+    left: var(--gap);
+    bottom: var(--gap);
+    z-index: 5;
+  }
+
+  /* lists of a panel moved to the bottom open upwards */
+  .dock.up {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    pointer-events: none;
+    flex-direction: column-reverse;
   }
 
-  .top > * {
-    pointer-events: auto;
-  }
-
-  .col {
+  .d-search {
     display: grid;
     gap: 8px;
-    width: 320px;
-    max-width: 100%;
+  }
+
+  .d-search.up {
+    display: flex;
+  }
+
+  .d-search.up .results {
+    margin-bottom: 8px;
+  }
+
+  .d-world.up .worldbox {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+  }
+
+  /* the handle to move a panel: shows above it on hover */
+  .handle {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 14px;
+    padding: 0;
+    translate: -50% 0;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: grab;
+    touch-action: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .handle svg {
+    fill: currentColor;
+  }
+
+  .dock:hover > .handle,
+  .dock.moving > .handle,
+  .handle:focus-visible {
+    opacity: 1;
+  }
+
+  .handle:hover {
+    color: var(--text);
+    filter: none;
+  }
+
+  .dock.moving > .handle {
+    cursor: grabbing;
   }
 
   .search {
@@ -1173,6 +1479,7 @@
   }
 
   .layers {
+    width: 236px;
     overflow: hidden;
   }
 
@@ -1180,12 +1487,13 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 0;
     background: transparent;
     color: var(--text);
+    font-size: 0.88rem;
   }
 
   .phead:hover {
@@ -1210,28 +1518,90 @@
   .pbody {
     display: grid;
     gap: 2px;
-    padding: 0 6px 8px;
-    max-height: min(55vh, 460px);
+    padding: 0 5px 6px;
+    max-height: min(60vh, 520px);
     overflow-y: auto;
   }
 
-  .lrow {
+  /* layer tree: group head with its own switch, compact rows below */
+
+  .lgroup + .lgroup {
+    margin-top: 2px;
+    padding-top: 2px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ghead {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+    gap: 4px;
+    padding-right: 5px;
+  }
+
+  .gopen {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
+    min-width: 0;
+    padding: 5px 6px;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .gopen:hover {
+    background: var(--surface-2);
+    color: var(--text);
+    filter: none;
+  }
+
+  .small-caret {
+    width: 8px;
+    font-size: 0.7rem;
+    transition: transform 0.15s;
+  }
+
+  .small-caret.up {
+    transform: rotate(90deg);
+  }
+
+  .gt {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gbody {
+    display: grid;
+    padding: 0 0 3px 14px;
+  }
+
+  .lrow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 5px;
   }
 
   .lname {
     display: flex;
+    flex: 1;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 7px;
     min-width: 0;
-    padding: 7px 8px;
-    border-radius: 8px;
+    height: 28px;
+    padding: 0 0 0 6px;
+    border-radius: 7px;
     background: transparent;
     color: var(--text);
+    font-size: 0.84rem;
     font-weight: 600;
   }
 
@@ -1240,30 +1610,12 @@
     filter: none;
   }
 
-  .lname.off {
+  .lrow.off .lname {
     color: var(--muted);
   }
 
-  .check {
-    display: grid;
-    place-items: center;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    border-radius: 5px;
-    font-size: 0.7rem;
-    color: #fff;
-    background: var(--accent);
-    border: 1.5px solid var(--accent);
-  }
-
-  .lname.off .check {
-    background: transparent;
-    border-color: var(--border);
-  }
-
-  .lname.off .dot {
-    opacity: 0.45;
+  .lrow.off .dot {
+    opacity: 0.4;
   }
 
   .lt {
@@ -1274,59 +1626,101 @@
 
   .count {
     margin-left: auto;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
 
+  .check {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    line-height: 1;
+    color: #fff;
+    background: transparent;
+    border: 1.5px solid var(--border);
+  }
+
+  .check.on,
+  .check.some {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .check.some {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+
+  button.check:hover {
+    filter: brightness(1.1);
+  }
+
+  /* the plugin's switch of a layer (MRwaypoints: shown in Xaero) as a small dot */
   .ltoggle {
-    gap: 6px;
-    padding: 4px 6px 4px 9px;
-    border-radius: 999px;
-    font-size: 0.74rem;
-    background: var(--surface-2);
-    color: var(--muted);
-    border: 1px solid var(--border);
-  }
-
-  .knob {
-    position: relative;
-    width: 24px;
-    height: 14px;
-    border-radius: 999px;
-    background: var(--border);
-    transition: background 0.15s;
-  }
-
-  .knob::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    padding: 0;
     border-radius: 50%;
-    background: #fff;
-    transition: translate 0.15s;
+    background: transparent;
+    border: 1.5px solid var(--muted);
   }
 
   .ltoggle.on {
-    color: var(--text);
+    border-color: var(--good);
+    background: radial-gradient(circle, var(--good) 0 3.5px, transparent 4px);
   }
 
-  .ltoggle.on .knob {
-    background: var(--good);
+  .ltoggle.none {
+    visibility: hidden;
   }
 
-  .ltoggle.on .knob::after {
-    translate: 10px 0;
+  button.ltoggle:hover:not(:disabled) {
+    filter: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 20%, transparent);
   }
 
-  .hint {
-    margin: 6px 8px 0;
-    font-size: 0.76rem;
-    line-height: 1.4;
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 6px 0;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .legend .ltoggle {
+    width: 12px;
+    height: 12px;
+    background: radial-gradient(circle, var(--good) 0 2.5px, transparent 3px);
+  }
+
+  .reset {
+    justify-self: start;
+    margin: 4px 6px 0;
+    padding: 4px 8px;
+    border-radius: 7px;
+    font-size: 0.74rem;
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .reset:hover {
+    background: var(--surface-2);
+    filter: none;
+  }
+
+  .gicon {
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1.6;
   }
 
   .dot {
@@ -1416,10 +1810,6 @@
   /* bottom right */
 
   .controls {
-    position: absolute;
-    right: var(--gap);
-    bottom: var(--gap);
-    z-index: 4;
     display: grid;
     justify-items: center;
     gap: 8px;
@@ -1464,39 +1854,41 @@
   }
 
   .coords {
-    position: absolute;
-    right: calc(var(--gap) + 54px);
-    bottom: var(--gap);
-    z-index: 4;
     padding: 5px 12px;
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    pointer-events: none;
+    white-space: nowrap;
   }
 
-  /* details */
+  /* details of the selected marker */
 
   .detail {
-    position: absolute;
-    left: var(--gap);
-    bottom: var(--gap);
-    z-index: 5;
     display: grid;
-    gap: 10px;
-    width: 340px;
-    max-width: calc(100% - 2 * var(--gap) - 60px);
-    max-height: calc(100% - 2 * var(--gap));
+    gap: 12px;
+    width: 320px;
+    max-height: calc(100vh - 160px);
     overflow-y: auto;
-    padding: 14px 14px 14px 16px;
-    border-left: 4px solid var(--c, var(--border));
+    padding: 12px;
   }
 
   .dhead {
     display: flex;
     align-items: center;
     gap: 10px;
+  }
+
+  .dbadge {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
   }
 
   .dtitle {
@@ -1506,46 +1898,84 @@
   }
 
   .dtitle strong {
-    font-size: 1.02rem;
+    font-size: 1rem;
+    line-height: 1.25;
     overflow-wrap: anywhere;
   }
 
-  .dlines {
-    display: grid;
-    gap: 3px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: 0.87rem;
+  .crumb {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .dlines li {
-    padding: 5px 10px;
-    border-radius: 8px;
+  .facts {
+    display: grid;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .fact {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+    text-align: left;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+  }
+
+  .fact + .fact {
+    border-top: 1px solid var(--border);
+  }
+
+  .fact.wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fk {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fv {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spotline {
+    justify-content: stretch;
+    cursor: copy;
+  }
+
+  .spotline:hover {
     background: var(--surface-2);
+    filter: none;
+  }
+
+  .copy {
+    color: var(--muted);
+    font-size: 0.85rem;
   }
 
   .dactions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .act {
-    padding: 7px 14px;
-    font-size: 0.85rem;
-    background: var(--surface-2);
-    color: var(--text);
-    border-color: var(--border);
-  }
-
-  .act.good {
-    color: var(--good);
-  }
-
-  .act.bad {
-    color: var(--bad);
-    border-color: color-mix(in srgb, var(--bad) 40%, var(--border));
+    display: grid;
+    gap: 1px;
   }
 
   .grip {
@@ -1650,64 +2080,6 @@
     height: 1px;
     margin: 4px 6px;
     background: var(--border);
-  }
-
-  /* layer groups */
-
-  .lgroup + .lgroup {
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid var(--border);
-  }
-
-  .ghead {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    width: 100%;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--muted);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .ghead:hover {
-    background: var(--surface-2);
-    filter: none;
-  }
-
-  .small-caret {
-    margin-left: 0;
-    font-size: 0.8rem;
-    transform: rotate(-90deg);
-  }
-
-  .small-caret.up {
-    transform: none;
-  }
-
-  .gt {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .gbody {
-    display: grid;
-    gap: 2px;
-    padding-left: 12px;
-  }
-
-  .gicon {
-    flex-shrink: 0;
-    fill: none;
-    stroke: var(--muted);
-    stroke-width: 1.6;
   }
 
   /* chunk grid */
@@ -1903,29 +2275,39 @@
     --gap: 10px;
   }
 
-  .phone .col {
-    flex: 1;
+  .phone .d-search {
     width: auto;
-    min-width: 0;
   }
 
-  .phone .detail {
+  .phone .d-detail {
     left: 0;
     right: 0;
     bottom: 0;
+    z-index: 7;
+  }
+
+  .phone .detail,
+  .phone .sheet-layers {
     width: auto;
-    max-width: none;
-    max-height: 70%;
+    max-height: 70vh;
     padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
     border-radius: 18px 18px 0 0;
-    border-left: none;
     border-bottom: none;
+  }
+
+  .phone .detail {
     border-top: 4px solid var(--c, var(--border));
   }
 
-  .phone .sheet-layers {
-    border-top-color: var(--border);
-    border-top-width: 1px;
+  .sheet-layers {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
+    display: grid;
+    gap: 10px;
+    overflow-y: auto;
   }
 
   .phone .sheet-layers .pbody {
