@@ -205,6 +205,9 @@ Was auf der Seite steht, hängt davon ab, was installiert ist:
 Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler (LibertyBans) kommen nicht hinein. Jedes Plugin prüft bei jeder Aktion dieselben Permissions und Regeln wie im Spiel.
 
 **Neuigkeiten, Changelogs und Warnungen (Team):** In der Weboberfläche unter **Kommunikation** (Permission `mradmin.news`, in `mradmin.groups.admin`; dort auch die Ankündigungen mit `mradmin.announce`). **Neuigkeiten** mit Titel und Text, **Changelogs** mit Version, Einträgen (Neu, Geändert, Behoben, Entfernt) und Überschriften in drei Ebenen (z.B. „Plugins“ → „MRpvp“, eingerückt), **kritische Warnungen**, die sofort an alle Online-Spieler gehen (Chat und Titel, `player-web.news.alerts`). Texte auf Deutsch und Englisch - eine leere Sprache zeigt die andere. Pro Beitrag optional **auch im Discord posten** (Kanal von `discord-announce`, mit Link zur ganzen Nachricht). Neue Neuigkeiten und Changelogs bekommt jeder Spieler einmal als **Vorschau im Chat** mit Link (`player-web.news.chat-preview`). Vorfälle, die auf einer **Uptime-Kuma-Statusseite** angeheftet sind (`uptime-kuma.status-pages`), erscheinen wie eigene Warnungen und im Discord (`discord-announce.kuma`). Karussell: `player-web.news` (`seconds`, `slides`, `show-maintenance`, `show-restart`, `show-plugin-notices`, `show-tickets`). Details in `docs/WEBOBERFLAECHE.md`.
+### Protokoll
+In der Weboberfläche unter **Protokoll** (Permission `mradmin.web.audit`) stehen alle Ereignisse von MRadmin und den anderen MRtechnology-Plugins - dieselben wie in ihren Discord-Logs, auch wenn Discord aus ist - und alle Aktionen in der Weboberfläche: neueste oben, nach Tagen gegliedert, filterbar nach Herkunft, Text und Zeitraum. Aufgehoben werden sie `logging.keep-days` Tage (höchstens 14) in `plugins/MRadmin/logs/`.
+
 
 ### Plugins & Updates
 In der Weboberfläche unter **Plugins** (Seite „Plugin-Konfiguration“) siehst du **alle MRtechnology-Plugins**: oben die auf deinem Server mit installierter und neuester Version und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
@@ -353,6 +356,7 @@ Am einfachsten im Browser: Weboberfläche → **Plugins → MRadmin → Konfigur
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
 | `map` | Karte der Spielerseite: squaremap automatisch installieren, aktualisieren und einrichten, Welten von Plugins ausblenden; `nether-roof`: eigene Karte der Netherdecke; `player-page`: Spieler auf der Karte, Chunkraster, Öffnen am Standort, „Mir folgen“ |
+| `logging` | Wie viele Tage das Protokoll aufgehoben wird (`keep-days`, 1-14) |
 | `discord` · `discord-announce` | Admin-Log per Webhook (welche Ereignisse), Ankündigungen im Community-Discord |
 | `updates` · `gui` | Update-Hinweise, Menüs |
 

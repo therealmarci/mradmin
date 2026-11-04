@@ -1261,3 +1261,14 @@ sections:
       - key: gui.sounds
         type: bool
         name: {de: Klickgeräusche, en: Click sounds}
+
+  - id: logging
+    name: {de: Protokoll, en: Log}
+    help: {de: "Alle Ereignisse von MRadmin und den Plugins (wie im Discord-Log) und die Aktionen in der Weboberfläche - Seite Protokoll.", en: "All events of MRadmin and the plugins (like in the Discord log) and the actions in the web interface - page Log."}
+    fields:
+      - key: logging.keep-days
+        type: int
+        min: 1
+        max: 14
+        unit: {de: Tage, en: days}
+        name: {de: Aufheben, en: Keep}

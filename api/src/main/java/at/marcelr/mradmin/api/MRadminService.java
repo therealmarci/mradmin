@@ -35,9 +35,9 @@ public interface MRadminService {
      * selections and symbols there - {@link SelfMapLayer#group}, {@link SelfMapLayer.Action#choice},
      * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
      * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
-     * {@link WebModule#webConfig}, {@link WebConfig}).
+     * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}).
      */
-    int API_VERSION = 12;
+    int API_VERSION = 13;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -134,5 +134,18 @@ public interface MRadminService {
     /** Link to the map of the player page centred on a place, or null if there is none or the world is not on it. */
     default @Nullable String mapUrl(World world, int x, int z) {
         return null;
+    }
+
+    // ------------------------------------------------------------------ log (since API 13)
+
+    /**
+     * Writes an event into MRadmin's log (web interface, page "Log", kept up to 14 days) - the same events a plugin sends
+     * to its Discord log, whether Discord is switched on or not.
+     *
+     * @param event key of the event, e.g. "loader-placed" (filterable)
+     * @param text  the finished text in the server language (Discord markdown like **bold** is shown)
+     * @param color colour of the event (0xRRGGBB), e.g. the Discord colour
+     */
+    default void log(String moduleId, String event, String text, int color) {
     }
 }

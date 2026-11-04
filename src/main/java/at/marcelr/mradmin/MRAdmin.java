@@ -108,6 +108,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private UpdateChecker updateChecker;
     private at.marcelr.mradmin.versions.VersionManager versions;
     private final at.marcelr.mradmin.config.ConfigEditor configEditor = new at.marcelr.mradmin.config.ConfigEditor(this);
+    private final at.marcelr.mradmin.log.EventLog eventLog = new at.marcelr.mradmin.log.EventLog(
+            new java.io.File(getDataFolder(), "logs").toPath(), getLogger());
     private at.marcelr.mradmin.versions.RestartManager restarts;
     private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
@@ -126,6 +128,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         ConfigUpdater.update(this);
         loadConfiguration();
         storage = Storage.create(this);
+        eventLog.load(getConfig().getInt("logging.keep-days", 14));
+        // Old days go at midnight - checked every hour.
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, eventLog::prune, 72_000L, 72_000L);
         getLogger().info("Storage: " + storage.type() + " (" + storage.describe() + ").");
         WebAuth webAuth = new WebAuth(this);
         webAuth.load();
@@ -142,6 +147,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.VersionRoutes.register(web);
         at.marcelr.mradmin.web.MapRoutes.register(web);
         at.marcelr.mradmin.web.ConfigRoutes.register(web);
+        at.marcelr.mradmin.web.LogRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
@@ -210,6 +216,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        eventLog.shutdown();
         if (xpPeaks != null) {
             xpPeaks.stop();
         }
@@ -307,6 +314,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
                 config.getString("general.server-language", "en"));
         settings = Settings.from(config, getLogger());
         discord.load(config.getConfigurationSection("discord"));
+        eventLog.keepDays(config.getInt("logging.keep-days", 14));
         discordAnnounce.load(config.getConfigurationSection("discord-announce"));
     }
 
@@ -461,6 +469,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     /** The plugins MRadmin works with (module API and old hooks). */
     public at.marcelr.mradmin.map.MapService map() {
         return map;
+    }
+
+    /** MRadmin's log: events of MRadmin and of the modules, up to 14 days (page "Log"). */
+    public at.marcelr.mradmin.log.EventLog eventLog() {
+        return eventLog;
     }
 
     /** The config files the web interface may edit. */

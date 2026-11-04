@@ -133,6 +133,11 @@ public final class Modules implements MRadminService {
     }
 
     @Override
+    public void log(String moduleId, String event, String text, int color) {
+        plugin.eventLog().add(moduleId, event, text, color);
+    }
+
+    @Override
     public void adminLog(String moduleId, String text) {
         if (plugin.isEnabled()) {
             plugin.discord().log("plugin-alert", "plugin", displayName(moduleId), "text", text);

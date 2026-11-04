@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 43
+config-version: 44
 
 
 # ------------------------------------------------------------------------------
@@ -665,7 +665,18 @@ map:
 
 
 # ------------------------------------------------------------------------------
-#   13) DISCORD LOGS (admin)
+#   13) LOG
+# ------------------------------------------------------------------------------
+# Every event of MRadmin and of the other MRtechnology plugins - the same ones that go to their Discord logs, whether
+# Discord is on or not - plus the actions in the web interface, on the page "Log" (permission mradmin.web.audit).
+# Kept in plugins/MRadmin/logs/ (one file per day).
+logging:
+  # How many days are kept (1-14).
+  keep-days: 14
+
+
+# ------------------------------------------------------------------------------
+#   14) DISCORD LOGS (admin)
 # ------------------------------------------------------------------------------
 # Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
 #                   -> New Webhook -> Copy Webhook URL.
@@ -777,7 +788,7 @@ discord:
 
 
 # ------------------------------------------------------------------------------
-#   14) DISCORD ANNOUNCEMENTS (community)
+#   15) DISCORD ANNOUNCEMENTS (community)
 # ------------------------------------------------------------------------------
 # Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
 # Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
@@ -840,7 +851,7 @@ discord-announce:
 
 
 # ------------------------------------------------------------------------------
-#   15) UPDATES
+#   16) UPDATES
 # ------------------------------------------------------------------------------
 updates:
   enabled: true
@@ -854,7 +865,7 @@ updates:
 
 
 # ------------------------------------------------------------------------------
-#   16) MENUS
+#   17) MENUS
 # ------------------------------------------------------------------------------
 gui:
   # How often open menus are refreshed (in ticks, 20 = 1 second).
