@@ -28,6 +28,7 @@ import org.bukkit.potion.PotionEffectType;
  * layers the modules offer this player ({@link WebModule#selfMap}) and their right-click actions.
  * <pre>
  *  GET  /api/self/map?lang=de                               worlds, layers and what the page offers (page)
+ *  GET  /api/self/map/worlds                                only the worlds (small maps on the pages, e.g. a loader)
  *  GET  /api/self/map/players                               own position and the other players shown
  *  GET  /api/self/map/tiles/{world}/{zoom}/{tile}           one map picture (x_z.png) from squaremap's folder
  *  POST /api/self/map/action {module, layer, action, args, lang}   an action -> 400 {message} on refusal
@@ -60,6 +61,7 @@ final class SelfMap {
 
     void register() {
         server.self("GET", "/api/self/map", this::map);
+        server.self("GET", "/api/self/map/worlds", this::worlds);
         server.self("GET", "/api/self/map/tiles/{world}/{zoom}/{tile}", this::tile);
         server.self("GET", "/api/self/map/players", this::players);
         server.self("POST", "/api/self/map/action", this::action);
@@ -68,6 +70,13 @@ final class SelfMap {
     /** Whether there is a map (squaremap renders, at least one world). */
     boolean available() {
         return plugin.map() != null && plugin.map().tilesDir() != null;
+    }
+
+    /** The worlds with pictures, without the layers - for small maps on the pages. Empty without a map. */
+    private void worlds(Http http) throws Exception {
+        routes.check(http);
+        List<Map<String, Object>> worlds = available() ? server.sync(() -> plugin.map().worlds()) : List.of();
+        http.json(200, Map.of("worlds", worlds));
     }
 
     private void map(Http http) throws Exception {
