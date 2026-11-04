@@ -1,6 +1,8 @@
 ﻿# ==============================================================================
 #   MRadmin - Configuration
 # ==============================================================================
+#   Easiest way:     web interface -> Plugins -> MRadmin -> Configuration
+#                    (saved and reloaded right away; this file stays editable by hand)
 #   After changes:   /mradmin reload   (no restart needed)
 #   Dashboard:       /mradmin        Command list: /mradmin help
 #   Help & docs:     https://mrtechnology.marcelr.at/docs/mradmin/
@@ -15,26 +17,32 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 42
+config-version: 43
 
-# Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
-#   auto = every player gets the language set in their Minecraft client:
-#          German (also Austria/Switzerland) -> de.yml, English -> en.yml, a language without a file -> fallback-language.
-#   de / en / ... = fixed language for all players.
-# The console is always English. Own language: copy a file (e.g. as fr.yml) and translate it - with "auto"
-# French players then get it automatically. The web interface follows the browser language.
-language: auto
 
-# Language for players whose Minecraft language has no file of its own.
-fallback-language: en
+# ------------------------------------------------------------------------------
+#   1) GENERAL
+# ------------------------------------------------------------------------------
+general:
+  # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
+  #   auto = every player gets the language set in their Minecraft client:
+  #          German (also Austria/Switzerland) -> de.yml, English -> en.yml, a language without a file -> fallback-language.
+  #   de / en / ... = fixed language for all players.
+  # The console is always English. Own language: copy a file (e.g. as fr.yml) and translate it - with "auto"
+  # French players then get it automatically. The web interface follows the browser language.
+  language: auto
+  # Language for players whose Minecraft language has no file of its own.
+  fallback-language: en
+  # Language of texts that are not meant for a single player: Discord logs and announcements, the server list
+  # during maintenance, push notifications, mails, notes in tickets.
+  server-language: en
+  # Time zone for all displayed times, e.g. "Europe/Vienna" or "Europe/Berlin". Empty = the server's time zone.
+  timezone: ""
 
-# Language of texts that are not meant for a single player: Discord logs and announcements, the server list
-# during maintenance, push notifications, mails, notes in tickets.
-server-language: en
 
-# Time zone for all displayed times, e.g. "Europe/Vienna" or "Europe/Berlin". Empty = the server's time zone.
-timezone: ""
-
+# ------------------------------------------------------------------------------
+#   2) FEATURES & OTHER PLUGINS
+# ------------------------------------------------------------------------------
 # Switch features on and off. A switched-off feature disappears completely: its commands report
 # "switched off", its buttons are missing from the menus and it no longer interferes anywhere. Stored data (tickets,
 # scheduled maintenance ...) is kept and is back after switching it on again. Takes effect with /mradmin reload.
@@ -81,7 +89,7 @@ libertybans:
 
 
 # ------------------------------------------------------------------------------
-#   1) MAINTENANCE
+#   3) MAINTENANCE
 # ------------------------------------------------------------------------------
 # During maintenance only players with the permission "mradmin.maintenance.bypass" can join
 # (in LuckPerms e.g. give it to the staff group: /lp group staff permission set mradmin.maintenance.bypass true).
@@ -128,7 +136,7 @@ maintenance:
 
 
 # ------------------------------------------------------------------------------
-#   2) UPTIME KUMA
+#   4) UPTIME KUMA
 # ------------------------------------------------------------------------------
 # MRadmin logs in to Uptime Kuma like the web interface and follows the maintenance windows live:
 # scheduled maintenance triggers the countdown, changes in Kuma (extending, moving, pausing,
@@ -171,7 +179,7 @@ uptime-kuma:
 
 
 # ------------------------------------------------------------------------------
-#   3) ANNOUNCEMENTS
+#   5) ANNOUNCEMENTS
 # ------------------------------------------------------------------------------
 # /mradmin announce <text>               own text (MiniMessage allowed, e.g. <red>Attention!)
 # /mradmin announce <preset> [values...] prepared announcement from the language file (announce-presets)
@@ -200,7 +208,7 @@ announce:
 
 
 # ------------------------------------------------------------------------------
-#   4) ADMIN MODE
+#   6) ADMIN MODE
 # ------------------------------------------------------------------------------
 # /mradmin mode on   inventory, armour, XP, health, hunger, effects and position are saved,
 #                    you get into creative mode and only get the admin menu item (right-click: teleport, plugins, maintenance).
@@ -242,7 +250,7 @@ admin-mode:
 
 
 # ------------------------------------------------------------------------------
-#   5) TICKETS & REPORTS
+#   7) TICKETS & REPORTS
 # ------------------------------------------------------------------------------
 # /report opens the ticket menu for all players (permission mradmin.tickets.create): "Create ticket" (pick a category,
 # then a form), the open tickets and the archive with the closed ones. In the ticket, players and
@@ -320,220 +328,7 @@ tickets:
 
 
 # ------------------------------------------------------------------------------
-#   6) DISCORD LOGS (admin)
-# ------------------------------------------------------------------------------
-# Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
-#                   -> New Webhook -> Copy Webhook URL.
-# The texts of the events are in the language file (lang/<language>.yml, section discord).
-# An event with "enabled: false" or an empty text is not sent.
-# Not working? -> /mradmin discord shows the status, /mradmin discord test sends a test message.
-discord:
-  enabled: false
-  # Full URL in quotes, e.g. "https://discord.com/api/webhooks/123456/abcdef"
-  webhook-url: ""
-  username: "MRadmin"
-  avatar-url: ""
-  use-embeds: true
-  footer: "Minecraft-Server"
-  events:
-    maintenance-scheduled:
-      enabled: true
-      color: "#F1C40F"
-    maintenance-changed:
-      enabled: true
-      color: "#3498DB"
-    maintenance-cancelled:
-      enabled: true
-      color: "#95A5A6"
-    maintenance-start:
-      enabled: true
-      color: "#E74C3C"
-    maintenance-end:
-      enabled: true
-      color: "#2ECC71"
-    kuma-connected:
-      enabled: false
-      color: "#2ECC71"
-    kuma-disconnected:
-      enabled: true
-      color: "#E67E22"
-    announce:
-      enabled: true
-      color: "#9B59B6"
-    admin-mode-on:
-      enabled: true
-      color: "#E67E22"
-    admin-mode-off:
-      enabled: true
-      color: "#1ABC9C"
-    # Notices from other plugins, e.g. suspicious duels from MRpvp.
-    plugin-alert:
-      enabled: true
-      color: "#E74C3C"
-    admin-reload:
-      enabled: true
-      color: "#3498DB"
-    ticket:
-      enabled: true
-      color: "#E67E22"
-    # Every message in a ticket (off by default).
-    ticket-message:
-      enabled: false
-      color: "#3498DB"
-    ticket-closed:
-      enabled: true
-      color: "#2ECC71"
-    ticket-reopened:
-      enabled: true
-      color: "#F1C40F"
-    player-freeze:
-      enabled: true
-      color: "#3498DB"
-    player-unfreeze:
-      enabled: true
-      color: "#95A5A6"
-    player-kick:
-      enabled: true
-      color: "#E67E22"
-    player-freeze-quit:
-      enabled: true
-      color: "#E74C3C"
-    # Every staff chat message also in the admin Discord (off by default).
-    staff-chat:
-      enabled: false
-      color: "#7F8C8D"
-    # Logins to the web interface and setting up/resetting a web account.
-    web-login:
-      enabled: true
-      color: "#3498DB"
-    web-setup:
-      enabled: true
-      color: "#9B59B6"
-    # Every command from the web console.
-    web-console:
-      enabled: true
-      color: "#E74C3C"
-    # The server lags for a longer time (health.alert) or has recovered.
-    health-alert:
-      enabled: true
-      color: "#E74C3C"
-    health-recovered:
-      enabled: true
-      color: "#2ECC71"
-    plugin-update-downloaded:
-      enabled: true
-      color: "#3498DB"
-    server-restart:
-      enabled: true
-      color: "#E67E22"
-    server-restart-cancelled:
-      enabled: true
-      color: "#95A5A6"
-
-
-# ------------------------------------------------------------------------------
-#   7) DISCORD ANNOUNCEMENTS (community)
-# ------------------------------------------------------------------------------
-# Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
-# Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
-# cancelling are worked into the last post instead of posting again. Times appear as Discord timestamps
-# (everyone sees them in their own time zone, with "in 2 hours").
-# Texts: lang/<language>.yml, section discord-announce. Test: /mradmin discord test announce
-discord-announce:
-  enabled: false
-  webhook-url: ""
-  username: ""
-  avatar-url: ""
-  footer: ""
-  # Role mentioned in the first post (e.g. @Server-News). Empty = nobody is pinged.
-  # ID: Discord settings -> Advanced -> Developer Mode on, then right-click the role -> "Copy ID".
-  ping-role-id: ""
-
-  # Every maintenance gets ONE message that is edited as it goes: scheduled -> running -> ended (or cancelled).
-  maintenance:
-    enabled: true
-    # Only post once the maintenance is at most this far away (ones created later: immediately).
-    # Prevents recurring maintenance from being posted far in advance.
-    announce-ahead: "24h"
-    # Do not post shorter maintenance at all ("0" = post all).
-    min-length: "0"
-    # Mention ping-role-id when a maintenance is posted (never in the later edits).
-    ping: true
-    # New times or titles in quick succession are combined into one edit. Start and end are edited in right away.
-    debounce-seconds: 60
-
-  announcements:
-    # Post announcements: presets with a "discord" text in the language file automatically (except with -q),
-    # own texts only with -d, e.g. /mradmin announce -d Event tonight!
-    enabled: true
-    # Post the same preset at most once within this time (restart script with 5m/1m = one post).
-    cooldown: "10m"
-    ping: false
-
-  # News, changelogs and warnings from the web interface ("News") - only those where "Post to Discord" is ticked.
-  news:
-    ping: false
-  alerts:
-    # Mention ping-role-id with a critical warning.
-    ping: true
-  # Incidents pinned on the Uptime Kuma status pages (uptime-kuma.status-pages): posted once, edited when they change
-  # in Kuma, marked as resolved when they are no longer pinned.
-  kuma:
-    enabled: true
-    # Mention ping-role-id with a red (danger) incident.
-    ping: true
-
-  colors:
-    scheduled: "#F1C40F"
-    started: "#E74C3C"
-    ended: "#2ECC71"
-    cancelled: "#95A5A6"
-    announce: "#9B59B6"
-    news: "#3498DB"
-    changelog: "#2ECC71"
-    alert: "#E74C3C"
-
-
-# ------------------------------------------------------------------------------
-#   8) UPDATE CHECK
-# ------------------------------------------------------------------------------
-update-checker:
-  enabled: true
-  # Source: "github" (GitHub Releases, default) or "modrinth"
-  source: github
-  # Also report beta/alpha versions. If a pre-release (0.x) is running, they are always reported.
-  include-prereleases: false
-  interval-hours: 6
-  # Notify players with "mradmin.admin.update" when they join the server.
-  notify-on-join: true
-
-
-# ------------------------------------------------------------------------------
-#   VERSIONS & RESTART (web interface, page "Versions")
-# ------------------------------------------------------------------------------
-# All installed MRtechnology plugins with their updates. Downloads come only from the official GitHub release of
-# each plugin (for this Minecraft version, checked with the SHA-256 checksum) and go to plugins/update/ - Paper
-# installs them on the next start. Nothing is replaced while the server runs.
-versions:
-  enabled: true
-  # How often to look for new versions (hours).
-  check-interval-hours: 6
-  # Download new versions by themselves: "off", "patch" (only hotfixes 1.2.x), "minor" (1.x), "all".
-  auto-download: "off"
-  # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
-  include-prereleases: false
-  # Restart button in the web interface. A server cannot start itself again - something outside has to do it:
-  #   none   = no restart button (default); after downloading, the page says "restart needed"
-  #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again
-  #   script = the server's own restart: runs restart-script from spigot.yml (settings.restart-script)
-  # Only switch it on if you know the server comes back - otherwise the button just stops it.
-  restart-method: none
-  # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
-  restart-delays: ["5m", "1m", "now"]
-
-
-# ------------------------------------------------------------------------------
-#   SERVER HEALTH
+#   8) SERVER HEALTH
 # ------------------------------------------------------------------------------
 # MRadmin measures TPS, MSPT (average, 95 %, peak), CPU, memory, garbage collection, players, chunks and
 # entities every second - like spark's health report. Visible in the web interface under "Health"
@@ -552,12 +347,27 @@ health:
 
 
 # ------------------------------------------------------------------------------
-#   9) MENUS
+#   9) PLUGINS & RESTART (web interface, page "Plugins")
 # ------------------------------------------------------------------------------
-gui:
-  # How often open menus are refreshed (in ticks, 20 = 1 second).
-  refresh-ticks: 20
-  sounds: true
+# All MRtechnology plugins with their updates (installed or not). Downloads come only from the official GitHub release of
+# each plugin (for this Minecraft version, checked with the SHA-256 checksum) and go to plugins/update/ - Paper
+# installs them on the next start. Nothing is replaced while the server runs.
+versions:
+  enabled: true
+  # How often to look for new versions (hours).
+  check-interval-hours: 6
+  # Download new versions by themselves: "off", "patch" (only hotfixes 1.2.x), "minor" (1.x), "all".
+  auto-download: "off"
+  # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
+  include-prereleases: false
+  # Restart button in the web interface. A server cannot start itself again - something outside has to do it:
+  #   none   = no restart button (default); after downloading, the page says "restart needed"
+  #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again
+  #   script = the server's own restart: runs restart-script from spigot.yml (settings.restart-script)
+  # Only switch it on if you know the server comes back - otherwise the button just stops it.
+  restart-method: none
+  # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
+  restart-delays: ["5m", "1m", "now"]
 
 
 # ------------------------------------------------------------------------------
@@ -852,3 +662,203 @@ map:
       # Players may hide themselves on the map (switch on the map, saved per player) - they then see no one else and
       # cannot search for players either.
       allow-hide: true
+
+
+# ------------------------------------------------------------------------------
+#   13) DISCORD LOGS (admin)
+# ------------------------------------------------------------------------------
+# Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
+#                   -> New Webhook -> Copy Webhook URL.
+# The texts of the events are in the language file (lang/<language>.yml, section discord).
+# An event with "enabled: false" or an empty text is not sent.
+# Not working? -> /mradmin discord shows the status, /mradmin discord test sends a test message.
+discord:
+  enabled: false
+  # Full URL in quotes, e.g. "https://discord.com/api/webhooks/123456/abcdef"
+  webhook-url: ""
+  username: "MRadmin"
+  avatar-url: ""
+  use-embeds: true
+  footer: "Minecraft-Server"
+  events:
+    maintenance-scheduled:
+      enabled: true
+      color: "#F1C40F"
+    maintenance-changed:
+      enabled: true
+      color: "#3498DB"
+    maintenance-cancelled:
+      enabled: true
+      color: "#95A5A6"
+    maintenance-start:
+      enabled: true
+      color: "#E74C3C"
+    maintenance-end:
+      enabled: true
+      color: "#2ECC71"
+    kuma-connected:
+      enabled: false
+      color: "#2ECC71"
+    kuma-disconnected:
+      enabled: true
+      color: "#E67E22"
+    announce:
+      enabled: true
+      color: "#9B59B6"
+    admin-mode-on:
+      enabled: true
+      color: "#E67E22"
+    admin-mode-off:
+      enabled: true
+      color: "#1ABC9C"
+    # Notices from other plugins, e.g. suspicious duels from MRpvp.
+    plugin-alert:
+      enabled: true
+      color: "#E74C3C"
+    admin-reload:
+      enabled: true
+      color: "#3498DB"
+    ticket:
+      enabled: true
+      color: "#E67E22"
+    # Every message in a ticket (off by default).
+    ticket-message:
+      enabled: false
+      color: "#3498DB"
+    ticket-closed:
+      enabled: true
+      color: "#2ECC71"
+    ticket-reopened:
+      enabled: true
+      color: "#F1C40F"
+    player-freeze:
+      enabled: true
+      color: "#3498DB"
+    player-unfreeze:
+      enabled: true
+      color: "#95A5A6"
+    player-kick:
+      enabled: true
+      color: "#E67E22"
+    player-freeze-quit:
+      enabled: true
+      color: "#E74C3C"
+    # Every staff chat message also in the admin Discord (off by default).
+    staff-chat:
+      enabled: false
+      color: "#7F8C8D"
+    # Logins to the web interface and setting up/resetting a web account.
+    web-login:
+      enabled: true
+      color: "#3498DB"
+    web-setup:
+      enabled: true
+      color: "#9B59B6"
+    # Every command from the web console.
+    web-console:
+      enabled: true
+      color: "#E74C3C"
+    # The server lags for a longer time (health.alert) or has recovered.
+    health-alert:
+      enabled: true
+      color: "#E74C3C"
+    health-recovered:
+      enabled: true
+      color: "#2ECC71"
+    plugin-update-downloaded:
+      enabled: true
+      color: "#3498DB"
+    server-restart:
+      enabled: true
+      color: "#E67E22"
+    server-restart-cancelled:
+      enabled: true
+      color: "#95A5A6"
+
+
+# ------------------------------------------------------------------------------
+#   14) DISCORD ANNOUNCEMENTS (community)
+# ------------------------------------------------------------------------------
+# Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
+# Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
+# cancelling are worked into the last post instead of posting again. Times appear as Discord timestamps
+# (everyone sees them in their own time zone, with "in 2 hours").
+# Texts: lang/<language>.yml, section discord-announce. Test: /mradmin discord test announce
+discord-announce:
+  enabled: false
+  webhook-url: ""
+  username: ""
+  avatar-url: ""
+  footer: ""
+  # Role mentioned in the first post (e.g. @Server-News). Empty = nobody is pinged.
+  # ID: Discord settings -> Advanced -> Developer Mode on, then right-click the role -> "Copy ID".
+  ping-role-id: ""
+
+  # Every maintenance gets ONE message that is edited as it goes: scheduled -> running -> ended (or cancelled).
+  maintenance:
+    enabled: true
+    # Only post once the maintenance is at most this far away (ones created later: immediately).
+    # Prevents recurring maintenance from being posted far in advance.
+    announce-ahead: "24h"
+    # Do not post shorter maintenance at all ("0" = post all).
+    min-length: "0"
+    # Mention ping-role-id when a maintenance is posted (never in the later edits).
+    ping: true
+    # New times or titles in quick succession are combined into one edit. Start and end are edited in right away.
+    debounce-seconds: 60
+
+  announcements:
+    # Post announcements: presets with a "discord" text in the language file automatically (except with -q),
+    # own texts only with -d, e.g. /mradmin announce -d Event tonight!
+    enabled: true
+    # Post the same preset at most once within this time (restart script with 5m/1m = one post).
+    cooldown: "10m"
+    ping: false
+
+  # News, changelogs and warnings from the web interface ("News") - only those where "Post to Discord" is ticked.
+  news:
+    ping: false
+  alerts:
+    # Mention ping-role-id with a critical warning.
+    ping: true
+  # Incidents pinned on the Uptime Kuma status pages (uptime-kuma.status-pages): posted once, edited when they change
+  # in Kuma, marked as resolved when they are no longer pinned.
+  kuma:
+    enabled: true
+    # Mention ping-role-id with a red (danger) incident.
+    ping: true
+
+  colors:
+    scheduled: "#F1C40F"
+    started: "#E74C3C"
+    ended: "#2ECC71"
+    cancelled: "#95A5A6"
+    announce: "#9B59B6"
+    news: "#3498DB"
+    changelog: "#2ECC71"
+    alert: "#E74C3C"
+
+
+# ------------------------------------------------------------------------------
+#   15) UPDATES
+# ------------------------------------------------------------------------------
+updates:
+  enabled: true
+  # Source: "github" (GitHub Releases, default) or "modrinth"
+  source: github
+  # Also report beta/alpha versions. If a pre-release (0.x) is running, they are always reported.
+  include-prereleases: false
+  interval-hours: 6
+  # Notify players with "mradmin.admin.update" when they join the server.
+  notify-on-join: true
+
+
+# ------------------------------------------------------------------------------
+#   16) MENUS
+# ------------------------------------------------------------------------------
+gui:
+  # How often open menus are refreshed (in ticks, 20 = 1 second).
+  refresh-ticks: 20
+  sounds: true
+
+

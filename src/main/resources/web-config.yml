@@ -1,0 +1,1263 @@
+# Form of config.yml for the web interface (Plugins -> MRadmin -> Configuration).
+# Every field names a key of config.yml, its type and limits, and a name and help text in German and English.
+# Format: docs/MODULE-API.md, section "Konfiguration im Browser". Texts with a comma need quotes.
+# Not in the form (only in the file): admin-mode.menu.buttons, web.roles and web.players (free lists of own entries),
+# new ticket categories (existing ones are in the table).
+sections:
+  - id: general
+    name: {de: Allgemein, en: General}
+    help: {de: "Sprache der Texte im Spiel, in Discord und Mails, Zeitzone.", en: "Language of the texts in game, on Discord and in mails, time zone."}
+    fields:
+      - key: general.language
+        type: choice
+        name: {de: Sprache der Spieler, en: Language of the players}
+        help: {de: "Automatisch = jeder Spieler bekommt die Sprache seines Minecraft-Clients. Die Weboberfläche folgt dem Browser.", en: "Automatic = every player gets the language of their Minecraft client. The web interface follows the browser."}
+        options:
+          - {value: auto, de: Automatisch, en: Automatic}
+          - {value: de, de: Deutsch, en: German}
+          - {value: en, de: Englisch, en: English}
+      - key: general.fallback-language
+        type: choice
+        name: {de: Ersatzsprache, en: Fallback language}
+        help: {de: Für Spieler mit einer Sprache ohne eigene Datei., en: For players whose language has no file of its own.}
+        when: general.language=auto
+        options:
+          - {value: de, de: Deutsch, en: German}
+          - {value: en, de: Englisch, en: English}
+      - key: general.server-language
+        type: choice
+        name: {de: Server-Sprache, en: Server language}
+        help: {de: "Discord, Serverliste während der Wartung, Push, Mails, Notizen in Tickets.", en: "Discord, server list during maintenance, push, mails, notes in tickets."}
+        options:
+          - {value: de, de: Deutsch, en: German}
+          - {value: en, de: Englisch, en: English}
+      - key: general.timezone
+        type: string
+        max-length: 64
+        name: {de: Zeitzone, en: Time zone}
+        help: {de: "Z.B. Europe/Vienna. Leer = Zeitzone des Servers.", en: "E.g. Europe/Vienna. Empty = the server's time zone."}
+
+  - id: features
+    name: {de: Funktionen, en: Features}
+    help: {de: "Eine abgeschaltete Funktion verschwindet ganz - gespeicherte Daten bleiben und sind beim Einschalten wieder da.", en: "A switched-off feature disappears completely - stored data is kept and back when switching it on."}
+    fields:
+      - key: features.maintenance
+        type: bool
+        name: {de: Wartungsmodus, en: Maintenance mode}
+        help: {de: "Countdown, Bossbar, MOTD, Join-Sperre (inkl. Uptime Kuma).", en: "Countdown, boss bar, MOTD, join lock (incl. Uptime Kuma)."}
+      - key: features.announce
+        type: bool
+        name: {de: Ankündigungen, en: Announcements}
+      - key: features.admin-mode
+        type: bool
+        name: {de: Admin-Modus, en: Admin mode}
+        help: {de: Wer gerade im Admin-Modus ist bekommt sein Inventar sofort zurück., en: Whoever is in admin mode gets their inventory back right away.}
+      - key: features.teleport
+        type: bool
+        name: {de: Zu Spielern teleportieren, en: Teleport to players}
+      - key: features.summon
+        type: bool
+        name: {de: Spieler herholen, en: Summon players}
+      - key: features.inventory
+        type: bool
+        name: {de: Inventar ansehen, en: View inventory}
+      - key: features.freeze
+        type: bool
+        name: {de: Einfrieren, en: Freeze}
+      - key: features.server-status
+        type: bool
+        name: {de: Serverzustand, en: Server status}
+      - key: features.tickets
+        type: bool
+        name: {de: Tickets & Meldungen, en: Tickets & reports}
+      - key: features.staff-chat
+        type: bool
+        name: {de: Staff-Chat (/sc), en: Staff chat (/sc)}
+
+  - id: integrations
+    name: {de: Andere Plugins, en: Other plugins}
+    help: {de: "MRadmin erkennt sie von selbst. Aus = nicht verbinden, auch wenn das Plugin installiert ist.", en: "MRadmin detects them by itself. Off = do not connect, even if the plugin is installed."}
+    fields:
+      - key: integrations.mrsleep
+        type: bool
+        name: {de: MRsleep, en: MRsleep}
+      - key: integrations.mrchunks
+        type: bool
+        name: {de: MRchunks, en: MRchunks}
+      - key: integrations.mrtoolbar
+        type: bool
+        name: {de: MRtoolbar, en: MRtoolbar}
+      - key: integrations.mrpvp
+        type: bool
+        name: {de: MRpvp, en: MRpvp}
+      - key: integrations.libertybans
+        type: bool
+        name: {de: LibertyBans, en: LibertyBans}
+        help: {de: Strafen auf der Spielerseite der Weboberfläche. Es gelten die Rechte von LibertyBans., en: Punishments on the player page of the web interface. LibertyBans' permissions apply.}
+      - key: libertybans.durations
+        type: strings
+        when: integrations.libertybans
+        name: {de: Schnellwahl Bann/Mute, en: Quick choices ban/mute}
+        help: {de: "Z.B. 1h, 7d - „perm“ = für immer.", en: "E.g. 1h, 7d - \"perm\" = forever."}
+
+  - id: maintenance
+    name: {de: Wartung, en: Maintenance}
+    help: {de: "Während der Wartung kommen nur Spieler mit mradmin.maintenance.bypass auf den Server.", en: "During maintenance only players with mradmin.maintenance.bypass can join."}
+    fields:
+      - key: maintenance.warn-before
+        type: duration
+        name: {de: Bossbar ab, en: Boss bar from}
+        help: {de: So lange vor dem Beginn erscheint die Bossbar mit Countdown., en: The boss bar with countdown appears this long before the start.}
+      - key: maintenance.bossbar.enabled
+        type: bool
+        name: {de: Bossbar, en: Boss bar}
+      - key: maintenance.bossbar.color
+        type: choice
+        when: maintenance.bossbar.enabled
+        name: {de: Farbe, en: Colour}
+        options: &barColors
+          - {value: YELLOW, de: Gelb, en: Yellow}
+          - {value: RED, de: Rot, en: Red}
+          - {value: GREEN, de: Grün, en: Green}
+          - {value: BLUE, de: Blau, en: Blue}
+          - {value: PINK, de: Rosa, en: Pink}
+          - {value: PURPLE, de: Lila, en: Purple}
+          - {value: WHITE, de: Weiß, en: White}
+      - key: maintenance.bossbar.final-color
+        type: choice
+        when: maintenance.bossbar.enabled
+        name: {de: Farbe kurz vor dem Beginn, en: Colour shortly before the start}
+        options: *barColors
+      - key: maintenance.bossbar.final-seconds
+        type: int
+        when: maintenance.bossbar.enabled
+        min: 0
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Kurz vor dem Beginn heißt, en: Shortly before means}
+      - key: maintenance.bossbar.overlay
+        type: choice
+        when: maintenance.bossbar.enabled
+        name: {de: Unterteilung, en: Segments}
+        options:
+          - {value: PROGRESS, de: Durchgehend, en: Continuous}
+          - {value: NOTCHED_6, de: 6 Teile, en: 6 parts}
+          - {value: NOTCHED_10, de: 10 Teile, en: 10 parts}
+          - {value: NOTCHED_12, de: 12 Teile, en: 12 parts}
+          - {value: NOTCHED_20, de: 20 Teile, en: 20 parts}
+      - key: maintenance.bossbar.show-during-maintenance
+        type: bool
+        when: maintenance.bossbar.enabled
+        name: {de: Restzeit fürs Team, en: Remaining time for the team}
+        help: {de: Während der Wartung eine Bossbar mit der Restzeit (wenn das Ende bekannt ist)., en: During maintenance a boss bar with the remaining time (if the end is known).}
+      - key: maintenance.bossbar.during-color
+        type: choice
+        when: maintenance.bossbar.show-during-maintenance
+        name: {de: Farbe während der Wartung, en: Colour during maintenance}
+        options: *barColors
+      - key: maintenance.reminders
+        type: strings
+        item: duration
+        name: {de: Erinnerungen im Chat, en: Reminders in the chat}
+        help: {de: So lange vor dem Beginn jeweils eine Nachricht., en: A message this long before the start each.}
+      - key: maintenance.title-countdown-seconds
+        type: int
+        min: 0
+        max: 300
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Großer Countdown ab, en: Big countdown from}
+        help: {de: "Countdown in der Bildschirmmitte, 0 = aus.", en: "Countdown in the middle of the screen, 0 = off."}
+      - key: maintenance.sound
+        type: string
+        max-length: 80
+        name: {de: Ton, en: Sound}
+        help: {de: "Bukkit-Name, z.B. BLOCK_NOTE_BLOCK_PLING. Leer = kein Ton.", en: "Bukkit name, e.g. BLOCK_NOTE_BLOCK_PLING. Empty = no sound."}
+      - key: maintenance.kick-on-start
+        type: bool
+        name: {de: Beim Beginn kicken, en: Kick at the start}
+        help: {de: Spieler ohne Bypass werden vom Server geworfen., en: Players without bypass are kicked from the server.}
+      - key: maintenance.kick-delay-seconds
+        type: int
+        when: maintenance.kick-on-start
+        min: 0
+        max: 300
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Kicken nach, en: Kick after}
+      - key: maintenance.motd.enabled
+        type: bool
+        name: {de: Eigene MOTD in der Serverliste, en: Own MOTD in the server list}
+      - key: maintenance.motd.replace-version
+        type: bool
+        when: maintenance.motd.enabled
+        name: {de: „Wartung“ statt Spielerzahl, en: "\"Maintenance\" instead of the player count"}
+
+  - id: uptime-kuma
+    name: {de: Uptime Kuma, en: Uptime Kuma}
+    help: {de: "MRadmin meldet sich bei Uptime Kuma an und übernimmt die Wartungsfenster live.", en: "MRadmin logs in to Uptime Kuma and follows the maintenance windows live."}
+    fields:
+      - key: uptime-kuma.enabled
+        type: bool
+        name: {de: Wartungen aus Uptime Kuma, en: Maintenance from Uptime Kuma}
+      - key: uptime-kuma.url
+        type: string
+        max-length: 300
+        name: {de: Adresse, en: Address}
+        help: {de: "Z.B. https://status.deinserver.at - auch für die Vorfälle der Statusseiten nötig.", en: "E.g. https://status.yourserver.com - also needed for the incidents of the status pages."}
+      - key: uptime-kuma.username
+        type: string
+        when: uptime-kuma.enabled
+        max-length: 120
+        name: {de: Benutzername, en: Username}
+      - key: uptime-kuma.password
+        type: secret
+        when: uptime-kuma.enabled
+        max-length: 300
+        name: {de: Passwort, en: Password}
+      - key: uptime-kuma.token
+        type: secret
+        when: uptime-kuma.enabled
+        max-length: 2000
+        name: {de: Token statt Passwort, en: Token instead of password}
+        help: {de: "Nötig mit 2FA: im Browser bei Kuma anmelden, F12 → Local Storage → Wert von „token“.", en: "Needed with 2FA: log in to Kuma in the browser, F12 → Local Storage → value of \"token\"."}
+      - key: uptime-kuma.monitor-ids
+        type: ints
+        when: uptime-kuma.enabled
+        min: 0
+        max: 1000000
+        name: {de: Monitor-IDs, en: Monitor IDs}
+        help: {de: "Wartungen, die einen dieser Monitore betreffen. Beide Listen leer = jede Wartung.", en: "Maintenance affecting one of these monitors. Both lists empty = every maintenance."}
+      - key: uptime-kuma.maintenance-ids
+        type: ints
+        when: uptime-kuma.enabled
+        min: 0
+        max: 1000000
+        name: {de: Wartungs-IDs, en: Maintenance IDs}
+        help: {de: Genau diese Wartungsfenster., en: Exactly these maintenance windows.}
+      - key: uptime-kuma.refresh-seconds
+        type: int
+        when: uptime-kuma.enabled
+        min: 10
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Liste zusätzlich holen alle, en: Fetch the list again every}
+      - key: uptime-kuma.reconnect-seconds
+        type: int
+        when: uptime-kuma.enabled
+        min: 5
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Neu verbinden nach, en: Reconnect after}
+      - key: uptime-kuma.keep-schedule-when-offline
+        type: bool
+        when: uptime-kuma.enabled
+        name: {de: Plan behalten wenn Kuma weg ist, en: Keep the schedule when Kuma is gone}
+      - key: uptime-kuma.status-pages
+        type: strings
+        name: {de: Statusseiten für Vorfälle, en: Status pages for incidents}
+        help: {de: "Slugs, z.B. main für /status/main. Angeheftete Vorfälle erscheinen auf der Spielerseite und im Spiel. Braucht nur die Adresse.", en: "Slugs, e.g. main for /status/main. Pinned incidents show on the player page and in game. Only needs the address."}
+      - key: uptime-kuma.incidents
+        type: bool
+        name: {de: Vorfälle übernehmen, en: Take over incidents}
+      - key: uptime-kuma.incident-seconds
+        type: int
+        when: uptime-kuma.incidents
+        min: 5
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Vorfälle lesen alle, en: Read incidents every}
+
+  - id: announce
+    name: {de: Ankündigungen, en: Announcements}
+    help: {de: "Aussehen von /mradmin announce. Eigene Vorlagen legst du in der Weboberfläche unter Kommunikation an.", en: "Look of /mradmin announce. Own presets are made in the web interface under Communication."}
+    fields:
+      - key: announce.fade-in
+        type: decimal
+        min: 0
+        max: 10
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Einblenden, en: Fade in}
+      - key: announce.stay
+        type: decimal
+        min: 0
+        max: 60
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Anzeigen, en: Stay}
+      - key: announce.fade-out
+        type: decimal
+        min: 0
+        max: 10
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Ausblenden, en: Fade out}
+      - key: announce.chat
+        type: bool
+        name: {de: Auch im Chat, en: In the chat too}
+      - key: announce.sound
+        type: string
+        max-length: 80
+        name: {de: Ton, en: Sound}
+        help: {de: Leer = kein Ton., en: Empty = no sound.}
+      - key: announce.volume
+        type: decimal
+        min: 0
+        max: 10
+        name: {de: Lautstärke, en: Volume}
+      - key: announce.pitch
+        type: decimal
+        min: 0.5
+        max: 2
+        name: {de: Tonhöhe, en: Pitch}
+
+  - id: admin-mode
+    name: {de: Admin-Modus, en: Admin mode}
+    help: {de: "Inventar und Position werden gesichert, du bekommst nur das Admin-Menü-Item. Eigene Knöpfe fürs Dashboard stehen in der Datei (admin-mode.menu.buttons).", en: "Inventory and position are saved, you only get the admin menu item. Own dashboard buttons are in the file (admin-mode.menu.buttons)."}
+    fields:
+      - key: admin-mode.gamemode
+        type: choice
+        name: {de: Spielmodus, en: Game mode}
+        help: {de: Im Zuschauermodus lassen sich Menüs nicht anklicken., en: Menus cannot be clicked in spectator mode.}
+        options:
+          - {value: CREATIVE, de: Kreativ, en: Creative}
+          - {value: SPECTATOR, de: Zuschauer, en: Spectator}
+      - key: admin-mode.return-to-start
+        type: bool
+        name: {de: Zurück zum Startpunkt, en: Back to the starting point}
+      - key: admin-mode.compass-material
+        type: string
+        max-length: 64
+        name: {de: Item des Admin-Menüs, en: Item of the admin menu}
+        help: {de: "Nicht den Kompass nehmen - WorldEdit teleportiert damit.", en: "Do not use the compass - WorldEdit teleports with it."}
+      - key: admin-mode.compass-slot
+        type: int
+        min: 0
+        max: 8
+        name: {de: Platz in der Hotbar, en: Hotbar slot}
+        help: {de: 0 bis 8., en: 0 to 8.}
+      - key: admin-mode.prevent-drop
+        type: bool
+        name: {de: Nichts fallen lassen, en: No dropping}
+      - key: admin-mode.prevent-pickup
+        type: bool
+        name: {de: Nichts aufheben, en: No picking up}
+      - key: admin-mode.end-on-quit
+        type: bool
+        name: {de: Beim Verlassen beenden, en: End on leaving}
+        help: {de: "Aus = beim nächsten Betreten geht es im Admin-Modus weiter.", en: "Off = it continues in admin mode on the next join."}
+
+  - id: tickets
+    name: {de: Tickets & Meldungen, en: Tickets & reports}
+    help: {de: "/report für alle Spieler. Eigene Kategorien legst du in der Datei an (tickets.categories).", en: "/report for all players. Own categories are added in the file (tickets.categories)."}
+    fields:
+      - key: tickets.cooldown
+        type: duration
+        name: {de: Wartezeit zwischen Tickets, en: Wait between tickets}
+        help: {de: Für das Team gilt keine., en: None for the team.}
+      - key: tickets.reply-cooldown
+        type: duration
+        name: {de: Wartezeit zwischen Nachrichten, en: Wait between messages}
+      - key: tickets.max-open-per-player
+        type: int
+        min: 1
+        max: 100
+        name: {de: Offene Tickets pro Spieler, en: Open tickets per player}
+      - key: tickets.min-subject-length
+        type: int
+        min: 1
+        max: 100
+        unit: {de: Zeichen, en: characters}
+        name: {de: Betreff mindestens, en: Subject at least}
+      - key: tickets.max-subject-length
+        type: int
+        min: 5
+        max: 200
+        unit: {de: Zeichen, en: characters}
+        name: {de: Betreff höchstens, en: Subject at most}
+      - key: tickets.min-text-length
+        type: int
+        min: 1
+        max: 1000
+        unit: {de: Zeichen, en: characters}
+        name: {de: Text mindestens, en: Text at least}
+      - key: tickets.max-text-length
+        type: int
+        min: 10
+        max: 5000
+        unit: {de: Zeichen, en: characters}
+        name: {de: Text höchstens, en: Text at most}
+      - key: tickets.notify-creator
+        type: bool
+        name: {de: Spieler beim Schließen informieren, en: Tell the player on closing}
+      - key: tickets.show-staff-names
+        type: bool
+        name: {de: Namen des Teams zeigen, en: Show team names}
+        help: {de: Aus = Spieler sehen nur „Team“., en: Off = players only see "Team".}
+      - key: tickets.team-icon
+        type: string
+        when: "!tickets.show-staff-names"
+        max-length: 64
+        name: {de: Bild für das Team, en: Picture for the team}
+        help: {de: "Item-Name, z.B. NETHER_STAR.", en: "Item name, e.g. NETHER_STAR."}
+      - key: tickets.auto-claim
+        type: bool
+        name: {de: Wer zuerst antwortet übernimmt, en: First to answer takes over}
+      - key: tickets.shown-messages
+        type: int
+        min: 5
+        max: 200
+        name: {de: Gezeigte Nachrichten, en: Messages shown}
+      - key: tickets.sound
+        type: string
+        max-length: 80
+        name: {de: Ton für neue Tickets, en: Sound for new tickets}
+        help: {de: Leer = kein Ton., en: Empty = no sound.}
+      - key: tickets.keep-closed
+        type: duration
+        name: {de: Geschlossene aufheben, en: Keep closed ones}
+      - key: tickets.plugin-reports
+        type: bool
+        name: {de: Automatische Tickets der Plugins, en: Automatic tickets from plugins}
+        help: {de: "Z.B. MRchunks bei einer Lag-Sperre - der Spieler kann dort erklären, was passiert ist.", en: "E.g. MRchunks on a lag lock - the player can explain there what happened."}
+      - key: tickets.icon
+        type: string
+        max-length: 64
+        name: {de: Symbol der Tickets, en: Icon of the tickets}
+      - key: tickets.categories
+        type: table
+        name: {de: Kategorien, en: Categories}
+        help: {de: "Name leer = Text aus der Sprachdatei. Spielermeldung = zuerst einen Spieler wählen. Permission leer = alle.", en: "Empty name = text from the language file. Player report = pick a player first. Empty permission = everyone."}
+        columns:
+          - {key: name, type: string, name: {de: Name, en: Name}, default: ""}
+          - {key: player, type: bool, name: {de: Spielermeldung, en: Player report}, default: false}
+          - {key: permission, type: string, name: {de: Permission, en: Permission}, default: ""}
+          - {key: enabled, type: bool, name: {de: Aktiv, en: Active}, default: true}
+        rows:
+          cheating: {de: Cheating, en: Cheating}
+          chat: {de: Chat, en: Chat}
+          griefing: {de: Griefing, en: Griefing}
+          scam: {de: Betrug, en: Scam}
+          bug: {de: Fehler, en: Bug}
+          other: {de: Sonstiges, en: Other}
+
+  - id: health
+    name: {de: Serverzustand, en: Server health}
+    help: {de: "TPS, MSPT, CPU und Speicher jede Sekunde - in der Weboberfläche unter Health.", en: "TPS, MSPT, CPU and memory every second - in the web interface under Health."}
+    fields:
+      - key: health.history
+        type: choice
+        name: {de: Verlauf aufheben, en: Keep the history}
+        options:
+          - {value: 24h, de: 24 Stunden, en: 24 hours}
+          - {value: 7d, de: 7 Tage, en: 7 days}
+          - {value: 30d, de: 30 Tage, en: 30 days}
+      - key: health.alert.enabled
+        type: bool
+        name: {de: Warnung bei Lag, en: Warning on lag}
+        help: {de: An das Team im Spiel und an den Discord-Log - mit Entwarnung danach., en: To the team in game and to the Discord log - with an all-clear afterwards.}
+      - key: health.alert.below-tps
+        type: decimal
+        when: health.alert.enabled
+        min: 1
+        max: 20
+        unit: {de: TPS, en: TPS}
+        name: {de: Warnen unter, en: Warn below}
+      - key: health.alert.minutes
+        type: int
+        when: health.alert.enabled
+        min: 1
+        max: 120
+        unit: {de: Minuten, en: minutes}
+        name: {de: So lange darunter, en: That long below}
+
+  - id: versions
+    name: {de: Plugins & Neustart, en: Plugins & restart}
+    help: {de: "Die Seite Plugins: Updates aus den offiziellen Releases, Installation beim nächsten Neustart.", en: "The page Plugins: updates from the official releases, installed on the next restart."}
+    fields:
+      - key: versions.enabled
+        type: bool
+        name: {de: Seite Plugins, en: Page Plugins}
+      - key: versions.check-interval-hours
+        type: int
+        when: versions.enabled
+        min: 1
+        max: 168
+        unit: {de: Stunden, en: hours}
+        name: {de: Nach Updates sehen alle, en: Look for updates every}
+      - key: versions.auto-download
+        type: choice
+        when: versions.enabled
+        name: {de: Selbst herunterladen, en: Download by itself}
+        options:
+          - {value: "off", de: Aus, en: "Off"}
+          - {value: patch, de: Hotfixes, en: Hotfixes}
+          - {value: minor, de: Neue Funktionen, en: New features}
+          - {value: all, de: Alle, en: All}
+      - key: versions.include-prereleases
+        type: bool
+        when: versions.enabled
+        name: {de: Auch Vorabversionen, en: Pre-releases too}
+      - key: versions.restart-method
+        type: choice
+        when: versions.enabled
+        name: {de: Neustart-Knopf, en: Restart button}
+        help: {de: "Ein Server startet sich nicht selbst - Stoppen nur, wenn ein Skript, Wächter oder Panel ihn wieder startet.", en: "A server does not start itself - stop only if a script, watchdog or panel starts it again."}
+        options:
+          - {value: none, de: Kein Knopf, en: No button}
+          - {value: stop, de: Stoppen, en: Stop}
+          - {value: script, de: restart-script, en: restart-script}
+      - key: versions.restart-delays
+        type: strings
+        when: versions.enabled
+        name: {de: Countdown zur Auswahl, en: Countdown choices}
+        help: {de: "Z.B. 5m, 1m - „now“ = sofort.", en: "E.g. 5m, 1m - \"now\" = right away."}
+
+  - id: storage
+    name: {de: Speicher, en: Storage}
+    help: {de: "Wo Tickets, Wartungen und Web-Konten liegen. Wirkt erst nach einem Neustart; beim ersten Start mit SQLite oder MySQL werden die YAML-Daten übernommen.", en: "Where tickets, maintenance and web accounts are kept. Takes effect after a restart; on the first start with SQLite or MySQL the YAML data is taken over."}
+    fields:
+      - key: storage.type
+        type: choice
+        restart: true
+        name: {de: Speicherart, en: Storage type}
+        options:
+          - {value: yaml, de: Dateien (YAML), en: Files (YAML)}
+          - {value: sqlite, de: SQLite, en: SQLite}
+          - {value: mysql, de: MySQL / MariaDB, en: MySQL / MariaDB}
+      - key: storage.mysql.host
+        type: string
+        when: storage.type=mysql
+        restart: true
+        max-length: 200
+        name: {de: Host, en: Host}
+      - key: storage.mysql.port
+        type: int
+        when: storage.type=mysql
+        restart: true
+        min: 1
+        max: 65535
+        name: {de: Port, en: Port}
+      - key: storage.mysql.database
+        type: string
+        when: storage.type=mysql
+        restart: true
+        max-length: 100
+        name: {de: Datenbank, en: Database}
+      - key: storage.mysql.username
+        type: string
+        when: storage.type=mysql
+        restart: true
+        max-length: 100
+        name: {de: Benutzer, en: User}
+      - key: storage.mysql.password
+        type: secret
+        when: storage.type=mysql
+        restart: true
+        max-length: 300
+        name: {de: Passwort, en: Password}
+      - key: storage.mysql.pool-size
+        type: int
+        when: storage.type=mysql
+        restart: true
+        min: 1
+        max: 32
+        name: {de: Gleichzeitige Verbindungen, en: Simultaneous connections}
+      - key: storage.server-id
+        type: string
+        restart: true
+        max-length: 32
+        name: {de: Name dieses Servers, en: Name of this server}
+        help: {de: Nur wichtig wenn mehrere Server eine Datenbank teilen., en: Only relevant if several servers share one database.}
+      - key: storage.table-prefix
+        type: string
+        restart: true
+        max-length: 32
+        name: {de: Tabellen-Präfix, en: Table prefix}
+
+  - id: web
+    name: {de: Weboberfläche, en: Web interface}
+    help: {de: "Der eingebaute Webserver hört nur lokal - erreichbar über deinen Reverse-Proxy mit HTTPS. Änderungen starten den Webserver neu.", en: "The built-in web server only listens locally - reachable through your reverse proxy with HTTPS. Changes restart the web server."}
+    fields:
+      - key: web.enabled
+        type: bool
+        name: {de: Weboberfläche an, en: Web interface on}
+        help: {de: "Aus schaltet auch diese Seite ab - zurück nur über die Datei.", en: "Off also switches this page off - back only through the file."}
+      - key: web.bind
+        type: string
+        max-length: 64
+        name: {de: Adresse des Webservers, en: Address of the web server}
+        help: {de: "Nur ändern, wenn der Proxy auf einem anderen Rechner läuft (dann z.B. 0.0.0.0 + Firewall).", en: "Only change if the proxy runs on another machine (then e.g. 0.0.0.0 + firewall)."}
+      - key: web.port
+        type: int
+        min: 1
+        max: 65535
+        name: {de: Port, en: Port}
+      - key: web.public-url
+        type: string
+        max-length: 300
+        name: {de: Öffentliche Adresse, en: Public address}
+        help: {de: "Z.B. https://admin.deinserver.at - für Links, Anmeldung, Passkeys und die Spielerseite.", en: "E.g. https://admin.yourserver.com - for links, sign-in, passkeys and the player page."}
+      - key: web.trusted-proxies
+        type: strings
+        name: {de: Vertrauenswürdige Proxys, en: Trusted proxies}
+        help: {de: Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For)., en: MRadmin only trusts these for the real visitor IP (X-Forwarded-For).}
+      - key: web.session-days
+        type: int
+        min: 1
+        max: 365
+        unit: {de: Tage, en: days}
+        name: {de: Team-Geräte angemeldet für, en: Team devices signed in for}
+      - key: web.login.passkeys
+        type: bool
+        name: {de: Anmeldung mit Passkey, en: Sign-in with passkey}
+      - key: web.login.password
+        type: bool
+        name: {de: Anmeldung mit Passwort, en: Sign-in with password}
+        help: {de: Immer zusammen mit dem Code aus der App., en: Always together with the code from the app.}
+      - key: web.login.discord.enabled
+        type: bool
+        name: {de: Anmeldung mit Discord, en: Sign-in with Discord}
+        help: {de: "Discord-Anwendung anlegen, Weiterleitung <public-url>/api/discord/callback eintragen.", en: "Create a Discord application, add the redirect <public-url>/api/discord/callback."}
+      - key: web.login.discord.client-id
+        type: string
+        when: web.login.discord.enabled
+        max-length: 64
+        name: {de: Discord Client-ID, en: Discord client ID}
+      - key: web.login.discord.client-secret
+        type: secret
+        when: web.login.discord.enabled
+        max-length: 200
+        name: {de: Discord Client-Secret, en: Discord client secret}
+      - key: web.item-icons
+        type: bool
+        name: {de: Item-Bilder, en: Item pictures}
+        help: {de: "Texturen einmal aus dem offiziellen Minecraft-Client laden (ca. 40 MB). Aus = Kürzel statt Bilder.", en: "Load the textures once from the official Minecraft client (about 40 MB). Off = short labels instead of pictures."}
+      - key: web.legal.imprint-url
+        type: string
+        max-length: 300
+        name: {de: Impressum-Link, en: Imprint link}
+        help: {de: Leer = Text aus plugins/MRadmin/web/impressum.md., en: Empty = text from plugins/MRadmin/web/impressum.md.}
+      - key: web.legal.privacy-url
+        type: string
+        max-length: 300
+        name: {de: Datenschutz-Link, en: Privacy link}
+        help: {de: Leer = Text aus plugins/MRadmin/web/datenschutz.md., en: Empty = text from plugins/MRadmin/web/datenschutz.md.}
+      - key: web.push.contact
+        type: string
+        max-length: 200
+        name: {de: Kontakt für Push, en: Contact for push}
+        help: {de: "mailto:du@deinserver.at oder https-Adresse. Leer = public-url. Apple braucht einen gültigen Kontakt.", en: "mailto:you@yourserver.com or an https address. Empty = public-url. Apple needs a valid contact."}
+      - key: web.privacy.audit-retention
+        type: duration
+        name: {de: Protokoll aufheben, en: Keep the log}
+      - key: web.privacy.mask-ip
+        type: bool
+        name: {de: IP-Adressen kürzen, en: Shorten IP addresses}
+        help: {de: 1.2.3.4 → 1.2.3.0 im Protokoll und bei den Geräten., en: 1.2.3.4 → 1.2.3.0 in the log and for the devices.}
+
+  - id: console
+    name: {de: Web-Konsole, en: Web console}
+    help: {de: "Live-Log und Befehle im Browser. Vor dem Öffnen fragt die Seite den Code aus der App ab.", en: "Live log and commands in the browser. Before opening, the page asks for the code from the app."}
+    fields:
+      - key: web.console.enabled
+        type: bool
+        name: {de: Web-Konsole an, en: Web console on}
+      - key: web.console.unlock-minutes
+        type: int
+        when: web.console.enabled
+        min: 1
+        max: 240
+        unit: {de: Minuten, en: minutes}
+        name: {de: Offen bleiben nach dem Code, en: Stay open after the code}
+      - key: web.console.lines
+        type: int
+        when: web.console.enabled
+        min: 100
+        max: 10000
+        name: {de: Gemerkte Zeilen, en: Lines kept}
+      - key: web.console.blocked
+        type: strings
+        when: web.console.enabled
+        name: {de: Gesperrte Befehle, en: Blocked commands}
+        help: {de: "Gehen nie über die Web-Konsole - auch nicht versteckt in execute … run.", en: "Never work through the web console - not even hidden in execute … run."}
+      - key: web.console.hide-links
+        type: bool
+        when: web.console.enabled
+        name: {de: Links ausblenden, en: Hide links}
+      - key: web.console.hide-ips
+        type: bool
+        when: web.console.enabled
+        name: {de: IP-Adressen ausblenden, en: Hide IP addresses}
+
+  - id: requests
+    name: {de: Öffentliche Formulare, en: Public forms}
+    help: {de: "Entbannungsanträge und Kontaktformular - ohne Anmeldung erreichbar, sie landen als Tickets bei dir.", en: "Unban requests and contact form - reachable without signing in, they end up as tickets with you."}
+    fields:
+      - key: web.requests.unban.enabled
+        type: bool
+        name: {de: Entbannungsanträge, en: Unban requests}
+        help: {de: Unter <public-url>/entbannung (braucht LibertyBans)., en: Under <public-url>/entbannung (needs LibertyBans).}
+      - key: web.requests.unban.kick-message
+        type: bool
+        when: web.requests.unban.enabled
+        name: {de: Adresse und Code in der Bann-Nachricht, en: Address and code in the ban message}
+      - key: web.requests.contact.enabled
+        type: bool
+        name: {de: Kontaktformular, en: Contact form}
+      - key: web.requests.notify-by-mail
+        type: bool
+        name: {de: Antworten auch per Mail, en: Replies by mail too}
+        help: {de: Wenn eine Adresse angegeben wurde und Mail eingerichtet ist., en: If an address was given and mail is set up.}
+      - key: web.requests.min-text-length
+        type: int
+        min: 1
+        max: 1000
+        unit: {de: Zeichen, en: characters}
+        name: {de: Text mindestens, en: Text at least}
+      - key: web.requests.max-text-length
+        type: int
+        min: 100
+        max: 20000
+        unit: {de: Zeichen, en: characters}
+        name: {de: Text höchstens, en: Text at most}
+      - key: web.requests.spam.per-ip-per-hour
+        type: int
+        min: 1
+        max: 1000
+        name: {de: Anträge pro IP und Stunde, en: Requests per IP and hour}
+      - key: web.requests.spam.max-open-contact
+        type: int
+        min: 1
+        max: 10000
+        name: {de: Höchstens offene Kontaktanfragen, en: At most open contact requests}
+      - key: web.requests.spam.proof-of-work
+        type: int
+        min: 0
+        max: 24
+        name: {de: Rechenaufgabe gegen Spam, en: Calculation against spam}
+        help: {de: "0 = aus, 16 = etwa eine Sekunde am Handy, jede +1 verdoppelt.", en: "0 = off, 16 = about one second on a phone, every +1 doubles."}
+
+  - id: player-web
+    name: {de: Spielerseite, en: Player page}
+    help: {de: "Jeder Spieler bekommt unter <public-url>/me seine eigene Seite - Anmeldung mit dem Code aus /web.", en: "Every player gets their own page under <public-url>/me - sign-in with the code from /web."}
+    fields:
+      - key: player-web.enabled
+        type: bool
+        name: {de: Spielerseite an, en: Player page on}
+        help: {de: Braucht die Weboberfläche und die öffentliche Adresse., en: Needs the web interface and the public address.}
+      - key: player-web.session-days
+        type: int
+        when: player-web.enabled
+        min: 1
+        max: 365
+        unit: {de: Tage, en: days}
+        name: {de: Angemeldet höchstens, en: Signed in at most}
+      - key: player-web.idle-days
+        type: int
+        when: player-web.enabled
+        min: 1
+        max: 365
+        unit: {de: Tage, en: days}
+        name: {de: Abmelden nach ungenutzt, en: Sign out after unused}
+      - key: player-web.code-seconds
+        type: int
+        when: player-web.enabled
+        min: 30
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Code gilt, en: Code works for}
+      - key: player-web.max-devices
+        type: int
+        when: player-web.enabled
+        min: 1
+        max: 50
+        name: {de: Geräte pro Spieler, en: Devices per player}
+      - key: player-web.rankings.enabled
+        type: bool
+        when: player-web.enabled
+        name: {de: Ranglisten, en: Rankings}
+      - key: player-web.rankings.top
+        type: int
+        when: player-web.rankings.enabled
+        min: 3
+        max: 100
+        name: {de: Plätze pro Rangliste, en: Places per ranking}
+      - key: player-web.rankings.statistics
+        type: choices
+        when: player-web.rankings.enabled
+        name: {de: Statistiken in den Ranglisten, en: Statistics in the rankings}
+        options: &stats
+          - {value: play-time, de: Spielzeit, en: Play time}
+          - {value: xp-level, de: XP-Level, en: XP level}
+          - {value: blocks-mined, de: Abgebaute Blöcke, en: Blocks mined}
+          - {value: blocks-placed, de: Gesetzte Blöcke, en: Blocks placed}
+          - {value: items-crafted, de: Hergestellte Items, en: Items crafted}
+          - {value: mob-kills, de: Getötete Mobs, en: Mob kills}
+          - {value: deaths, de: Tode, en: Deaths}
+          - {value: totems, de: Totems, en: Totems}
+          - {value: distance, de: Gelaufen, en: Distance}
+          - {value: distance-swum, de: Geschwommen, en: Swum}
+          - {value: distance-flown, de: Geflogen, en: Flown}
+          - {value: jumps, de: Sprünge, en: Jumps}
+          - {value: fish-caught, de: Gefangene Fische, en: Fish caught}
+          - {value: times-slept, de: Geschlafen, en: Times slept}
+      - key: player-web.personal-stats
+        type: choices
+        when: player-web.enabled
+        name: {de: Eigene Statistik auf der Startseite, en: Own statistics on the start page}
+        help: {de: In dieser Reihenfolge - die erste groß. Keine = keine Kachel., en: In this order - the first one big. None = no tile.}
+        options: *stats
+      - key: player-web.news.enabled
+        type: bool
+        when: player-web.enabled
+        name: {de: Karussell auf der Startseite, en: Slideshow on the start page}
+      - key: player-web.news.seconds
+        type: int
+        when: player-web.news.enabled
+        min: 0
+        max: 120
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Pro Folie, en: Per slide}
+        help: {de: 0 = nur von Hand., en: 0 = only by hand.}
+      - key: player-web.news.slides
+        type: int
+        when: player-web.news.enabled
+        min: 1
+        max: 20
+        name: {de: Neueste Beiträge im Karussell, en: Newest posts in the slideshow}
+      - key: player-web.news.show-maintenance
+        type: bool
+        when: player-web.news.enabled
+        name: {de: Geplante Wartung zeigen, en: Show planned maintenance}
+      - key: player-web.news.show-restart
+        type: bool
+        when: player-web.news.enabled
+        name: {de: Geplanten Neustart zeigen, en: Show a planned restart}
+      - key: player-web.news.show-plugin-notices
+        type: bool
+        when: player-web.news.enabled
+        name: {de: Hinweise der Plugins zeigen, en: Show notices of the plugins}
+        help: {de: "Z.B. MRchunks: Loader gesperrt oder über dem Budget.", en: "E.g. MRchunks: loader locked or over the budget."}
+      - key: player-web.news.show-tickets
+        type: bool
+        when: player-web.news.enabled
+        name: {de: Ticket-Antworten zeigen, en: Show ticket answers}
+      - key: player-web.news.chat-preview.enabled
+        type: bool
+        when: player-web.enabled
+        name: {de: Neuigkeiten als Vorschau im Chat, en: News as a preview in the chat}
+        help: {de: Einmal pro Spieler mit Link zum ganzen Beitrag., en: Once per player with a link to the whole post.}
+      - key: player-web.news.chat-preview.max
+        type: int
+        when: player-web.news.chat-preview.enabled
+        min: 1
+        max: 20
+        name: {de: Höchstens auf einmal, en: At most at once}
+      - key: player-web.news.chat-preview.max-age-days
+        type: int
+        when: player-web.news.chat-preview.enabled
+        min: 1
+        max: 365
+        unit: {de: Tage, en: days}
+        name: {de: Nicht älter als, en: Not older than}
+      - key: player-web.news.alerts.chat
+        type: bool
+        when: player-web.enabled
+        name: {de: Kritische Warnungen im Chat, en: Critical warnings in the chat}
+      - key: player-web.news.alerts.title
+        type: bool
+        when: player-web.enabled
+        name: {de: Kritische Warnungen als Titel, en: Critical warnings as a title}
+
+  - id: mail
+    name: {de: Mail-Versand, en: Sending mail}
+    help: {de: "Für Antworten auf Entbannungsanträge und Kontaktanfragen. Test: /mradmin mail test <Adresse>.", en: "For replies to unban requests and contact requests. Test: /mradmin mail test <address>."}
+    fields:
+      - key: mail.enabled
+        type: bool
+        name: {de: Mails senden, en: Send mail}
+      - key: mail.host
+        type: string
+        when: mail.enabled
+        max-length: 200
+        name: {de: SMTP-Server, en: SMTP server}
+      - key: mail.security
+        type: choice
+        when: mail.enabled
+        name: {de: Verschlüsselung, en: Encryption}
+        options:
+          - {value: starttls, de: STARTTLS (587), en: STARTTLS (587)}
+          - {value: ssl, de: SSL (465), en: SSL (465)}
+          - {value: none, de: Keine, en: None}
+      - key: mail.port
+        type: int
+        when: mail.enabled
+        min: 1
+        max: 65535
+        name: {de: Port, en: Port}
+      - key: mail.username
+        type: string
+        when: mail.enabled
+        max-length: 200
+        name: {de: Benutzer, en: User}
+      - key: mail.password
+        type: secret
+        when: mail.enabled
+        max-length: 300
+        name: {de: Passwort, en: Password}
+        help: {de: "Viele Anbieter brauchen ein eigenes App-Passwort.", en: "Many providers need a separate app password."}
+      - key: mail.from
+        type: string
+        when: mail.enabled
+        max-length: 200
+        name: {de: Absender, en: Sender}
+      - key: mail.from-name
+        type: string
+        when: mail.enabled
+        max-length: 100
+        name: {de: Absendername, en: Sender name}
+      - key: mail.reply-to
+        type: string
+        when: mail.enabled
+        max-length: 200
+        name: {de: Antwort an, en: Reply to}
+        help: {de: "Leer = an den Absender. Was dort ankommt, landet nicht im Ticket.", en: "Empty = to the sender. What arrives there does not end up in the ticket."}
+
+  - id: map
+    name: {de: Karte, en: Map}
+    help: {de: "Die Karte der Spielerseite. squaremap rendert nur die Bilder - MRadmin installiert, aktualisiert und richtet es selbst ein.", en: "The map of the player page. squaremap only renders the pictures - MRadmin installs, updates and sets it up by itself."}
+    fields:
+      - key: map.enabled
+        type: bool
+        name: {de: Karte an, en: Map on}
+      - key: map.auto-configure
+        type: bool
+        when: map.enabled
+        name: {de: squaremap selbst einrichten, en: Set up squaremap by itself}
+        help: {de: "Bei jedem Start. Von Hand geänderte Werte bleiben.", en: "On every start. Values changed by hand stay."}
+      - key: map.hide-module-worlds
+        type: bool
+        when: map.enabled
+        name: {de: Welten der Plugins ausblenden, en: Hide the worlds of plugins}
+        help: {de: "Z.B. die Arena-Welt von MRpvp.", en: "E.g. MRpvp's arena world."}
+      - key: map.squaremap.auto-install
+        type: bool
+        when: map.enabled
+        name: {de: squaremap selbst installieren, en: Install squaremap by itself}
+      - key: map.squaremap.auto-update
+        type: bool
+        when: map.enabled
+        name: {de: squaremap selbst aktualisieren, en: Update squaremap by itself}
+      - key: map.squaremap.full-render
+        type: bool
+        when: map.enabled
+        name: {de: Nach Installation alles neu zeichnen, en: Redraw everything after installing}
+      - key: map.squaremap.check-hours
+        type: int
+        when: map.enabled
+        min: 1
+        max: 168
+        unit: {de: Stunden, en: hours}
+        name: {de: Nach squaremap-Updates sehen alle, en: Look for squaremap updates every}
+      - key: map.nether-roof.enabled
+        type: bool
+        when: map.enabled
+        name: {de: Netherdecke als eigene Karte, en: Nether ceiling as its own map}
+      - key: map.nether-roof.from-y
+        type: int
+        when: map.nether-roof.enabled
+        min: 100
+        max: 320
+        name: {de: Auf der Decke ab Höhe, en: On the ceiling from height}
+      - key: map.nether-roof.full-render
+        type: bool
+        when: map.nether-roof.enabled
+        name: {de: Decke einmal komplett zeichnen, en: Draw the ceiling once completely}
+      - key: map.nether-roof.chunks-per-second
+        type: int
+        when: map.nether-roof.enabled
+        min: 1
+        max: 1000
+        unit: {de: Chunks/s, en: chunks/s}
+        name: {de: Tempo beim Zeichnen, en: Drawing speed}
+        help: {de: Kleiner wenn der Server dabei langsamer wird., en: Lower it if the server gets slower meanwhile.}
+      - key: map.player-page.open-at-player
+        type: bool
+        when: map.enabled
+        name: {de: Beim Spieler öffnen, en: Open at the player}
+      - key: map.player-page.follow
+        type: bool
+        when: map.enabled
+        name: {de: "Knopf „Mir folgen“", en: "Button \"Follow me\""}
+      - key: map.player-page.chunk-grid
+        type: bool
+        when: map.enabled
+        name: {de: Ebene Chunkraster, en: Layer chunk grid}
+      - key: map.player-page.players.self
+        type: bool
+        when: map.enabled
+        name: {de: Sich selbst sehen, en: See oneself}
+      - key: map.player-page.players.others
+        type: bool
+        when: map.enabled
+        name: {de: Andere Spieler sehen, en: See other players}
+        help: {de: "Braucht auch mradmin.map.players. Aus z.B. für Manhunt.", en: "Also needs mradmin.map.players. Off e.g. for a manhunt."}
+      - key: map.player-page.players.update-seconds
+        type: int
+        when: map.enabled
+        min: 1
+        max: 60
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Positionen aktualisieren alle, en: Update positions every}
+      - key: map.player-page.players.hide-admin-mode
+        type: bool
+        when: map.player-page.players.others
+        name: {de: Admin-Modus verbergen, en: Hide admin mode}
+      - key: map.player-page.players.hide-spectators
+        type: bool
+        when: map.player-page.players.others
+        name: {de: Zuschauer verbergen, en: Hide spectators}
+      - key: map.player-page.players.hide-invisible
+        type: bool
+        when: map.player-page.players.others
+        name: {de: Unsichtbare verbergen, en: Hide invisible players}
+      - key: map.player-page.players.hidden-worlds
+        type: strings
+        when: map.player-page.players.others
+        name: {de: Welten ohne andere Spieler, en: Worlds without other players}
+        help: {de: "Schlüssel wie minecraft:the_nether.", en: "Keys like minecraft:the_nether."}
+      - key: map.player-page.players.allow-hide
+        type: bool
+        when: map.player-page.players.others
+        name: {de: Spieler dürfen sich ausblenden, en: Players may hide themselves}
+        help: {de: Wer sich ausblendet sieht auch keine anderen., en: Whoever hides sees no one else either.}
+
+  - id: discord
+    name: {de: Discord-Log (Team), en: Discord log (team)}
+    help: {de: "Ereignisse in einen Team-Kanal. Webhook: Kanal bearbeiten → Integrationen → Webhooks → Neuer Webhook → URL kopieren.", en: "Events to a team channel. Webhook: Edit channel → Integrations → Webhooks → New webhook → copy URL."}
+    fields:
+      - key: discord.enabled
+        type: bool
+        name: {de: Discord-Log senden, en: Send Discord log}
+      - key: discord.webhook-url
+        type: secret
+        when: discord.enabled
+        max-length: 300
+        name: {de: Webhook-URL, en: Webhook URL}
+      - key: discord.username
+        type: string
+        when: discord.enabled
+        max-length: 80
+        name: {de: Name im Kanal, en: Name in the channel}
+      - key: discord.avatar-url
+        type: string
+        when: discord.enabled
+        max-length: 300
+        name: {de: Bild-URL, en: Avatar URL}
+      - key: discord.use-embeds
+        type: bool
+        when: discord.enabled
+        name: {de: Farbige Karten, en: Coloured embeds}
+      - key: discord.footer
+        type: string
+        when: discord.enabled
+        max-length: 120
+        name: {de: Fußzeile, en: Footer}
+      - key: discord.events
+        type: table
+        when: discord.enabled
+        name: {de: Ereignisse, en: Events}
+        columns:
+          - {key: enabled, type: bool, name: {de: Senden, en: Send}}
+          - {key: color, type: color, name: {de: Farbe, en: Colour}}
+        rows:
+          maintenance-scheduled: {de: Wartung geplant, en: Maintenance scheduled}
+          maintenance-changed: {de: Wartung geändert, en: Maintenance changed}
+          maintenance-cancelled: {de: Wartung abgesagt, en: Maintenance cancelled}
+          maintenance-start: {de: Wartung beginnt, en: Maintenance starts}
+          maintenance-end: {de: Wartung endet, en: Maintenance ends}
+          kuma-connected: {de: Kuma verbunden, en: Kuma connected}
+          kuma-disconnected: {de: Kuma getrennt, en: Kuma disconnected}
+          announce: {de: Ankündigung, en: Announcement}
+          admin-mode-on: {de: Admin-Modus an, en: Admin mode on}
+          admin-mode-off: {de: Admin-Modus aus, en: Admin mode off}
+          plugin-alert: {de: Meldung eines Plugins, en: Alert of a plugin}
+          admin-reload: {de: Neu geladen, en: Reloaded}
+          ticket: {de: Neues Ticket, en: New ticket}
+          ticket-message: {de: Ticket-Nachricht, en: Ticket message}
+          ticket-closed: {de: Ticket geschlossen, en: Ticket closed}
+          ticket-reopened: {de: Ticket wieder geöffnet, en: Ticket reopened}
+          player-freeze: {de: Spieler eingefroren, en: Player frozen}
+          player-unfreeze: {de: Spieler aufgetaut, en: Player unfrozen}
+          player-kick: {de: Spieler gekickt, en: Player kicked}
+          player-freeze-quit: {de: Eingefroren verlassen, en: Left while frozen}
+          staff-chat: {de: Staff-Chat, en: Staff chat}
+          web-login: {de: Web-Anmeldung, en: Web sign-in}
+          web-setup: {de: Web-Konto eingerichtet, en: Web account set up}
+          web-console: {de: Befehl in der Web-Konsole, en: Command in the web console}
+          health-alert: {de: Server laggt, en: Server lags}
+          health-recovered: {de: Server erholt, en: Server recovered}
+          plugin-update-downloaded: {de: Update heruntergeladen, en: Update downloaded}
+          server-restart: {de: Neustart geplant, en: Restart planned}
+          server-restart-cancelled: {de: Neustart abgebrochen, en: Restart cancelled}
+
+  - id: discord-announce
+    name: {de: Discord-Ankündigungen (Community), en: Discord announcements (community)}
+    help: {de: "Eigener Webhook für den öffentlichen Kanal - sparsam: eine Nachricht pro Wartung, die bearbeitet wird.", en: "Own webhook for the public channel - sparing: one message per maintenance that is edited."}
+    fields:
+      - key: discord-announce.enabled
+        type: bool
+        name: {de: Ankündigungen senden, en: Send announcements}
+      - key: discord-announce.webhook-url
+        type: secret
+        when: discord-announce.enabled
+        max-length: 300
+        name: {de: Webhook-URL, en: Webhook URL}
+      - key: discord-announce.username
+        type: string
+        when: discord-announce.enabled
+        max-length: 80
+        name: {de: Name im Kanal, en: Name in the channel}
+      - key: discord-announce.avatar-url
+        type: string
+        when: discord-announce.enabled
+        max-length: 300
+        name: {de: Bild-URL, en: Avatar URL}
+      - key: discord-announce.footer
+        type: string
+        when: discord-announce.enabled
+        max-length: 120
+        name: {de: Fußzeile, en: Footer}
+      - key: discord-announce.ping-role-id
+        type: string
+        when: discord-announce.enabled
+        max-length: 32
+        name: {de: Rolle zum Erwähnen (ID), en: Role to mention (ID)}
+        help: {de: "Entwicklermodus an, Rechtsklick auf die Rolle → ID kopieren. Leer = niemand.", en: "Developer mode on, right-click the role → copy ID. Empty = nobody."}
+      - key: discord-announce.maintenance.enabled
+        type: bool
+        when: discord-announce.enabled
+        name: {de: Wartungen posten, en: Post maintenance}
+      - key: discord-announce.maintenance.announce-ahead
+        type: duration
+        when: discord-announce.maintenance.enabled
+        name: {de: Frühestens vorher, en: At the earliest before}
+      - key: discord-announce.maintenance.min-length
+        type: duration
+        when: discord-announce.maintenance.enabled
+        name: {de: Kürzere nicht posten, en: Do not post shorter ones}
+        help: {de: 0 = alle posten., en: 0 = post all.}
+      - key: discord-announce.maintenance.ping
+        type: bool
+        when: discord-announce.maintenance.enabled
+        name: {de: Bei Wartungen erwähnen, en: Mention on maintenance}
+      - key: discord-announce.maintenance.debounce-seconds
+        type: int
+        when: discord-announce.maintenance.enabled
+        min: 0
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Änderungen zusammenfassen, en: Combine changes}
+      - key: discord-announce.announcements.enabled
+        type: bool
+        when: discord-announce.enabled
+        name: {de: Ankündigungen posten, en: Post announcements}
+      - key: discord-announce.announcements.cooldown
+        type: duration
+        when: discord-announce.announcements.enabled
+        name: {de: Gleiche Vorlage höchstens alle, en: Same preset at most every}
+      - key: discord-announce.announcements.ping
+        type: bool
+        when: discord-announce.announcements.enabled
+        name: {de: Bei Ankündigungen erwähnen, en: Mention on announcements}
+      - key: discord-announce.news.ping
+        type: bool
+        when: discord-announce.enabled
+        name: {de: Bei Neuigkeiten erwähnen, en: Mention on news}
+      - key: discord-announce.alerts.ping
+        type: bool
+        when: discord-announce.enabled
+        name: {de: Bei kritischen Warnungen erwähnen, en: Mention on critical warnings}
+      - key: discord-announce.kuma.enabled
+        type: bool
+        when: discord-announce.enabled
+        name: {de: Vorfälle aus Kuma posten, en: Post incidents from Kuma}
+      - key: discord-announce.kuma.ping
+        type: bool
+        when: discord-announce.kuma.enabled
+        name: {de: Bei roten Vorfällen erwähnen, en: Mention on red incidents}
+      - key: discord-announce.colors.scheduled
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: geplant", en: "Colour: scheduled"}
+      - key: discord-announce.colors.started
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: läuft", en: "Colour: started"}
+      - key: discord-announce.colors.ended
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: beendet", en: "Colour: ended"}
+      - key: discord-announce.colors.cancelled
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: abgesagt", en: "Colour: cancelled"}
+      - key: discord-announce.colors.announce
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: Ankündigung", en: "Colour: announcement"}
+      - key: discord-announce.colors.news
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: Neuigkeit", en: "Colour: news"}
+      - key: discord-announce.colors.changelog
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: Changelog", en: "Colour: changelog"}
+      - key: discord-announce.colors.alert
+        type: color
+        when: discord-announce.enabled
+        name: {de: "Farbe: Warnung", en: "Colour: warning"}
+
+  - id: updates
+    name: {de: Updates von MRadmin, en: Updates of MRadmin}
+    help: {de: Hinweis auf neue Versionen in der Konsole und beim Betreten., en: Notice about new versions in the console and on joining.}
+    fields:
+      - key: updates.enabled
+        type: bool
+        name: {de: Nach Updates suchen, en: Look for updates}
+      - key: updates.source
+        type: choice
+        when: updates.enabled
+        name: {de: Quelle, en: Source}
+        options:
+          - {value: github, de: GitHub, en: GitHub}
+          - {value: modrinth, de: Modrinth, en: Modrinth}
+      - key: updates.include-prereleases
+        type: bool
+        when: updates.enabled
+        name: {de: Auch Vorabversionen, en: Pre-releases too}
+      - key: updates.interval-hours
+        type: int
+        when: updates.enabled
+        min: 1
+        max: 168
+        unit: {de: Stunden, en: hours}
+        name: {de: Prüfen alle, en: Check every}
+      - key: updates.notify-on-join
+        type: bool
+        when: updates.enabled
+        name: {de: Team beim Betreten informieren, en: Tell the team on join}
+        help: {de: Spieler mit mradmin.admin.update bekommen einen Hinweis., en: Players with mradmin.admin.update get a notice.}
+
+  - id: gui
+    name: {de: Menüs, en: Menus}
+    help: {de: Die Menüs im Spiel., en: The menus in game.}
+    fields:
+      - key: gui.refresh-ticks
+        type: int
+        min: 5
+        max: 200
+        unit: {de: Ticks, en: ticks}
+        name: {de: Aktualisieren alle, en: Refresh every}
+        help: {de: 20 Ticks = 1 Sekunde., en: 20 ticks = 1 second.}
+      - key: gui.sounds
+        type: bool
+        name: {de: Klickgeräusche, en: Click sounds}

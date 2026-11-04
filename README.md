@@ -209,7 +209,7 @@ Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler 
 ### Plugins & Updates
 In der Weboberfläche unter **Plugins** (Seite „Plugin-Konfiguration“) siehst du **alle MRtechnology-Plugins**: oben die auf deinem Server mit installierter und neuester Version und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
 - **Installieren:** Nicht installierte Plugins installierst du mit einem Klick. MRadmin lädt das offizielle Release für deine Minecraft-Version (nur mit passender Prüfsumme) nach `plugins/` - **geladen wird es beim nächsten Neustart**. Gibt es bisher nur Vorabversionen (z.B. MRpvp 0.x), wird die neueste davon angeboten.
-- **Einstellen im Browser:** Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration**: alle Einstellungen der `config.yml` als Formular mit Erklärungen (Deutsch/Englisch). Speichern prüft jeden Wert, schreibt die Datei (Kommentare bleiben, die alte Datei liegt als `config.backup-web.yml` daneben) und lädt das Plugin sofort neu - ohne Befehl, ohne Neustart. Von Hand bearbeiten geht weiterhin. Permission `mradmin.config` (in `mradmin.groups.admin`). Verfügbar für Plugins, die das schon können (derzeit MRsleep).
+- **Einstellen im Browser:** Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration**: alle Einstellungen der `config.yml` als Formular mit Erklärungen (Deutsch/Englisch). Speichern prüft jeden Wert, schreibt die Datei (Kommentare bleiben, die alte Datei liegt als `config.backup-web.yml` daneben) und lädt das Plugin sofort neu - ohne Befehl, ohne Neustart. Von Hand bearbeiten geht weiterhin. Permission `mradmin.config` (in `mradmin.groups.admin`). Verfügbar für MRadmin und alle MRtechnology-Plugins in aktueller Version.
 - **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Plugins bzw. `/<plugin> version`.
 - **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
 - **Server neu starten:** Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein heruntergeladenes Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
@@ -337,27 +337,28 @@ Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren
 > Einzelnen Leuten gibst du zusätzlich einzelne Rechte, z.B. `/lp user <name> permission set mradmin.announce true`. Aus einer Gruppe nimmst du eins heraus mit z.B. `/lp group staff permission set mradmin.player.kick false`.
 
 ## Konfiguration
-Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst du mit `/mradmin reload`.
+Am einfachsten im Browser: Weboberfläche → **Plugins → MRadmin → Konfiguration** - jede Einstellung mit Erklärung, Speichern lädt MRadmin sofort neu (Permission `mradmin.config`). Alles steht außerdem kommentiert in `plugins/MRadmin/config.yml`, im selben Aufbau wie bei allen MRtechnology-Plugins; Änderungen von Hand übernimmst du mit `/mradmin reload`. Nur in der Datei: eigene Dashboard-Knöpfe (`admin-mode.menu.buttons`), `web.roles` / `web.players` und neue Ticket-Kategorien.
 
 | Abschnitt | Wofür |
 |---|---|
-| `language` · `fallback-language` · `server-language` · `timezone` | Sprachen (pro Spieler automatisch) und Zeitzone aller angezeigten Zeiten (leer = die des Servers) |
-| `features` · `integrations` | Funktionen und Plugin-Verbindungen an/aus |
+| `general` | `language`, `fallback-language`, `server-language` (Sprachen, pro Spieler automatisch) und `timezone` (Zeitzone aller angezeigten Zeiten, leer = die des Servers) |
+| `features` · `integrations` · `libertybans` | Funktionen und Plugin-Verbindungen an/aus, Strafen-Schnellauswahl |
 | `maintenance` · `uptime-kuma` | Ablauf der Wartung, Anbindung an Uptime Kuma |
-| `announce` · `discord-announce` | Ankündigungen im Spiel und im Community-Discord |
-| `admin-mode` · `gui` | Admin-Modus, Menü-Item, eigene Dashboard-Knöpfe |
+| `announce` | Ankündigungen im Spiel |
+| `admin-mode` | Admin-Modus, Menü-Item, eigene Dashboard-Knöpfe |
 | `tickets` | Kategorien, Cooldowns, Limits, wie lange geschlossene Tickets bleiben |
-| `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
+| `health` | Verlauf und TPS-Alarm |
+| `versions` | Seite Plugins: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
-| `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
 | `map` | Karte der Spielerseite: squaremap automatisch installieren, aktualisieren und einrichten, Welten von Plugins ausblenden; `nether-roof`: eigene Karte der Netherdecke; `player-page`: Spieler auf der Karte, Chunkraster, Öffnen am Standort, „Mir folgen“ |
-| `versions` | Seite Plugins: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
+| `discord` · `discord-announce` | Admin-Log per Webhook (welche Ereignisse), Ankündigungen im Community-Discord |
+| `updates` · `gui` | Update-Hinweise, Menüs |
 
 **Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
-- **Jeder Spieler bekommt seine Sprache:** Mit `language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
-- **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
+- **Jeder Spieler bekommt seine Sprache:** Mit `general.language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
+- **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `general.server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
 - Die Konsole ist immer Englisch.
 - Ankündigungen, Wartungs-Countdown, Bossbars und Titel sieht jeder Spieler in seiner Sprache. Die Weboberfläche richtet sich nach der Sprache des Browsers - oder nach der Sprache, die man dort umgeschaltet hat.
 

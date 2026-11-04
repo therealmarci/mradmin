@@ -37,8 +37,11 @@ public final class ConfigForm {
     public record Option(String value, Text name) {
     }
 
-    /** A column of a table: one value per row, e.g. "enabled" (bool) and "color" (color) of a Discord event. */
-    public record Column(String key, Type type, Text name, Double min, Double max) {
+    /**
+     * A column of a table: one value per row, e.g. "enabled" (bool) and "color" (color) of a Discord event.
+     * {@code fallback}: the value while a row does not have the key (e.g. "enabled: true" of ticket categories).
+     */
+    public record Column(String key, Type type, Text name, Double min, Double max, Object fallback) {
     }
 
     /**
@@ -150,7 +153,7 @@ public final class ConfigForm {
                         throw new InvalidConfigurationException("field " + key + ": column type " + ct + " is not allowed");
                     }
                     columns.add(new Column(string(c.get("key")), ct, text(c.get("name"), string(c.get("key"))),
-                            number(c.get("min")), number(c.get("max"))));
+                            number(c.get("min")), number(c.get("max")), c.get("default")));
                 }
             }
         }
@@ -283,7 +286,7 @@ public final class ConfigForm {
                     Map<String, Object> cells = new LinkedHashMap<>();
                     for (Column col : f.columns()) {
                         String path = f.key() + "." + row + "." + col.key();
-                        Object v = c.isSet(path) ? c.get(path) : defaults.get(path);
+                        Object v = c.isSet(path) ? c.get(path) : defaults.isSet(path) ? defaults.get(path) : col.fallback();
                         cells.put(col.key(), switch (col.type()) {
                             case BOOL -> v instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(v));
                             case INT -> v instanceof Number n ? (Object) n.longValue() : parseLong(v);

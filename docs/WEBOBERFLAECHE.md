@@ -275,7 +275,7 @@ Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` 
   prüft alle Werte (bei einem Fehler wird nichts gespeichert und das Feld rot markiert), schreibt die Datei und lässt
   das Plugin neu laden; ein Fehler beim Neuladen erscheint als roter Hinweis. Hat jemand die Datei inzwischen von Hand
   geändert, kommt „Neu laden“ statt Speichern. Geheimnisse (Webhook-URLs, Passwörter) zeigt die Seite nie, nur ob sie
-  gesetzt sind. Welche Plugins das können, steht in `docs/MODULE-API.md` (`webConfig`, ab API 12) - derzeit MRsleep.
+  gesetzt sind. Welche Plugins das können, steht in `docs/MODULE-API.md` (`webConfig`, ab API 12) - MRadmin selbst und alle MRtechnology-Plugins.
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur

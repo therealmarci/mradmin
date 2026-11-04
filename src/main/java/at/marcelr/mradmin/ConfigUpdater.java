@@ -51,7 +51,7 @@ public final class ConfigUpdater {
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
      */
-    public static final int CURRENT_VERSION = 42;
+    public static final int CURRENT_VERSION = 43;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -66,7 +66,17 @@ public final class ConfigUpdater {
             Map.entry("discord.events.report-closed.enabled", "discord.events.ticket-closed.enabled"),
             Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"),
             // v23: automatic tickets of all plugins, not only MRchunks' lag locks
-            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"));
+            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"),
+            // v43: same layout as all MRtechnology plugins (general, features, discord, updates, gui)
+            Map.entry("language", "general.language"),
+            Map.entry("fallback-language", "general.fallback-language"),
+            Map.entry("server-language", "general.server-language"),
+            Map.entry("timezone", "general.timezone"),
+            Map.entry("update-checker.enabled", "updates.enabled"),
+            Map.entry("update-checker.source", "updates.source"),
+            Map.entry("update-checker.include-prereleases", "updates.include-prereleases"),
+            Map.entry("update-checker.interval-hours", "updates.interval-hours"),
+            Map.entry("update-checker.notify-on-join", "updates.notify-on-join"));
 
     /**
      * Sections whose entries are made by the server owner (own menu buttons, ticket categories): their entries are
@@ -148,9 +158,9 @@ public final class ConfigUpdater {
             if (version < 19) {
                 String old = existing.getString("language", "auto").trim();
                 if (!old.isEmpty() && !old.equalsIgnoreCase("auto")) {
-                    template.set("server-language", old);
+                    template.set("general.server-language", old);
                 }
-                template.set("language", "auto");
+                template.set("general.language", "auto");
             }
             // v29: the player page asks for a new code from /web after at most 14 days - the old default of 90 goes.
             if (version < 29 && existing.getInt("player-web.session-days", 90) == 90) {

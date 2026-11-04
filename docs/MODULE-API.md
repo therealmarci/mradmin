@@ -318,7 +318,7 @@ sections:
 | `ints` | Liste ganzer Zahlen als Chips | `min`, `max`, `count`, `unit` |
 | `choices` | Mehrfachauswahl aus festen Werten (Chips zum Anklicken) | `options` wie bei `choice` |
 | `worlds` | Welten des Servers zum Anklicken | |
-| `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name}`, `rows`: Name je Zeile |
+| `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name, default}` (`default` = Wert, solange eine Zeile den Schlüssel nicht hat), `rows`: Name je Zeile |
 
 - **Texte mit Komma** in der Kurzschreibweise `{de: …, en: …}` immer in Anführungszeichen setzen, sonst schneidet YAML den Text am Komma ab.
 - Jeder Wert der `config.yml` (außer `config-version`) braucht ein Feld - ein Test im Plugin prüft das (Muster: `WebConfigFormTest` in MRsleep).

@@ -47,7 +47,7 @@ public final class SiteRoutes {
     /** Creates impressum.md and datenschutz.md from the templates (in the server's language) if they are missing. */
     private void templates() {
         File folder = new File(plugin.getDataFolder(), "web");
-        String lang = plugin.getConfig().getString("language", "de").toLowerCase(Locale.ROOT).startsWith("de") ? "de" : "en";
+        String lang = plugin.getConfig().getString("general.server-language", "en").toLowerCase(Locale.ROOT).startsWith("de") ? "de" : "en";
         for (String file : PAGES.values()) {
             File target = new File(folder, file);
             if (target.exists()) {
