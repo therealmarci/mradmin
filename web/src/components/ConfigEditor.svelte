@@ -119,10 +119,30 @@
     data ? data.sections.map((s) => ({ ...s, list: s.fields.filter((f) => shown(f) && matches(f)) })).filter((s) => s.list.length) : [],
   );
 
+  let jumping = 0;
   function jump(id) {
     active = id;
+    // While the page scrolls there, the marker stays on the chosen section.
+    jumping = Date.now() + 900;
     document.getElementById('cfg-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  /** The marker follows the scrolling: the last section whose top passed the bar, at the very bottom the last one. */
+  function spy() {
+    if (Date.now() < jumping || !visible.length) return;
+    let current = visible[0].id;
+    for (const s of visible) {
+      const el = document.getElementById('cfg-' + s.id);
+      if (el && el.getBoundingClientRect().top <= 130) current = s.id;
+    }
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = visible.at(-1).id;
+    active = current;
+  }
+
+  $effect(() => {
+    visible;
+    requestAnimationFrame(spy);
+  });
 
   // ------------------------------------------------------------------ durations
 
@@ -198,7 +218,7 @@
   }
 </script>
 
-<svelte:window onbeforeunload={(e) => { if (changes) e.preventDefault(); }} />
+<svelte:window onbeforeunload={(e) => { if (changes) e.preventDefault(); }} onscroll={spy} />
 
 {#snippet control(f)}
   {@const v = value(f)}
@@ -323,7 +343,15 @@
             {#if s.list.some((f) => f.key in draft)}<span class="dirty" title={t('config.changed')}></span>{/if}
           </button>
         {/each}
-        <p class="file muted mono" title={t('config.fileHint')}>{data.file}</p>
+        <div class="file" title={t('config.fileHint')}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" /></svg>
+          <div>
+            <span class="file-label">{t('config.fileLabel')}</span>
+            <code>{#each data.file.split('/') as part, i}{i ? '/' : ''}<wbr />{part}{/each}</code>
+            <span class="file-hint">{t('config.fileShort')}</span>
+          </div>
+        </div>
       </nav>
 
       <div class="content">
@@ -392,9 +420,9 @@
     gap: 2px;
   }
 
-  .search {
+  .sections .search {
     width: 100%;
-    margin: 0 0 8px;
+    margin: 0 0 16px;
     padding: 8px 10px;
     border-radius: 10px;
     border: 1px solid var(--border);
@@ -438,10 +466,44 @@
   }
 
   .file {
-    margin: 10px 0 0;
-    padding: 0 10px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    color: var(--accent);
+  }
+
+  .file svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .file div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .file-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .file code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+
+  .file-hint {
     font-size: 0.74rem;
-    overflow-wrap: anywhere;
+    color: var(--muted);
   }
 
   .content {
@@ -895,7 +957,7 @@
       gap: 4px;
     }
 
-    .search {
+    .sections .search {
       flex: 0 0 160px;
       margin: 0;
     }
