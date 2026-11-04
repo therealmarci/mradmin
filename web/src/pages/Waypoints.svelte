@@ -68,18 +68,25 @@
   );
 
   function newCategory() {
-    editing = { isNew: true, id: '', nameDe: '', nameEn: '', color: '#4FC3F7', icon: 'paper', playersCreate: true, maxPerPlayer: 3, visible: true, map: true };
+    editing = { isNew: true, id: '', nameDe: '', nameEn: '', color: '#4FC3F7', icon: 'paper', playersCreate: true, maxPerPlayer: 3, visible: true, map: true, worlds: [] };
   }
 
   function editCategory(c) {
     editing = {
       isNew: false, id: c.id, nameDe: c.names.de ?? '', nameEn: c.names.en ?? '', color: c.color, icon: c.icon,
-      playersCreate: c.playersCreate, maxPerPlayer: c.maxPerPlayer, visible: c.visible, map: c.map,
+      playersCreate: c.playersCreate, maxPerPlayer: c.maxPerPlayer, visible: c.visible, map: c.map, worlds: [...(c.worlds ?? [])],
     };
   }
 
+  // Worlds to pick for a category: the loaded ones plus any saved one that is not loaded right now.
+  const worldChoices = $derived([...new Set([...(overview?.worlds ?? []), ...(editing?.worlds ?? [])])]);
+
+  function toggleWorld(w) {
+    editing.worlds = editing.worlds.includes(w) ? editing.worlds.filter((x) => x !== w) : [...editing.worlds, w];
+  }
+
   async function saveCategory() {
-    const ok = await act({ action: 'categorySave', ...editing, maxPerPlayer: String(editing.maxPerPlayer) }, t('wp.done.saved'));
+    const ok = await act({ action: 'categorySave', ...editing, maxPerPlayer: String(editing.maxPerPlayer), worlds: editing.worlds.join(',') }, t('wp.done.saved'));
     if (ok) editing = null;
   }
 
@@ -153,6 +160,18 @@
             <small class="muted">{t('wp.f.maxHint')}</small>
           </label>
         </div>
+        <div class="worlds">
+          <span class="wlabel">{t('wp.f.worlds')}</span>
+          <div class="wchips">
+            <button class="wchip" class:on={editing.worlds.length === 0} aria-pressed={editing.worlds.length === 0}
+              onclick={() => (editing.worlds = [])}>{t('wp.f.worldsAll')}</button>
+            {#each worldChoices as w (w)}
+              <button class="wchip" class:on={editing.worlds.includes(w)} aria-pressed={editing.worlds.includes(w)}
+                onclick={() => toggleWorld(w)}>{w}</button>
+            {/each}
+          </div>
+          <small class="muted">{t('wp.f.worldsHint')}</small>
+        </div>
         <div class="toggles">
           <label class="toggle"><input type="checkbox" bind:checked={editing.playersCreate} /><span>{t('wp.f.playersCreate')}</span></label>
           <label class="toggle"><input type="checkbox" bind:checked={editing.visible} /><span>{t('wp.f.visible')}</span></label>
@@ -181,6 +200,7 @@
                 <span class="chip">{c.playersCreate ? t('wp.chip.players') : t('wp.chip.team')}</span>
                 {#if c.maxPerPlayer > 0}<span class="chip">{t('wp.chip.max', { n: c.maxPerPlayer })}</span>{/if}
                 {#if c.map}<span class="chip">{t('wp.chip.map')}</span>{/if}
+                {#if c.worlds?.length}<span class="chip">{t('wp.chip.worlds', { worlds: c.worlds.join(', ') })}</span>{/if}
                 {#if !c.visible}<span class="chip muted">{t('wp.chip.hidden')}</span>{/if}
               </div>
               <code class="small muted">mrwaypoints.create.{c.id}</code>
@@ -393,6 +413,38 @@
   .color input[type='color'] {
     width: 44px;
     padding: 2px;
+  }
+
+  .worlds {
+    display: grid;
+    gap: 6px;
+  }
+
+  .wlabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .wchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .wchip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .wchip.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
   }
 
   .toggles {
