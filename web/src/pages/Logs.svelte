@@ -1,13 +1,17 @@
 <script>
-  // Page Log: events of MRadmin and of every plugin (the same as in their Discord logs) plus the actions in the web
-  // interface, newest first, kept up to 14 days. Filters: source, text, time range. See LogRoutes.java.
-  // Live: MRadmin sends "log" on the event stream (lib/live.svelte.js), the page then loads only what is newer.
-  // Second tab "Server log" (with the web console's permission): components/ServerLog.svelte.
+  // Page Log as a log viewer: tabs Events | Server log, search, time range and Live/Pause on top; the filters on the
+  // left (components/LogLayout.svelte), one row per entry on the right (components/LogList.svelte).
+  // Events = what MRadmin and every plugin send to their Discord logs plus the actions in the web interface, kept up to
+  // 14 days (LogRoutes.java). Live: MRadmin sends "log" on the event stream (lib/live.svelte.js), the page then loads
+  // only what is newer; paused, new entries wait above the list. Server log: components/ServerLog.svelte.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
-  import { ICONS } from '../lib/icons.js';
+  import { ICONS, moduleHue } from '../lib/icons.js';
   import { live } from '../lib/live.svelte.js';
+  import LogLayout from '../components/LogLayout.svelte';
+  import LogFilter from '../components/LogFilter.svelte';
+  import LogList from '../components/LogList.svelte';
   import ServerLog from '../components/ServerLog.svelte';
 
   let { me } = $props();
@@ -18,27 +22,35 @@
   $effect(() => sessionStorage.setItem('mradmin.logs.tab', tab));
 
   let entries = $state([]);
-  let sources = $state({});
+  let queued = $state([]);
+  let names = $state({});
+  let counts = $state({});
   let more = $state(false);
   let error = $state('');
   let loading = $state(false);
-  let source = $state('');
+  let selected = $state([]);
   let query = $state('');
   let range = $state('24h');
+  let paused = $state(false);
 
   const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
   const since = $derived(Date.now() - RANGES[range]);
 
+  function params(extra = {}) {
+    const p = new URLSearchParams({ limit: '200', since: String(Date.now() - RANGES[range]), ...extra });
+    if (selected.length) p.set('sources', selected.join(','));
+    if (query.trim()) p.set('q', query.trim());
+    return p;
+  }
+
   async function load(older = false) {
     loading = true;
     try {
-      const p = new URLSearchParams({ limit: '200', since: String(Date.now() - RANGES[range]) });
-      if (source) p.set('source', source);
-      if (query.trim()) p.set('q', query.trim());
-      if (older && entries.length) p.set('before', String(entries[entries.length - 1].time));
-      const data = await api('GET', '/logs?' + p);
+      const data = await api('GET', '/logs?' + params(older && entries.length ? { before: String(entries.at(-1).time) } : {}));
       entries = older ? [...entries, ...data.entries] : data.entries;
-      sources = data.sources;
+      if (!older) queued = [];
+      names = data.sources;
+      if (data.counts) counts = data.counts;
       more = data.more;
       error = '';
     } catch (e) {
@@ -48,49 +60,64 @@
     }
   }
 
-  // Reload when a filter changes (the text after a short pause).
+  const key = (e) => e.time + '|' + e.source + '|' + e.event + '|' + e.text;
+
+  /** Only what is newer than the newest entry (shown or waiting), same filters. */
+  async function loadNew() {
+    const newest = queued[0] ?? entries[0];
+    if (loading || !newest) return load();
+    try {
+      const data = await api('GET', '/logs?' + params({ since: String(newest.time) }));
+      const seen = new Set([...queued, ...entries].filter((e) => e.time === newest.time).map(key));
+      const fresh = data.entries.filter((e) => !seen.has(key(e)));
+      if (fresh.length) {
+        if (paused) queued = [...fresh, ...queued];
+        else entries = [...fresh, ...entries];
+      }
+      names = data.sources;
+      if (data.counts) counts = data.counts;
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  function showQueued() {
+    entries = [...queued, ...entries];
+    queued = [];
+  }
+
+  // Again when a filter changes (the text after a short pause).
   let timer;
   $effect(() => {
-    source;
+    selected;
     range;
     const q = query;
     clearTimeout(timer);
     timer = setTimeout(() => load(), q ? 300 : 0);
   });
-  /** Only the entries after the newest one shown, put on top (same filters). */
-  async function loadNew() {
-    if (loading || !entries.length) return load();
-    try {
-      const newest = entries[0].time;
-      const p = new URLSearchParams({ limit: '200', since: String(newest) });
-      if (source) p.set('source', source);
-      if (query.trim()) p.set('q', query.trim());
-      const data = await api('GET', '/logs?' + p);
-      const seen = new Set(entries.filter((e) => e.time === newest).map(key));
-      const fresh = data.entries.filter((e) => !seen.has(key(e)));
-      if (fresh.length) entries = [...fresh, ...entries];
-      sources = data.sources;
-    } catch (e) {
-      error = errorText(e);
-    }
-  }
-  const key = (e) => e.time + '|' + e.source + '|' + e.event + '|' + e.text;
-
-  // A short pause collects bursts (e.g. many events in one second) into one request.
+  // A short pause collects bursts (many events in one second) into one request.
   let liveTimer;
   $effect(() => {
-    if (!live.log.tick) return;
+    if (!live.log.tick || server) return;
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => !document.hidden && loadNew(), 250);
   });
   // Without the event stream (connection lost): every 15 seconds.
   $effect(() => {
-    if (live.connected) return;
+    if (live.connected || server) return;
     const id = setInterval(() => !document.hidden && loadNew(), 15000);
     return () => clearInterval(id);
   });
+  $effect(() => {
+    if (!paused && queued.length) showQueued();
+  });
 
-  const label = (s) => (s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : sources[s] ?? s);
+  const label = (s) => (s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : names[s] ?? s);
+  const color = (s) => (s === 'web' ? '#3b82f6' : s === 'mradmin' ? 'var(--accent)' : `hsl(${moduleHue(s)} 62% 55%)`);
+
+  const filterItems = $derived(
+    Object.keys(names).map((s) => ({ key: s, label: label(s), color: color(s), count: counts[s] ?? 0 })),
+  );
 
   /** Discord markdown to safe HTML: escaping first, then **bold**, *italic*, `code`. */
   function render(text) {
@@ -101,97 +128,91 @@
       .replace(/`([^`]+)`/g, '<code>$1</code>');
   }
 
-  // Group by day for the separators.
-  const days = $derived.by(() => {
-    const out = [];
-    for (const e of entries) {
-      const day = new Date(e.time).toDateString();
-      if (!out.length || out[out.length - 1].day !== day) out.push({ day, time: e.time, items: [] });
-      out[out.length - 1].items.push(e);
-    }
-    return out;
-  });
-  const time = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const rows = $derived(
+    entries.map((e, i) => ({
+      key: key(e) + '|' + i,
+      time: e.time,
+      clock: clock(e.time),
+      badge: { label: label(e.source), color: color(e.source) },
+      accent: e.color,
+      text: render(e.text),
+      html: true,
+      tag: e.event,
+      details: [
+        { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
+        { label: t('logs.detail.source'), value: label(e.source) },
+        { label: t('logs.detail.event'), value: e.event || '-' },
+      ],
+    })),
+  );
 </script>
 
 <div class="page">
   <header class="head">
     <span class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         stroke-linejoin="round"><path d={ICONS.news} /></svg>
     </span>
-    <div>
+    <div class="title">
       <h1>{t('logs.title')}</h1>
-      <p class="muted">{t('logs.subtitle')}</p>
+      <p class="muted">{t(server ? 'logs.subtitle.server' : 'logs.subtitle')}</p>
     </div>
+    <button type="button" class="live" class:paused aria-pressed={paused} title={t(paused ? 'logs.resume' : 'logs.pause')}
+      onclick={() => (paused = !paused)}>
+      <span class="pulse" aria-hidden="true"></span>
+      {t(paused ? 'logs.paused' : 'logs.live')}
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+        {#if paused}<path d="M7 5v14l12-7z" />{:else}<path d="M7 5h3v14H7zM14 5h3v14h-3z" />{/if}
+      </svg>
+    </button>
   </header>
 
-  {#if me?.may?.console}
-    <span class="segments tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'events'} class:on={tab === 'events'} onclick={() => (tab = 'events')}>{t('logs.tab.events')}</button>
-      <button type="button" role="tab" aria-selected={tab === 'server'} class:on={tab === 'server'} onclick={() => (tab = 'server')}>{t('logs.tab.server')}</button>
-    </span>
-  {/if}
-
-  <div class="filters">
-    {#if !server}
-    <div class="chips" role="group" aria-label={t('logs.source')}>
-      <button type="button" class:on={source === ''} onclick={() => (source = '')}>{t('logs.all')}</button>
-      {#each Object.keys(sources) as s}
-        <button type="button" class:on={source === s} onclick={() => (source = s)}>{label(s)}</button>
-      {/each}
-    </div>
-    {/if}
-    <div class="row">
-      <input class="search" type="search" placeholder={t(server ? 'logs.search.server' : 'logs.search')} bind:value={query} />
-      <span class="segments" role="radiogroup" aria-label={t('logs.range')}>
-        {#each Object.keys(RANGES) as r}
-          <button type="button" role="radio" aria-checked={range === r} class:on={range === r} onclick={() => (range = r)}>{t('logs.range.' + r)}</button>
-        {/each}
+  <div class="toolbar">
+    {#if me?.may?.console}
+      <span class="segments" role="tablist">
+        <button type="button" role="tab" aria-selected={!server} class:on={!server} onclick={() => (tab = 'events')}>{t('logs.tab.events')}</button>
+        <button type="button" role="tab" aria-selected={server} class:on={server} onclick={() => (tab = 'server')}>{t('logs.tab.server')}</button>
       </span>
-    </div>
+    {/if}
+    <label class="search">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input type="search" placeholder={t(server ? 'logs.search.server' : 'logs.search')} aria-label={t('logs.search')} bind:value={query} />
+    </label>
+    <span class="segments" role="radiogroup" aria-label={t('logs.range')}>
+      {#each Object.keys(RANGES) as r}
+        <button type="button" role="radio" aria-checked={range === r} class:on={range === r} onclick={() => (range = r)}>{t('logs.range.' + r)}</button>
+      {/each}
+    </span>
   </div>
 
   {#if server}
-    <ServerLog {query} {since} />
+    <ServerLog {query} {since} {paused} />
   {:else}
-  {#if error}<div class="error">{error}</div>{/if}
-
-  {#if days.length}
-    {#each days as d (d.day)}
-      <section class="day">
-        <h2>{new Date(d.time).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-        <ul>
-          {#each d.items as e, i (e.time + e.source + e.event + i)}
-            <li style="--c:{e.color}">
-              <span class="time mono" title={dateTime(e.time)}>{time(e.time)}</span>
-              <span class="src">{label(e.source)}</span>
-              <span class="text">{@html render(e.text)}<span class="event mono">{e.event}</span></span>
-            </li>
-          {/each}
-        </ul>
-      </section>
-    {/each}
-    {#if more}
-      <button type="button" class="ghost more" disabled={loading} onclick={() => load(true)}>{t('logs.more')}</button>
-    {/if}
-  {:else if !loading}
-    <p class="muted">{t('logs.empty')}</p>
-  {/if}
+    {#if error}<div class="error">{error}</div>{/if}
+    <LogLayout active={selected.length}>
+      {#snippet filters()}
+        <LogFilter title={t('logs.sources')} items={filterItems} bind:selected />
+      {/snippet}
+      <LogList {rows} {more} {loading} empty={t('logs.empty')} pending={queued.length} onmore={() => load(true)} onshow={showQueued} />
+    </LogLayout>
   {/if}
 </div>
 
 <style>
   .page {
+    container-type: inline-size;
     display: grid;
-    gap: 16px;
+    gap: 14px;
   }
 
   .head {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     align-items: center;
-    padding: 22px 24px;
+    padding: 16px 20px;
     border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
     background:
@@ -203,71 +224,106 @@
   .icon {
     display: grid;
     place-items: center;
-    width: 56px;
-    height: 56px;
+    width: 46px;
+    height: 46px;
     flex-shrink: 0;
-    border-radius: 14px;
+    border-radius: 12px;
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
   }
 
+  .title {
+    flex: 1;
+    min-width: 0;
+  }
+
   h1 {
     margin: 0;
-    font-size: 1.45rem;
+    font-size: 1.3rem;
   }
 
   .head p {
     margin: 2px 0 0;
+    font-size: 0.88rem;
   }
 
-  .filters {
-    display: grid;
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, #22c55e 45%, var(--border));
+    background: color-mix(in srgb, #22c55e 12%, var(--surface));
+    color: #22c55e;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  .live.paused {
+    border-color: var(--border);
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  .paused .pulse {
+    animation: none;
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 14px 16px;
+    align-items: center;
+    padding: 10px 12px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface);
   }
 
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .chips button {
-    padding: 4px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--muted);
-    font-size: 0.86rem;
-    font-weight: 600;
-  }
-
-  .chips button.on {
-    color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-    background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
-  }
-
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
-
   .search {
+    display: flex;
     flex: 1;
     min-width: 200px;
+    align-items: center;
+    gap: 8px;
     margin: 0;
-    padding: 7px 10px;
+    padding: 0 10px;
     border-radius: 9px;
     border: 1px solid var(--border);
     background: var(--surface-2);
+    color: var(--muted);
+  }
+
+  .search input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 7px 0;
+    border: 0;
+    background: transparent;
     color: var(--text);
     font: inherit;
+    outline: none;
   }
 
   .segments {
@@ -295,88 +351,17 @@
     box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
   }
 
-  .tabs {
-    justify-self: start;
-  }
-
-  .day h2 {
-    margin: 4px 0 8px;
-    font-size: 0.9rem;
-    color: var(--muted);
-  }
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    overflow: hidden;
-  }
-
-  li {
-    display: grid;
-    grid-template-columns: 74px 110px minmax(0, 1fr);
-    gap: 12px;
-    align-items: baseline;
-    padding: 9px 14px;
-    border-left: 3px solid var(--c);
-    font-size: 0.9rem;
-  }
-
-  li + li {
-    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  }
-
-  .time {
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-
-  .src {
-    justify-self: start;
-    padding: 1px 8px;
-    border-radius: 999px;
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: var(--c);
-    background: color-mix(in srgb, var(--c) 14%, transparent);
-    white-space: nowrap;
-  }
-
-  .text {
-    overflow-wrap: anywhere;
-  }
-
-  .event {
-    margin-left: 8px;
-    color: var(--muted);
-    font-size: 0.72rem;
-  }
-
-  .mono {
-    font-family: ui-monospace, monospace;
-  }
-
-  .ghost {
-    padding: 6px 14px;
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-
-  .more {
-    justify-self: center;
-  }
-
-  @media (max-width: 640px) {
-    li {
-      grid-template-columns: auto 1fr;
+  @container (max-width: 640px) {
+    .head {
+      padding: 12px 14px;
     }
 
-    .text {
-      grid-column: 1 / -1;
+    .head p {
+      display: none;
+    }
+
+    .toolbar {
+      position: static;
     }
   }
 </style>

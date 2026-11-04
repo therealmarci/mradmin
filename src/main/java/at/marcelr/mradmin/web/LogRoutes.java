@@ -18,9 +18,10 @@ import java.util.Set;
  * The page Log: events of MRadmin and of the modules (EventLog) together with the web log (actions in the web
  * interface, from the storage) - newest first, mradmin.web.audit.
  * <pre>
- *  GET /api/logs?source=&q=&since=&before=&limit=   {entries: [{time, source, event, text, color}], sources}
+ *  GET /api/logs?sources=a,b&q=&since=&before=&limit=   {entries: [{time, source, event, text, color}], sources, counts}
  * </pre>
- * source "web" = the web log, "mradmin" = MRadmin itself, otherwise the id of a module. before = load older ones.
+ * sources (empty = all): "web" = the web log, "mradmin" = MRadmin itself, otherwise the id of a module. before = load
+ * older ones. counts = entries per source in the range that match the text (only on the first page).
  */
 public final class LogRoutes {
 
@@ -44,22 +45,35 @@ public final class LogRoutes {
             throw new Http.WebException(403, "no-permission");
         }
         Map<String, String> query = http.query();
-        String source = query.get("source");
+        Set<String> chosen = new LinkedHashSet<>();
+        for (String s : (query.getOrDefault("sources", query.getOrDefault("source", ""))).split(",")) {
+            if (!s.isBlank()) {
+                chosen.add(s.strip());
+            }
+        }
+        boolean all = chosen.isEmpty();
         String q = query.get("q");
         long since = number(query.get("since"));
         long before = number(query.get("before"));
         int limit = (int) Math.clamp(number(query.get("limit")) <= 0 ? 200 : number(query.get("limit")), 1, MAX_LIMIT);
         List<EventLog.Entry> entries = new ArrayList<>();
-        if (source == null || source.isEmpty() || !source.equals("web")) {
-            entries.addAll(plugin.eventLog().find(source, q, since, before, limit));
+        if (all || chosen.stream().anyMatch(c -> !c.equals("web"))) {
+            entries.addAll(plugin.eventLog().find(all ? null : chosen, q, since, before, limit));
         }
-        if (source == null || source.isEmpty() || source.equals("web")) {
-            String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-            for (Storage.AuditRow row : plugin.storage().recentAudit(2000)) {
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        int webCount = 0;
+        List<Storage.AuditRow> audit = plugin.storage().recentAudit(2000);
+        for (Storage.AuditRow row : audit) {
+            if (row.time() >= since && (needle.isEmpty() || webText(row).toLowerCase(Locale.ROOT).contains(needle))) {
+                webCount++;
+            }
+        }
+        if (all || chosen.contains("web")) {
+            for (Storage.AuditRow row : audit) {
                 if (row.time() < since || (before > 0 && row.time() >= before)) {
                     continue;
                 }
-                String text = row.name() + ": " + row.action() + (row.detail() == null || row.detail().isEmpty() ? "" : " - " + row.detail());
+                String text = webText(row);
                 if (!needle.isEmpty() && !text.toLowerCase(Locale.ROOT).contains(needle)) {
                     continue;
                 }
@@ -84,7 +98,20 @@ public final class LogRoutes {
         for (String s : sources) {
             names.put(s, s.equals("web") || s.equals("mradmin") ? s : plugin.modules().displayName(s));
         }
-        http.json(200, Map.of("entries", out, "sources", names, "more", entries.size() > limit));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("entries", out);
+        result.put("sources", names);
+        result.put("more", entries.size() > limit);
+        if (before <= 0) {
+            Map<String, Integer> counts = new LinkedHashMap<>(plugin.eventLog().counts(q, since));
+            counts.put("web", webCount);
+            result.put("counts", counts);
+        }
+        http.json(200, result);
+    }
+
+    private static String webText(Storage.AuditRow row) {
+        return row.name() + ": " + row.action() + (row.detail() == null || row.detail().isEmpty() ? "" : " - " + row.detail());
     }
 
     private static long number(String value) {

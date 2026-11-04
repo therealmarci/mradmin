@@ -23,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/console/unlock  {code}
  *  POST /api/console/lock
  *  GET  /api/console/log?after=n        lines after n (unlocked only)
- *  GET  /api/console/history?since=&before=&q=   older lines from Paper's log files (unlocked only, page Log)
+ *  GET  /api/console/history?since=&before=&q=&levels=   page Log: Paper's log files (view permission, no unlocking)
+ *  GET  /api/console/tail?after=n       page Log: live lines with level (view permission, no unlocking)
  *  POST /api/console/command {command}  (unlocked, mradmin.web.console.execute)
  * </pre>
  */
@@ -57,6 +58,7 @@ public final class ConsoleRoutes {
         server.route("POST", "/api/console/lock", r::lock);
         server.route("GET", "/api/console/log", r::lines);
         server.route("GET", "/api/console/history", r::history);
+        server.route("GET", "/api/console/tail", r::tail);
         server.route("POST", "/api/console/command", r::command);
         // The log reader runs while the web interface runs (and web.console.enabled is on).
         server.lifecycle(() -> {
@@ -163,24 +165,67 @@ public final class ConsoleRoutes {
     }
 
     /**
-     * The page Log, tab "Server log": lines of Paper's log files (today and up to 13 days before), newest first.
-     * {@code last} = number of the newest live line when reading started - the page follows from there with /log.
+     * The page Log, tab "Server log": lines of Paper's log files (today and up to 13 days before), newest first,
+     * filtered by text and level ({@code levels=info,warn,error}). Only mradmin.web.console.view - no unlocking, that
+     * is only for the console itself. The first page also counts the lines per level; {@code last} = number of the
+     * newest live line when reading started - the page follows from there with /tail.
      */
     private void history(Http http) throws Exception {
-        requireUnlocked(http);
+        require(http);
         Map<String, String> query = http.query();
         long last = log.last();
-        boolean links = plugin.getConfig().getBoolean("web.console.hide-links", true);
-        boolean ips = plugin.getConfig().getBoolean("web.console.hide-ips", true);
+        long before = number(query.get("before"));
         java.time.ZoneId zone = java.time.ZoneId.systemDefault();
         ServerLogFiles files = new ServerLogFiles(plugin.getServer().getWorldContainer().toPath().resolve("logs"), zone);
-        ServerLogFiles.Result result = files.find(java.time.LocalDate.now(zone), number(query.get("since")),
-                number(query.get("before")), query.get("q"), MAX_HISTORY, links, ips);
+        ServerLogFiles.Result result = files.find(java.time.LocalDate.now(zone), number(query.get("since")), before,
+                query.get("q"), levels(query.get("levels")), MAX_HISTORY, before == 0, hideLinks(), hideIps());
         List<Map<String, Object>> lines = new ArrayList<>();
         for (ServerLogFiles.Line line : result.lines()) {
-            lines.add(Map.of("key", line.key(), "time", line.time(), "text", line.text()));
+            lines.add(Map.of("key", line.key(), "time", line.time(), "level", line.level(), "text", line.text()));
         }
-        http.json(200, Map.of("lines", lines, "more", result.more(), "last", last));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("lines", lines);
+        out.put("more", result.more());
+        out.put("last", last);
+        if (result.counts() != null) {
+            out.put("counts", result.counts());
+        }
+        http.json(200, out);
+    }
+
+    /**
+     * The page Log: new console lines after {@code after} (like /log, but without unlocking), with their level - a
+     * line without one (stack trace) keeps the one before.
+     */
+    private void tail(Http http) throws Exception {
+        require(http);
+        long after = number(http.query().get("after"));
+        List<Map<String, Object>> lines = new ArrayList<>();
+        String level = "info";
+        for (ConsoleLog.Line line : log.after(after, MAX_LINES)) {
+            String own = ServerLogFiles.level(line.text());
+            level = own == null ? level : own;
+            lines.add(Map.of("seq", line.seq(), "level", level, "text", line.text()));
+        }
+        http.json(200, Map.of("lines", lines, "last", log.last()));
+    }
+
+    private static java.util.Set<String> levels(String raw) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (String l : (raw == null ? "" : raw).split(",")) {
+            if (ServerLogFiles.LEVELS.contains(l.strip())) {
+                out.add(l.strip());
+            }
+        }
+        return out;
+    }
+
+    private boolean hideLinks() {
+        return plugin.getConfig().getBoolean("web.console.hide-links", true);
+    }
+
+    private boolean hideIps() {
+        return plugin.getConfig().getBoolean("web.console.hide-ips", true);
     }
 
     private static long number(String value) {

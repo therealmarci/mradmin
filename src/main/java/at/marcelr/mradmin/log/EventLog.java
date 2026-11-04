@@ -139,11 +139,10 @@ public final class EventLog {
      *
      * @param before only older than this (0 = all), for loading more
      */
-    public List<Entry> find(String source, String query, long since, long before, int limit) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        Predicate<Entry> match = e -> (source == null || source.isEmpty() || source.equals(e.source()))
-                && e.time() >= since && (before <= 0 || e.time() < before)
-                && (q.isEmpty() || e.text().toLowerCase(Locale.ROOT).contains(q) || e.event().toLowerCase(Locale.ROOT).contains(q));
+    public List<Entry> find(java.util.Set<String> sources, String query, long since, long before, int limit) {
+        Predicate<Entry> text = matches(query);
+        Predicate<Entry> match = e -> (sources == null || sources.isEmpty() || sources.contains(e.source()))
+                && e.time() >= since && (before <= 0 || e.time() < before) && text.test(e);
         List<Entry> result = new ArrayList<>();
         synchronized (entries) {
             var it = entries.descendingIterator();
@@ -158,6 +157,25 @@ public final class EventLog {
     }
 
     /** The sources that have entries. */
+    /** Entries per source since {@code since} that match the text (for the filter list of the page). */
+    public java.util.Map<String, Integer> counts(String query, long since) {
+        Predicate<Entry> text = matches(query);
+        java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
+        synchronized (entries) {
+            for (Entry e : entries) {
+                if (e.time() >= since && text.test(e)) {
+                    counts.merge(e.source(), 1, Integer::sum);
+                }
+            }
+        }
+        return counts;
+    }
+
+    private static Predicate<Entry> matches(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        return e -> q.isEmpty() || e.text().toLowerCase(Locale.ROOT).contains(q) || e.event().toLowerCase(Locale.ROOT).contains(q);
+    }
+
     public List<String> sources() {
         synchronized (entries) {
             return entries.stream().map(Entry::source).distinct().sorted().toList();

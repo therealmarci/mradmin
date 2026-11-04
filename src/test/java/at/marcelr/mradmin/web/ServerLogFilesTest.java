@@ -40,7 +40,7 @@ class ServerLogFilesTest {
     }
 
     private ServerLogFiles.Result find(long since, long before, String q, int limit) throws IOException {
-        return new ServerLogFiles(dir, ZONE).find(TODAY, since, before, q, limit, true, true);
+        return new ServerLogFiles(dir, ZONE).find(TODAY, since, before, q, null, limit, false, true, true);
     }
 
     private static List<String> texts(ServerLogFiles.Result r) {
@@ -74,5 +74,17 @@ class ServerLogFilesTest {
         assertFalse(older.more());
         // the stack trace line keeps the time of the line before it
         assertEquals(page.lines().get(2).time(), page.lines().get(1).time());
+    }
+
+    @Test
+    void levelsFromBothFormatsAndCounts() throws IOException {
+        files();
+        ServerLogFiles.Result r = new ServerLogFiles(dir, ZONE).find(TODAY, 0, 0, "", java.util.Set.of("warn"), 100, true, true, true);
+        // the stack trace keeps the level of its line
+        assertEquals(List.of("	at some.Trace", "[09:00:00] [Server thread/WARN]: error"), texts(r));
+        assertEquals(java.util.Map.of("info", 4, "warn", 2, "error", 0), r.counts());
+        assertEquals("error", ServerLogFiles.level("[10:20:12 ERROR]: Could not pass event"));
+        assertEquals("warn", ServerLogFiles.level("[10:20:59 WARN]: Can't keep up!"));
+        assertEquals(null, ServerLogFiles.level("	at some.Trace"));
     }
 }

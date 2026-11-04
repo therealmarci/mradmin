@@ -1,67 +1,57 @@
 <script>
   // Page Log, tab "Server log": the lines of the server console - older ones from Paper's log files (up to 14 days,
-  // GET /console/history), new ones live (GET /console/log, once a second). Locked like the web console: unlocked
-  // there with a fresh code, for the same browser session. Links and IPs are hidden by the server. Newest first.
-  import { untrack } from 'svelte';
+  // GET /console/history), new ones live (GET /console/tail, once a second). Only mradmin.web.console.view, no
+  // unlocking (that is only for running commands in the web console). Links and IPs are hidden by the server.
+  // Filter by level (info, warn, error); newest first; paused, new lines wait above the list.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
-  import { go } from '../lib/router.svelte.js';
+  import LogLayout from './LogLayout.svelte';
+  import LogFilter from './LogFilter.svelte';
+  import LogList from './LogList.svelte';
 
-  let { query = '', since = 0 } = $props();
+  let { query = '', since = 0, paused = false } = $props();
 
   const KEEP = 3000;
+  const COLORS = { info: '#8b95a5', warn: '#f59e0b', error: '#e5484d' };
 
-  let info = $state(null);
   let lines = $state([]);
+  let queued = $state([]);
+  let counts = $state({});
+  let levels = $state([]);
   let more = $state(false);
   let error = $state('');
   let loading = $state(false);
   let last = 0;
 
-  async function loadState() {
-    try {
-      info = await api('GET', '/console/state');
-      error = '';
-    } catch (e) {
-      error = errorText(e);
-    }
-  }
-
-  function locked(e) {
-    if (e.key === 'console-locked') {
-      info = { ...info, unlocked: false };
-      return true;
-    }
-    return false;
-  }
-
   async function load(older = false) {
-    if (!info?.unlocked) return;
     loading = true;
     try {
       const p = new URLSearchParams({ since: String(since) });
       if (query.trim()) p.set('q', query.trim());
-      if (older && lines.length) p.set('before', String(lines[lines.length - 1].key));
+      if (levels.length) p.set('levels', levels.join(','));
+      if (older && lines.length) p.set('before', String(lines.at(-1).key));
       const data = await api('GET', '/console/history?' + p);
       if (older) {
         lines = [...lines, ...data.lines].slice(0, KEEP);
       } else {
         lines = data.lines;
+        queued = [];
         last = data.last;
       }
+      if (data.counts) counts = data.counts;
       more = data.more;
       error = '';
     } catch (e) {
-      if (!locked(e)) error = errorText(e);
+      error = errorText(e);
     } finally {
       loading = false;
     }
   }
 
   async function poll() {
-    if (!info?.unlocked || loading || document.hidden) return;
+    if (loading || document.hidden) return;
     try {
-      const result = await api('GET', '/console/log?after=' + last);
+      const result = await api('GET', '/console/tail?after=' + last);
       if (result.last < last) {
         // The server was restarted - read the files again.
         load();
@@ -71,150 +61,81 @@
       const q = query.trim().toLowerCase();
       const now = Date.now();
       const fresh = result.lines
-        .filter((l) => !q || l.text.toLowerCase().includes(q))
-        .map((l) => ({ key: 'live-' + l.seq, time: now, text: l.text }))
-        .reverse();
-      if (fresh.length) lines = [...fresh, ...lines].slice(0, KEEP);
+        .filter((l) => (!q || l.text.toLowerCase().includes(q)))
+        .map((l) => ({ key: 'live-' + l.seq, time: now, level: l.level, text: l.text }));
+      if (!fresh.length) return;
+      for (const l of fresh) counts = { ...counts, [l.level]: (counts[l.level] ?? 0) + 1 };
+      const shown = fresh.filter((l) => !levels.length || levels.includes(l.level)).reverse();
+      if (paused) queued = [...shown, ...queued].slice(0, KEEP);
+      else lines = [...shown, ...lines].slice(0, KEEP);
     } catch (e) {
-      locked(e);
+      error = errorText(e);
     }
   }
 
-  $effect(() => {
-    untrack(loadState);
-  });
+  function showQueued() {
+    lines = [...queued, ...lines].slice(0, KEEP);
+    queued = [];
+  }
 
-  // Again when the filters change (the text after a short pause) or after unlocking.
+  // Again when the filters change (the text after a short pause).
   let timer;
   $effect(() => {
-    const unlocked = info?.unlocked;
     since;
+    levels;
     const q = query;
-    if (!unlocked) return;
     clearTimeout(timer);
     timer = setTimeout(() => load(), q ? 300 : 0);
   });
-
   $effect(() => {
-    if (!info?.unlocked) return;
     const id = setInterval(poll, 1000);
     return () => clearInterval(id);
   });
-
-  // "[12:00:00] [Server thread/WARN]: …" in the files, "[12:00:00 WARN]: …" in the console
-  const level = (text) => (/[/ ](ERROR|FATAL)\]/.test(text) ? 'bad' : /[/ ]WARN\]/.test(text) ? 'warn' : '');
-
-  const days = $derived.by(() => {
-    const out = [];
-    for (const l of lines) {
-      const day = new Date(l.time).toDateString();
-      if (!out.length || out[out.length - 1].day !== day) out.push({ day, time: l.time, items: [] });
-      out[out.length - 1].items.push(l);
-    }
-    return out;
+  $effect(() => {
+    if (!paused && queued.length) showQueued();
   });
+
+  // "[12:00:00] [Server thread/WARN]: text" (files) or "[12:00:00 WARN]: text" (console) - time and level have
+  // their own columns, the row shows only the text.
+  const PREFIX = /^\[(\d{2}:\d{2}:\d{2})(?: [A-Z]+)?\](?: \[[^\]]*\])?:?\s?/;
+
+  const filterItems = $derived(
+    ['info', 'warn', 'error'].map((l) => ({ key: l, label: t('logs.level.' + l), color: COLORS[l], count: counts[l] ?? 0 })),
+  );
+
+  const rows = $derived(
+    lines.map((l) => {
+      const m = PREFIX.exec(l.text);
+      return {
+        key: l.key,
+        time: l.time,
+        clock: m ? m[1] : '',
+        badge: m ? { label: t('logs.level.' + l.level), color: COLORS[l.level] } : { label: '', color: COLORS[l.level] },
+        text: m ? l.text.slice(m[0].length) : l.text,
+        details: [
+          { label: t('logs.detail.time'), value: new Date(l.time).toLocaleDateString() + (m ? ' ' + m[1] : '') },
+          { label: t('logs.detail.line'), value: l.text },
+        ],
+      };
+    }),
+  );
 </script>
 
 {#if error}<div class="error">{error}</div>{/if}
-
-{#if info && !info.unlocked}
-  <div class="locked">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-    <p>{t('logs.server.locked')}</p>
-    <button type="button" onclick={() => go('/console')}>{t('logs.server.unlock')}</button>
-  </div>
-{:else if info}
-  <p class="muted hint">{t('logs.server.hint')}</p>
-  {#if days.length}
-    {#each days as d (d.day)}
-      <section class="day">
-        <h2>{new Date(d.time).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-        <ol class="mono">
-          {#each d.items as l (l.key)}
-            <li class={level(l.text)}>{l.text}</li>
-          {/each}
-        </ol>
-      </section>
-    {/each}
-    {#if more}
-      <button type="button" class="ghost more" disabled={loading} onclick={() => load(true)}>{t('logs.more')}</button>
-    {/if}
-  {:else if !loading}
-    <p class="muted">{t('logs.server.empty')}</p>
-  {/if}
-{/if}
+<LogLayout active={levels.length}>
+  {#snippet filters()}
+    <LogFilter title={t('logs.levels')} items={filterItems} bind:selected={levels} />
+    <p class="hint">{t('logs.server.hint')}</p>
+  {/snippet}
+  <LogList {rows} mono {more} {loading} empty={t('logs.server.empty')} pending={queued.length} onmore={() => load(true)} onshow={showQueued} />
+</LogLayout>
 
 <style>
-  .locked {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    padding: 16px 18px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-  }
-
-  .locked p {
-    flex: 1;
-    min-width: 200px;
-    margin: 0;
-  }
-
   .hint {
     margin: 0;
-    font-size: 0.86rem;
-  }
-
-  .day h2 {
-    margin: 4px 0 8px;
-    font-size: 0.9rem;
+    padding: 0 6px;
     color: var(--muted);
-  }
-
-  ol {
-    list-style: none;
-    margin: 0;
-    padding: 8px 0;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     line-height: 1.45;
-  }
-
-  li {
-    padding: 1px 14px;
-    border-left: 3px solid transparent;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-
-  li.warn {
-    border-left-color: #f59e0b;
-    background: color-mix(in srgb, #f59e0b 8%, transparent);
-  }
-
-  li.bad {
-    border-left-color: #e5484d;
-    background: color-mix(in srgb, #e5484d 9%, transparent);
-  }
-
-  .mono {
-    font-family: ui-monospace, monospace;
-  }
-
-  .ghost {
-    padding: 6px 14px;
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-
-  .more {
-    justify-self: center;
   }
 </style>
