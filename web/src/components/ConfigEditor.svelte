@@ -297,6 +297,15 @@
         oninput={(e) => (adding = { ...adding, [f.key]: e.currentTarget.value })}
         onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addItem(f))} onblur={() => addItem(f)} />
     </span>
+  {:else if f.type === 'choices'}
+    <span class="chips">
+      {#each f.options as o}
+        <button type="button" class="world" class:on={v.includes(o.value)} aria-pressed={v.includes(o.value)}
+          onclick={() => set(f, v.includes(o.value) ? v.filter((x) => x !== o.value) : [...v, o.value])}>
+          {v.includes(o.value) ? '✓ ' : ''}{tx(o.name)}
+        </button>
+      {/each}
+    </span>
   {:else if f.type === 'worlds'}
     <span class="chips">
       {#each worldsOf(f) as w}

@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  */
 public final class ConfigForm {
 
-    public enum Type { BOOL, INT, DECIMAL, STRING, TEXT, SECRET, CHOICE, COLOR, DURATION, STRINGS, INTS, WORLDS, TABLE }
+    public enum Type { BOOL, INT, DECIMAL, STRING, TEXT, SECRET, CHOICE, COLOR, DURATION, STRINGS, INTS, CHOICES, WORLDS, TABLE }
 
     /** A text in German and English (missing: the other one). */
     public record Text(String de, String en) {
@@ -138,7 +138,7 @@ public final class ConfigForm {
                 }
             }
         }
-        if (type == Type.CHOICE && options.isEmpty()) {
+        if ((type == Type.CHOICE || type == Type.CHOICES) && options.isEmpty()) {
             throw new InvalidConfigurationException("field " + key + ": choice without options");
         }
         List<Column> columns = new ArrayList<>();
@@ -275,7 +275,7 @@ public final class ConfigForm {
             case BOOL -> raw instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(raw));
             case INT -> raw instanceof Number n ? (Object) n.longValue() : parseLong(raw);
             case DECIMAL -> raw instanceof Number n ? (Object) n.doubleValue() : parseDouble(raw);
-            case STRINGS, WORLDS -> raw instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+            case STRINGS, CHOICES, WORLDS -> raw instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
             case INTS -> raw instanceof List<?> l ? l.stream().map(ConfigForm::parseLong).toList() : List.of();
             case TABLE -> {
                 Map<String, Object> rows = new LinkedHashMap<>();
@@ -429,6 +429,22 @@ public final class ConfigForm {
                         throw new Invalid(key, "config-invalid");
                     }
                     result.add("duration".equals(f.item()) ? duration(f, s) : s);
+                }
+                return result;
+            }
+            case CHOICES -> {
+                if (!(value instanceof List<?> list) || list.size() > MAX_LIST) {
+                    throw new Invalid(key, "config-invalid");
+                }
+                List<String> result = new ArrayList<>();
+                for (Object o : list) {
+                    String s = String.valueOf(o);
+                    if (f.options().stream().noneMatch(op -> op.value().equals(s))) {
+                        throw new Invalid(key, "config-invalid");
+                    }
+                    if (!result.contains(s)) {
+                        result.add(s);
+                    }
                 }
                 return result;
             }
