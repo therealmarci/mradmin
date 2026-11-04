@@ -23,15 +23,13 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/console/unlock  {code}
  *  POST /api/console/lock
  *  GET  /api/console/log?after=n        lines after n (unlocked only)
- *  GET  /api/console/history?since=&before=&q=&levels=   page Log: Paper's log files (view permission, no unlocking)
- *  GET  /api/console/tail?after=n       page Log: live lines with level (view permission, no unlocking)
+ *  GET  /api/console/tail?after=n       page Log: live lines with level (mradmin.web.console.view, no unlocking)
  *  POST /api/console/command {command}  (unlocked, mradmin.web.console.execute)
  * </pre>
  */
 public final class ConsoleRoutes {
 
     private static final int MAX_LINES = 500;
-    private static final int MAX_HISTORY = 1000;
     private static final int MAX_COMMAND = 500;
     private static final int MAX_FAILURES = 5;
     private static final long FAILURE_LOCK_MILLIS = 15 * 60_000L;
@@ -57,7 +55,6 @@ public final class ConsoleRoutes {
         server.route("POST", "/api/console/unlock", r::unlock);
         server.route("POST", "/api/console/lock", r::lock);
         server.route("GET", "/api/console/log", r::lines);
-        server.route("GET", "/api/console/history", r::history);
         server.route("GET", "/api/console/tail", r::tail);
         server.route("POST", "/api/console/command", r::command);
         // The log reader runs while the web interface runs (and web.console.enabled is on).
@@ -76,8 +73,16 @@ public final class ConsoleRoutes {
         return server.permissions().has(http.account().id(), permission);
     }
 
-    /** Switched on and allowed to look - otherwise 404 / 403. */
+    /** The page Console (admins: mradmin.web.console.execute) - switched on and allowed, otherwise 404 / 403. */
     private void require(Http http) throws Http.WebException {
+        requireView(http);
+        if (!may(http, Perms.WEB_CONSOLE_EXECUTE)) {
+            throw new Http.WebException(403, "no-permission");
+        }
+    }
+
+    /** Reading the console output on the page Log (mradmin.web.console.view). */
+    private void requireView(Http http) throws Http.WebException {
         if (!enabled(plugin)) {
             throw new Http.WebException(404, "feature-disabled");
         }
@@ -165,40 +170,11 @@ public final class ConsoleRoutes {
     }
 
     /**
-     * The page Log, tab "Server log": lines of Paper's log files (today and up to 13 days before), newest first,
-     * filtered by text and level ({@code levels=info,warn,error}). Only mradmin.web.console.view - no unlocking, that
-     * is only for the console itself. The first page also counts the lines per level; {@code last} = number of the
-     * newest live line when reading started - the page follows from there with /tail.
-     */
-    private void history(Http http) throws Exception {
-        require(http);
-        Map<String, String> query = http.query();
-        long last = log.last();
-        long before = number(query.get("before"));
-        java.time.ZoneId zone = java.time.ZoneId.systemDefault();
-        ServerLogFiles files = new ServerLogFiles(plugin.getServer().getWorldContainer().toPath().resolve("logs"), zone);
-        ServerLogFiles.Result result = files.find(java.time.LocalDate.now(zone), number(query.get("since")), before,
-                query.get("q"), levels(query.get("levels")), MAX_HISTORY, before == 0, hideLinks(), hideIps());
-        List<Map<String, Object>> lines = new ArrayList<>();
-        for (ServerLogFiles.Line line : result.lines()) {
-            lines.add(Map.of("key", line.key(), "time", line.time(), "level", line.level(), "text", line.text()));
-        }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("lines", lines);
-        out.put("more", result.more());
-        out.put("last", last);
-        if (result.counts() != null) {
-            out.put("counts", result.counts());
-        }
-        http.json(200, out);
-    }
-
-    /**
      * The page Log: new console lines after {@code after} (like /log, but without unlocking), with their level - a
-     * line without one (stack trace) keeps the one before.
+     * line without one (stack trace) keeps the one before. {@code after} very large = only the number of the newest.
      */
     private void tail(Http http) throws Exception {
-        require(http);
+        requireView(http);
         long after = number(http.query().get("after"));
         List<Map<String, Object>> lines = new ArrayList<>();
         String level = "info";
@@ -208,24 +184,6 @@ public final class ConsoleRoutes {
             lines.add(Map.of("seq", line.seq(), "level", level, "text", line.text()));
         }
         http.json(200, Map.of("lines", lines, "last", log.last()));
-    }
-
-    private static java.util.Set<String> levels(String raw) {
-        java.util.Set<String> out = new java.util.HashSet<>();
-        for (String l : (raw == null ? "" : raw).split(",")) {
-            if (ServerLogFiles.LEVELS.contains(l.strip())) {
-                out.add(l.strip());
-            }
-        }
-        return out;
-    }
-
-    private boolean hideLinks() {
-        return plugin.getConfig().getBoolean("web.console.hide-links", true);
-    }
-
-    private boolean hideIps() {
-        return plugin.getConfig().getBoolean("web.console.hide-ips", true);
     }
 
     private static long number(String value) {

@@ -1,6 +1,6 @@
 <script>
   // Page Log: filter column on the left, the list on the right. Narrow (phone): the filters fold away behind a button
-  // above the list. Used by the tabs Events (pages/Logs.svelte) and Server log (components/ServerLog.svelte).
+  // above the list. Used by pages/Logs.svelte.
   import { t } from '../lib/i18n.js';
 
   let { filters, active = 0, children } = $props();

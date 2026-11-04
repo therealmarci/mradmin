@@ -1,13 +1,13 @@
 <script>
   // The web console: unlock with a fresh 2FA code, then the live log and (with mradmin.web.console.execute) commands.
-  // A tab of the page Log (embedded = without its own title).
+  // Admins only (mradmin.web.console.execute); the console output alone is a source on the page Log.
   import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
 
-  let { me, embedded = false } = $props();
+  let { me } = $props();
 
   let info = $state(null);
   let error = $state('');
@@ -149,17 +149,15 @@
 </script>
 
 <div class="stack">
-  {#if !embedded}
-    <div class="head">
-      <div>
-        <h1>{t('console.title')}</h1>
-        <p class="muted small">{t('console.subtitle')}</p>
-      </div>
-      {#if info?.unlocked}
-        <button class="secondary" onclick={lock}>🔒 {t('console.lock')}</button>
-      {/if}
+  <div class="head">
+    <div>
+      <h1>{t('console.title')}</h1>
+      <p class="muted small">{t('console.subtitle')}</p>
     </div>
-  {/if}
+    {#if info?.unlocked}
+      <button class="secondary" onclick={lock}>🔒 {t('console.lock')}</button>
+    {/if}
+  </div>
 
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -190,9 +188,6 @@
       <span class="muted small">{t('console.openUntil', { time: untilText })}</span>
       {#if !follow}
         <button class="secondary mini" onclick={() => { follow = true; box?.scrollTo({ top: box.scrollHeight }); }}>↓ {t('console.follow')}</button>
-      {/if}
-      {#if embedded}
-        <button class="secondary mini" onclick={lock}>🔒 {t('console.lock')}</button>
       {/if}
     </div>
 

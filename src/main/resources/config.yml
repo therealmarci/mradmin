@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 45
+config-version: 46
 
 
 # ------------------------------------------------------------------------------
@@ -471,8 +471,8 @@ web:
     # Only store shortened IP addresses (1.2.3.4 -> 1.2.3.0) - in the log and for the logged-in devices.
     # Less personal, but misuse is harder to trace.
     mask-ip: false
-  # Server log on the page Log (console output, permission mradmin.web.console.view, in mradmin.groups.staff) and
-  # the tab Console with commands (mradmin.web.console.execute, in mradmin.groups.admin - as powerful as the server
+  # Console output on the page Log (permission mradmin.web.console.view, in mradmin.groups.staff) and the page
+  # Console with commands (mradmin.web.console.execute, in mradmin.groups.admin - as powerful as the server
   # console). Before opening the console, the interface asks once more for the code from the authenticator app.
   # Every command ends up in the web log and in the Discord log (web-console).
   console:

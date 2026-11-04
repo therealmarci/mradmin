@@ -1,36 +1,19 @@
 <script>
-  // Page Log as a log viewer: tabs Events | Server log | Console, search, time range and Live/Pause on top; the filters on the
-  // left (components/LogLayout.svelte), one row per entry on the right (components/LogList.svelte).
-  // Events = what MRadmin and every plugin send to their Discord logs plus the actions in the web interface, kept up to
-  // 14 days (LogRoutes.java). Live: MRadmin sends "log" on the event stream (lib/live.svelte.js), the page then loads
-  // only what is newer; paused, new entries wait above the list. Server log: components/ServerLog.svelte (only the
-  // console output, mradmin.web.console.view - staff). Console: pages/Console.svelte with commands (admins,
-  // mradmin.web.console.execute, unlocked with a code). Each tab only with its permission.
+  // Page Log as a log viewer: search, time range and Live/Pause on top; the sources on the left
+  // (components/LogLayout.svelte), one row per entry on the right (components/LogList.svelte), all in one list by time.
+  // Sources: MRadmin and every plugin (the events of their Discord logs) and the web interface - mradmin.web.audit -
+  // and the console output ("console", mradmin.web.console.view; older days from Paper's log files). LogRoutes.java.
+  // Live: events come with "log" on the event stream (lib/live.svelte.js), console lines once a second from
+  // /console/tail (memory); paused, new entries wait above the list. Commands: page Console (admins only).
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
-  import { dateTime } from '../lib/format.js';
   import { ICONS, moduleHue } from '../lib/icons.js';
   import { live } from '../lib/live.svelte.js';
   import LogLayout from '../components/LogLayout.svelte';
   import LogFilter from '../components/LogFilter.svelte';
   import LogList from '../components/LogList.svelte';
-  import ServerLog from '../components/ServerLog.svelte';
-  import Console from './Console.svelte';
 
-  // initial: tab to open (e.g. "console" for the old address /console)
-  let { me, initial = '' } = $props();
-
-  // events | server | console - those the member may see; the choice is remembered for this browser tab
-  const tabs = $derived(
-    [me?.may?.audit && 'events', me?.may?.console && 'server', me?.may?.consoleExecute && 'console'].filter(Boolean),
-  );
-  let chosen = $state(sessionStorage.getItem('mradmin.logs.tab') ?? 'events');
-  $effect.pre(() => {
-    if (initial) chosen = initial;
-  });
-  const tab = $derived(tabs.includes(chosen) ? chosen : tabs[0]);
-  const server = $derived(tab === 'server');
-  $effect(() => sessionStorage.setItem('mradmin.logs.tab', chosen));
+  let { me } = $props();
 
   let entries = $state([]);
   let queued = $state([]);
@@ -43,9 +26,12 @@
   let query = $state('');
   let range = $state('24h');
   let paused = $state(false);
+  // number of the newest console line seen (for /console/tail)
+  let consoleSeq = 0;
 
   const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
-  const since = $derived(Date.now() - RANGES[range]);
+  const CONSOLE = { info: '#8B95A5', warn: '#F59E0B', error: '#E5484D' };
+  const wants = (source) => !selected.length || selected.includes(source);
 
   function params(extra = {}) {
     const p = new URLSearchParams({ limit: '200', since: String(Date.now() - RANGES[range]), ...extra });
@@ -57,7 +43,12 @@
   async function load(older = false) {
     loading = true;
     try {
-      const data = await api('GET', '/logs?' + params(older && entries.length ? { before: String(entries.at(-1).time) } : {}));
+      if (!older && me?.may?.console) {
+        // Only the number of the newest console line - from there the live lines follow.
+        consoleSeq = (await api('GET', '/console/tail?after=9000000000000000')).last;
+      }
+      const extra = older && entries.length ? { before: String(entries.at(-1).time) } : { counts: '1' };
+      const data = await api('GET', '/logs?' + params(extra));
       entries = older ? [...entries, ...data.entries] : data.entries;
       if (!older) queued = [];
       names = data.sources;
@@ -73,22 +64,56 @@
 
   const key = (e) => e.time + '|' + e.source + '|' + e.event + '|' + e.text;
 
-  /** Only what is newer than the newest entry (shown or waiting), same filters. */
+  /** New entries on top (or waiting while paused), counted for the filter list. */
+  function add(fresh) {
+    if (!fresh.length) return;
+    const next = { ...counts };
+    for (const e of fresh) next[e.source] = (next[e.source] ?? 0) + 1;
+    counts = next;
+    if (paused) queued = [...fresh, ...queued];
+    else entries = [...fresh, ...entries];
+  }
+
+  /** Events newer than the newest one shown or waiting (same filters, without the console). */
   async function loadNew() {
-    const newest = queued[0] ?? entries[0];
+    const newest = [...queued, ...entries].find((e) => e.source !== 'console');
     if (loading || !newest) return load();
     try {
-      const data = await api('GET', '/logs?' + params({ since: String(newest.time) }));
+      const sources = (selected.length ? selected : Object.keys(names)).filter((s) => s !== 'console');
+      if (!sources.length) return;
+      const p = params({ since: String(newest.time) });
+      p.set('sources', sources.join(','));
+      const data = await api('GET', '/logs?' + p);
       const seen = new Set([...queued, ...entries].filter((e) => e.time === newest.time).map(key));
-      const fresh = data.entries.filter((e) => !seen.has(key(e)));
-      if (fresh.length) {
-        if (paused) queued = [...fresh, ...queued];
-        else entries = [...fresh, ...entries];
-      }
-      names = data.sources;
-      if (data.counts) counts = data.counts;
+      add(data.entries.filter((e) => !seen.has(key(e))));
+      names = { ...names, ...data.sources };
     } catch (e) {
       error = errorText(e);
+    }
+  }
+
+  /** New console lines from memory (cheap, once a second). */
+  async function pollConsole() {
+    if (loading || document.hidden || !me?.may?.console) return;
+    try {
+      const result = await api('GET', '/console/tail?after=' + consoleSeq);
+      if (result.last < consoleSeq) {
+        // The server was restarted.
+        consoleSeq = 0;
+        return;
+      }
+      consoleSeq = result.last;
+      if (!wants('console')) return;
+      const q = query.trim().toLowerCase();
+      const now = Date.now();
+      add(
+        result.lines
+          .filter((l) => !q || l.text.toLowerCase().includes(q))
+          .map((l, i) => ({ time: now + i, source: 'console', event: l.level, text: l.text, color: CONSOLE[l.level] }))
+          .reverse(),
+      );
+    } catch {
+      // next second again
     }
   }
 
@@ -100,7 +125,6 @@
   // Again when a filter changes (the text after a short pause).
   let timer;
   $effect(() => {
-    if (tab !== 'events') return;
     selected;
     range;
     const q = query;
@@ -110,22 +134,29 @@
   // A short pause collects bursts (many events in one second) into one request.
   let liveTimer;
   $effect(() => {
-    if (!live.log.tick || tab !== 'events') return;
+    if (!live.log.tick) return;
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => !document.hidden && loadNew(), 250);
   });
   // Without the event stream (connection lost): every 15 seconds.
   $effect(() => {
-    if (live.connected || tab !== 'events') return;
+    if (live.connected) return;
     const id = setInterval(() => !document.hidden && loadNew(), 15000);
+    return () => clearInterval(id);
+  });
+  $effect(() => {
+    if (!me?.may?.console) return;
+    const id = setInterval(pollConsole, 1000);
     return () => clearInterval(id);
   });
   $effect(() => {
     if (!paused && queued.length) showQueued();
   });
 
-  const label = (s) => (s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : names[s] ?? s);
-  const color = (s) => (s === 'web' ? '#3b82f6' : s === 'mradmin' ? 'var(--accent)' : `hsl(${moduleHue(s)} 62% 55%)`);
+  const label = (s) =>
+    s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : s === 'console' ? t('logs.console') : names[s] ?? s;
+  const color = (s) =>
+    s === 'web' ? '#3b82f6' : s === 'mradmin' ? 'var(--accent)' : s === 'console' ? '#8b95a5' : `hsl(${moduleHue(s)} 62% 55%)`;
 
   const filterItems = $derived(
     Object.keys(names).map((s) => ({ key: s, label: label(s), color: color(s), count: counts[s] ?? 0 })),
@@ -141,6 +172,9 @@
   }
 
   const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  // "[12:00:00] [Server thread/WARN]: text" (files) or "[12:00:00 WARN]: text" (console): time and level have their
+  // own columns, the row shows only the text.
+  const PREFIX = /^\[(\d{2}:\d{2}:\d{2})(?: [A-Z]+)?\](?: \[[^\]]*\])?:?\s?/;
 
   // Stable keys (new entries come on top): the same entry twice gets a counter.
   const rows = $derived.by(() => {
@@ -149,20 +183,28 @@
       const k = key(e);
       const n = seen.get(k) ?? 0;
       seen.set(k, n + 1);
+      const console = e.source === 'console';
+      const m = console ? PREFIX.exec(e.text) : null;
       return {
         key: n ? k + '|' + n : k,
         time: e.time,
-        clock: clock(e.time),
+        clock: console ? (m ? m[1] : '') : clock(e.time),
         badge: { label: label(e.source), color: color(e.source) },
         accent: e.color,
-        text: render(e.text),
-        html: true,
-        tag: e.event,
-        details: [
-          { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
-          { label: t('logs.detail.source'), value: label(e.source) },
-          { label: t('logs.detail.event'), value: e.event || '-' },
-        ],
+        text: console ? (m ? e.text.slice(m[0].length) : e.text) : render(e.text),
+        html: !console,
+        mono: console,
+        tag: console ? t('logs.level.' + e.event) : e.event,
+        details: console
+          ? [
+              { label: t('logs.detail.time'), value: new Date(e.time).toLocaleDateString() + (m ? ' ' + m[1] : '') },
+              { label: t('logs.detail.line'), value: e.text },
+            ]
+          : [
+              { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
+              { label: t('logs.detail.source'), value: label(e.source) },
+              { label: t('logs.detail.event'), value: e.event || '-' },
+            ],
       };
     });
   });
@@ -176,9 +218,8 @@
     </span>
     <div class="title">
       <h1>{t('logs.title')}</h1>
-      <p class="muted">{t('logs.subtitle.' + tab)}</p>
+      <p class="muted">{t('logs.subtitle')}</p>
     </div>
-    {#if tab !== 'console'}
     <button type="button" class="live" class:paused aria-pressed={paused} title={t(paused ? 'logs.resume' : 'logs.pause')}
       onclick={() => (paused = !paused)}>
       <span class="pulse" aria-hidden="true"></span>
@@ -187,44 +228,28 @@
         {#if paused}<path d="M7 5v14l12-7z" />{:else}<path d="M7 5h3v14H7zM14 5h3v14h-3z" />{/if}
       </svg>
     </button>
-    {/if}
   </header>
 
   <div class="toolbar">
-    {#if tabs.length > 1}
-      <span class="segments" role="tablist">
-        {#each tabs as name}
-          <button type="button" role="tab" aria-selected={tab === name} class:on={tab === name} onclick={() => (chosen = name)}>{t('logs.tab.' + name)}</button>
-        {/each}
-      </span>
-    {/if}
-    {#if tab !== 'console'}
     <label class="search">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-      <input type="search" placeholder={t(server ? 'logs.search.server' : 'logs.search')} aria-label={t('logs.search')} bind:value={query} />
+      <input type="search" placeholder={t('logs.search')} aria-label={t('logs.search')} bind:value={query} />
     </label>
     <span class="segments" role="radiogroup" aria-label={t('logs.range')}>
       {#each Object.keys(RANGES) as r}
         <button type="button" role="radio" aria-checked={range === r} class:on={range === r} onclick={() => (range = r)}>{t('logs.range.' + r)}</button>
       {/each}
     </span>
-    {/if}
   </div>
 
-  {#if tab === 'console'}
-    <Console {me} embedded />
-  {:else if server}
-    <ServerLog {query} {since} {paused} />
-  {:else if tab === 'events'}
-    {#if error}<div class="error">{error}</div>{/if}
-    <LogLayout active={selected.length}>
-      {#snippet filters()}
-        <LogFilter title={t('logs.sources')} items={filterItems} bind:selected />
-      {/snippet}
-      <LogList {rows} {more} {loading} empty={t('logs.empty')} pending={queued.length} onmore={() => load(true)} onshow={showQueued} />
-    </LogLayout>
-  {/if}
+  {#if error}<div class="error">{error}</div>{/if}
+  <LogLayout active={selected.length}>
+    {#snippet filters()}
+      <LogFilter title={t('logs.sources')} items={filterItems} bind:selected />
+    {/snippet}
+    <LogList {rows} {more} {loading} empty={t('logs.empty')} pending={queued.length} onmore={() => load(true)} onshow={showQueued} />
+  </LogLayout>
 </div>
 
 <style>

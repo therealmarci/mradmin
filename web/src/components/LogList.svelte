@@ -2,7 +2,8 @@
   // The list of the page Log: one row per entry (time | badge | text in one line | tag), grouped by day, a click opens
   // the whole text and the details. rows: [{key, time, clock, badge: {label, color}, text, html, tag, details: [{label,
   // value}]}] - html = text as safe HTML (already escaped), clock = time shown in the row (empty = none, e.g. a stack
-  // trace line), accent = colour of the left edge (default: the badge). pending = new entries held back while paused.
+  // trace line), accent = colour of the left edge (default: the badge), mono = text in a fixed font (console lines).
+  // pending = new entries held back while paused.
   // The tile has a fixed height of about 35 rows and scrolls inside; near the end it loads older entries by itself.
   // New entries on top do not move what is being read further down.
   import { tick } from 'svelte';
@@ -59,7 +60,7 @@
   {#each days as d (d.day)}
     <div class="day">{dayLabel(d)}</div>
     {#each d.items as row (row.key)}
-      <div class="entry" class:open={open.has(row.key)} style="--c:{row.badge?.color ?? 'var(--border)'}; --a:{row.accent ?? row.badge?.color ?? 'var(--border)'}">
+      <div class="entry" class:open={open.has(row.key)} class:mono={row.mono} style="--c:{row.badge?.color ?? 'var(--border)'}; --a:{row.accent ?? row.badge?.color ?? 'var(--border)'}">
         <button type="button" class="row" aria-expanded={open.has(row.key)} onclick={() => toggle(row.key)}>
           <span class="clock">{row.clock}</span>
           <span class="badge" class:none={!row.badge?.label}>{row.badge?.label ?? ''}</span>
@@ -201,10 +202,6 @@
     font-size: 0.8rem;
   }
 
-  .mono .row {
-    grid-template-columns: 70px 64px minmax(0, 1fr);
-  }
-
   .detail {
     display: grid;
     gap: 10px;
@@ -265,8 +262,7 @@
   }
 
   @container (max-width: 600px) {
-    .row,
-    .mono .row {
+    .row {
       grid-template-columns: auto minmax(0, 1fr);
       row-gap: 2px;
     }

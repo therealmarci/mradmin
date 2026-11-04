@@ -76,7 +76,7 @@ permissions:
       libertybans.list.banlist: true
       libertybans.list.mutelist: true
   mradmin.groups.staff:
-    description: "Group staff: support + summon, freeze and kick players, read the server log on the page Log; with LibertyBans kick, mute and warn."
+    description: "Group staff: support + summon, freeze and kick players, read the console output on the page Log; with LibertyBans kick, mute and warn."
     default: op
     children:
       mradmin.groups.support: true
@@ -227,10 +227,10 @@ permissions:
     description: Manage other players' web accounts (/mradmin web invite|logout|remove).
     default: op
   mradmin.web.console.view:
-    description: Read the server log (console output) on the page Log of the web interface.
+    description: Read the console output on the page Log of the web interface (no commands).
     default: false
   mradmin.web.console.execute:
-    description: "Tab Console on the page Log: run commands (as powerful as console access!), after unlocking with a code."
+    description: "Page Console of the web interface: run commands (as powerful as console access!), after unlocking with a code."
     default: false
     children:
       mradmin.web.console.view: true

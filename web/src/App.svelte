@@ -29,6 +29,7 @@
   import Plugins from './pages/Plugins.svelte';
   import PluginView from './pages/PluginView.svelte';
   import Logs from './pages/Logs.svelte';
+  import Console from './pages/Console.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -120,6 +121,7 @@
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
           ...(me.may.versions ? [{ path: '/plugins', label: t('nav.versions'), icon: 'box' }] : []),
           ...(me.may.audit || me.may.console ? [{ path: '/logs', label: t('nav.logs'), icon: 'news' }] : []),
+          ...(me.may.consoleExecute ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
       : [],
   );
@@ -186,7 +188,7 @@
     {:else if route.path === '/news' && (me.may.news || me.may.announce)}
       <News {me} />
     {:else if route.path === '/console' && me.may.consoleExecute}
-      <Logs {me} initial="console" />
+      <Console {me} />
     {:else if pvpId && me.may.mrpvp}
       {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
     {:else if kitMatch && me.may.mrpvpKits}
