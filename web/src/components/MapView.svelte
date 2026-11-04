@@ -160,7 +160,7 @@
   // Areas first, so the pins stay on top of them.
   const markers = $derived(
     allMarkers
-      .filter((m) => m.world === worldKey && !hidden.has(layerKey(m.layer)))
+      .filter((m) => m.world === mapKey && !hidden.has(layerKey(m.layer)))
       .sort((a, b) => (b.width > 0) - (a.width > 0)),
   );
 
@@ -173,8 +173,12 @@
     return allMarkers.filter((m) => m.label.toLowerCase().includes(q)).slice(0, 8);
   });
 
-  const worldName = (key) => worlds.find((w) => w.key === key)?.name ?? key;
-  const countIn = (l) => l.markers.filter((m) => m.world === worldKey).length;
+  // The Nether ceiling is a map of its own over the same dimension: markers belong to the dimension (base).
+  const mapKey = $derived(world ? (world.base ?? world.key) : null);
+  const baseOf = (key) => worlds.find((w) => w.key === key)?.base ?? key;
+  const label = (w) => (w.roof ? `${w.name} · ${t('map.roof')}` : w.name);
+  const worldName = (key) => { const w = worlds.find((x) => x.key === key); return w ? label(w) : key; };
+  const countIn = (l) => l.markers.filter((m) => m.world === mapKey).length;
 
   // ---------------------------------------------------------------- layer list in groups
 
@@ -576,7 +580,8 @@
   }
   /** Jump to a marker (from the search) at the closest zoom, also into another world. */
   function goTo(m) {
-    const target = worlds.find((w) => w.key === m.world);
+    // Already on a map of that dimension (e.g. the Nether ceiling): stay on it.
+    const target = world?.base === m.world ? world : worlds.find((w) => w.key === m.world);
     if (!target) return;
     follow = false;
     worldKey = target.key;
@@ -624,9 +629,9 @@
     const x = Math.floor(cx + (px - width / 2) / ppb);
     const z = Math.floor(cz + (pz - height / 2) / ppb);
     const items = layers.flatMap((l) =>
-      l.here.map((a) => ({ layer: l, action: a, args: { world: worldKey, x: String(x), z: String(z) } })));
+      l.here.map((a) => ({ layer: l, action: a, args: { world: mapKey, x: String(x), z: String(z) } })));
     if (!items.length) return;
-    menu = { px, pz, title: `X ${x} · Z ${z}`, sub: world?.name ?? '', color: null, ...split(items) };
+    menu = { px, pz, title: `X ${x} · Z ${z}`, sub: world ? label(world) : '', color: null, ...split(items) };
   }
 
   /** Red ones (delete ...) at the end, below a line. */
@@ -719,7 +724,7 @@
   } : null);
   const distance = $derived.by(() => {
     const self = drawn.find((d) => d.self) ?? me;
-    if (!spot || !self || self.world !== selected.world) return null;
+    if (!spot || !self || baseOf(self.world) !== selected.world) return null;
     return Math.round(Math.hypot(self.x - spot.x, self.z - spot.z));
   });
 
@@ -898,7 +903,7 @@
           <button class="result" style="--c:{m.color}" onmousedown={(e) => e.preventDefault()} onclick={() => goTo(m)}>
             <span class="dot" aria-hidden="true"></span>
             <span class="rt">{m.label}</span>
-            <span class="rs">{m.layer.name}{m.world !== worldKey ? ' · ' + worldName(m.world) : ''}</span>
+            <span class="rs">{m.layer.name}{m.world !== mapKey ? ' · ' + worldName(m.world) : ''}</span>
           </button>
         {:else}
           <p class="muted small empty">{t('map.noResults')}</p>
@@ -937,14 +942,14 @@
       <div class="worldbox">
         <button class="panel pill" aria-haspopup="listbox" aria-expanded={worldOpen} onclick={() => (worldOpen = !worldOpen)}>
           <span class="wdot {world?.type ?? ''}" aria-hidden="true"></span>
-          <span class="wname">{world?.name}</span>
+          <span class="wname">{world ? label(world) : ''}</span>
           <span class="caret" class:up={worldOpen} aria-hidden="true">▾</span>
         </button>
         {#if worldOpen}
           <div class="panel wlist" role="listbox" transition:fly={{ y: -6, duration: 140 }}>
             {#each worlds as w (w.key)}
               <button role="option" aria-selected={w.key === worldKey} class:active={w.key === worldKey} onclick={() => pickWorld(w.key)}>
-                <span class="wdot {w.type}" aria-hidden="true"></span>{w.name}
+                <span class="wdot {w.type}" aria-hidden="true"></span>{label(w)}
               </button>
             {/each}
           </div>

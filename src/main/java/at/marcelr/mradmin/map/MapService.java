@@ -30,12 +30,16 @@ import static at.marcelr.mradmin.Messages.tag;
  */
 public final class MapService {
 
+    /** Ending of the map key of a Nether ceiling: minecraft:the_nether#roof. */
+    public static final String ROOF_KEY = "#roof";
+
     private final MRAdmin plugin;
     private final SquaremapSetup setup;
     private final SquaremapInstaller installer;
     private MapSettings settings;
     private SquaremapBridge squaremap;
     private BukkitTask installCheck;
+    private @Nullable RoofRenderer roof;
     /** Language key of the squaremap status (map-state-*). */
     private String status = "map-state-missing";
     private String error = "";
@@ -83,12 +87,25 @@ public final class MapService {
         }
         // Worlds without any picture yet (new install, new world): render them once completely.
         Bukkit.getScheduler().runTaskLater(plugin, this::renderMissing, 20L * 20);
+        // The Nether ceiling: drawn by MRadmin itself (squaremap shows the Nether from the inside).
+        if (settings.roof().enabled()) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (squaremap != null && roof == null) {
+                    roof = new RoofRenderer(plugin, settings.roof());
+                    roof.start(worlds());
+                }
+            }, 20L * 25);
+        }
     }
 
     public void stop() {
         if (installCheck != null) {
             installCheck.cancel();
             installCheck = null;
+        }
+        if (roof != null) {
+            roof.stop();
+            roof = null;
         }
         squaremap = null;
     }
@@ -203,6 +220,19 @@ public final class MapService {
 
     // ------------------------------------------------- map of the player page
 
+    /** Folder of the Nether ceiling pictures (MRadmin's own), or null without them. */
+    public @Nullable Path roofDir() {
+        return roof == null ? null : roof.dir();
+    }
+
+    /**
+     * The map a position belongs to: the world's key, for a player on the Nether ceiling the key of the ceiling map
+     * (so the map of the player page switches to it by itself).
+     */
+    public String mapKey(World world, double y) {
+        String key = world.getKey().asString();
+        return roof != null && roof.covers(world) && y >= roof.fromY() ? key + ROOF_KEY : key;
+    }
     /** squaremap's tile folder, or null without an active squaremap. */
     public @Nullable Path tilesDir() {
         try {
@@ -250,6 +280,16 @@ public final class MapService {
                 map.put("spawnX", spawn.get("x").getAsInt());
                 map.put("spawnZ", spawn.get("z").getAsInt());
                 result.add(map);
+                // The Nether ceiling as a world of its own right after it: same dimension (base), own pictures.
+                if (roof != null && roof.coversFolder(folder)) {
+                    Map<String, Object> ceiling = new LinkedHashMap<>(map);
+                    ceiling.put("key", map.get("key") + ROOF_KEY);
+                    ceiling.put("folder", folder + RoofRenderer.SUFFIX);
+                    ceiling.put("base", map.get("key"));
+                    ceiling.put("roof", true);
+                    ceiling.put("roofY", roof.fromY());
+                    result.add(ceiling);
+                }
             }
         } catch (IOException | RuntimeException e) {
             plugin.getLogger().fine("squaremap settings not readable yet: " + e);

@@ -15,9 +15,20 @@ import java.util.Set;
  * @param fullRender       render every world completely once after squaremap was installed or updated
  * @param checkHours       how often Modrinth is asked
  * @param page             the map of the player page ({@code map.player-page})
+ * @param roof             the map of the Nether ceiling ({@code map.nether-roof})
  */
 public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideModuleWorlds, boolean autoInstall,
-                          boolean autoUpdate, boolean fullRender, int checkHours, PlayerPage page) {
+                          boolean autoUpdate, boolean fullRender, int checkHours, PlayerPage page, Roof roof) {
+
+    /**
+     * {@code map.nether-roof}: MRadmin's own map of the Nether ceiling.
+     *
+     * @param fromY           from this height a player is on the ceiling
+     * @param fullRender      render all generated chunks once
+     * @param chunksPerSecond pace of the complete render
+     */
+    public record Roof(boolean enabled, int fromY, boolean fullRender, int chunksPerSecond) {
+    }
 
     /**
      * {@code map.player-page}: what the map of the player page offers besides the layers of the plugins.
@@ -64,6 +75,10 @@ public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideMo
                         c.getBoolean(p + "players.hide-admin-mode", true),
                         c.getBoolean(p + "players.hide-spectators", true),
                         c.getBoolean(p + "players.hide-invisible", true),
-                        Set.copyOf(hidden)));
+                        Set.copyOf(hidden)),
+                new Roof(c.getBoolean("map.nether-roof.enabled", true),
+                        Math.clamp(c.getInt("map.nether-roof.from-y", 128), 1, 320),
+                        c.getBoolean("map.nether-roof.full-render", true),
+                        Math.clamp(c.getInt("map.nether-roof.chunks-per-second", 40), 1, 1000)));
     }
 }

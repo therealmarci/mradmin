@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 40
+config-version: 41
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -815,6 +815,18 @@ map:
     full-render: true
     # How often MRadmin asks Modrinth (hours).
     check-hours: 12
+  # The Nether's bedrock ceiling and what players built on it, as its own map "Nether (ceiling)" next to the Nether
+  # (squaremap shows the Nether from the inside). MRadmin renders it itself into plugins/MRadmin/map-roof/: once
+  # completely (all generated chunks, in the background) and then every chunk where something changes up there.
+  # The map switches to it by itself while a player is on the ceiling.
+  nether-roof:
+    enabled: true
+    # From this height on a player counts as "on the ceiling" (the bedrock ceiling ends at 127).
+    from-y: 128
+    # Render all generated chunks once (again after the pictures were deleted).
+    full-render: true
+    # How many chunks the complete render reads per second - lower it if the server gets slower meanwhile.
+    chunks-per-second: 40
   # The map of the player page (tab "Map"), besides the layers the plugins bring.
   player-page:
     # Open the map where the player stands while they are online (a link to a spot wins, e.g. from /chunkloader).

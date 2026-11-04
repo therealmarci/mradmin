@@ -213,8 +213,9 @@ final class SelfMap {
                         || (page.hideSpectators() && p.getGameMode() == GameMode.SPECTATOR)
                         || (page.hideInvisible() && (p.isInvisible() || p.hasPotionEffect(PotionEffectType.INVISIBILITY)));
                 var l = p.getLocation();
-                found.add(new Spot(p.getUniqueId(), p.getName(), p.getWorld().getKey().asString(), l.getX(), l.getZ(),
-                        l.getYaw(), hidden));
+                // On the Nether ceiling the player belongs to the ceiling map (the map switches to it by itself).
+                found.add(new Spot(p.getUniqueId(), p.getName(), plugin.map().mapKey(p.getWorld(), l.getY()),
+                        l.getX(), l.getZ(), l.getYaw(), hidden));
             }
             return found;
         });
@@ -244,6 +245,13 @@ final class SelfMap {
         if (tiles == null || !world.matches("[a-z0-9_.-]{1,64}") || !zoom.matches("\\d{1,2}")
                 || !tile.matches("-?\\d{1,6}_-?\\d{1,6}\\.png")) {
             throw new Http.WebException(404, "not-found");
+        }
+        // The Nether ceiling comes from MRadmin's own pictures, everything else from squaremap.
+        if (world.endsWith("-roof")) {
+            tiles = plugin.map().roofDir();
+            if (tiles == null) {
+                throw new Http.WebException(404, "not-found");
+            }
         }
         Path file = tiles.resolve(world).resolve(zoom).resolve(tile);
         if (!file.normalize().startsWith(tiles.normalize()) || !Files.isRegularFile(file)) {
