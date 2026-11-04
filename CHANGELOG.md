@@ -28,6 +28,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 - **Karte für alle ein- und ausschalten:** Zwei Schalter auf der Seite **Karte** (`mradmin.map.admin`, auch ohne MRwaypoints): **Karte der Spielerseite** (aus = der Tab „Karte“ verschwindet für alle Spieler) und **Spieler auf der Karte** (aus = niemand sieht andere Spieler oder kann nach ihnen suchen). Getrennt schaltbar, sofort wirksam, bleiben über Neustarts (Speicher `map-locks`), stehen im Web-Protokoll. Neue Routen `GET/POST /api/map/locks`.
 
 ### Behoben & geändert
+- **Entbannungsformular zeigte eine falsche Fehlermeldung:** Bei falschem Namen oder Code stand dort der Hinweis zur Handy-Uhrzeit (2FA), weil sich beide Meldungen denselben Schlüssel teilten. Jetzt eigene Meldung (`unban-code-wrong`).
+- **Keine Fehler mehr beim Stoppen:** Die Verbindung zu Uptime Kuma hat jetzt einen eigenen HTTP-Client, der beim Deaktivieren beendet wird - vorher liefen dessen Threads weiter und schrieben beim Stoppen „zip file closed“ ins Log.
 - **Chunkloader-Diagramme ab 1 Stunde durchgehend:** Ab dem Zeitraum 1h war die Linie in den Kacheln, im großen Diagramm und in der Zeitleiste gestrichelt. Die Lücken-Erkennung richtet sich jetzt nach dem Detailgrad des Zeitraums (kommt von MRchunks; mit älterem MRchunks bleibt es wie bisher).
 
 ## [1.1.0] - 2026-11-02

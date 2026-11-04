@@ -238,7 +238,7 @@ public List<SelfMapLayer> selfMap(SelfViewer viewer) {          // Hauptthread, 
                     List.of(new SelfMapLayer.Action("delete", "Löschen", "bad", "Wirklich löschen?", null)))),
             List.of(new SelfMapLayer.Action("create", "Wegpunkt hier erstellen", "good", null,
                     new SelfBlock.Input("Name", "", 32))),
-            new SelfMapLayer.Toggle("in Xaero: an", true, "xaero")));
+            new SelfMapLayer.Toggle("Ingame: an", true, "xaero")));
 }
 
 @Override
