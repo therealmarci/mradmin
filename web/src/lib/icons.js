@@ -16,10 +16,12 @@ export const ICONS = {
   users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9c0-3.3 3.1-6 7-6s7 2.7 7 6M16 3.5a4 4 0 0 1 0 7M18 14c2.4.6 4 2.6 4 5',
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   shield: 'M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z',
+  hotbar: 'M2 9h20v6H2zM7 9v6M12 9v6M17 9v6',
+  pin: 'M12 21s-6.5-6.2-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21ZM12 12.3a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
 };
 
 /** Symbols of known plugins; others get the box. */
-export const MODULE_ICONS = { mrchunks: 'grid', mrpvp: 'swords', mrsleep: 'moon' };
+export const MODULE_ICONS = { mrchunks: 'grid', mrpvp: 'swords', mrsleep: 'moon', mrwaypoints: 'pin' };
 
 /** A stable hue per plugin id - the same colour on the team panel and the player area. */
 export function moduleHue(id) {

@@ -7,7 +7,7 @@
 | Auf einen Blick | |
 |---|---|
 | Server | Paper 26.3 (oder ein Fork wie Purpur), Java 25 |
-| Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma und LibertyBans optional |
+| Benötigt | nichts - LuckPerms empfohlen, Uptime Kuma, und LibertyBans optional (squaremap für die Karte installiert MRadmin selbst) |
 | Sprachen | Deutsch, Englisch - jeder Spieler automatisch in der Sprache seines Minecraft-Clients |
 | Status | stabil (1.x) |
 
@@ -20,7 +20,8 @@
 - **Admin-Dashboard** mit Live-Kacheln, **Serverzustand** und **Staff-Chat**.
 - **Weboberfläche** fürs Handy: Tickets, Spieler, Serverzustand, Wartungen, Push-Benachrichtigungen - mit 2FA und Passkeys.
 - **Spielerseite im Web (`/web`):** Jeder Spieler bekommt seine eigene Seite - eigene Tickets, Ranglisten und alles, was die anderen Plugins anbieten (z.B. Chunkloader verwalten, Duell-Statistik). Als Lesezeichen speicherbar, Deutsch und Englisch.
-- **Versionen & Updates:** alle MRtechnology-Plugins mit ihren Updates im Web, Updates per Klick herunterladen (Installation beim nächsten Neustart) und den Server mit Countdown neu starten.
+- **Karte:** eigene Karte auf der Spielerseite mit den Ebenen der anderen Plugins (z.B. Chunkloader, Wegpunkte) - squaremap rendert sie, MRadmin installiert, aktualisiert und richtet es selbst ein.
+- **Plugins, Updates & Einstellungen:** alle MRtechnology-Plugins im Web - im Browser einstellen (config.yml als Formular, sofort neu geladen), installierte mit ihren Updates (per Klick herunterladen, Installation beim nächsten Neustart), nicht installierte direkt installieren, den Server mit Countdown neu starten.
 - **Discord-Logs**, **Update-Prüfung**, eine Permission für jede Funktion, jede Funktion einzeln abschaltbar.
 
 ## Schnellstart
@@ -197,18 +198,24 @@ Was auf der Seite steht, hängt davon ab, was installiert ist:
 | **Neuigkeiten** | eine Seite mit zwei Bereichen: **Neuigkeiten** (die neueste groß, die anderen als Karten, Lesen im Fenster) und **Changelog** (Zeitleiste der Versionen mit Neu / Geändert / Behoben / Entfernt); aktive **Warnungen** stehen rot ganz oben. Auf der Startseite ein Karussell, das von selbst weiterblättert: Warnungen, Wartung, Neustart, Warnungen der Plugins, Ticket-Antworten und die neuesten Beiträge. | `player-web.news.enabled` |
 | **Meine Statistik** | Kachel auf der Startseite neben denen der Plugins: eigene Spielzeit, abgebaute Blöcke, besiegte Mobs, Tode (Auswahl und Reihenfolge unter `player-web.personal-stats`, die erste groß). Führt zur Statistik-Seite. | `player-web.personal-stats` nicht leer |
 | **Statistik** | zwei Reiter: **Persönlich** (jeder eigene Wert mit Platz, Medaille für die Top 3 und Vergleich zum Besten) und **Server** (Summen aller Spieler, Ranglisten mit Siegertreppchen - Auswahl unter `player-web.rankings` - und von den Plugins). Wer nicht in Ranglisten stehen will, trägt sich dort aus. | `player-web.rankings.enabled` |
-| **Chunkloader** | Kopf mit Budget und Warnungen; jeder Loader als Karte (Status, Größe, Auslastung, An/Aus-Knopf), ein Klick zeigt seine Grenzwerte wie in der Team-Ansicht, eine Live-Karte rund um ihn und alle Aktionen (umbenennen, Dummy, löschen); Mitglieder mit Kopf und Entfernen-Knopf, Einladen per Formular (Spieler, für welchen Loader, Dauer); mit squaremap die Live-Karte. Größe nur im Spiel. | MRchunks |
+| **Chunkloader** | Kopf mit Budget und Warnungen; jeder Loader als Karte (Status, Größe, Auslastung, An/Aus-Knopf), ein Klick zeigt seine Grenzwerte wie in der Team-Ansicht und alle Aktionen (umbenennen, Dummy, löschen); Mitglieder mit Kopf und Entfernen-Knopf, Einladen per Formular (Spieler, für welchen Loader, Dauer); Größe nur im Spiel. | MRchunks |
 | **Duelle** | eigene Duell-Statistik und letzte Runden, Duell-Ranglisten auf der Statistik-Seite | MRpvp |
+| **Karte** | MRadmins eigene Karte im Vollbild (Bilder von squaremap, siehe [Karte](#karte-squaremap)): Suche nach Punkten, Ebenen gegliedert ein- und ausblenden, Chunkraster, Welt wählen, ziehen, zoomen (am Handy auch mit zwei Fingern); ein Klick auf einen Punkt zeigt seine Einzelheiten. Wer online ist, sieht sich selbst und die anderen Spieler, die Karte öffnet an seinem Standort und folgt ihm auf Wunsch („Mir folgen“). Alle Felder der Karte (Suche, Ebenen, Welt, Knöpfe, Einzelheiten) lassen sich am Griff verschieben und bleiben im Browser gespeichert. Die Plugins bringen ihre Ebenen mit - z.B. alle Server-Wegpunkte (MRwaypoints) und die eigenen Chunkloader (MRchunks). **Rechtsklick** (am Handy lange drücken) auf einen Punkt zeigt seine Aktionen (eigenen Wegpunkt bearbeiten oder löschen, Wegweiser im Spiel starten, Chunkloader an/aus), auf eine freie Stelle z.B. „Wegpunkt erstellen“. Die Bilder liest MRadmin selbst aus squaremaps Ordner - squaremaps eigene Webseite braucht man dafür nicht. | squaremap (+ MRwaypoints, MRchunks für deren Ebenen) |
 
 Die Seite gibt es auf Deutsch und Englisch (Umschalter oben). Gesperrte Spieler (LibertyBans) kommen nicht hinein. Jedes Plugin prüft bei jeder Aktion dieselben Permissions und Regeln wie im Spiel.
 
 **Neuigkeiten, Changelogs und Warnungen (Team):** In der Weboberfläche unter **Kommunikation** (Permission `mradmin.news`, in `mradmin.groups.admin`; dort auch die Ankündigungen mit `mradmin.announce`). **Neuigkeiten** mit Titel und Text, **Changelogs** mit Version, Einträgen (Neu, Geändert, Behoben, Entfernt) und Überschriften in drei Ebenen (z.B. „Plugins“ → „MRpvp“, eingerückt), **kritische Warnungen**, die sofort an alle Online-Spieler gehen (Chat und Titel, `player-web.news.alerts`). Texte auf Deutsch und Englisch - eine leere Sprache zeigt die andere. Pro Beitrag optional **auch im Discord posten** (Kanal von `discord-announce`, mit Link zur ganzen Nachricht). Neue Neuigkeiten und Changelogs bekommt jeder Spieler einmal als **Vorschau im Chat** mit Link (`player-web.news.chat-preview`). Vorfälle, die auf einer **Uptime-Kuma-Statusseite** angeheftet sind (`uptime-kuma.status-pages`), erscheinen wie eigene Warnungen und im Discord (`discord-announce.kuma`). Karussell: `player-web.news` (`seconds`, `slides`, `show-maintenance`, `show-restart`, `show-plugin-notices`, `show-tickets`). Details in `docs/WEBOBERFLAECHE.md`.
+### Protokoll
+In der Weboberfläche unter **Protokoll** (Permission `mradmin.web.audit`) stehen alle Ereignisse von MRadmin und den anderen MRtechnology-Plugins - dieselben wie in ihren Discord-Logs, auch wenn Discord aus ist - und alle Aktionen in der Weboberfläche: neueste oben, nach Tagen gegliedert, filterbar nach Herkunft, Text und Zeitraum, neue Einträge erscheinen sofort. Aufgehoben werden sie `logging.keep-days` Tage (höchstens 14) in `plugins/MRadmin/logs/`. Mit `mradmin.web.console.view` steht dort auch die Ausgabe der Server-Konsole als Quelle **Konsole** in derselben Liste - live und die älteren Tage aus Papers Logdateien (bis zu 14 Tage). Befehle ausführen geht nur auf der Seite **Konsole** (Admins).
 
-### Versionen & Updates
-In der Weboberfläche unter **Versionen** siehst du alle MRtechnology-Plugins auf deinem Server: installierte und neueste Version, was neu ist, und ob ein Update wartet.
-- **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Versionen bzw. `/<plugin> version`.
+
+### Plugins & Updates
+In der Weboberfläche unter **Plugins** (Seite „Plugin-Konfiguration“) siehst du **alle MRtechnology-Plugins**: oben die auf deinem Server mit installierter und neuester Version und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
+- **Installieren:** Nicht installierte Plugins installierst du mit einem Klick. MRadmin lädt das offizielle Release für deine Minecraft-Version (nur mit passender Prüfsumme) nach `plugins/` - **geladen wird es beim nächsten Neustart**. Gibt es bisher nur Vorabversionen (z.B. MRpvp 0.x), wird die neueste davon angeboten.
+- **Einstellen im Browser:** Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration**: alle Einstellungen der `config.yml` als Formular mit Erklärungen (Deutsch/Englisch). Speichern prüft jeden Wert, schreibt die Datei (Kommentare bleiben, die alte Datei liegt als `config.backup-web.yml` daneben) und lädt das Plugin sofort neu - ohne Befehl, ohne Neustart. Von Hand bearbeiten geht weiterhin. Permission `mradmin.config` (in `mradmin.groups.admin`). Verfügbar für MRadmin und alle MRtechnology-Plugins in aktueller Version.
+- **Herunterladen** holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht. Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt die Seite Plugins bzw. `/<plugin> version`.
 - **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
-- **Server neu starten:** Nach dem Herunterladen zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein heruntergeladenes Update auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
+- **Server neu starten:** Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein heruntergeladenes Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
   - `none` (Standard): kein Knopf.
   - `stop`: Der Server stoppt, und **dein Start-Skript mit Schleife, ein Wächter oder dein Hoster-Panel** startet ihn wieder.
   - `script`: Der Server startet über das `restart-script` aus der `spigot.yml` neu (`settings.restart-script`).
@@ -246,6 +253,30 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 
 ---
 
+## Karte (squaremap)
+Die Spielerseite hat einen Tab **Karte** mit echtem Minecraft-Gelände. Darauf zeigen die anderen Plugins ihre **Ebenen** - z.B. die eigenen Chunkloader (MRchunks) oder die Server-Wegpunkte (MRwaypoints), jeweils passend für den angemeldeten Spieler, mit Rechtsklick-Aktionen. Die Bilder dafür rendert **[squaremap](https://modrinth.com/plugin/squaremap)**, um das du dich nicht kümmern musst:
+
+- **Automatisch installiert:** Fehlt squaremap, lädt MRadmin das offizielle Release für deine Minecraft-Version von Modrinth (nur wenn die SHA-512-Prüfsumme stimmt). Es ist nach dem nächsten Neustart aktiv.
+- **Automatisch aktualisiert:** Neue squaremap-Versionen landen in `plugins/update/`, Paper tauscht sie beim nächsten Neustart (geprüft alle `map.squaremap.check-hours`, Standard 12 Stunden). Abschaltbar mit `map.squaremap.auto-install` und `auto-update`.
+- **Automatisch gerendert:** Nach der Installation und nach jedem squaremap-Update rendert MRadmin alle Welten der Karte einmal komplett (alle generierten Chunks, im Hintergrund; `map.squaremap.full-render`, gemerkt in `plugins/MRadmin/map-render.yml`). Welten ohne Kartenbilder werden immer gerendert.
+- **Netherdecke als eigene Karte:** squaremap zeigt den Nether von innen. Die Bedrockdecke und was darauf gebaut ist, rendert MRadmin selbst als eigene Karte **„Nether · Decke“** (Bilder in `plugins/MRadmin/map-roof/`): einmal komplett im Hintergrund, danach jeder Chunk, in dem sich oben etwas ändert. Steht ein Spieler auf der Decke (ab Y 128), springt die Karte bei „Zu mir“ und „Folgen“ von selbst dorthin, sonst über die Welt-Auswahl. Wegpunkte und Chunkloader erscheinen auf der Karte, auf der sie liegen (Decke ab Y 128 bzw. darunter). Einstellungen unter `map.nether-roof` (`enabled`, `from-y`, `full-render`, `chunks-per-second`).
+- **Version im Blick:** Auf der Seite **Plugins** steht bei MRadmin auch die squaremap-Version (und ein wartendes Update).
+- **Automatisch eingerichtet:** Bei jedem Start bringt MRadmin die squaremap-Config auf den passenden Stand: squaremaps eigene Webseite aus, schnelle Aktualisierung, keine Spieler auf der Karte, Nether von innen statt der Bedrock-Decke, Namen der Dimensionen. Welten, die einem Plugin gehören (z.B. die Arena-Welt von MRpvp), bleiben von der Karte (`map.hide-module-worlds`). **Was du selbst in `plugins/squaremap/config.yml` änderst, bleibt.** `/mradmin map setup` überschreibt auch deine Änderungen, `map.auto-configure: false` lässt die squaremap-Config ganz in Ruhe.
+
+Die Karte gibt es **nur in MRadmin** - squaremaps eigene Webseite (Port 8080) ist aus, du brauchst keinen Port freizugeben und keinen eigenen Proxy. Die Kartenbilder liefert MRadmin selbst aus, nur an angemeldete Spieler. Dafür muss die Spielerseite eingeschaltet sein (`player-web.enabled`) und `web.public-url` stimmen, damit `/mradmin map` einen Link geben kann.
+
+> [!TIP]
+> **Spieler auf der Karte** (man selbst und die anderen Online-Spieler), Öffnen am eigenen Standort, „Mir folgen“ und das Chunkraster stellst du unter `map.player-page` ein. Für ein Manhunt z.B. `map.player-page.players.others: false` - dann sieht jeder nur sich selbst. Spieler im Admin-Modus, im Zuschauermodus und unsichtbare Spieler sehen andere nie (abschaltbar), in `players.hidden-worlds` genannte Welten zeigen niemanden. Andere Spieler sieht nur, wer `mradmin.map.players` hat.
+
+`/mradmin map` gibt Spielern den Link zur Karte. Admins (`mradmin.map.admin`) sehen dort zusätzlich die squaremap-Version und ob ein Update auf den Neustart wartet oder die Installation fehlgeschlagen ist.
+
+**Karte für alle ausschalten:** Auf der Seite **Karte** im Adminportal (früher „Wegpunkte“, mit MRwaypoints auch Kategorien und Wegpunkte) stehen zwei Schalter (`mradmin.map.admin`): **Karte der Spielerseite** (aus = der Tab „Karte“ verschwindet für alle Spieler) und **Spieler auf der Karte** (aus = niemand sieht andere Spieler oder kann nach ihnen suchen). Beide wirken sofort und bleiben über Neustarts.
+
+> [!NOTE]
+> Bis MRadmin 1.1 hat MRchunks squaremap angebunden, und die Karte war eine öffentliche squaremap-Webseite. Aktualisiere MRadmin und MRchunks gemeinsam - MRadmin übernimmt die Einrichtung aus der alten MRchunks-Config. Ein Reverse-Proxy oder eine Portfreigabe für squaremap kann danach weg.
+
+---
+
 ## Befehle
 
 | Befehl | Was er tut | Permission |
@@ -264,6 +295,7 @@ Den Speicher (`4G`) und den Namen der Paper-JAR an deinen Server anpassen.
 | `/mradmin mail test <adresse>` | Test-Mail über den eingestellten SMTP-Server | `mradmin.web.manage` |
 | `/mradmin discord [test]` | Discord-Status · Testnachricht | `mradmin.admin.discord` |
 | `/mradmin storage` | Speicher-Status (yaml, sqlite, mysql) | `mradmin.admin.storage` |
+| `/mradmin map [setup]` | Link zur Karte der Spielerseite · für Admins Zustand von squaremap, squaremap neu einrichten | `mradmin.map` · `mradmin.map.admin` |
 | `/mradmin reload` · `version` | Config und Sprachdateien neu laden · Version | `mradmin.admin.reload` · `mradmin.version` |
 
 ## Permissions
@@ -271,10 +303,10 @@ Jede Funktion hat eine eigene Permission - **im Spiel und im Web gleich**. Am ei
 
 | Gruppe | Enthält |
 |---|---|
-| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin version` |
-| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Versionen ansehen (ohne „Jetzt prüfen“), Web-Konsole ansehen |
-| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
-| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Server neu starten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
+| `mradmin.player` | `/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Karte, andere Spieler darauf (`mradmin.map.players`) · `/mradmin version` |
+| `mradmin.groups.support` | Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Seite Plugins ansehen (ohne „Jetzt prüfen“) |
+| `mradmin.groups.staff` | Support + Spieler herholen, einfrieren und kicken, die Konsole im Protokoll mitlesen · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben) |
+| `mradmin.groups.admin` | Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Plugins im Browser einstellen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden) |
 
 Die Gruppen bringen auch die nötigen **LibertyBans**-Rechte mit (falls installiert): Support sieht Strafen, Verlauf und die Bann- und Mute-Listen (`libertybans.commands`, `libertybans.list.*`), Staff darf kicken, muten und verwarnen, nur Admins bannen. Diese Rechte gelten dann auch für die LibertyBans-Befehle im Spiel.
 
@@ -296,9 +328,10 @@ Standard ist `op`, außer anders angegeben.
 | Wartung | `mradmin.maintenance.view` · `.manage` · `.bypass` · `.notify` |
 | Ankündigungen, Modus, Chat | `mradmin.announce` · `mradmin.announce.templates` (Ankündigungs-Vorlagen im Web) · `mradmin.news` (Kommunikation im Web) · `mradmin.mode` · `mradmin.mode.others` · `mradmin.staffchat` |
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
-| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
+| Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole im Protokoll mitlesen in `groups.staff`, Seite Konsole mit Befehlen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
-| Versionen & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen) · `mradmin.server.restart` (neu starten) |
+| Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.players` (andere Online-Spieler auf der Karte der Spielerseite) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`, Schalter Karte / Spieler auf der Karte im Adminportal) |
+| Plugins & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen, installieren) · `mradmin.config` (Konfiguration im Browser) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.
 </details>
@@ -307,26 +340,29 @@ Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren
 > Einzelnen Leuten gibst du zusätzlich einzelne Rechte, z.B. `/lp user <name> permission set mradmin.announce true`. Aus einer Gruppe nimmst du eins heraus mit z.B. `/lp group staff permission set mradmin.player.kick false`.
 
 ## Konfiguration
-Alles steht kommentiert in `plugins/MRadmin/config.yml`. Änderungen übernimmst du mit `/mradmin reload`.
+Am einfachsten im Browser: Weboberfläche → **Plugins → MRadmin → Konfiguration** - jede Einstellung mit Erklärung, Speichern lädt MRadmin sofort neu (Permission `mradmin.config`). Alles steht außerdem kommentiert in `plugins/MRadmin/config.yml`, im selben Aufbau wie bei allen MRtechnology-Plugins; Änderungen von Hand übernimmst du mit `/mradmin reload`. Nur in der Datei: eigene Dashboard-Knöpfe (`admin-mode.menu.buttons`), `web.roles` / `web.players` und neue Ticket-Kategorien.
 
 | Abschnitt | Wofür |
 |---|---|
-| `language` · `fallback-language` · `server-language` · `timezone` | Sprachen (pro Spieler automatisch) und Zeitzone aller angezeigten Zeiten (leer = die des Servers) |
-| `features` · `integrations` | Funktionen und Plugin-Verbindungen an/aus |
+| `general` | `language`, `fallback-language`, `server-language` (Sprachen, pro Spieler automatisch) und `timezone` (Zeitzone aller angezeigten Zeiten, leer = die des Servers) |
+| `features` · `integrations` · `libertybans` | Funktionen und Plugin-Verbindungen an/aus, Strafen-Schnellauswahl |
 | `maintenance` · `uptime-kuma` | Ablauf der Wartung, Anbindung an Uptime Kuma |
-| `announce` · `discord-announce` | Ankündigungen im Spiel und im Community-Discord |
-| `admin-mode` · `gui` | Admin-Modus, Menü-Item, eigene Dashboard-Knöpfe |
+| `announce` | Ankündigungen im Spiel |
+| `admin-mode` | Admin-Modus, Menü-Item, eigene Dashboard-Knöpfe |
 | `tickets` | Kategorien, Cooldowns, Limits, wie lange geschlossene Tickets bleiben |
-| `discord` | Admin-Log per Webhook, welche Ereignisse gesendet werden |
+| `health` | Verlauf und TPS-Alarm |
+| `versions` | Seite Plugins: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code (`session-days`, `idle-days`, `code-seconds`), Ranglisten, Karussell mit Neuigkeiten (`news`), eigene Statistik-Kachel (`personal-stats`) |
-| `health` · `libertybans` · `update-checker` | Verlauf und TPS-Alarm, Strafen-Schnellauswahl, Update-Hinweise |
-| `versions` | Seite Versionen: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet |
+| `map` | Karte der Spielerseite: squaremap automatisch installieren, aktualisieren und einrichten, Welten von Plugins ausblenden; `nether-roof`: eigene Karte der Netherdecke; `player-page`: Spieler auf der Karte, Chunkraster, Öffnen am Standort, „Mir folgen“ |
+| `logging` | Wie viele Tage das Protokoll aufgehoben wird (`keep-days`, 1-14) |
+| `discord` · `discord-announce` | Admin-Log per Webhook (welche Ereignisse), Ankündigungen im Community-Discord |
+| `updates` · `gui` | Update-Hinweise, Menüs |
 
 **Sprache:** Alle Texte, Vorlagen und Discord-Nachrichten stehen in `plugins/MRadmin/lang/<sprache>.yml`. Neue Texte aus Updates werden automatisch ergänzt.
-- **Jeder Spieler bekommt seine Sprache:** Mit `language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
-- **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
+- **Jeder Spieler bekommt seine Sprache:** Mit `general.language: auto` (Standard) richtet sich MRadmin nach der Sprache, die der Spieler in Minecraft eingestellt hat - Deutsch (auch Österreich und Schweiz) bekommt Deutsch, Englisch bekommt Englisch. Für Sprachen ohne eigene Datei gilt `fallback-language` (Standard Englisch). Mit `language: de` oder `en` bekommen alle dieselbe Sprache.
+- **Server-Sprache:** Discord-Logs und -Ankündigungen, die Serverliste während einer Wartung, Push-Benachrichtigungen, Mails und Notizen in Tickets haben keinen einzelnen Empfänger - sie kommen in `general.server-language` (Standard `en`). Auf einem deutschen Server also `server-language: de` setzen.
 - Die Konsole ist immer Englisch.
 - Ankündigungen, Wartungs-Countdown, Bossbars und Titel sieht jeder Spieler in seiner Sprache. Die Weboberfläche richtet sich nach der Sprache des Browsers - oder nach der Sprache, die man dort umgeschaltet hat.
 
@@ -345,11 +381,11 @@ Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integratione
 ---
 
 ## Zusammenarbeit mit anderen Plugins
-MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
+MRadmin, MRsleep, MRchunks, MRtoolbar, MRpvp und MRwaypoints laufen jeweils **auch allein**. Sind sie zusammen installiert, erkennt MRadmin sie automatisch und passt Menüs und Web von selbst an:
 - **Dashboard:** ein Knopf je Plugin mit Live-Infos.
 - **Spieler-Menü:** die Infos des Spielers aus jedem Plugin.
 - **Serverzustand:** auffällige und gesperrte Chunkloader (MRchunks), wartende Duell-Prüfungen (MRpvp).
-- **Web:** eigene Seiten **Chunkloader**, **Schlaf** und **Duelle** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader** und **Duelle** für die Spieler selbst.
+- **Web:** eigene Seiten **Chunkloader**, **Schlaf**, **Duelle** und **Wegpunkte** fürs Team, auf der Spielerseite (`/web`) die Bereiche **Chunkloader**, **Duelle** und **Wegpunkte** für die Spieler selbst.
 
 **MRadmin ist außerdem die Verbindung zwischen den anderen Plugins** - ohne MRadmin bekommen sie voneinander nichts mit:
 
@@ -358,6 +394,7 @@ MRadmin, MRsleep, MRchunks, MRtoolbar und MRpvp laufen jeweils **auch allein**. 
 | Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
 | Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
 | In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Chunkloader auf der Karte der Spielerseite, die Arena-Welt nicht | MRchunks / MRpvp |
 | Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
 
 Einrichten musst du dafür nichts. Eine Verbindung abschalten geht unter `integrations` (z.B. `mrsleep: false`). Die Konsole zeigt beim Start, welche Plugins verbunden sind. Für Entwickler: [docs/MODULE-API.md](docs/MODULE-API.md).

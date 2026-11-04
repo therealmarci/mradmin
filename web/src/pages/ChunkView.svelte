@@ -428,7 +428,7 @@
                 barTitle="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
                 note="{t('chunks.warnLimit')} {m.warn} · {t('chunks.lockLimit')} {m.lock}"
                 line={history?.points.length > 1 || phases.length > 0} points={shownPoints.map((p) => linePoint(p, m))} {phases}
-                live={livePoint && linePoint(livePoint, m)} from={rangeStart} to={viewTo} onclick={history ? () => openChart(m.key) : null} />
+                live={livePoint && linePoint(livePoint, m)} from={rangeStart} to={viewTo} gap={history?.gap} onclick={history ? () => openChart(m.key) : null} />
             {/each}
           </div>
         {:else}
@@ -499,13 +499,13 @@
       {/if}
       <LineChart title={m.label} points={shownPoints} live={livePoint} smooth bands={phases} from={rangeStart} to={viewTo} height={chartHeight}
         onpan={(ms) => goTo(viewTo - ms)}
-        states={{ points: shownPoints.map((p) => linePoint(p, m)), phases, live: livePoint && linePoint(livePoint, m) }}
+        states={{ points: shownPoints.map((p) => linePoint(p, m)), phases, live: livePoint && linePoint(livePoint, m), gap: history.gap }}
         seconds={range === '1m' || range === '10m'} format={(v) => (m.rate ? v.toFixed(1) + '/s' : String(Math.round(v)))}
         refs={[{ value: m.warn, label: t('chunks.warnLimit'), color: 'var(--value-warn)' }, { value: m.lock, label: t('chunks.lockLimit'), color: 'var(--bad)' }].filter((r) => r.value > 0)}
         series={[{ key: m.key, label: m.label, color: 'var(--tn)' }]} onClose={() => (chart = null)} />
       {#if overview}
         <TimeNavigator from={overviewFrom} to={now} viewFrom={rangeStart} viewTo={viewTo} label={t('chunks.timeline')}
-          points={overview.points.map((p) => linePoint(p, m))} phases={overviewPhases} onjump={jumpTo} />
+          points={overview.points.map((p) => linePoint(p, m))} phases={overviewPhases} gap={overview.gap} onjump={jumpTo} />
       {/if}
     </div>
   </div>

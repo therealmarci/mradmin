@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import io.socket.client.Ack;
 import io.socket.client.IO;
 import io.socket.client.Socket;
+import okhttp3.OkHttpClient;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 import org.json.JSONObject;
@@ -40,6 +41,8 @@ public final class KumaClient {
     private final Consumer<Boolean> onConnectionChange;
 
     private volatile Socket socket;
+    /** Own HTTP client of the connection - stopped with it, so no thread of it outlives the plugin (reload, stop). */
+    private volatile OkHttpClient http;
     private volatile State state = State.DISABLED;
     /** A maintenance list has arrived since the last login (see {@link #upToDate()}). */
     private volatile boolean listSinceLogin;
@@ -105,6 +108,11 @@ public final class KumaClient {
                 .setTimeout(15_000)
                 .setExtraHeaders(Map.of("User-Agent", List.of("MRadmin/" + plugin.getPluginMeta().getVersion())))
                 .build();
+        // Not the library's shared client: its threads would keep running after MRadmin is disabled.
+        OkHttpClient client = new OkHttpClient.Builder().readTimeout(1, TimeUnit.MINUTES).build();
+        options.callFactory = client;
+        options.webSocketFactory = client;
+        http = client;
         Socket created;
         try {
             created = IO.socket(origin, options);
@@ -157,6 +165,20 @@ public final class KumaClient {
         if (current != null) {
             current.off();
             current.close();
+        }
+        OkHttpClient client = http;
+        http = null;
+        if (client != null) {
+            // End the calls and wait for their threads: a late callback after the plugin is gone would load classes
+            // from a closed JAR ("zip file closed").
+            client.dispatcher().cancelAll();
+            client.dispatcher().executorService().shutdown();
+            client.connectionPool().evictAll();
+            try {
+                client.dispatcher().executorService().awaitTermination(3, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         state = State.DISABLED;
     }

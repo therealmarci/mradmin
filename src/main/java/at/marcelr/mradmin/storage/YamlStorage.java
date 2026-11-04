@@ -278,6 +278,7 @@ final class YamlStorage implements Storage {
             } catch (IOException e) {
                 plugin.getLogger().log(Level.WARNING, "Could not write " + AUDIT + ": " + e.getMessage());
             }
+            plugin.logChanged();
         });
     }
 

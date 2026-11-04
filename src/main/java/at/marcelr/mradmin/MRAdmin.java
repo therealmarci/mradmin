@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(18, Map.ofEntries(
+    private final Messages messages = new Messages(19, Map.ofEntries(
+            // 19: the map is shown by MRadmin (player page), squaremap only renders.
+            Map.entry(19, Set.of("help-map", "help-map-admin", "map-link", "map-unavailable", "map-status-on", "map-status-off")),
             // 18: only a short warning fills the screen, the text comes in the chat.
             Map.entry(18, Set.of("alert-title", "alert-subtitle")),
             // 17: the admin item is no compass any more.
@@ -105,11 +107,15 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private AdminModeManager adminMode;
     private UpdateChecker updateChecker;
     private at.marcelr.mradmin.versions.VersionManager versions;
+    private final at.marcelr.mradmin.config.ConfigEditor configEditor = new at.marcelr.mradmin.config.ConfigEditor(this);
+    private final at.marcelr.mradmin.log.EventLog eventLog = new at.marcelr.mradmin.log.EventLog(
+            new java.io.File(getDataFolder(), "logs").toPath(), getLogger());
     private at.marcelr.mradmin.versions.RestartManager restarts;
     private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
     private TicketManager tickets;
     private Modules modules;
+    private at.marcelr.mradmin.map.MapService map;
     private Storage storage;
     private WebServer web;
     private HealthMonitor health;
@@ -122,6 +128,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         ConfigUpdater.update(this);
         loadConfiguration();
         storage = Storage.create(this);
+        eventLog.load(getConfig().getInt("logging.keep-days", 14));
+        eventLog.onAdd(this::logChanged);
+        // Old days go at midnight - checked every hour.
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, eventLog::prune, 72_000L, 72_000L);
         getLogger().info("Storage: " + storage.type() + " (" + storage.describe() + ").");
         WebAuth webAuth = new WebAuth(this);
         webAuth.load();
@@ -136,6 +146,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.MaintenanceRoutes.register(web);
         at.marcelr.mradmin.web.NewsRoutes.register(web);
         at.marcelr.mradmin.web.VersionRoutes.register(web);
+        at.marcelr.mradmin.web.MapRoutes.register(web);
+        at.marcelr.mradmin.web.ConfigRoutes.register(web);
+        at.marcelr.mradmin.web.LogRoutes.register(web);
         at.marcelr.mradmin.web.PushRoutes.register(web);
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
@@ -155,6 +168,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         modules = new Modules(this);
         // Before the other plugins enable (they softdepend on MRadmin) - they register their modules then.
         modules.offer();
+        map = new at.marcelr.mradmin.map.MapService(this);
         staffChat = new StaffChat(this);
         maintenance = new MaintenanceManager(this);
         discordAnnounce.loadState();
@@ -203,6 +217,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        eventLog.shutdown();
         if (xpPeaks != null) {
             xpPeaks.stop();
         }
@@ -221,6 +236,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (versions != null) {
             versions.shutdown();
+        }
+        if (map != null) {
+            map.stop();
         }
         if (updateChecker != null) {
             updateChecker.stop();
@@ -287,14 +305,17 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         versions.start();
         menuListener.start();
         newsDelivery.incidents().start();
+        // After all plugins are enabled: their modules bring the layers of the web map.
+        Bukkit.getScheduler().runTask(this, map::start);
     }
 
     private void loadConfiguration() {
         config = ConfigUpdater.load(this);
-        messages.load(this, config.getString("language", "auto"), config.getString("fallback-language", "en"),
-                config.getString("server-language", "en"));
+        messages.load(this, config.getString("general.language", "auto"), config.getString("general.fallback-language", "en"),
+                config.getString("general.server-language", "en"));
         settings = Settings.from(config, getLogger());
         discord.load(config.getConfigurationSection("discord"));
+        eventLog.keepDays(config.getInt("logging.keep-days", 14));
         discordAnnounce.load(config.getConfigurationSection("discord-announce"));
     }
 
@@ -442,11 +463,33 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         return web;
     }
 
+    /** A new entry in the log or the web log: open pages Log load the new ones (any thread). */
+    public void logChanged() {
+        WebServer server = web;
+        if (server != null) {
+            server.events().log();
+        }
+    }
+
     public HealthMonitor health() {
         return health;
     }
 
     /** The plugins MRadmin works with (module API and old hooks). */
+    public at.marcelr.mradmin.map.MapService map() {
+        return map;
+    }
+
+    /** MRadmin's log: events of MRadmin and of the modules, up to 14 days (page "Log"). */
+    public at.marcelr.mradmin.log.EventLog eventLog() {
+        return eventLog;
+    }
+
+    /** The config files the web interface may edit. */
+    public at.marcelr.mradmin.config.ConfigEditor configEditor() {
+        return configEditor;
+    }
+
     public Modules modules() {
         return modules;
     }

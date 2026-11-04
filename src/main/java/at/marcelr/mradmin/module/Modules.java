@@ -133,9 +133,15 @@ public final class Modules implements MRadminService {
     }
 
     @Override
+    public void log(String moduleId, String event, String text, int color) {
+        plugin.eventLog().add(moduleId, event, text, color);
+    }
+
+    @Override
     public void adminLog(String moduleId, String text) {
         if (plugin.isEnabled()) {
-            plugin.discord().log("plugin-alert", "plugin", displayName(moduleId), "text", text);
+            // Modules write the same text into the log themselves (log(...), API 13) - not a second time here.
+            plugin.discord().discordOnly("plugin-alert", "plugin", displayName(moduleId), "text", text);
         }
     }
 
@@ -170,6 +176,26 @@ public final class Modules implements MRadminService {
     public Map<Long, String> moduleHistory(String moduleId, long since) {
         requireHistoryId(moduleId);
         return plugin.isEnabled() ? plugin.storage().loadModuleHistory(moduleId, since) : Map.of();
+    }
+
+    /**
+     * squaremap's own page is off after MRadmin 1.1 - nothing is drawn there any more (the map of the player page
+     * asks the modules itself).
+     */
+    @Override
+    public void mapChanged(String moduleId) {
+    }
+
+    @Override
+    public @Nullable String mapUrl() {
+        String url = plugin.isEnabled() && plugin.map() != null ? plugin.map().url() : "";
+        return url.isEmpty() ? null : url;
+    }
+
+    @Override
+    public @Nullable String mapUrl(World world, int x, int z) {
+        String url = plugin.isEnabled() && plugin.map() != null ? plugin.map().url(world, x, z) : "";
+        return url.isEmpty() ? null : url;
     }
 
     /** The id becomes part of a file name. */

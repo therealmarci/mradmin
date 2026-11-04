@@ -253,7 +253,7 @@ public final class Http {
         json(status, Map.of("error", key));
     }
 
-    void send(int status, String type, byte[] data, String cache) throws IOException {
+    public void send(int status, String type, byte[] data, String cache) throws IOException {
         if (answered) {
             return;
         }

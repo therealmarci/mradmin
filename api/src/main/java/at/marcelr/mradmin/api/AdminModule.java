@@ -115,6 +115,25 @@ public interface AdminModule {
         return -1;
     }
 
+    // ------------------------------------------------------------ web map
+
+    /**
+     * <b>Not shown any more after MRadmin 1.1</b> (squaremap only renders, its own page is off) - the map of the player
+     * page asks {@link WebModule#selfMap}. Kept so modules built for API 7 still load. Was: the module's layers on the
+     * web map, e.g. MRchunks' chunk loaders. Since API 7.
+     */
+    default List<MapLayer> mapLayers() {
+        return List.of();
+    }
+
+    /**
+     * Pictures for {@link MapMarker.Icon} of {@link #mapLayers()} - like those not used any more after MRadmin 1.1.
+     * Since API 7.
+     */
+    default Map<String, java.awt.image.BufferedImage> mapIcons() {
+        return Map.of();
+    }
+
     // ---------------------------------------------------------------- web
 
     /**

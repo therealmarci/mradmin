@@ -28,9 +28,16 @@ public interface MRadminService {
      * {@link WebModule#tile}, {@link WebModule#pushKinds}, {@link WebModule#reportCategories}; 4: the player area -
      * {@link WebModule#selfAreas}, {@link WebModule#selfAction}, {@link WebModule#selfPermissions},
      * {@link WebModule#rankings}; 5: more building blocks for it - {@link SelfBlock.Cards}, {@link SelfBlock.Meters},
-     * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}).
+     * {@link SelfBlock.People}, {@link SelfBlock.Form}, {@link SelfBlock.Embed}, {@link SelfBlock.Group}; 6: module
+     * history - {@link #moduleHistoryAdd}, {@link #moduleHistory}; 7: the web map - {@link AdminModule#mapLayers},
+     * {@link AdminModule#mapIcons}, {@link #mapChanged}, {@link #mapUrl()}, {@link #mapUrl(World, int, int)}; 8: the map of
+     * the player's page - {@link WebModule#selfMap}, {@link WebModule#selfMapAction}, {@link SelfMapLayer}; 9: groups,
+     * selections and symbols there - {@link SelfMapLayer#group}, {@link SelfMapLayer.Action#choice},
+     * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
+     * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
+     * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}).
      */
-    int API_VERSION = 6;
+    int API_VERSION = 13;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -69,7 +76,10 @@ public interface MRadminService {
      */
     void webChanged(String moduleId, String type, String id);
 
-    /** A line in MRadmin's Discord admin log (event "plugin-alert"). */
+    /**
+     * A line in MRadmin's Discord admin log (event "plugin-alert"). Only Discord: the log of the web interface gets
+     * its entry from {@link #log} (API 13), so a module that does both does not appear twice.
+     */
     void adminLog(String moduleId, String text);
 
     /**
@@ -105,5 +115,40 @@ public interface MRadminService {
      */
     default Map<Long, String> moduleHistory(String moduleId, long since) {
         return Map.of();
+    }
+
+    // ------------------------------------------------- web map (since API 7)
+
+    /**
+     * Something on the module's map layers changed. Without effect after MRadmin 1.1 - the map of the player page
+     * loads them again by itself; kept so modules built for API 7 still load.
+     */
+    default void mapChanged(String moduleId) {
+    }
+
+    /**
+     * Link to the map of the player page (web.public-url + /me/map), or null if there is none (no squaremap, no
+     * address, no player page). With {@link #mapUrl(World, int, int)} centred on a place.
+     */
+    default @Nullable String mapUrl() {
+        return null;
+    }
+
+    /** Link to the map of the player page centred on a place, or null if there is none or the world is not on it. */
+    default @Nullable String mapUrl(World world, int x, int z) {
+        return null;
+    }
+
+    // ------------------------------------------------------------------ log (since API 13)
+
+    /**
+     * Writes an event into MRadmin's log (web interface, page "Log", kept up to 14 days) - the same events a plugin sends
+     * to its Discord log, whether Discord is switched on or not.
+     *
+     * @param event key of the event, e.g. "loader-placed" (filterable)
+     * @param text  the finished text in the server language (Discord markdown like **bold** is shown)
+     * @param color colour of the event (0xRRGGBB), e.g. the Discord colour
+     */
+    default void log(String moduleId, String event, String text, int color) {
     }
 }

@@ -44,8 +44,14 @@ public final class ConfigUpdater {
  * 33: the statistic player-kills is gone, xp-level instead (in player-web.rankings.statistics).
  * 34: new statistics blocks-placed, totems, times-slept, distance-swum, distance-flown (added to the rankings).
  * 35: every statistic of the personal tab also as a ranking (items-crafted, jumps, fish-caught added).
+ * 36: admin item STRUCTURE_VOID instead of a compass.
+ * 37: the web map (map) moved from MRchunks to MRadmin - MRchunks' squaremap settings are taken over.
+ * 38: squaremap only renders, MRadmin shows the map (player page): map.squaremap (auto-install, auto-update,
+ * check-hours); the settings of squaremap's own page (address, reverse-proxy, chunk-grid, layers ...) are gone.
+ * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
+ * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
      */
-    public static final int CURRENT_VERSION = 36;
+    public static final int CURRENT_VERSION = 46;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -60,7 +66,17 @@ public final class ConfigUpdater {
             Map.entry("discord.events.report-closed.enabled", "discord.events.ticket-closed.enabled"),
             Map.entry("discord.events.report-closed.color", "discord.events.ticket-closed.color"),
             // v23: automatic tickets of all plugins, not only MRchunks' lag locks
-            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"));
+            Map.entry("tickets.chunkloader-locks", "tickets.plugin-reports"),
+            // v43: same layout as all MRtechnology plugins (general, features, discord, updates, gui)
+            Map.entry("language", "general.language"),
+            Map.entry("fallback-language", "general.fallback-language"),
+            Map.entry("server-language", "general.server-language"),
+            Map.entry("timezone", "general.timezone"),
+            Map.entry("update-checker.enabled", "updates.enabled"),
+            Map.entry("update-checker.source", "updates.source"),
+            Map.entry("update-checker.include-prereleases", "updates.include-prereleases"),
+            Map.entry("update-checker.interval-hours", "updates.interval-hours"),
+            Map.entry("update-checker.notify-on-join", "updates.notify-on-join"));
 
     /**
      * Sections whose entries are made by the server owner (own menu buttons, ticket categories): their entries are
@@ -142,9 +158,9 @@ public final class ConfigUpdater {
             if (version < 19) {
                 String old = existing.getString("language", "auto").trim();
                 if (!old.isEmpty() && !old.equalsIgnoreCase("auto")) {
-                    template.set("server-language", old);
+                    template.set("general.server-language", old);
                 }
-                template.set("language", "auto");
+                template.set("general.language", "auto");
             }
             // v29: the player page asks for a new code from /web after at most 14 days - the old default of 90 goes.
             if (version < 29 && existing.getInt("player-web.session-days", 90) == 90) {
@@ -178,6 +194,9 @@ public final class ConfigUpdater {
             if (version < 36 && "COMPASS".equalsIgnoreCase(existing.getString("admin-mode.compass-material"))) {
                 template.set("admin-mode.compass-material", "STRUCTURE_VOID");
             }
+            if (version < 37) {
+                takeOverMap(plugin, template);
+            }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.
             template.options().width(10_000);
@@ -189,6 +208,48 @@ public final class ConfigUpdater {
                     + carried + " settings carried over, backup: " + backup.getName() + ").");
         } catch (IOException | InvalidConfigurationException e) {
             plugin.getLogger().log(Level.WARNING, "Could not update config.yml: " + e.getMessage());
+        }
+    }
+
+    /** squaremap settings of MRchunks (until its 1.1) that are still map.* in MRadmin. */
+    private static final java.util.List<String> MAP_KEYS = java.util.List.of("enabled", "auto-configure");
+
+    /**
+     * v37: the web map moved from MRchunks to MRadmin. Takes over MRchunks' squaremap section - from its config.yml,
+     * or, if MRchunks already updated itself and dropped the section, from the newest backup it kept of it.
+     */
+    private static void takeOverMap(MRAdmin plugin, YamlConfiguration template) {
+        File folder = new File(plugin.getDataFolder().getParentFile(), "MRchunks");
+        java.util.List<File> candidates = new java.util.ArrayList<>();
+        candidates.add(new File(folder, "config.yml"));
+        File[] backups = folder.listFiles((dir, name) -> name.matches("config\\.v\\d+\\.backup\\.yml"));
+        if (backups != null) {
+            java.util.Arrays.sort(backups, java.util.Comparator.comparingInt(
+                    (File f) -> Integer.parseInt(f.getName().replaceAll("\\D", ""))).reversed());
+            candidates.addAll(java.util.List.of(backups));
+        }
+        for (File candidate : candidates) {
+            if (!candidate.isFile()) {
+                continue;
+            }
+            YamlConfiguration old = new YamlConfiguration();
+            try {
+                old.loadFromString(stripBom(Files.readString(candidate.toPath(), StandardCharsets.UTF_8)));
+            } catch (IOException | InvalidConfigurationException e) {
+                continue;
+            }
+            if (!old.isConfigurationSection("squaremap")) {
+                continue;
+            }
+            int taken = 0;
+            for (String key : MAP_KEYS) {
+                if (old.contains("squaremap." + key)) {
+                    template.set("map." + key, old.get("squaremap." + key));
+                    taken++;
+                }
+            }
+            plugin.getLogger().info("Took over " + taken + " web map settings from MRchunks (" + candidate.getName() + ").");
+            return;
         }
     }
 

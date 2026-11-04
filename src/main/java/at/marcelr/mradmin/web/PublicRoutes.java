@@ -132,12 +132,12 @@ public final class PublicRoutes {
         Bans bans = bans();
         String name = String.valueOf(http.string("name")).strip();
         if (!PublicRequests.validName(name)) {
-            throw new Http.WebException(400, "code-wrong");
+            throw new Http.WebException(400, "unban-code-wrong");
         }
         UUID player = requests.lookup(bans, name);
         long banId = player == null ? -1 : requests.verify(player, http.string("code"));
         if (banId < 0) {
-            throw new Http.WebException(400, "code-wrong");
+            throw new Http.WebException(400, "unban-code-wrong");
         }
         String exact = Bukkit.getOfflinePlayer(player).getName();
         return new Proof(exact == null ? name : exact, player, banId, bans.activeBan(banId));

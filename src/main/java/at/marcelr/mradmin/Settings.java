@@ -263,23 +263,23 @@ public record Settings(
                 c.getBoolean("admin-mode.end-on-quit", false),
                 hubButtons(c, log));
 
-        String source = c.getString("update-checker.source", "github").toLowerCase(Locale.ROOT);
+        String source = c.getString("updates.source", "github").toLowerCase(Locale.ROOT);
         if (!source.equals("github") && !source.equals("modrinth")) {
-            log.warning("update-checker.source '" + source + "' is unknown, using github.");
+            log.warning("updates.source '" + source + "' is unknown, using github.");
             source = "github";
         }
         UpdateSettings update = new UpdateSettings(
-                c.getBoolean("update-checker.enabled", true),
+                c.getBoolean("updates.enabled", true),
                 source,
-                c.getBoolean("update-checker.include-prereleases", false),
-                Math.max(1, c.getInt("update-checker.interval-hours", 6)),
-                c.getBoolean("update-checker.notify-on-join", true));
+                c.getBoolean("updates.include-prereleases", false),
+                Math.max(1, c.getInt("updates.interval-hours", 6)),
+                c.getBoolean("updates.notify-on-join", true));
 
         GuiSettings gui = new GuiSettings(
                 Math.clamp(c.getInt("gui.refresh-ticks", 20), 5, 200),
                 c.getBoolean("gui.sounds", true));
 
-        String zoneName = c.getString("timezone", "").trim();
+        String zoneName = c.getString("general.timezone", "").trim();
         ZoneId zone = ZoneId.systemDefault();
         if (!zoneName.isEmpty()) {
             try {

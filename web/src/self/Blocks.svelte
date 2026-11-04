@@ -100,7 +100,7 @@
         {/if}
       </section>
     {:else if block.type === 'map'}
-      <AreaMap {block} />
+      <AreaMap {block} flat={nested} />
     {:else if block.type === 'meters'}
       <section class="card" class:flat={nested}>
         {#if block.title}<h2>{block.title}</h2>{/if}

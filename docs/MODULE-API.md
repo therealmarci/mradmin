@@ -37,7 +37,7 @@ Alle Typen liegen im Paket `at.marcelr.mradmin.api` (Teilprojekt `api/`).
 
 **`gradle.properties`**
 ```properties
-mradminApi=api-1.2.0
+mradminApi=api-1.8.0
 ```
 
 **`build.gradle.kts`**
@@ -213,6 +213,129 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   sie auf der Statistik-Seite neben den Minecraft-Statistiken, lässt ausgetragene Spieler weg, zeigt die besten
   (`player-web.rankings.top`) und den eigenen Platz.
 
+## Webkarte (`mapLayers`, API 7 - nicht mehr angezeigt)
+
+Nach MRadmin 1.1 gibt es squaremaps eigene Webseite nicht mehr, die Karte steht nur noch auf der Spielerseite (siehe
+unten). `mapLayers()`, `mapIcons()` (`MapLayer`, `MapMarker`) und `service.mapChanged(id)` bleiben in der API, damit
+ältere Module weiter laden, haben aber **keine Wirkung** mehr. Neue Module nutzen `selfMap`.
+
+- **Links:** `service.mapUrl()` führt zum Tab „Karte“ der Spielerseite, `service.mapUrl(world, x, z)` dorthin mit
+  `?world=…&x=…&z=…` (die Karte öffnet an dieser Stelle). `null`, wenn es keine Karte (squaremap fehlt, Spielerseite
+  aus) oder keine `web.public-url` gibt.
+- **Welten von Modulen** (`ownsWorld`) lässt MRadmin mit `map.hide-module-worlds` von der Karte.
+
+## Karte der Spielerseite (`selfMap`, ab API 8)
+
+Der Tab **Karte** der Spielerseite ist MRadmins eigene Karte über den Bildern, die squaremap rendert (MRadmin liest sie
+aus squaremaps Ordner). Jedes Modul bringt Ebenen **für genau diesen Spieler** mit:
+
+```java
+@Override
+public List<SelfMapLayer> selfMap(SelfViewer viewer) {          // Hauptthread, beim Laden und alle paar Sekunden
+    return List.of(new SelfMapLayer("shops", "Shops", "#FFB300",
+            List.of(new SelfMapLayer.Marker("12", "minecraft:overworld", 250, 150, 0, 0, "Test-Shop", "",
+                    List.of("Shops", "250 -60 150"),
+                    List.of(new SelfMapLayer.Action("delete", "Löschen", "bad", "Wirklich löschen?", null)))),
+            List.of(new SelfMapLayer.Action("create", "Wegpunkt hier erstellen", "good", null,
+                    new SelfBlock.Input("Name", "", 32))),
+            new SelfMapLayer.Toggle("Ingame: an", true, "xaero")));
+}
+
+@Override
+public String selfMapAction(SelfViewer viewer, String layer, String action, Map<String, String> args) {
+    // args: "marker" (Marker-Aktion) bzw. "world", "x", "z" (Rechtsklick auf freie Stelle), "value" (Eingabe), "on" (Schalter)
+    return null; // oder der Grund in viewer.lang()
+}
+```
+
+- **Marker:** Punkt (`width`/`length` 0) oder Fläche ab (x, z), Welt als Schlüssel (`minecraft:overworld`), Farbe leer =
+  Farbe der Ebene, `details` = Zeilen beim Anklicken, `actions` = Rechtsklick-Menü.
+- **`here`:** Aktionen für einen Rechtsklick auf eine freie Stelle der Karte.
+- **`toggle`:** ein Schalter in der Ebenenliste (z.B. MRwaypoints: „Ingame“ = in Xaero zeigen).
+- Reine Texte in `viewer.lang()`. MRadmin prüft `mradmin.web.self` und Sperren, alles andere prüft das Modul in
+  `selfMapAction` selbst (wie in `selfAction`). Aktionen sind auf 60 pro Minute begrenzt.
+- **Ab API 9** (`api-1.8.0`, vorher `apiVersion() >= 9` prüfen, sonst die alten Konstruktoren nutzen):
+  - `group` (7. Wert von `SelfMapLayer`): Überschrift in der Ebenenliste, Ebenen mit gleicher Gruppe stehen zusammen (leer = Name des Plugins).
+  - `Action.choice` = `SelfMapLayer.Choice(label, value, options)` mit `Option(id, label, color)`: eine Auswahl im selben Dialog wie `input`, kommt als Argument `choice` an (MRwaypoints: Kategorie beim Erstellen und Bearbeiten).
+  - `Action.icon`: Symbol im Menü - `plus`, `edit`, `trash`, `power`, `compass`, `eye` oder leer. Aktionen mit `tone` `bad` stehen rot am Ende des Menüs.
+  - MRadmin selbst zeichnet zusätzlich Spieler (eigene Position, andere Online-Spieler) und das Chunkraster (`map.player-page`) - dafür braucht ein Modul nichts.
+- **Ab API 10** (`api-1.9.0`, vorher `apiVersion() >= 10` prüfen, sonst den Konstruktor ohne Höhe nutzen): `Marker.y` (letzter Wert, `null` = keine Höhe). Im Nether zeigt MRadmin einen Marker mit Höhe nur auf der Karte der Decke (ab `map.nether-roof.from-y`) bzw. nur darunter; ohne Höhe auf beiden.
+- **Ab API 11** (`api-1.10.0`, vorher `apiVersion() >= 11` prüfen): `Marker.card` (eine `SelfBlock.Card` wie im eigenen Bereich, am besten ohne `details`) und `Marker.area` (Id des Bereichs). Ein Klick auf den Punkt zeigt dann die Kachel statt der `details`; ihre Knöpfe gehen an `selfAction(viewer, area, …)`, „Einstellungen öffnen“ führt zu `/me/<modul>/<area>#card=<id>` (die Seite öffnet dort diese Kachel). MRchunks: Auslastung, Ein/Aus, Dummy.
+- Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `GET /api/self/map/stamps`, `GET /api/self/map/worlds`, `POST /api/self/map/action`.
+
+## Konfiguration im Browser (`webConfig`, ab API 12)
+
+Seite **Plugins → <Plugin> → Konfiguration** (Recht `mradmin.config`). Ein Modul gibt seine `config.yml` frei:
+
+```java
+@Override
+public @Nullable WebConfig webConfig() {
+    return new WebConfig(new File(plugin.getDataFolder(), "config.yml"),
+            resource("web-config.yml"),   // Formular (unten)
+            resource("config.yml"),       // mitgelieferte Config: Standardwerte, Zeilen von Tabellen
+            by -> {                       // nach dem Speichern, Hauptthread - wie der Reload-Befehl
+                plugin.reload();
+                plugin.discord().log("admin-reload", "admin", by);
+            });
+}
+```
+
+MRadmin liest die Datei neu, prüft die Prüfsumme (Datei inzwischen geändert → 409 `config-changed`), prüft jede Änderung
+gegen das Formular (nur Schlüssel des Formulars, Typ und Grenzen), legt die alte Datei als `config.backup-web.yml` ab,
+schreibt die neue in einem Schritt (UTF-8 mit BOM, Kommentare und Reihenfolge bleiben) und ruft dann `reload` auf.
+Bearbeiten per Datei bleibt möglich. Ein Plugin, das für ältere MRadmin-Versionen baut, braucht keine Prüfung - ältere
+MRadmin rufen `webConfig()` nie auf.
+
+**Formular** (`src/main/resources/web-config.yml`, englische Kommentare, Texte DE/EN):
+
+```yaml
+sections:
+  - id: sleep
+    name: {de: Schlafen, en: Sleeping}
+    help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
+    fields:
+      - key: sleep.percentage          # Schlüssel in config.yml
+        type: int                      # Typ, siehe unten
+        min: 0
+        max: 100
+        unit: {de: "%", en: "%"}
+        name: {de: Anteil der Schläfer, en: Share of sleepers}
+        help: {de: "...", en: "..."}
+        restart: false                 # true = wirkt erst nach einem Neustart (Hinweis im Web)
+        when: sleep.enabled            # nur zeigen, wenn: "key" (Schalter an), "!key" (aus), "key=a|b" (Wert)
+```
+
+| `type` | Bedienung | Weitere Angaben |
+|---|---|---|
+| `bool` | Schalter | |
+| `int`, `decimal` | Zahlenfeld | `min`, `max`, `unit` |
+| `string`, `text` | Eingabezeile / mehrzeilig | `max-length` (Standard 2000) |
+| `secret` | „gesetzt“ / „leer“, neuer Wert per Knopf - der Wert geht nie an den Browser | `max-length` |
+| `choice` | bis 4 kurze Werte als Umschalter, sonst Auswahlliste | `options`: Liste aus `{value, de, en}` oder einfachen Werten |
+| `color` | Farbwähler + `#RRGGBB` | |
+| `duration` | Dauer wie `15m`, `1h30m`, `2d` (Zahl = Minuten), mit Klartext daneben | `permanent: true` erlaubt `permanent` |
+| `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent` |
+| `ints` | Liste ganzer Zahlen als Chips | `min`, `max`, `count`, `unit` |
+| `choices` | Mehrfachauswahl aus festen Werten (Chips zum Anklicken) | `options` wie bei `choice` |
+| `worlds` | Welten des Servers zum Anklicken | |
+| `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name, default}` (`default` = Wert, solange eine Zeile den Schlüssel nicht hat), `rows`: Name je Zeile |
+
+- **Texte mit Komma** in der Kurzschreibweise `{de: …, en: …}` immer in Anführungszeichen setzen, sonst schneidet YAML den Text am Komma ab.
+- Jeder Wert der `config.yml` (außer `config-version`) braucht ein Feld - ein Test im Plugin prüft das (Muster: `WebConfigFormTest` in MRsleep).
+- Routen: `GET /api/config/<Plugin>`, `POST /api/config/<Plugin>` `{version, changes}` → `{changed, restart, reloadError, version, sections}`; ungültiger Wert: 400 `{error, field}`.
+
+## Protokoll (`log`, ab API 13)
+
+`MRadminService#log(moduleId, event, text, color)` schreibt ein Ereignis ins Protokoll von MRadmin (Seite „Protokoll“,
+bis zu 14 Tage). Gedacht für genau die Ereignisse, die ein Plugin in sein Discord-Log schickt - und zwar immer, auch
+wenn Discord aus ist: Text fertig in der Server-Sprache (Discord-Markdown wie `**fett**` wird dargestellt), `color` =
+Discord-Farbe. Vorher `apiVersion() >= 13` prüfen. Muster: `DiscordWebhook#log` in MRsleep/MRchunks ruft vor dem
+Discord-Teil `plugin.mradmin().log(...)`.
+
+`adminLog(id, text)` geht nur in MRadmins Discord-Log (Ereignis „plugin-alert“), **nicht** ins Protokoll - dafür
+sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-mradmin-webhook`, eigene
+`webhook-url` leer): `log(...)` fürs Protokoll, `adminLog(...)` statt des eigenen Webhooks.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -222,7 +345,9 @@ public String selfAction(SelfViewer viewer, String area, String action, Map<Stri
   (Bausteine `Cards`, `Meters`, `People`, `Form`, `Embed`; `Group` ab `api-1.4.1`), Version 6 = `api-1.5.0`
   (`moduleHistoryAdd`, `moduleHistory`: eigene Messwerte eines Moduls im Speicher von MRadmin ablegen - Dateien,
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
-  Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader).
+  Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
+  `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

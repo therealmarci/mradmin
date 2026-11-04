@@ -18,15 +18,18 @@
   import Chunks from './pages/Chunks.svelte';
   import ChunkView from './pages/ChunkView.svelte';
   import Sleep from './pages/Sleep.svelte';
+  import Waypoints from './pages/Waypoints.svelte';
   import Pvp from './pages/Pvp.svelte';
   import PvpGame from './pages/PvpGame.svelte';
   import PvpKits from './pages/PvpKits.svelte';
   import PvpKit from './pages/PvpKit.svelte';
   import Players from './pages/Players.svelte';
-  import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
   import News from './pages/News.svelte';
-  import Versions from './pages/Versions.svelte';
+  import Plugins from './pages/Plugins.svelte';
+  import PluginView from './pages/PluginView.svelte';
+  import Logs from './pages/Logs.svelte';
+  import Console from './pages/Console.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -94,7 +97,14 @@
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
   // /pvp/kits = list, /pvp/kits/<id> = one kit, /pvp/new-kit[/<copy of>] = new kit
   const kitMatch = $derived(route.path.match(/^\/pvp\/(kits|new-kit)(?:\/([a-z0-9_-]+))?$/));
-  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp' : route.path);
+  // /plugins = all plugins, /plugins/<name>[/config] = one plugin (the old address /versions leads to the list)
+  const pluginMatch = $derived(route.path.match(/^\/plugins\/([A-Za-z0-9_-]+)(?:\/(config))?$/));
+  const pluginName = $derived(pluginMatch?.[1] ?? null);
+  $effect(() => {
+    if (route.path === '/versions') go('/plugins', true);
+  });
+  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp'
+    : pluginName ? '/plugins' : route.path);
 
   const nav = $derived(
     me
@@ -106,10 +116,12 @@
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
+          ...(me.may.mrwaypoints || me.may.mapAdmin ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
-          ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
-          ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
+          ...(me.may.versions ? [{ path: '/plugins', label: t('nav.versions'), icon: 'box' }] : []),
+          ...(me.may.audit || me.may.console ? [{ path: '/logs', label: t('nav.logs'), icon: 'news' }] : []),
+          ...(me.may.consoleExecute ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
       : [],
   );
@@ -165,13 +177,17 @@
       {#key playerId}<PlayerView uuid={playerId} section={playerSection} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}
       <Players />
-    {:else if route.path === '/versions' && me.may.versions}
-      <Versions />
+    {:else if pluginName && me.may.versions}
+      {#key pluginName}<PluginView name={pluginName} tab={pluginMatch[2] ?? null} />{/key}
+    {:else if route.path === '/logs' && (me.may.audit || me.may.console)}
+      <Logs {me} />
+    {:else if route.path === '/plugins' && me.may.versions}
+      <Plugins />
     {:else if route.path === '/maintenance' && me.may.maintenance}
       <Maintenance {me} />
     {:else if route.path === '/news' && (me.may.news || me.may.announce)}
       <News {me} />
-    {:else if route.path === '/console' && me.may.console}
+    {:else if route.path === '/console' && me.may.consoleExecute}
       <Console {me} />
     {:else if pvpId && me.may.mrpvp}
       {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
@@ -183,6 +199,8 @@
       {/if}
     {:else if route.path === '/pvp' && me.may.mrpvp}
       <Pvp {me} />
+    {:else if route.path === '/waypoints' && (me.may.mrwaypoints || me.may.mapAdmin)}
+      <Waypoints {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
     {:else}

@@ -251,20 +251,37 @@ Die eingebauten Vorlagen der Sprachdatei (`restart`, `restart-now`, `update`, `e
 nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten gehen sie weiter. Gespeichert wird im
 Speicher von MRadmin unter `announce-templates`.
 
-## Versionen (`mradmin.versions.view`)
-- Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
-  (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
-  auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
-- Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
-  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit
-  `mradmin.versions.install`, höchstens einmal pro
-  Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+## Plugins (`mradmin.versions.view`)
+Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` leitet weiter).
+- **Auf diesem Server:** eine Karte pro installiertem MRtechnology-Plugin mit Version, Zustand (aktuell / Update
+  verfügbar / wartet auf Neustart / Fehler) und Update-Knopf. Ein Klick öffnet die Seite des Plugins (`/plugins/<name>`)
+  mit installierter und neuester Version, Veröffentlichungsdatum, „Was ist neu“, Links zur Website und zu GitHub; bei
+  MRtoolbar auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst), bei MRadmin
+  die squaremap-Version.
+- **Weitere MRtechnology-Plugins:** alle Plugins, die MRadmin kennt, aber nicht laufen - mit **Installieren**
+  (`mradmin.versions.install`). Die Datei kommt aus dem offiziellen Release (gleiche Prüfungen wie beim Herunterladen,
+  gibt es nur Vorabversionen, die neueste davon) unter ihrem Release-Namen nach `plugins/`; geladen wird sie beim
+  nächsten Start. Liegt die JAR schon seit dem Start in `plugins/` und läuft das Plugin trotzdem nicht, steht es als
+  „nicht geladen“ da (Paper hat es abgelehnt - Konsole ansehen).
+- Erkannt werden installierte Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte
+  Version der anderen Plugins; nicht installierte kennt MRadmin aus einer festen Liste (`versions/Catalog.java`).
+  Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit `mradmin.versions.install`,
+  höchstens einmal pro Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+- **Konfiguration** (`mradmin.config`, Reiter auf der Seite eines Plugins, `/plugins/<name>/config`): die `config.yml`
+  des Plugins als Formular. Links die Abschnitte und eine Suche (Name, Erklärung oder Schlüssel), rechts je Einstellung
+  Name, kurze Erklärung und das passende Bedienelement; „Neustart nötig“ markiert Werte, die erst nach einem Neustart
+  wirken, „Standard“ setzt auf den mitgelieferten Wert zurück, abhängige Felder erscheinen nur, wenn sie etwas
+  bewirken. Geänderte Felder sind gelb markiert, die Leiste unten zeigt die Zahl der Änderungen. Speichern: MRadmin
+  prüft alle Werte (bei einem Fehler wird nichts gespeichert und das Feld rot markiert), schreibt die Datei und lässt
+  das Plugin neu laden; ein Fehler beim Neuladen erscheint als roter Hinweis. Hat jemand die Datei inzwischen von Hand
+  geändert, kommt „Neu laden“ statt Speichern. Geheimnisse (Webhook-URLs, Passwörter) zeigt die Seite nie, nur ob sie
+  gesetzt sind. Welche Plugins das können, steht in `docs/MODULE-API.md` (`webConfig`, ab API 12) - MRadmin selbst und alle MRtechnology-Plugins.
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
   der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
-- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen, aber noch nicht installiert ist,
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen oder ein Plugin installiert, aber noch nicht geladen ist,
   und `versions.restart-method` eingestellt ist (Standard
   `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
   den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
@@ -282,11 +299,32 @@ Unter **Konto → Benachrichtigungen**.
 - Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
-## Konsole
-`mradmin.web.console.view` ansehen (in `mradmin.groups.support`), `mradmin.web.console.execute` Befehle ausführen (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole).
+## Protokoll (`mradmin.web.audit`)
+Alles, was auf dem Server passiert ist, auf einer Seite. Oben Quellen (Menü, mehrere gleichzeitig), Suche, Zeitraum
+(1 Std. bis 14 Tage) und **Live/Anhalten**. Darunter das **Aktivitätsdiagramm**: Balken über den Zeitraum, gestapelt
+nach Ereignissen, Konsole, Warnungen und Fehlern; Ziehen oder ein Klick auf einen Balken zeigt nur diesen Ausschnitt
+(✕ hebt ihn auf). Darunter die **Tabelle** mit 50 Einträgen pro Seite und Seitenzahlen („1-50 von 873“) - ein Klick
+klappt den ganzen Text und die Einzelheiten auf. Live läuft auf Seite 1 ohne Ausschnitt; sonst zählt die Seite neue
+Einträge nur („3 neue Einträge - anzeigen“).
 
-- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
-  farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
+- **Ereignisse:** dieselben Ereignisse, die MRadmin und die anderen MRtechnology-Plugins in ihre Discord-Logs
+  schicken (auch wenn Discord aus ist), in der Farbe aus `discord.events`, dazu jede Aktion in der Weboberfläche
+  (wer, was, von welchem Konto). Filter nach Quelle (MRadmin, Weboberfläche, je Plugin - mehrere gleichzeitig), Suche
+  in Text und Ereignis, „Ältere laden“. Neue Einträge erscheinen sofort.
+- Aufgehoben `logging.keep-days` Tage (höchstens 14) in `plugins/MRadmin/logs/events-<datum>.log` (eine Zeile pro
+  Ereignis). Plugins schreiben erst ab der Version mit Modul-API 13 hinein.
+- **Konsole** (Quelle in derselben Liste, mit `mradmin.web.console.view` - in `mradmin.groups.staff`), nur lesen: die
+  Zeilen der Server-Konsole nach Zeit zwischen den Ereignissen - neue live, ältere aus Papers `logs/latest.log` und
+  `logs/<datum>-<n>.log.gz` (bis zu 14 Tage), Stufe rechts (Info, Warnung gelb, Fehler rot; Stacktrace-Zeilen gehören
+  zur Zeile davor). Links und IP-Adressen ausgeblendet wie in der Web-Konsole. Kein Entsperren nötig. MRadmin
+  speichert dafür nichts - die Dateien hält Paper selbst. Staff ohne `mradmin.web.audit` sieht nur diese Quelle.
+
+## Konsole (`mradmin.web.console.execute`)
+Nur für Admins (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole). Wer nur mitlesen soll, bekommt
+`mradmin.web.console.view` und sieht die Konsole im **Protokoll**.
+
+- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben) mit Eingabezeile, Filter, Warnungen
+  und Fehler farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
 - Vor dem Öffnen noch einmal der Code aus der Authenticator-App (keine Wiederherstellungscodes), dann
   `web.console.unlock-minutes` lang offen (pro Gerät). 5 falsche Codes sperren die Konsole 15 Minuten.
 - Befehle laufen als Konsole. `web.console.blocked` sperrt Befehle komplett - auch mit Namespace

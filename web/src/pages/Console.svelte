@@ -1,5 +1,6 @@
 <script>
   // The web console: unlock with a fresh 2FA code, then the live log and (with mradmin.web.console.execute) commands.
+  // Admins only (mradmin.web.console.execute); the console output alone is a source on the page Log.
   import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -143,7 +144,7 @@
   const shown = $derived(
     filter.trim() ? lines.filter((l) => l.text.toLowerCase().includes(filter.trim().toLowerCase())) : lines,
   );
-  const level = (text) => (/\b(ERROR|SEVERE)\b/.test(text) ? 'error' : /\bWARN(ING)?\b/.test(text) ? 'warn' : '');
+  const level = (text) => (/\b(ERROR|SEVERE)\b/.test(text) ? 'lv-error' : /\bWARN(ING)?\b/.test(text) ? 'lv-warn' : '');
   const untilText = $derived(info?.until ? new Date(info.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 </script>
 
@@ -271,7 +272,7 @@
 
   /* Always dark, like a terminal - easier to read long output. */
   .log {
-    height: min(62vh, 640px);
+    height: calc(35 * 1.45em + 20px);
     overflow: auto;
     background: #0f1115;
     color: #d6dae0;
@@ -287,11 +288,11 @@
     overflow-wrap: anywhere;
   }
 
-  .line.warn {
+  .line.lv-warn {
     color: #f0c674;
   }
 
-  .line.error {
+  .line.lv-error {
     color: #ff7b72;
   }
 

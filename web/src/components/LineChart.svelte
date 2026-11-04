@@ -104,7 +104,7 @@
   }
 
   const stateLines = $derived(
-    states ? statePieces(stateEntries(states.points, states.phases, states.live), x, y, 3 * Math.max(20000, (t1 - t0) / 300)) : [],
+    states ? statePieces(stateEntries(states.points, states.phases, states.live), x, y, states.gap ?? 3 * Math.max(20000, (t1 - t0) / 300)) : [],
   );
 
   // Single series: a light wash under the line, closed down to the baseline.

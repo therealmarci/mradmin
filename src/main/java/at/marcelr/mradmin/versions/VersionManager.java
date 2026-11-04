@@ -56,10 +56,12 @@ public final class VersionManager {
     /** One MRtechnology plugin (state changes from the background thread - read it as a whole via {@link #list()}). */
     public static final class Entry {
         public final String name;
+        /** Running version, null if the plugin is not installed (only known from the {@link Catalog}). */
         public final String installed;
         public final String minecraft;
         public final String repository;
         public final String website;
+        /** The running JAR, or for a plugin that is not running the JAR lying in plugins/ (null if there is none). */
         final File jar;
         public volatile ReleasePicker.Release latest;
         /** Newest client mod (only MRtoolbar has one). */
@@ -67,6 +69,10 @@ public final class VersionManager {
         public volatile String error;
         /** Version waiting in plugins/update/ for the next start, or null. */
         public volatile String staged;
+        /** Not installed: version of the JAR put into plugins/, loaded on the next start (null if there is none). */
+        public volatile String pending;
+        /** Not installed, but its JAR was already there when the server started - Paper did not load it (see the console). */
+        public volatile boolean notLoaded;
         public volatile boolean downloading;
 
         Entry(String name, String installed, String minecraft, String repository, String website, File jar) {
@@ -78,10 +84,24 @@ public final class VersionManager {
             this.jar = jar;
         }
 
+        public boolean isInstalled() {
+            return installed != null;
+        }
+
         /** Whether a newer version than the installed (and the downloaded) one is published. */
         public boolean updateAvailable() {
-            return latest != null && Versions.compare(latest.version(), installed) > 0
+            return installed != null && latest != null && Versions.compare(latest.version(), installed) > 0
                     && (staged == null || Versions.compare(latest.version(), staged) > 0);
+        }
+
+        /** Not installed, nothing in plugins/ yet and a release with checksum for this Minecraft version exists. */
+        public boolean installable() {
+            return installed == null && pending == null && !notLoaded && latest != null && latest.sha256() != null;
+        }
+
+        /** A downloaded update or a new plugin that the next start brings in. */
+        public boolean waitsForRestart() {
+            return staged != null || (pending != null && !notLoaded);
         }
     }
 
@@ -205,6 +225,55 @@ public final class VersionManager {
             entry.staged = waiting.isFile() ? versionIn(waiting) : null;
             entries.put(entry.name, entry);
         }
+        discoverMissing();
+    }
+
+    /**
+     * The catalogue plugins that do not run: offered for installation, or - if their JAR already lies in plugins/ - shown
+     * as waiting for the next start (new file) or as not loaded (the file was there when the server started).
+     */
+    private void discoverMissing() {
+        Properties own = new Properties();
+        try (InputStream in = plugin.getResource("build-info.properties")) {
+            if (in != null) {
+                own.load(in);
+            }
+        } catch (IOException ignored) {
+            // without it no Minecraft version - nothing to offer
+        }
+        String minecraft = own.getProperty("mcVersion", "").trim();
+        String website = own.getProperty("website", "").trim();
+        if (minecraft.isEmpty() || minecraft.contains("$")) {
+            return;
+        }
+        Map<String, File> lying = new java.util.HashMap<>();
+        File[] files = plugin.getDataFolder().getParentFile().listFiles((dir, n) -> n.endsWith(".jar"));
+        for (File f : files == null ? new File[0] : files) {
+            String[] meta = meta(f);
+            if (meta != null) {
+                lying.putIfAbsent(meta[0], f);
+            }
+        }
+        long started = java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime();
+        for (Catalog.Known known : Catalog.PLUGINS) {
+            if (Bukkit.getPluginManager().getPlugin(known.name()) != null) {
+                continue;
+            }
+            File jar = lying.get(known.name());
+            Entry old = entries.get(known.name());
+            Entry entry = new Entry(known.name(), null, minecraft, known.repository(),
+                    website.isEmpty() || website.contains("$") ? "https://github.com/" + known.repository()
+                            : website + "/download/" + known.slug() + "/", jar);
+            if (old != null) {
+                entry.latest = old.latest;
+                entry.mod = old.mod;
+                entry.error = old.error;
+                entry.downloading = old.downloading;
+            }
+            entry.pending = jar == null ? null : versionIn(jar);
+            entry.notLoaded = jar != null && jar.lastModified() < started;
+            entries.put(entry.name, entry);
+        }
     }
 
     private static File jarOf(Plugin p) {
@@ -286,11 +355,15 @@ public final class VersionManager {
 
     private void checkOne(Entry e, boolean includePrereleases) {
         // Whoever runs a pre-release (0.x, -rc...) also gets newer pre-releases - like the update check.
-        boolean prereleases = includePrereleases || Versions.isPrerelease(e.installed);
+        boolean prereleases = includePrereleases || (e.installed != null && Versions.isPrerelease(e.installed));
         try {
             String body = fetch("https://api.github.com/repos/" + e.repository + "/releases?per_page=50");
             JsonArray releases = JsonParser.parseString(body).getAsJsonArray();
             e.latest = ReleasePicker.pick(releases, e.name, e.minecraft, false, prereleases);
+            if (e.latest == null && !e.isInstalled()) {
+                // Not installed and only pre-releases so far (e.g. MRpvp 0.x): offer the newest pre-release.
+                e.latest = ReleasePicker.pick(releases, e.name, e.minecraft, false, true);
+            }
             e.mod = ReleasePicker.pick(releases, e.name, e.minecraft, true, true);
             e.error = e.latest == null ? "no-release" : null;
         } catch (InterruptedException ex) {
@@ -345,9 +418,42 @@ public final class VersionManager {
         return null;
     }
 
-    /** Background thread. Only files that match the checksum and contain this plugin land in the update folder. */
+    /**
+     * Installs a plugin that is not on the server yet: its newest release goes straight into plugins/ (background
+     * thread). Paper loads it on the next start - there is no loading while the server runs.
+     *
+     * @param by who asked
+     * @return null if the download started, otherwise an error key
+     */
+    public String install(String name, String by) {
+        Entry e = entries.get(name);
+        if (e == null) {
+            return "not-found";
+        }
+        if (e.downloading) {
+            return "versions-busy";
+        }
+        if (e.isInstalled() || e.pending != null || e.notLoaded) {
+            return "versions-already-installed";
+        }
+        if (e.latest == null) {
+            return "versions-no-release";
+        }
+        if (e.latest.sha256() == null) {
+            return "versions-no-checksum";
+        }
+        e.downloading = true;
+        worker.execute(() -> downloadNow(e, by));
+        return null;
+    }
+
+    /**
+     * Background thread. Only files that match the checksum and contain this plugin are kept: an update goes into the
+     * update folder under the name of the installed JAR, a new plugin into plugins/ under the name of the release file.
+     */
     private void downloadNow(Entry e, String by) {
         ReleasePicker.Release release = e.latest;
+        boolean fresh = !e.isInstalled();
         e.downloading = true;
         Path temp = null;
         try {
@@ -358,9 +464,13 @@ public final class VersionManager {
             if (!url.startsWith("https://github.com/" + e.repository + "/releases/download/")) {
                 throw new IOException("unexpected download address " + url);
             }
-            Path folder = Bukkit.getUpdateFolderFile().toPath();
+            if (fresh && !release.asset().matches("[A-Za-z0-9_.+-]+\\.jar")) {
+                throw new IOException("unexpected file name " + release.asset());
+            }
+            Path folder = fresh ? plugin.getDataFolder().getParentFile().toPath() : Bukkit.getUpdateFolderFile().toPath();
+            String fileName = fresh ? release.asset() : e.jar.getName();
             Files.createDirectories(folder);
-            temp = folder.resolve(e.jar.getName() + ".download");
+            temp = folder.resolve(fileName + ".download");
             HttpResponse<InputStream> response = client.send(request(url).build(), HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() / 100 != 2) {
                 response.body().close();
@@ -388,17 +498,23 @@ public final class VersionManager {
             if (meta == null || !meta[0].equals(e.name)) {
                 throw new IOException("the file does not contain " + e.name);
             }
-            // Same name as the installed JAR - that is how Paper knows which plugin it replaces.
-            Files.move(temp, folder.resolve(e.jar.getName()), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            // An update keeps the name of the installed JAR - that is how Paper knows which plugin it replaces.
+            Files.move(temp, folder.resolve(fileName), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             temp = null;
-            e.staged = release.version();
+            if (fresh) {
+                e.pending = release.version();
+            } else {
+                e.staged = release.version();
+            }
             e.error = null;
             String who = by == null ? "auto-download" : by;
-            plugin.getLogger().info("Downloaded " + e.name + " " + release.version() + " (" + who
-                    + ") - it is installed on the next start.");
-            Bukkit.getScheduler().runTask(plugin, () -> plugin.discord().log("plugin-update-downloaded",
-                    "plugin", e.name, "version", release.version(), "installed", e.installed,
-                    "admin", by == null ? plugin.messages().server(() -> plugin.messages().plain("versions-auto")) : by));
+            plugin.getLogger().info((fresh ? "Installed " : "Downloaded ") + e.name + " " + release.version() + " (" + who
+                    + ") - it is " + (fresh ? "loaded" : "installed") + " on the next start.");
+            if (!fresh) {
+                Bukkit.getScheduler().runTask(plugin, () -> plugin.discord().log("plugin-update-downloaded",
+                        "plugin", e.name, "version", release.version(), "installed", e.installed,
+                        "admin", by == null ? plugin.messages().server(() -> plugin.messages().plain("versions-auto")) : by));
+            }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         } catch (Exception ex) {
