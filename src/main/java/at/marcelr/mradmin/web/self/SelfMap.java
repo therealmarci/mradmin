@@ -143,6 +143,11 @@ final class SelfMap {
             marker.put("color", m.color());
             marker.put("details", m.details());
             marker.put("actions", actions(m.actions()));
+            // API 11: the card of the module's area for this marker (its buttons act on that area).
+            if (m.card() != null && m.area() != null && m.area().matches("[a-z0-9_-]{1,32}")) {
+                marker.put("card", SelfJson.card(m.card()));
+                marker.put("area", m.area());
+            }
             markers.add(marker);
         }
         l.put("markers", markers);

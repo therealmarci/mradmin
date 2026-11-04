@@ -35,6 +35,22 @@ final class SelfJson {
         return result;
     }
 
+    /** One card (SelfBlock.Card) - also used for a marker's card on the map of the player page. */
+    static Map<String, Object> card(SelfBlock.Card c) {
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("id", text(c.id()));
+        card.put("title", text(c.title()));
+        card.put("subtitle", text(c.subtitle()));
+        card.put("badge", text(c.badge()));
+        card.put("tone", tone(c.tone()));
+        card.put("stats", stats(c.stats()));
+        card.put("meters", meters(c.meters()));
+        card.put("primary", c.primary() == null ? null : buttons(List.of(c.primary())).getFirst());
+        card.put("buttons", buttons(c.buttons()));
+        card.put("details", blocks(c.details()));
+        return card;
+    }
+
     private static Map<String, Object> block(SelfBlock block) {
         Map<String, Object> m = new LinkedHashMap<>();
         switch (block) {
@@ -104,18 +120,7 @@ final class SelfJson {
                 m.put("empty", text(x.empty()));
                 List<Map<String, Object>> cards = new ArrayList<>();
                 for (SelfBlock.Card c : list(x.cards())) {
-                    Map<String, Object> card = new LinkedHashMap<>();
-                    card.put("id", text(c.id()));
-                    card.put("title", text(c.title()));
-                    card.put("subtitle", text(c.subtitle()));
-                    card.put("badge", text(c.badge()));
-                    card.put("tone", tone(c.tone()));
-                    card.put("stats", stats(c.stats()));
-                    card.put("meters", meters(c.meters()));
-                    card.put("primary", c.primary() == null ? null : buttons(List.of(c.primary())).getFirst());
-                    card.put("buttons", buttons(c.buttons()));
-                    card.put("details", blocks(c.details()));
-                    cards.add(card);
+                    cards.add(card(c));
                 }
                 m.put("cards", cards);
             }

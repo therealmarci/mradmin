@@ -12,6 +12,16 @@
   let openId = $state(null);
   const open = $derived(openId === null ? null : block.cards.find((c) => c.id === openId) ?? null);
 
+  // A link with #card=<id> (e.g. "settings" on the map) opens that card once it is on this page.
+  let fromLink = $state(decodeURIComponent(location.hash.match(/^#card=(.+)$/)?.[1] ?? ''));
+  $effect(() => {
+    if (fromLink && block.cards.some((c) => c.id === fromLink)) {
+      openId = fromLink;
+      fromLink = '';
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  });
+
   // Pages of at most ROWS rows of cards: how many fit in a row follows the width (same as the grid's columns).
   const ROWS = 5;
   const MIN = 270;

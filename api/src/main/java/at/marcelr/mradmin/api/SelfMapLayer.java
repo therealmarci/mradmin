@@ -37,14 +37,26 @@ public record SelfMapLayer(String id, String name, String color, List<Marker> ma
      * @param actions in its right-click menu (and below the details) - they get the marker's id as arg "marker"
      * @param y       its height, or null if it has none: in the Nether MRadmin then shows it on the ceiling map
      *                (from map.nether-roof.from-y) or below - without a height on both (since API 10)
+     * @param card    shown when the marker is clicked instead of the plain details, like on the module's area (status,
+     *                figures, bars, buttons - their actions go to {@link WebModule#selfAction} of {@code area}), or null
+     *                (since API 11)
+     * @param area    id of the module's area the card belongs to: its buttons act there and a link opens the card on
+     *                that page ({@code /me/<module>/<area>#card=<id>}), or null (since API 11)
      */
     public record Marker(String id, String world, int x, int z, int width, int length, String label, String color,
-                         List<String> details, List<Action> actions, @Nullable Integer y) {
+                         List<String> details, List<Action> actions, @Nullable Integer y,
+                         SelfBlock.@Nullable Card card, @Nullable String area) {
 
         /** A marker without a height (as in API 8 and 9). */
         public Marker(String id, String world, int x, int z, int width, int length, String label, String color,
                       List<String> details, List<Action> actions) {
-            this(id, world, x, z, width, length, label, color, details, actions, null);
+            this(id, world, x, z, width, length, label, color, details, actions, null, null, null);
+        }
+
+        /** A marker with a height, without a card (as in API 10). */
+        public Marker(String id, String world, int x, int z, int width, int length, String label, String color,
+                      List<String> details, List<Action> actions, @Nullable Integer y) {
+            this(id, world, x, z, width, length, label, color, details, actions, y, null, null);
         }
     }
 

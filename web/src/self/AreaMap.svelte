@@ -21,17 +21,20 @@
   });
   const tileWorld = $derived(mapWorlds.find((w) => w.key === current) ?? null);
 
-  // Visible section: all areas plus a margin of two chunks, at least 8 chunks wide.
+  // Visible section: all areas plus a margin of three chunks, in a wide frame (16:9) and at least 12 chunks wide -
+  // the area stays in the middle, the surroundings fill the sides.
+  const RATIO = 16 / 9;
   const view = $derived.by(() => {
-    if (!rects.length) return { x: 0, z: 0, w: 128, h: 128 };
-    let minX = Math.min(...rects.map((r) => r.minX)) - 32;
-    let minZ = Math.min(...rects.map((r) => r.minZ)) - 32;
-    let maxX = Math.max(...rects.map((r) => r.maxX)) + 32;
-    let maxZ = Math.max(...rects.map((r) => r.maxZ)) + 32;
-    const size = Math.max(maxX - minX, maxZ - minZ, 128);
+    if (!rects.length) return { x: 0, z: 0, w: 192, h: 108 };
+    const minX = Math.min(...rects.map((r) => r.minX)) - 48;
+    const minZ = Math.min(...rects.map((r) => r.minZ)) - 48;
+    const maxX = Math.max(...rects.map((r) => r.maxX)) + 48;
+    const maxZ = Math.max(...rects.map((r) => r.maxZ)) + 48;
+    const w = Math.max(maxX - minX, (maxZ - minZ) * RATIO, 192);
+    const h = w / RATIO;
     const cx = (minX + maxX) / 2;
     const cz = (minZ + maxZ) / 2;
-    return { x: cx - size / 2, z: cz - size / 2, w: size, h: size };
+    return { x: cx - w / 2, z: cz - h / 2, w, h };
   });
 
   // squaremap's pictures at full detail (one pixel per block, 512 blocks per picture) covering the section.
@@ -95,25 +98,36 @@
   {#if rects.length === 0}
     <p class="muted">{t('self.mapEmpty')}</p>
   {:else}
-    <svg viewBox="{view.x} {view.z} {view.w} {view.h}" role="img" aria-label={block.title} class:terrain={tileWorld}>
-      <rect x={view.x} y={view.z} width={view.w} height={view.h} class="ground" />
-      {#each tiles as tile (tile.src)}
-        <image href={tile.src} x={tile.x} y={tile.z} width={TILE} height={TILE} preserveAspectRatio="none" class="tile" />
-      {/each}
-      {#each grid as l}<line x1={l.x1} y1={l.z1} x2={l.x2} y2={l.z2} class="grid" />{/each}
-      {#each rects as r}
-        <a href={r.link ?? undefined} onclick={(e) => { if (r.link) { e.preventDefault(); open(r.link); } }}>
-          <rect x={r.minX} y={r.minZ} width={r.maxX - r.minX} height={r.maxZ - r.minZ} fill={r.color} stroke={r.color} class="area">
-            <title>{r.label}</title>
-          </rect>
-          <text x={(r.minX + r.maxX) / 2} y={(r.minZ + r.maxZ) / 2} font-size={label(r)} class="name">{r.label}</text>
-        </a>
-      {/each}
-    </svg>
+    <div class="frame" class:terrain={tileWorld}>
+      <svg viewBox="{view.x} {view.z} {view.w} {view.h}" role="img" aria-label={block.title}>
+        <rect x={view.x} y={view.z} width={view.w} height={view.h} class="ground" />
+        {#each tiles as tile (tile.src)}
+          <image href={tile.src} x={tile.x} y={tile.z} width={TILE} height={TILE} preserveAspectRatio="none" class="tile" />
+        {/each}
+        {#each grid as l}<line x1={l.x1} y1={l.z1} x2={l.x2} y2={l.z2} class="grid" />{/each}
+        {#each rects as r}
+          <a href={r.link ?? undefined} onclick={(e) => { if (r.link) { e.preventDefault(); open(r.link); } }}>
+            <rect x={r.minX} y={r.minZ} width={r.maxX - r.minX} height={r.maxZ - r.minZ} fill={r.color} stroke={r.color}
+              class="area">
+              <title>{r.label}</title>
+            </rect>
+            {#if rects.length > 1}
+              <text x={(r.minX + r.maxX) / 2} y={(r.minZ + r.maxZ) / 2} font-size={label(r)} class="name">{r.label}</text>
+            {/if}
+          </a>
+        {/each}
+      </svg>
+      <!-- One area: its name as a label in the corner instead of text squeezed into the area. -->
+      {#if rects.length === 1}
+        <span class="tag" style="--c:{rects[0].color}"><span class="dot" aria-hidden="true"></span>{rects[0].label}</span>
+      {/if}
+      {#if block.link}
+        <button class="open" onclick={() => open(block.link)}>{block.linkLabel} <span aria-hidden="true">→</span></button>
+      {/if}
+    </div>
     {#if !tileWorld}<p class="muted small">{t('self.mapHint')}</p>{/if}
-  {/if}
-  {#if block.link}
-    <button class="secondary small open" onclick={() => open(block.link)}>{block.linkLabel}</button>
+  {:else if block.link}
+    <button class="secondary small" onclick={() => open(block.link)}>{block.linkLabel}</button>
   {/if}
 </section>
 
@@ -131,11 +145,67 @@
     font-size: 1.05rem;
   }
 
+  /* the map in a frame with rounded corners; label and button float over it */
+  .frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.04);
+  }
+
   svg {
     width: 100%;
-    max-height: 520px;
-    border-radius: 10px;
+    height: auto;
     display: block;
+  }
+
+  .tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: calc(100% - 20px);
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tag .dot {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    background: var(--c);
+  }
+
+  .open {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+    backdrop-filter: blur(4px);
+  }
+
+  .open:hover {
+    filter: none;
+    background: var(--surface);
   }
 
   .ground {
@@ -158,8 +228,9 @@
   }
 
   .area {
-    fill-opacity: 0.3;
-    stroke-width: 2;
+    fill-opacity: 0.22;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
   }
 
@@ -180,9 +251,6 @@
     vector-effect: non-scaling-stroke;
   }
 
-  .open {
-    margin-top: 10px;
-  }
 
   p {
     margin: 8px 0 0;
@@ -202,7 +270,4 @@
     font-size: 0.95rem;
   }
 
-  .flat svg {
-    max-height: 320px;
-  }
 </style>

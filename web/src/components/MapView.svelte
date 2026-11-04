@@ -10,6 +10,7 @@
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
   import { poll } from '../lib/poll.js';
+  import MeterList from '../self/MeterList.svelte';
 
   /**
    * page: what the server offers besides the layers ({openAtPlayer, follow, chunkGrid, self, others});
@@ -17,9 +18,10 @@
    * stamps(folder, zoom, ["x_z", …]): when those pictures were last drawn ({"x_z": seconds}) - asked every 15 seconds,
    * changed pictures are loaded again (tileUrl gets their time as 5th argument).
    * onhide(hidden): the player hides themselves on the map or shows themselves again (page.allowHide) - a promise.
+   * onareaaction(module, area, action, args): a button of a marker's card (API 11); onopen(path): open a page.
    */
   let { worlds = [], layers = [], tileUrl, onaction, storageKey = 'mradmin.map', initial = null, page = {},
-    positions = null, stamps = null, onhide = null } = $props();
+    positions = null, stamps = null, onhide = null, onareaaction = null, onopen = null } = $props();
 
   const TILE = 512;
   const LONG_PRESS = 500;
@@ -753,6 +755,25 @@
     }
   }
 
+  /** A button of a marker's card: asks like the module's page would (confirm, text), then acts on its area. */
+  async function runCard(m, b) {
+    if (!onareaaction) return;
+    if (b.confirm && !(await ask({ kind: 'confirm', title: b.label, message: b.confirm, tone: b.tone }))) return;
+    const args = { ...(b.args ?? {}) };
+    if (b.input) {
+      const answer = await ask({ kind: 'form', title: b.label, input: true, label: b.input.label ?? '',
+        value: b.input.value ?? '', max: b.input.maxLength || 200, choice: null });
+      if (answer === null) return;
+      args.value = answer.value.slice(0, b.input.maxLength || 200);
+    }
+    busy = true;
+    try {
+      await onareaaction(m.layer.module, m.area, b.action, args);
+    } finally {
+      busy = false;
+    }
+  }
+
   function toggleLayer(l) {
     const next = new Set(hidden);
     const key = layerKey(l);
@@ -1109,6 +1130,36 @@
           <button class="x" aria-label={t('common.close')} onclick={() => (selectedKey = null)}>✕</button>
         </div>
 
+        {#if selected.card}
+          {@const c = selected.card}
+          <!-- The module's card (API 11), like on its own page: status, figures, bars, buttons, link to the page. -->
+          <div class="mcard tone-{c.tone || 'none'}">
+            <div class="mchead">
+              {#if c.subtitle}<span class="msub">{c.subtitle}</span>{/if}
+              {#if c.badge}<span class="mbadge">{c.badge}</span>{/if}
+            </div>
+            {#if c.stats.length}
+              <div class="mchips">
+                {#each c.stats as s}<span class="mchip"><span>{s.label}</span> <b class="{s.tone}-text">{s.value}</b></span>{/each}
+              </div>
+            {/if}
+            {#if c.meters.length}<MeterList meters={c.meters} compact />{/if}
+            {#if c.primary || c.buttons.length}
+              <div class="mbuttons">
+                {#each c.primary ? [c.primary, ...c.buttons] : c.buttons as b}
+                  <button class={b.tone === 'good' ? 'small' : b.tone === 'bad' ? 'danger small' : 'secondary small'}
+                    disabled={busy} onclick={() => runCard(selected, b)}>{b.label}</button>
+                {/each}
+              </div>
+            {/if}
+            {#if onopen}
+              <button class="mlink" onclick={() => onopen(`/me/${selected.layer.module}/${selected.area}#card=${encodeURIComponent(c.id)}`)}>
+                {t('map.openPage')} <span aria-hidden="true">→</span>
+              </button>
+            {/if}
+          </div>
+        {/if}
+
         <div class="facts">
           <button class="fact spotline" title={t('map.copy')} onclick={copySpot}>
             <span class="fk">{worldName(selected.world)}</span>
@@ -1121,7 +1172,7 @@
           {#if selected.width > 0}
             <div class="fact"><span class="fk">{t('map.area')}</span><span class="fv">{t('map.size', { w: selected.width, l: selected.length })}</span></div>
           {/if}
-          {#each selected.details as text}
+          {#each selected.card ? [] : selected.details as text}
             {@const l = line(text)}
             <div class="fact" class:wide={!l.key}>
               {#if l.key}<span class="fk">{l.key}</span>{/if}<span class="fv">{l.value}</span>
@@ -1129,7 +1180,7 @@
           {/each}
         </div>
 
-        {#if selected.actions.length}
+        {#if selected.actions.length && !selected.card}
           {@const parts = split(selected.actions.map((a) => ({ layer: selected.layer, action: a })))}
           <div class="dactions">
             {#each parts.items as i (i.action.id)}
@@ -2065,6 +2116,98 @@
   .copy {
     color: var(--muted);
     font-size: 0.85rem;
+  }
+
+  /* the module's card of a marker (API 11): status strip, figures, bars, buttons */
+  .mcard {
+    --tone: var(--muted);
+    display: grid;
+    gap: 10px;
+    padding: 10px 12px 12px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--tone);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--tone) 6%, transparent);
+  }
+
+  .mcard.tone-good {
+    --tone: var(--good);
+  }
+
+  .mcard.tone-warn {
+    --tone: var(--warn);
+  }
+
+  .mcard.tone-bad {
+    --tone: var(--bad);
+  }
+
+  .mchead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .msub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mbadge {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 16%, transparent);
+  }
+
+  .mchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .mchip {
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    background: var(--surface-2);
+  }
+
+  .mchip span {
+    color: var(--muted);
+  }
+
+  .mbuttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .mbuttons button {
+    flex: 1 1 auto;
+  }
+
+  .mlink {
+    justify-content: flex-start;
+    padding: 4px 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .mlink:hover {
+    filter: none;
+    text-decoration: underline;
   }
 
   .dactions {

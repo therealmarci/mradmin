@@ -5,6 +5,7 @@
   // top (and above the bar at the bottom on phones), without a page head.
   import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
+  import { go } from '../lib/router.svelte.js';
   import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import MapView from '../components/MapView.svelte';
@@ -92,6 +93,17 @@
     }
   }
 
+  // A button of a marker's card acts on the module's area (as on its page); afterwards the map loads again.
+  async function areaAction(module, area, name, args) {
+    try {
+      await api('POST', `/self/areas/${module}/${area}/action`, { action: name, args, lang });
+      toast = { text: t('map.done'), tone: 'good' };
+      await load();
+    } catch (e) {
+      toast = { text: errorText(e), tone: 'bad' };
+    }
+  }
+
   // Hide oneself on the map (or show again) - the positions are asked anew right away.
   async function hide(hidden) {
     try {
@@ -108,7 +120,7 @@
 <div class="full" style="top:{top}px;bottom:{bottom}px" aria-label={t('map.title')}>
   {#if data?.worlds.length}
     <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {stamps} {initial} onaction={action} storageKey="mradmin.self.map"
-      page={data.page ?? {}} {positions} onhide={hide} />
+      page={data.page ?? {}} {positions} onhide={hide} onareaaction={areaAction} onopen={(path) => go(path)} />
   {:else}
     <div class="state">
       {#if loadError}
