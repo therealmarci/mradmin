@@ -654,7 +654,7 @@ sections:
 
   - id: console
     name: {de: Web-Konsole, en: Web console}
-    help: {de: "Live-Log und Befehle im Browser. Vor dem Öffnen fragt die Seite den Code aus der App ab.", en: "Live log and commands in the browser. Before opening, the page asks for the code from the app."}
+    help: {de: "Server-Log (Seite Protokoll) und Befehle im Browser (Reiter Konsole). Vor dem Öffnen der Konsole fragt die Seite den Code aus der App ab.", en: "Server log (page Log) and commands in the browser (tab Console). Before opening the console, the page asks for the code from the app."}
     fields:
       - key: web.console.enabled
         type: bool

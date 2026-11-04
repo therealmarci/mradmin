@@ -24,7 +24,6 @@
   import PvpKits from './pages/PvpKits.svelte';
   import PvpKit from './pages/PvpKit.svelte';
   import Players from './pages/Players.svelte';
-  import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
   import News from './pages/News.svelte';
   import Plugins from './pages/Plugins.svelte';
@@ -120,8 +119,7 @@
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
           ...(me.may.versions ? [{ path: '/plugins', label: t('nav.versions'), icon: 'box' }] : []),
-          ...(me.may.audit ? [{ path: '/logs', label: t('nav.logs'), icon: 'news' }] : []),
-          ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
+          ...(me.may.audit || me.may.console ? [{ path: '/logs', label: t('nav.logs'), icon: 'news' }] : []),
         ]
       : [],
   );
@@ -179,7 +177,7 @@
       <Players />
     {:else if pluginName && me.may.versions}
       {#key pluginName}<PluginView name={pluginName} tab={pluginMatch[2] ?? null} />{/key}
-    {:else if route.path === '/logs' && me.may.audit}
+    {:else if route.path === '/logs' && (me.may.audit || me.may.console)}
       <Logs {me} />
     {:else if route.path === '/plugins' && me.may.versions}
       <Plugins />
@@ -187,8 +185,8 @@
       <Maintenance {me} />
     {:else if route.path === '/news' && (me.may.news || me.may.announce)}
       <News {me} />
-    {:else if route.path === '/console' && me.may.console}
-      <Console {me} />
+    {:else if route.path === '/console' && me.may.consoleExecute}
+      <Logs {me} initial="console" />
     {:else if pvpId && me.may.mrpvp}
       {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
     {:else if kitMatch && me.may.mrpvpKits}

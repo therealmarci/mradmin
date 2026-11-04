@@ -1,9 +1,11 @@
 <script>
-  // Page Log as a log viewer: tabs Events | Server log, search, time range and Live/Pause on top; the filters on the
+  // Page Log as a log viewer: tabs Events | Server log | Console, search, time range and Live/Pause on top; the filters on the
   // left (components/LogLayout.svelte), one row per entry on the right (components/LogList.svelte).
   // Events = what MRadmin and every plugin send to their Discord logs plus the actions in the web interface, kept up to
   // 14 days (LogRoutes.java). Live: MRadmin sends "log" on the event stream (lib/live.svelte.js), the page then loads
-  // only what is newer; paused, new entries wait above the list. Server log: components/ServerLog.svelte.
+  // only what is newer; paused, new entries wait above the list. Server log: components/ServerLog.svelte (only the
+  // console output, mradmin.web.console.view - staff). Console: pages/Console.svelte with commands (admins,
+  // mradmin.web.console.execute, unlocked with a code). Each tab only with its permission.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
@@ -13,13 +15,22 @@
   import LogFilter from '../components/LogFilter.svelte';
   import LogList from '../components/LogList.svelte';
   import ServerLog from '../components/ServerLog.svelte';
+  import Console from './Console.svelte';
 
-  let { me } = $props();
+  // initial: tab to open (e.g. "console" for the old address /console)
+  let { me, initial = '' } = $props();
 
-  // events | server - remembered for this browser tab
-  let tab = $state(sessionStorage.getItem('mradmin.logs.tab') === 'server' ? 'server' : 'events');
-  const server = $derived(tab === 'server' && !!me?.may?.console);
-  $effect(() => sessionStorage.setItem('mradmin.logs.tab', tab));
+  // events | server | console - those the member may see; the choice is remembered for this browser tab
+  const tabs = $derived(
+    [me?.may?.audit && 'events', me?.may?.console && 'server', me?.may?.consoleExecute && 'console'].filter(Boolean),
+  );
+  let chosen = $state(sessionStorage.getItem('mradmin.logs.tab') ?? 'events');
+  $effect.pre(() => {
+    if (initial) chosen = initial;
+  });
+  const tab = $derived(tabs.includes(chosen) ? chosen : tabs[0]);
+  const server = $derived(tab === 'server');
+  $effect(() => sessionStorage.setItem('mradmin.logs.tab', chosen));
 
   let entries = $state([]);
   let queued = $state([]);
@@ -89,6 +100,7 @@
   // Again when a filter changes (the text after a short pause).
   let timer;
   $effect(() => {
+    if (tab !== 'events') return;
     selected;
     range;
     const q = query;
@@ -98,13 +110,13 @@
   // A short pause collects bursts (many events in one second) into one request.
   let liveTimer;
   $effect(() => {
-    if (!live.log.tick || server) return;
+    if (!live.log.tick || tab !== 'events') return;
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => !document.hidden && loadNew(), 250);
   });
   // Without the event stream (connection lost): every 15 seconds.
   $effect(() => {
-    if (live.connected || server) return;
+    if (live.connected || tab !== 'events') return;
     const id = setInterval(() => !document.hidden && loadNew(), 15000);
     return () => clearInterval(id);
   });
@@ -130,23 +142,30 @@
 
   const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-  const rows = $derived(
-    entries.map((e, i) => ({
-      key: key(e) + '|' + i,
-      time: e.time,
-      clock: clock(e.time),
-      badge: { label: label(e.source), color: color(e.source) },
-      accent: e.color,
-      text: render(e.text),
-      html: true,
-      tag: e.event,
-      details: [
-        { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
-        { label: t('logs.detail.source'), value: label(e.source) },
-        { label: t('logs.detail.event'), value: e.event || '-' },
-      ],
-    })),
-  );
+  // Stable keys (new entries come on top): the same entry twice gets a counter.
+  const rows = $derived.by(() => {
+    const seen = new Map();
+    return entries.map((e) => {
+      const k = key(e);
+      const n = seen.get(k) ?? 0;
+      seen.set(k, n + 1);
+      return {
+        key: n ? k + '|' + n : k,
+        time: e.time,
+        clock: clock(e.time),
+        badge: { label: label(e.source), color: color(e.source) },
+        accent: e.color,
+        text: render(e.text),
+        html: true,
+        tag: e.event,
+        details: [
+          { label: t('logs.detail.time'), value: new Date(e.time).toLocaleString() },
+          { label: t('logs.detail.source'), value: label(e.source) },
+          { label: t('logs.detail.event'), value: e.event || '-' },
+        ],
+      };
+    });
+  });
 </script>
 
 <div class="page">
@@ -157,8 +176,9 @@
     </span>
     <div class="title">
       <h1>{t('logs.title')}</h1>
-      <p class="muted">{t(server ? 'logs.subtitle.server' : 'logs.subtitle')}</p>
+      <p class="muted">{t('logs.subtitle.' + tab)}</p>
     </div>
+    {#if tab !== 'console'}
     <button type="button" class="live" class:paused aria-pressed={paused} title={t(paused ? 'logs.resume' : 'logs.pause')}
       onclick={() => (paused = !paused)}>
       <span class="pulse" aria-hidden="true"></span>
@@ -167,15 +187,18 @@
         {#if paused}<path d="M7 5v14l12-7z" />{:else}<path d="M7 5h3v14H7zM14 5h3v14h-3z" />{/if}
       </svg>
     </button>
+    {/if}
   </header>
 
   <div class="toolbar">
-    {#if me?.may?.console}
+    {#if tabs.length > 1}
       <span class="segments" role="tablist">
-        <button type="button" role="tab" aria-selected={!server} class:on={!server} onclick={() => (tab = 'events')}>{t('logs.tab.events')}</button>
-        <button type="button" role="tab" aria-selected={server} class:on={server} onclick={() => (tab = 'server')}>{t('logs.tab.server')}</button>
+        {#each tabs as name}
+          <button type="button" role="tab" aria-selected={tab === name} class:on={tab === name} onclick={() => (chosen = name)}>{t('logs.tab.' + name)}</button>
+        {/each}
       </span>
     {/if}
+    {#if tab !== 'console'}
     <label class="search">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -186,11 +209,14 @@
         <button type="button" role="radio" aria-checked={range === r} class:on={range === r} onclick={() => (range = r)}>{t('logs.range.' + r)}</button>
       {/each}
     </span>
+    {/if}
   </div>
 
-  {#if server}
+  {#if tab === 'console'}
+    <Console {me} embedded />
+  {:else if server}
     <ServerLog {query} {since} {paused} />
-  {:else}
+  {:else if tab === 'events'}
     {#if error}<div class="error">{error}</div>{/if}
     <LogLayout active={selected.length}>
       {#snippet filters()}

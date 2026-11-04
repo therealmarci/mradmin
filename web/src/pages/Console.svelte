@@ -1,12 +1,13 @@
 <script>
   // The web console: unlock with a fresh 2FA code, then the live log and (with mradmin.web.console.execute) commands.
+  // A tab of the page Log (embedded = without its own title).
   import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
 
-  let { me } = $props();
+  let { me, embedded = false } = $props();
 
   let info = $state(null);
   let error = $state('');
@@ -143,20 +144,22 @@
   const shown = $derived(
     filter.trim() ? lines.filter((l) => l.text.toLowerCase().includes(filter.trim().toLowerCase())) : lines,
   );
-  const level = (text) => (/\b(ERROR|SEVERE)\b/.test(text) ? 'error' : /\bWARN(ING)?\b/.test(text) ? 'warn' : '');
+  const level = (text) => (/\b(ERROR|SEVERE)\b/.test(text) ? 'lv-error' : /\bWARN(ING)?\b/.test(text) ? 'lv-warn' : '');
   const untilText = $derived(info?.until ? new Date(info.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 </script>
 
 <div class="stack">
-  <div class="head">
-    <div>
-      <h1>{t('console.title')}</h1>
-      <p class="muted small">{t('console.subtitle')}</p>
+  {#if !embedded}
+    <div class="head">
+      <div>
+        <h1>{t('console.title')}</h1>
+        <p class="muted small">{t('console.subtitle')}</p>
+      </div>
+      {#if info?.unlocked}
+        <button class="secondary" onclick={lock}>🔒 {t('console.lock')}</button>
+      {/if}
     </div>
-    {#if info?.unlocked}
-      <button class="secondary" onclick={lock}>🔒 {t('console.lock')}</button>
-    {/if}
-  </div>
+  {/if}
 
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -187,6 +190,9 @@
       <span class="muted small">{t('console.openUntil', { time: untilText })}</span>
       {#if !follow}
         <button class="secondary mini" onclick={() => { follow = true; box?.scrollTo({ top: box.scrollHeight }); }}>↓ {t('console.follow')}</button>
+      {/if}
+      {#if embedded}
+        <button class="secondary mini" onclick={lock}>🔒 {t('console.lock')}</button>
       {/if}
     </div>
 
@@ -271,7 +277,7 @@
 
   /* Always dark, like a terminal - easier to read long output. */
   .log {
-    height: min(62vh, 640px);
+    height: calc(35 * 1.45em + 20px);
     overflow: auto;
     background: #0f1115;
     color: #d6dae0;
@@ -287,11 +293,11 @@
     overflow-wrap: anywhere;
   }
 
-  .line.warn {
+  .line.lv-warn {
     color: #f0c674;
   }
 
-  .line.error {
+  .line.lv-error {
     color: #ff7b72;
   }
 

@@ -3,11 +3,32 @@
   // the whole text and the details. rows: [{key, time, clock, badge: {label, color}, text, html, tag, details: [{label,
   // value}]}] - html = text as safe HTML (already escaped), clock = time shown in the row (empty = none, e.g. a stack
   // trace line), accent = colour of the left edge (default: the badge). pending = new entries held back while paused.
+  // The tile has a fixed height of about 35 rows and scrolls inside; near the end it loads older entries by itself.
+  // New entries on top do not move what is being read further down.
+  import { tick } from 'svelte';
   import { t } from '../lib/i18n.js';
 
   let { rows = [], mono = false, more = false, loading = false, empty = '', pending = 0, onmore, onshow } = $props();
 
   let open = $state(new Set());
+  let scroller = $state();
+
+  // Entries put on top while scrolled down: keep the same entries in view.
+  let firstKey;
+  $effect.pre(() => {
+    const key = rows[0]?.key;
+    if (!scroller || key === firstKey) return;
+    // The old first entry is still there = new ones came on top; otherwise it is a new list (a filter changed).
+    const kept = firstKey !== undefined && rows.some((r) => r.key === firstKey);
+    const before = scroller.scrollHeight;
+    firstKey = key;
+    if (kept && scroller.scrollTop > 0) tick().then(() => (scroller.scrollTop += scroller.scrollHeight - before));
+    else if (!kept) scroller.scrollTop = 0;
+  });
+
+  function scrolled() {
+    if (more && !loading && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 300) onmore?.();
+  }
 
   function toggle(key) {
     const next = new Set(open);
@@ -34,6 +55,7 @@
   {#if pending}
     <button type="button" class="pending" onclick={onshow}>{t('logs.pending', { n: pending })}</button>
   {/if}
+  <div class="scroll" bind:this={scroller} onscroll={scrolled}>
   {#each days as d (d.day)}
     <div class="day">{dayLabel(d)}</div>
     {#each d.items as row (row.key)}
@@ -64,23 +86,33 @@
   {#if more}
     <button type="button" class="more" disabled={loading} onclick={onmore}>{t('logs.more')}</button>
   {/if}
+  </div>
 </div>
 
 <style>
   .list {
     container-type: inline-size;
     display: grid;
+    --row: 27px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface);
     overflow: hidden;
   }
 
+  .scroll {
+    display: grid;
+    align-content: start;
+    height: calc(35 * var(--row) + 30px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .day {
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 6px 14px;
+    padding: 4px 14px;
     font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -101,15 +133,17 @@
     align-items: center;
     width: 100%;
     justify-content: flex-start;
-    padding: 7px 14px 7px 11px;
+    min-height: var(--row);
+    padding: 3px 14px 3px 11px;
     border: 0;
     border-left: 3px solid var(--a);
     border-radius: 0;
     background: transparent;
     color: var(--text);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
     font-weight: 400;
+    line-height: 1.35;
     text-align: left;
   }
 

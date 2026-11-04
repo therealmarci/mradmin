@@ -311,17 +311,18 @@ liegen die Filter hinter dem Knopf **Filter**.
   in Text und Ereignis, „Ältere laden“. Neue Einträge erscheinen sofort.
 - Aufgehoben `logging.keep-days` Tage (höchstens 14) in `plugins/MRadmin/logs/events-<datum>.log` (eine Zeile pro
   Ereignis). Plugins schreiben erst ab der Version mit Modul-API 13 hinein.
-- **Server-Log** (Reiter, nur mit `mradmin.web.console.view`): die Zeilen der Server-Konsole - neue live, ältere
+- **Server-Log** (Reiter, mit `mradmin.web.console.view` - in `mradmin.groups.staff`), nur lesen: die Zeilen der Server-Konsole - neue live, ältere
   aus Papers `logs/latest.log` und `logs/<datum>-<n>.log.gz` (bis zu 14 Tage) - mit derselben Suche und demselben
   Zeitraum, Filter nach Stufe (Info, Warnung gelb, Fehler rot; Stacktrace-Zeilen gehören zur Zeile davor). Links und
   IP-Adressen ausgeblendet wie in der Konsole. Kein Entsperren nötig - den Code verlangt nur das Ausführen von
   Befehlen in der Web-Konsole. MRadmin speichert dafür nichts - die Dateien hält Paper selbst.
 
-## Konsole
-`mradmin.web.console.view` ansehen (in `mradmin.groups.support`), `mradmin.web.console.execute` Befehle ausführen (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole).
+## Konsole (Reiter auf der Seite Protokoll)
+Nur mit `mradmin.web.console.execute` (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole). Die alte
+Adresse `/console` öffnet den Reiter. Wer nur mitlesen soll, bekommt den Reiter **Server-Log**.
 
-- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben), mit Filter, Warnungen und Fehler
-  farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
+- Die Server-Konsole live (aus `logs/latest.log`, auch Minecrafts eigene Ausgaben) mit Eingabezeile, Filter, Warnungen
+  und Fehler farbig. Links und IP-Adressen sind ausgeblendet (`web.console.hide-links` / `hide-ips`).
 - Vor dem Öffnen noch einmal der Code aus der Authenticator-App (keine Wiederherstellungscodes), dann
   `web.console.unlock-minutes` lang offen (pro Gerät). 5 falsche Codes sperren die Konsole 15 Minuten.
 - Befehle laufen als Konsole. `web.console.blocked` sperrt Befehle komplett - auch mit Namespace
