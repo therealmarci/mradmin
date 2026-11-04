@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.2.0] - 2026-11-04
+
 ### Neu
 - **Seite „Protokoll“:** Alle Ereignisse von MRadmin und den anderen MRtechnology-Plugins - dieselben, die in ihre Discord-Logs gehen, **auch wenn Discord aus ist** - zusammen mit den Aktionen in der Weboberfläche (bisher nur über `/api/audit` sichtbar) auf einer Seite, neueste oben, nach Tagen gegliedert. Filter nach Herkunft (MRadmin, Weboberfläche, je Plugin), Suche in Text und Ereignis, Zeitraum 1 Std. bis 14 Tage, „Ältere laden“; **neue Einträge erscheinen sofort** (live über die Verbindung, die auch Tickets aktuell hält). Gespeichert in `plugins/MRadmin/logs/` (eine Datei pro Tag), aufgehoben `logging.keep-days` Tage (höchstens 14, Standard 14; config-version 44). Recht `mradmin.web.audit` (in `mradmin.groups.admin`). Plugins brauchen dafür die Version mit Modul-API 13.
 - **Konsole im Protokoll:** Die Ausgabe der Server-Konsole steht als Quelle **Konsole** in derselben Liste wie die Ereignisse, nach Zeit einsortiert - neue Zeilen live, ältere aus Papers Logdateien (`logs/latest.log` und `logs/<datum>-<n>.log.gz`, bis zu 14 Tage zurück), mit derselben Suche und demselben Zeitraum, Warnungen und Fehler farbig. Links und IP-Adressen sind ausgeblendet wie in der Web-Konsole (`web.console.hide-links` / `hide-ips`). Recht `mradmin.web.console.view`, ohne Entsperren. MRadmin speichert dafür nichts zusätzlich.
