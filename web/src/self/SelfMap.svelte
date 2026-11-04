@@ -78,7 +78,9 @@
     ? { world: params.get('world'), x: Number(params.get('x')), z: Number(params.get('z')) }
     : null;
 
-  const tileUrl = (folder, zoom, x, z) => `/api/self/map/tiles/${folder}/${zoom}/${x}_${z}.png`;
+  const tileUrl = (folder, zoom, x, z, v) => `/api/self/map/tiles/${folder}/${zoom}/${x}_${z}.png${v ? `?v=${v}` : ''}`;
+  const stamps = (folder, zoom, names) =>
+    api('GET', `/self/map/stamps?world=${encodeURIComponent(folder)}&zoom=${zoom}&tiles=${names.join(',')}`);
 
   async function action(module, layer, id, args) {
     try {
@@ -93,7 +95,7 @@
 
 <div class="full" style="top:{top}px;bottom:{bottom}px" aria-label={t('map.title')}>
   {#if data?.worlds.length}
-    <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {initial} onaction={action} storageKey="mradmin.self.map"
+    <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {stamps} {initial} onaction={action} storageKey="mradmin.self.map"
       page={data.page ?? {}} {positions} />
   {:else}
     <div class="state">

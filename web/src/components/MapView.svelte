@@ -9,13 +9,16 @@
   import { fly, fade } from 'svelte/transition';
   import { t } from '../lib/i18n.js';
   import { head } from '../lib/format.js';
+  import { poll } from '../lib/poll.js';
 
   /**
    * page: what the server offers besides the layers ({openAtPlayer, follow, chunkGrid, self, others});
    * positions: {self: {world, x, z, yaw} | null, players: [{uuid, name, world, x, z, yaw}]} - asked by the page.
+   * stamps(folder, zoom, ["x_z", …]): when those pictures were last drawn ({"x_z": seconds}) - asked every 15 seconds,
+   * changed pictures are loaded again (tileUrl gets their time as 5th argument).
    */
   let { worlds = [], layers = [], tileUrl, onaction, storageKey = 'mradmin.map', initial = null, page = {},
-    positions = null } = $props();
+    positions = null, stamps = null } = $props();
 
   const TILE = 512;
   const LONG_PRESS = 500;
@@ -142,13 +145,46 @@
     const z1 = Math.floor((cz + half.z) / tileBlocks);
     for (let tx = x0; tx <= x1; tx++) {
       for (let tz = z0; tz <= z1; tz++) {
-        const src = tileUrl(world.folder, tileZoom, tx, tz);
-        list.push({ src, left: sx(tx * tileBlocks), top: sz(tz * tileBlocks), size: tileBlocks * ppb });
+        const name = `${tx}_${tz}`;
+        const src = tileUrl(world.folder, tileZoom, tx, tz, versions[`${world.folder}/${tileZoom}/${name}`]);
+        list.push({ src, name, key: `${world.folder}/${tileZoom}/${name}`, left: sx(tx * tileBlocks), top: sz(tz * tileBlocks), size: tileBlocks * ppb });
       }
     }
     return list;
   });
 
+
+  // Fresh pictures: every 15 seconds (tab visible) the page asks when the shown pictures were last drawn; a picture
+  // drawn after the one on screen gets its time in the address and loads again - the others stay as they are.
+  let versions = $state({});
+  const seen = new Map();
+  async function refreshTiles() {
+    if (!stamps || !world) return;
+    const folder = world.folder;
+    const zoom = tileZoom;
+    const names = untrack(() => tiles.map((tl) => tl.name)).slice(0, 200);
+    if (!names.length) return;
+    let result;
+    try {
+      result = await stamps(folder, zoom, names);
+    } catch {
+      return;
+    }
+    const next = { ...versions };
+    let changed = false;
+    for (const [name, at] of Object.entries(result)) {
+      const key = `${folder}/${zoom}/${name}`;
+      const known = seen.get(key);
+      seen.set(key, at);
+      // The first answer is what is on screen already; later ones only if newer.
+      if (known !== undefined && at > known) {
+        next[key] = at;
+        changed = true;
+      }
+    }
+    if (changed) versions = next;
+  }
+  $effect(() => poll(refreshTiles, 15_000));
   const layerKey = (l) => l.module + ':' + l.id;
   const markerKey = (m) => layerKey(m.layer) + ':' + m.id;
 
@@ -836,7 +872,8 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="map" bind:this={box} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}
     onpointerleave={() => (cursor = null)} onwheel={wheel} oncontextmenu={(e) => context(e, null)}>
-    {#each tiles as tile (tile.src)}
+    <!-- keyed by the place, not the address: a newer picture swaps in without a blank moment -->
+    {#each tiles as tile (tile.key)}
       {#if !broken.has(tile.src)}
         <img class="tile" class:pixel={zoom > world.zoomMax} src={tile.src} alt="" draggable="false"
           style="left:{tile.left}px;top:{tile.top}px;width:{tile.size}px;height:{tile.size}px"

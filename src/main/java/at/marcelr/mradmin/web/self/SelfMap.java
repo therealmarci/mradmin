@@ -22,6 +22,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The map of the player's own page (tab "Map"): MRadmin's own map view over the pictures squaremap renders, with the
@@ -31,6 +32,7 @@ import org.bukkit.potion.PotionEffectType;
  *  GET  /api/self/map/worlds                                only the worlds (small maps on the pages, e.g. a loader)
  *  GET  /api/self/map/players                               own position and the other players shown
  *  GET  /api/self/map/tiles/{world}/{zoom}/{tile}           one map picture (x_z.png) from squaremap's folder
+ *  GET  /api/self/map/stamps?world=&zoom=&tiles=x_z,…       when those pictures were last drawn
  *  POST /api/self/map/action {module, layer, action, args, lang}   an action -> 400 {message} on refusal
  * </pre>
  * squaremap's own web server and page are not needed for this - MRadmin reads the pictures from its folder.
@@ -63,6 +65,7 @@ final class SelfMap {
         server.self("GET", "/api/self/map", this::map);
         server.self("GET", "/api/self/map/worlds", this::worlds);
         server.self("GET", "/api/self/map/tiles/{world}/{zoom}/{tile}", this::tile);
+        server.self("GET", "/api/self/map/stamps", this::stamps);
         server.self("GET", "/api/self/map/players", this::players);
         server.self("POST", "/api/self/map/action", this::action);
     }
@@ -235,31 +238,63 @@ final class SelfMap {
         return m;
     }
 
-    /** One picture - straight from squaremap's folder, the names checked so nothing outside it can be read. */
+    /**
+     * One picture - straight from squaremap's folder (the Nether ceiling from MRadmin's own). With {@code ?v=} (the
+     * picture's time from {@link #stamps}) the browser may keep it for a day - a newer picture gets a new address.
+     */
     private void tile(Http http) throws Exception {
         routes.check(http);
-        String world = http.param("world");
-        String zoom = http.param("zoom");
-        String tile = http.param("tile");
+        Path file = picture(http.param("world"), http.param("zoom"), http.param("tile"));
+        if (file == null || !Files.isRegularFile(file)) {
+            throw new Http.WebException(404, "not-found");
+        }
+        boolean versioned = http.query().containsKey("v");
+        http.send(200, "image/png", Files.readAllBytes(file), versioned ? "private, max-age=86400" : "private, max-age=30");
+    }
+
+    /**
+     * When the pictures the browser shows were last drawn ({@code ?world=&zoom=&tiles=x_z,x_z}): {"x_z": seconds, 0 =
+     * none}. The map asks every 15 seconds and loads only the pictures that changed since.
+     */
+    private void stamps(Http http) throws Exception {
+        routes.check(http);
+        Map<String, String> q = http.query();
+        String[] names = q.getOrDefault("tiles", "").split(",");
+        if (names.length > 200) {
+            throw new Http.WebException(400, "too-many");
+        }
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (String name : names) {
+            if (name.isEmpty()) {
+                continue;
+            }
+            Path file = picture(q.getOrDefault("world", ""), q.getOrDefault("zoom", ""), name + ".png");
+            if (file == null) {
+                throw new Http.WebException(404, "not-found");
+            }
+            result.put(name, Files.isRegularFile(file) ? Files.getLastModifiedTime(file).toMillis() / 1000 : 0L);
+        }
+        http.json(200, result);
+    }
+
+    /** The file of a picture, the names checked so nothing outside the folders can be read; null if invalid. */
+    private @Nullable Path picture(String world, String zoom, String tile) {
         Path tiles = plugin.map() == null ? null : plugin.map().tilesDir();
         if (tiles == null || !world.matches("[a-z0-9_.-]{1,64}") || !zoom.matches("\\d{1,2}")
                 || !tile.matches("-?\\d{1,6}_-?\\d{1,6}\\.png")) {
-            throw new Http.WebException(404, "not-found");
+            return null;
         }
         // The Nether ceiling comes from MRadmin's own pictures, everything else from squaremap.
         if (world.endsWith("-roof")) {
             tiles = plugin.map().roofDir();
             if (tiles == null) {
-                throw new Http.WebException(404, "not-found");
+                return null;
             }
         }
         Path file = tiles.resolve(world).resolve(zoom).resolve(tile);
-        if (!file.normalize().startsWith(tiles.normalize()) || !Files.isRegularFile(file)) {
-            throw new Http.WebException(404, "not-found");
-        }
-        // squaremap renders again every few seconds - the browser may keep a picture only briefly.
-        http.send(200, "image/png", Files.readAllBytes(file), "private, max-age=30");
+        return file.normalize().startsWith(tiles.normalize()) ? file : null;
     }
+
 
     private void action(Http http) throws Exception {
         routes.check(http);
