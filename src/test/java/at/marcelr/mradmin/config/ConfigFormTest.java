@@ -24,6 +24,7 @@ class ConfigFormTest {
                   - {key: nosleep.cooldown, type: duration}
                   - {key: gui.bans, type: strings, count: 2, item: duration, permanent: true}
                   - {key: discord.webhook-url, type: secret}
+                  - {key: view.ranges, type: ints, min: 0, max: 500}
                   - key: discord.events
                     type: table
                     columns: [{key: enabled, type: bool}, {key: color, type: color}]
@@ -39,6 +40,8 @@ class ConfigFormTest {
               cooldown: 15m
             gui:
               bans: [1h, permanent]
+            view:
+              ranges: [10, 0]
             discord:
               webhook-url: ""
               events:
@@ -77,7 +80,8 @@ class ConfigFormTest {
         assertEquals("", fields.get(5).get("value"));
         assertEquals(true, fields.get(5).get("set"));
         @SuppressWarnings("unchecked")
-        Map<String, Map<String, Object>> rows = (Map<String, Map<String, Object>>) fields.get(6).get("value");
+        Map<String, Map<String, Object>> rows = (Map<String, Map<String, Object>>) fields.get(7).get("value");
+        assertEquals(List.of(10L, 0L), fields.get(6).get("value"));
         assertEquals(List.of("skip", "ban"), List.copyOf(rows.keySet()));
         assertEquals("#C0392B", rows.get("ban").get("color"));
     }
@@ -121,6 +125,9 @@ class ConfigFormTest {
         assertEquals("config-invalid", invalid(form, defaults, Map.of("discord.events", Map.of("unknown", Map.of("enabled", true)))));
         assertEquals("config-color", invalid(form, defaults, Map.of("discord.events", Map.of("skip", Map.of("color", "red")))));
         assertEquals("config-invalid", invalid(form, defaults, Map.of("discord.webhook-url", "a\nb")));
+        assertEquals("config-range", invalid(form, defaults, Map.of("view.ranges", List.of(10L, 900L))));
+        assertEquals("config-number", invalid(form, defaults, Map.of("view.ranges", List.of(1.5))));
+        assertEquals("accepted", invalid(form, defaults, Map.of("view.ranges", List.of(5L, 0L))));
     }
 
     @Test

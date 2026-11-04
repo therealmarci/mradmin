@@ -315,6 +315,7 @@ sections:
 | `color` | Farbwähler + `#RRGGBB` | |
 | `duration` | Dauer wie `15m`, `1h30m`, `2d` (Zahl = Minuten), mit Klartext daneben | `permanent: true` erlaubt `permanent` |
 | `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent` |
+| `ints` | Liste ganzer Zahlen als Chips | `min`, `max`, `count`, `unit` |
 | `worlds` | Welten des Servers zum Anklicken | |
 | `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name}`, `rows`: Name je Zeile |
 

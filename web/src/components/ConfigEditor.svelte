@@ -162,8 +162,10 @@
 
   let adding = $state({});
   function addItem(f) {
-    const v = String(adding[f.key] ?? '').trim();
-    if (!v) return;
+    const raw = String(adding[f.key] ?? '').trim();
+    if (!raw) return;
+    const v = f.type === 'ints' ? Number(raw) : raw;
+    if (f.type === 'ints' && !Number.isInteger(v)) return;
     const list = [...value(f)];
     if (!list.includes(v)) list.push(v);
     set(f, list);
@@ -276,6 +278,15 @@
         <input class="mono" value={item} class:bad={human === null} title={human ?? ''}
           oninput={(e) => set(f, v.map((x, j) => (j === i ? e.currentTarget.value : x)))} />
       {/each}
+    </span>
+  {:else if f.type === 'ints'}
+    <span class="chips">
+      {#each v as item, i}
+        <span class="item mono">{item}{tx(f.unit) ? ' ' + tx(f.unit) : ''}<button type="button" aria-label={t('config.remove')} onclick={() => removeItem(f, i)}>×</button></span>
+      {/each}
+      <input class="add" type="number" step="1" min={f.min ?? undefined} max={f.max ?? undefined} placeholder={t('config.add')}
+        value={adding[f.key] ?? ''} oninput={(e) => (adding = { ...adding, [f.key]: e.currentTarget.value })}
+        onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addItem(f))} onblur={() => addItem(f)} />
     </span>
   {:else if f.type === 'strings'}
     <span class="chips">

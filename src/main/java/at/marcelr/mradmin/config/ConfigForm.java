@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  */
 public final class ConfigForm {
 
-    public enum Type { BOOL, INT, DECIMAL, STRING, TEXT, SECRET, CHOICE, COLOR, DURATION, STRINGS, WORLDS, TABLE }
+    public enum Type { BOOL, INT, DECIMAL, STRING, TEXT, SECRET, CHOICE, COLOR, DURATION, STRINGS, INTS, WORLDS, TABLE }
 
     /** A text in German and English (missing: the other one). */
     public record Text(String de, String en) {
@@ -276,6 +276,7 @@ public final class ConfigForm {
             case INT -> raw instanceof Number n ? (Object) n.longValue() : parseLong(raw);
             case DECIMAL -> raw instanceof Number n ? (Object) n.doubleValue() : parseDouble(raw);
             case STRINGS, WORLDS -> raw instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+            case INTS -> raw instanceof List<?> l ? l.stream().map(ConfigForm::parseLong).toList() : List.of();
             case TABLE -> {
                 Map<String, Object> rows = new LinkedHashMap<>();
                 for (String row : isDefault ? rowKeys(f, defaults, defaults) : rowKeys(f, c, defaults)) {
@@ -428,6 +429,24 @@ public final class ConfigForm {
                         throw new Invalid(key, "config-invalid");
                     }
                     result.add("duration".equals(f.item()) ? duration(f, s) : s);
+                }
+                return result;
+            }
+            case INTS -> {
+                if (!(value instanceof List<?> list) || list.size() > MAX_LIST) {
+                    throw new Invalid(key, "config-invalid");
+                }
+                if (f.count() > 0 && list.size() != f.count()) {
+                    throw new Invalid(key, "config-count");
+                }
+                List<Integer> result = new ArrayList<>();
+                for (Object o : list) {
+                    if (!(o instanceof Number n) || n.doubleValue() != Math.rint(n.doubleValue())
+                            || Math.abs(n.doubleValue()) > Integer.MAX_VALUE) {
+                        throw new Invalid(key, "config-number");
+                    }
+                    range(f, n.doubleValue());
+                    result.add(n.intValue());
                 }
                 return result;
             }
