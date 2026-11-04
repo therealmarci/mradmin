@@ -265,6 +265,8 @@ Die Karte gibt es **nur in MRadmin** - squaremaps eigene Webseite (Port 8080) is
 
 `/mradmin map` gibt Spielern den Link zur Karte. Admins (`mradmin.map.admin`) sehen dort zusätzlich die squaremap-Version und ob ein Update auf den Neustart wartet oder die Installation fehlgeschlagen ist.
 
+**Karte für alle ausschalten:** Auf der Seite **Wegpunkte** im Adminportal stehen zwei Schalter (`mradmin.map.admin`): **Karte der Spielerseite** (aus = der Tab „Karte“ verschwindet für alle Spieler) und **Spieler auf der Karte** (aus = niemand sieht andere Spieler oder kann nach ihnen suchen). Beide wirken sofort und bleiben über Neustarts.
+
 > [!NOTE]
 > Bis MRadmin 1.1 hat MRchunks squaremap angebunden, und die Karte war eine öffentliche squaremap-Webseite. Aktualisiere MRadmin und MRchunks gemeinsam - MRadmin übernimmt die Einrichtung aus der alten MRchunks-Config. Ein Reverse-Proxy oder eine Portfreigabe für squaremap kann danach weg.
 
@@ -323,7 +325,7 @@ Standard ist `op`, außer anders angegeben.
 | Spieler | `mradmin.player.view` · `.teleport` · `.summon` · `.inventory` · `.freeze` · `.kick` |
 | Weboberfläche | `mradmin.web` · `mradmin.web.audit` · `mradmin.web.manage` · `mradmin.web.console.view` · `mradmin.web.console.execute` (Konsole: ansehen in `groups.support`, ausführen in `groups.admin`) |
 | Verwaltung | `mradmin.admin.reload` · `.storage` · `.discord` · `.update` |
-| Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.players` (andere Online-Spieler auf der Karte der Spielerseite) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`) |
+| Karte | `mradmin.map` (`/mradmin map`, Link) · `mradmin.map.players` (andere Online-Spieler auf der Karte der Spielerseite) · `mradmin.map.admin` (Zustand von squaremap, `/mradmin map setup`, Schalter Karte / Spieler auf der Karte im Adminportal) |
 | Versionen & Neustart (Web) | `mradmin.versions.view` (nur ansehen) · `mradmin.versions.install` (jetzt prüfen, herunterladen) · `mradmin.server.restart` (neu starten) |
 
 Die Permissions von MRsleep, MRchunks und MRpvp gelten im Web genauso für deren Bereiche.

@@ -81,7 +81,8 @@ final class SelfMap {
 
     /** Whether there is a map (squaremap renders, at least one world). */
     boolean available() {
-        return plugin.map() != null && plugin.map().tilesDir() != null;
+        // The team can switch the map off for everyone (adminportal) - then the tab disappears as well.
+        return plugin.map() != null && plugin.map().tilesDir() != null && !plugin.map().pageLock().off();
     }
 
     /** The worlds with pictures, without the layers - for small maps on the pages. Empty without a map. */
@@ -114,7 +115,8 @@ final class SelfMap {
         offers.put("follow", page.follow());
         offers.put("chunkGrid", page.chunkGrid());
         offers.put("self", page.self());
-        offers.put("others", page.others() && server.permissions().has(http.player().player(), PERM_PLAYERS));
+        offers.put("others", page.others() && !plugin.map().playersLock().off()
+                && server.permissions().has(http.player().player(), PERM_PLAYERS));
         offers.put("positions", page.positions());
         offers.put("updateSeconds", page.updateSeconds());
         offers.put("allowHide", page.allowHide());
@@ -202,7 +204,8 @@ final class SelfMap {
         List<Spot> all = page.positions() ? spots(page) : List.of();
         Set<UUID> hiddenNow = hiddenOnMap();
         // Who hid themselves sees no one else either.
-        boolean others = page.others() && server.permissions().has(me, PERM_PLAYERS) && !hiddenNow.contains(me);
+        boolean others = page.others() && !plugin.map().playersLock().off() && server.permissions().has(me, PERM_PLAYERS)
+                && !hiddenNow.contains(me);
         Map<String, Object> self = null;
         List<Map<String, Object>> list = new ArrayList<>();
         for (Spot s : all) {

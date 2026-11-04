@@ -58,6 +58,7 @@ public final class MapService {
     public void start() {
         stop();
         settings = MapSettings.from(plugin.getConfig());
+        loadLocks();
         if (!settings.enabled()) {
             status = "map-state-disabled";
             return;
@@ -218,6 +219,64 @@ public final class MapService {
         return base + "?world=" + world.getKey().asString() + "&x=" + x + "&z=" + z;
     }
 
+
+    // ------------------------------------------------- the team's switches
+
+    /** A switch of the team: off, by whom and since when (saved in the storage "map-locks"). */
+    public record Lock(boolean off, String by, long since) {
+        static final Lock ON = new Lock(false, "", 0);
+    }
+
+    private volatile Lock pageLock = Lock.ON;
+    private volatile Lock playersLock = Lock.ON;
+
+    /** The map of the player page switched off for everyone (the tab disappears). */
+    public Lock pageLock() {
+        return pageLock;
+    }
+
+    /** Players on the map switched off for everyone (nobody sees anyone else). */
+    public Lock playersLock() {
+        return playersLock;
+    }
+
+    /** Switches the map ({@code players} false) or the players on it off or on again - right away, kept over restarts. */
+    public void setLock(boolean players, boolean off, String by) {
+        Lock lock = off ? new Lock(true, by, System.currentTimeMillis()) : Lock.ON;
+        if (players) {
+            playersLock = lock;
+        } else {
+            pageLock = lock;
+        }
+        org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+        for (var e : Map.of("page", pageLock, "players", playersLock).entrySet()) {
+            y.set(e.getKey() + ".off", e.getValue().off());
+            y.set(e.getKey() + ".by", e.getValue().by());
+            y.set(e.getKey() + ".since", e.getValue().since());
+        }
+        String text = y.saveToString();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.storage().saveState("map-locks", text));
+    }
+
+    private void loadLocks() {
+        try {
+            String text = plugin.storage().loadState("map-locks");
+            if (text == null || text.isBlank()) {
+                return;
+            }
+            org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+            y.loadFromString(text);
+            pageLock = lock(y, "page");
+            playersLock = lock(y, "players");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Could not read the map switches (map-locks)", e);
+        }
+    }
+
+    private static Lock lock(org.bukkit.configuration.file.YamlConfiguration y, String key) {
+        return y.getBoolean(key + ".off") ? new Lock(true, y.getString(key + ".by", ""), y.getLong(key + ".since"))
+                : Lock.ON;
+    }
     // ------------------------------------------------- map of the player page
 
     /** Folder of the Nether ceiling pictures (MRadmin's own), or null without them. */
