@@ -251,20 +251,28 @@ Die eingebauten Vorlagen der Sprachdatei (`restart`, `restart-now`, `update`, `e
 nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten gehen sie weiter. Gespeichert wird im
 Speicher von MRadmin unter `announce-templates`.
 
-## Versionen (`mradmin.versions.view`)
-- Eine Kachel pro MRtechnology-Plugin: installierte und neueste Version (für die eigene Minecraft-Version), Status
-  (aktuell / Update verfügbar / wartet auf Neustart), was neu ist, Links zur Website und zu GitHub; bei MRtoolbar
-  auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst).
-- Erkannt werden die Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte Version
-  der anderen Plugins. Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit
-  `mradmin.versions.install`, höchstens einmal pro
-  Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
+## Plugins (`mradmin.versions.view`)
+Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` leitet weiter).
+- **Auf diesem Server:** eine Karte pro installiertem MRtechnology-Plugin mit Version, Zustand (aktuell / Update
+  verfügbar / wartet auf Neustart / Fehler) und Update-Knopf. Ein Klick öffnet die Seite des Plugins (`/plugins/<name>`)
+  mit installierter und neuester Version, Veröffentlichungsdatum, „Was ist neu“, Links zur Website und zu GitHub; bei
+  MRtoolbar auch die neueste Version des Client-Mods (nur zur Info, den installieren die Spieler selbst), bei MRadmin
+  die squaremap-Version.
+- **Weitere MRtechnology-Plugins:** alle Plugins, die MRadmin kennt, aber nicht laufen - mit **Installieren**
+  (`mradmin.versions.install`). Die Datei kommt aus dem offiziellen Release (gleiche Prüfungen wie beim Herunterladen,
+  gibt es nur Vorabversionen, die neueste davon) unter ihrem Release-Namen nach `plugins/`; geladen wird sie beim
+  nächsten Start. Liegt die JAR schon seit dem Start in `plugins/` und läuft das Plugin trotzdem nicht, steht es als
+  „nicht geladen“ da (Paper hat es abgelehnt - Konsole ansehen).
+- Erkannt werden installierte Plugins an der `build-info.properties` in ihrer JAR - es braucht dafür keine bestimmte
+  Version der anderen Plugins; nicht installierte kennt MRadmin aus einer festen Liste (`versions/Catalog.java`).
+  Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (nur mit `mradmin.versions.install`,
+  höchstens einmal pro Minute, GitHub erlaubt ohne Anmeldung 60 Anfragen pro Stunde).
 - **Herunterladen** (`mradmin.versions.install`): nur aus dem Release des eigenen GitHub-Repos, nur mit passender
   SHA-256-Prüfsumme und nur, wenn die Datei wirklich dieses Plugin enthält. Sie wird unter dem Namen der installierten
   JAR in `plugins/update/` abgelegt; Paper tauscht sie beim nächsten Start aus. Der Dateiname bleibt deshalb der alte, nur
   der Inhalt ist neu. `versions.auto-download`
   (`off`, `patch`, `minor`, `all`) lädt Updates von selbst.
-- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen, aber noch nicht installiert ist,
+- **Server neu starten** (`mradmin.server.restart`): nur, wenn ein Update heruntergeladen oder ein Plugin installiert, aber noch nicht geladen ist,
   und `versions.restart-method` eingestellt ist (Standard
   `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
   den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit

@@ -140,9 +140,9 @@ public final class PanelRoutes {
             }
         }
         if (plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())) {
-            var plugins = plugin.versions().list();
+            var plugins = plugin.versions().list().stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::isInstalled).toList();
             long updates = plugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
-            long staged = plugins.stream().filter(e -> e.staged != null).count();
+            long staged = plugin.versions().list().stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::waitsForRestart).count();
             long restartAt = server.sync(() -> plugin.restarts().endsAt());
             result.put("versions", Map.of("plugins", plugins.size(), "updates", updates, "staged", staged, "restartAt", restartAt));
             if (restartAt > 0) {

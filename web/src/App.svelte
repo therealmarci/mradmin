@@ -27,7 +27,8 @@
   import Console from './pages/Console.svelte';
   import Maintenance from './pages/Maintenance.svelte';
   import News from './pages/News.svelte';
-  import Versions from './pages/Versions.svelte';
+  import Plugins from './pages/Plugins.svelte';
+  import PluginView from './pages/PluginView.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -95,7 +96,13 @@
   const pvpId = $derived(route.path.match(/^\/pvp\/(\d+)$/)?.[1] ?? null);
   // /pvp/kits = list, /pvp/kits/<id> = one kit, /pvp/new-kit[/<copy of>] = new kit
   const kitMatch = $derived(route.path.match(/^\/pvp\/(kits|new-kit)(?:\/([a-z0-9_-]+))?$/));
-  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp' : route.path);
+  // /plugins = all plugins, /plugins/<name> = one plugin (the old address /versions leads to the list)
+  const pluginName = $derived(route.path.match(/^\/plugins\/([A-Za-z0-9_-]+)$/)?.[1] ?? null);
+  $effect(() => {
+    if (route.path === '/versions') go('/plugins', true);
+  });
+  const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp'
+    : pluginName ? '/plugins' : route.path);
 
   const nav = $derived(
     me
@@ -110,7 +117,7 @@
           ...(me.may.mrwaypoints || me.may.mapAdmin ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
-          ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
+          ...(me.may.versions ? [{ path: '/plugins', label: t('nav.versions'), icon: 'box' }] : []),
           ...(me.may.console ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
         ]
       : [],
@@ -167,8 +174,10 @@
       {#key playerId}<PlayerView uuid={playerId} section={playerSection} {me} />{/key}
     {:else if route.path === '/players' && me.may.players}
       <Players />
-    {:else if route.path === '/versions' && me.may.versions}
-      <Versions />
+    {:else if pluginName && me.may.versions}
+      {#key pluginName}<PluginView name={pluginName} />{/key}
+    {:else if route.path === '/plugins' && me.may.versions}
+      <Plugins />
     {:else if route.path === '/maintenance' && me.may.maintenance}
       <Maintenance {me} />
     {:else if route.path === '/news' && (me.may.news || me.may.announce)}

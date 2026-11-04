@@ -51,7 +51,7 @@
     tickets: () => me.may.tickets && '/tickets',
     'tickets-mine': () => me.may.tickets && '/tickets',
     maintenance: () => me.may.maintenance && '/maintenance',
-    versions: () => me.may.versions && '/versions',
+    versions: () => me.may.versions && '/plugins',
   };
   // Hints of modules (MRchunks, MRsleep ...) name the page themselves - linked if the member may see the module.
   const target = (a) => (a.module ? (me.may[a.module] && a.page) : a.page && pages[a.page]?.()) || null;
@@ -172,7 +172,7 @@
     if (data?.versions) {
       const { updates, staged, restartAt } = data.versions;
       rows.push({ key: 'versions', label: t('nav.versions'), value: restartAt ? t('home.versionsRestart') : staged ? t('home.versionsStaged') : updates ? t('home.versionsUpdates', { n: updates }) : t('home.g.current'),
-        tone: restartAt ? 'bad' : updates ? 'warn' : '', page: '/versions' });
+        tone: restartAt ? 'bad' : updates ? 'warn' : '', page: '/plugins' });
     }
     return rows;
   });
@@ -404,7 +404,7 @@
             { label: t('home.versionsAvailable'), value: v.updates, tone: v.updates ? 'warn' : '' },
             { label: t('home.versionsWaiting'), value: v.staged },
           ]}
-          link={t('home.toVersions')} onclick={() => go('/versions')} />
+          link={t('home.toVersions')} onclick={() => go('/plugins')} />
       {/if}
     </div>
 
