@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.2.1] - 2026-11-04
+
+### Behoben & geändert
+- **Netherdecke voller Lücken:** Ein Neustart während des Komplett-Renderns ließ es beim nächsten Start von vorn beginnen - bei einem großen Nether oder häufigen Neustarts kam es nie bis zu den hinteren Bereichen. **Jetzt macht es nach einem Neustart (auch nach einem Absturz) dort weiter, wo es aufgehört hat:** MRadmin merkt sich die fertigen Chunks in `plugins/MRadmin/map-roof/<welt>-roof/progress.v2`, erst wenn ihr Bild gespeichert ist; die Konsole zeigt „rendering 2836 of 4438 chunks …, going on after a restart“. Außerdem suchte MRadmin die Region-Dateien nur an einer Stelle: Auf Servern mit anderem Ordneraufbau (z.B. `world_nether/DIM-1/region`) fand es keine und merkte sich die Decke trotzdem als fertig. Jetzt sucht es an allen üblichen Stellen, nennt den Ordner in der Konsole (oder warnt) und zeichnet geladene Chunks nach, sodass Lücken sich auch dort schließen, wo Spieler vorbeikommen. **Nach dem Update rendert MRadmin die Netherdecke einmal komplett neu** (im Hintergrund, `map.nether-roof.chunks-per-second`).
+
 ## [1.2.0] - 2026-11-04
 
 ### Neu

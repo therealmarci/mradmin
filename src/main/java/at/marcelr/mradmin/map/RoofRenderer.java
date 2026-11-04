@@ -67,6 +67,13 @@ final class RoofRenderer implements Listener {
     private static final Pattern REGION = Pattern.compile("r\\.(-?\\d+)\\.(-?\\d+)\\.mca");
     /** Below the ceiling there is nothing to see from above: a few blocks under from-y the bedrock is solid. */
     private static final int DEPTH = 6;
+    /** Marks a world whose complete render went through. ".v2": up to 1.2.0 a render that found no region files was
+     *  marked complete too - those worlds get drawn completely once more. */
+    private static final String COMPLETE = "complete.v2";
+    /** Chunks of the complete render whose pictures are saved (8 bytes per chunk key) - a restart goes on from there. */
+    private static final String PROGRESS = "progress.v2";
+    /** At most this many loaded (not new) chunks wait to be drawn per world. */
+    private static final int MAX_DIRTY = 20_000;
 
     /** A Nether world drawn here: its squaremap folder and closest zoom. */
     private record Target(World world, String folder, int zoomMax) {
@@ -92,12 +99,16 @@ final class RoofRenderer implements Listener {
     /** Chunks of the complete render still to do, per world - at 0 the world is marked complete. */
     private final Map<UUID, Integer> remaining = new HashMap<>();
     private int loading;
+    /** Chunks the complete render is loading right now (server thread). */
+    private final Set<Long> loadingNow = new HashSet<>();
     private int ticks;
     private @Nullable BukkitTask task;
 
     // Worker thread: the closest-zoom pictures being drawn, and which of them changed since the last save.
     private final Map<String, BufferedImage> open = new HashMap<>();
     private final Set<String> changed = new LinkedHashSet<>();
+    /** Chunks of the complete render drawn since the last save, per folder - written to PROGRESS with the pictures. */
+    private final Map<String, List<Long>> drawn = new HashMap<>();
     /** Closest zoom per folder - read by the worker, also while stopping. */
     private final Map<String, Integer> zooms = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -148,7 +159,7 @@ final class RoofRenderer implements Listener {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
         if (settings.fullRender()) {
             for (Target target : targets.values()) {
-                if (!Files.exists(dir.resolve(target.folder() + SUFFIX).resolve("complete"))) {
+                if (!Files.exists(dir.resolve(target.folder() + SUFFIX).resolve(COMPLETE))) {
                     queueAll(target);
                 }
             }
@@ -178,10 +189,17 @@ final class RoofRenderer implements Listener {
 
     /** All generated chunks of the world, from the headers of its region files (read in the background). */
     private void queueAll(Target target) {
-        Path regions = target.world().getWorldFolder().toPath().resolve("region");
+        Path worldFolder = target.world().getWorldFolder().toPath();
+        Path container = Bukkit.getWorldContainer().toPath().resolve(target.world().getName());
         UUID id = target.world().getUID();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             List<Job> jobs = new ArrayList<>();
+            Path regions = regionFolder(worldFolder, container);
+            if (regions == null) {
+                Bukkit.getScheduler().runTask(plugin, () -> plugin.getLogger().warning("Nether ceiling map: no region files found for "
+                        + target.world().getName() + " (looked in " + worldFolder + ") - only chunks that are loaded get drawn."));
+                return;
+            }
             try (DirectoryStream<Path> files = Files.newDirectoryStream(regions, "r.*.mca")) {
                 for (Path file : files) {
                     Matcher m = REGION.matcher(file.getFileName().toString());
@@ -192,19 +210,66 @@ final class RoofRenderer implements Listener {
             } catch (IOException e) {
                 plugin.getLogger().log(Level.FINE, "No region files for the Nether ceiling in " + regions, e);
             }
+            Set<Long> saved = progress(target.folder());
+            int total = jobs.size();
+            jobs.removeIf(job -> saved.contains(org.bukkit.Chunk.getChunkKey(job.x(), job.z())));
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (!targets.containsKey(id)) {
                     return;
                 }
                 full.addAll(jobs);
                 remaining.merge(id, jobs.size(), Integer::sum);
-                plugin.getLogger().info("Nether ceiling map: rendering " + jobs.size() + " chunks of "
-                        + target.world().getName() + " in the background.");
-                if (jobs.isEmpty()) {
+                plugin.getLogger().info("Nether ceiling map: rendering " + jobs.size() + " of " + total + " chunks of "
+                        + target.world().getName() + " in the background" + (jobs.size() < total ? ", going on after a restart" : "")
+                        + " (" + regions + ").");
+                // Nothing found is no finished map - the next start looks again. All done before: finished now.
+                if (total > 0 && jobs.isEmpty()) {
                     finished(id);
                 }
             });
         });
+    }
+
+    /**
+     * The folder with the region files of a Nether world: {@code region} in the world's folder (new layout), the old
+     * Bukkit layout {@code <world>/DIM-1/region}, otherwise the first {@code region} folder below it that holds
+     * region files (Nether paths first). Null if there is none.
+     */
+    static @Nullable Path regionFolder(Path worldFolder, Path container) {
+        for (Path candidate : List.of(worldFolder.resolve("region"), worldFolder.resolve("DIM-1").resolve("region"),
+                container.resolve("DIM-1").resolve("region"), container.resolve("region"))) {
+            if (hasRegions(candidate)) {
+                return candidate;
+            }
+        }
+        for (Path root : List.of(worldFolder, container)) {
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
+            try (java.util.stream.Stream<Path> walk = Files.walk(root, 5)) {
+                List<Path> found = walk.filter(d -> d.getFileName() != null && d.getFileName().toString().equals("region"))
+                        .filter(RoofRenderer::hasRegions).toList();
+                Path nether = found.stream().filter(d -> d.toString().contains("the_nether") || d.toString().contains("DIM-1"))
+                        .findFirst().orElse(null);
+                if (nether != null || !found.isEmpty()) {
+                    return nether != null ? nether : found.getFirst();
+                }
+            } catch (IOException | java.io.UncheckedIOException e) {
+                // not readable - try the next place
+            }
+        }
+        return null;
+    }
+
+    private static boolean hasRegions(Path folder) {
+        if (!Files.isDirectory(folder)) {
+            return false;
+        }
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(folder, "r.*.mca")) {
+            return files.iterator().hasNext();
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     /** A region file starts with 1024 locations, one per chunk; 0 = the chunk was never generated. */
@@ -257,8 +322,14 @@ final class RoofRenderer implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onLoad(ChunkLoadEvent event) {
-        if (event.isNewChunk() && targets.containsKey(event.getWorld().getUID())) {
-            dirty.computeIfAbsent(event.getWorld().getUID(), k -> new HashSet<>()).add(event.getChunk().getChunkKey());
+        // Every loaded chunk, not only new ones: gaps (e.g. from a complete render that missed something) close by
+        // themselves wherever players come by. Capped, the drawing budget per second stays the same.
+        // Chunks the complete render loads itself are drawn by it - not a second time.
+        if (targets.containsKey(event.getWorld().getUID()) && !loadingNow.contains(event.getChunk().getChunkKey())) {
+            Set<Long> set = dirty.computeIfAbsent(event.getWorld().getUID(), k -> new HashSet<>());
+            if (event.isNewChunk() || set.size() < MAX_DIRTY) {
+                set.add(event.getChunk().getChunkKey());
+            }
         }
     }
 
@@ -285,15 +356,20 @@ final class RoofRenderer implements Listener {
             }
         }
         int budget = settings.chunksPerSecond();
+        // Taken out first, drawn afterwards: drawing may load a chunk, and its load event adds to these sets.
+        List<Map.Entry<Target, Long>> now = new ArrayList<>();
         for (var entry : dirty.entrySet()) {
             Target target = targets.get(entry.getKey());
             var it = entry.getValue().iterator();
             while (target != null && it.hasNext() && budget > 0) {
-                long key = it.next();
+                now.add(Map.entry(target, it.next()));
                 it.remove();
                 budget--;
-                read(target, (int) key, (int) (key >> 32), false);
             }
+        }
+        for (Map.Entry<Target, Long> job : now) {
+            long key = job.getValue();
+            read(job.getKey(), (int) key, (int) (key >> 32), false);
         }
         while (budget > 0 && loading < settings.chunksPerSecond() && !full.isEmpty()) {
             Job job = full.poll();
@@ -314,24 +390,42 @@ final class RoofRenderer implements Listener {
         if (world.isChunkLoaded(x, z)) {
             ChunkSnapshot snapshot = world.getChunkAt(x, z).getChunkSnapshot(false, false, false);
             worker.execute(() -> draw(target, snapshot));
-            done(target, complete);
+            done(target, x, z, complete);
+            return;
+        }
+        if (!complete) {
+            // Drawn again only while loaded: loading it here would fire a load event and mark it once more.
             return;
         }
         loading++;
+        long own = org.bukkit.Chunk.getChunkKey(x, z);
+        loadingNow.add(own);
         world.getChunkAtAsync(x, z, false).whenComplete((chunk, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
             loading--;
-            if (chunk != null && targets.containsKey(world.getUID())) {
+            loadingNow.remove(own);
+            if (!targets.containsKey(world.getUID())) {
+                // stopped meanwhile: not drawn, so not done either - the next start draws it
+                return;
+            }
+            if (chunk != null) {
                 ChunkSnapshot snapshot = chunk.getChunkSnapshot(false, false, false);
                 worker.execute(() -> draw(target, snapshot));
             }
-            done(target, complete);
+            done(target, x, z, complete);
         }));
     }
 
-    private void done(Target target, boolean complete) {
+    private void done(Target target, int x, int z, boolean complete) {
         if (!complete) {
             return;
         }
+        // Queued after the drawing: written to the progress file together with its picture (save), never before.
+        long key = org.bukkit.Chunk.getChunkKey(x, z);
+        String folder = target.folder();
+        if (worker.isShutdown()) {
+            return;
+        }
+        worker.execute(() -> drawn.computeIfAbsent(folder, k -> new ArrayList<>()).add(key));
         UUID id = target.world().getUID();
         int left = remaining.merge(id, -1, Integer::sum);
         if (left <= 0) {
@@ -351,7 +445,8 @@ final class RoofRenderer implements Listener {
             try {
                 Path folder = dir.resolve(target.folder() + SUFFIX);
                 Files.createDirectories(folder);
-                Files.writeString(folder.resolve("complete"), String.valueOf(System.currentTimeMillis()));
+                Files.writeString(folder.resolve(COMPLETE), String.valueOf(System.currentTimeMillis()));
+                Files.deleteIfExists(folder.resolve(PROGRESS));
             } catch (IOException e) {
                 plugin.getLogger().log(Level.WARNING, "Could not mark the Nether ceiling map as complete", e);
             }
@@ -442,6 +537,7 @@ final class RoofRenderer implements Listener {
     private void save() {
         if (changed.isEmpty()) {
             open.clear();
+            saveProgress();
             return;
         }
         Set<String> parents = new LinkedHashSet<>();
@@ -478,6 +574,40 @@ final class RoofRenderer implements Listener {
             }
             parents = next;
         }
+        saveProgress();
+    }
+
+    /** Appends the chunks drawn since the last save to the progress file of their world (after their pictures). */
+    private void saveProgress() {
+        for (var entry : drawn.entrySet()) {
+            Path file = dir.resolve(entry.getKey() + SUFFIX).resolve(PROGRESS);
+            try {
+                Files.createDirectories(file.getParent());
+                java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(entry.getValue().size() * 8);
+                entry.getValue().forEach(buffer::putLong);
+                Files.write(file, buffer.array(), java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not save the progress of the Nether ceiling map", e);
+            }
+        }
+        drawn.clear();
+    }
+
+    /** Chunk keys an earlier complete render already saved (empty if none); a cut-off last entry is ignored. */
+    private Set<Long> progress(String folder) {
+        Path file = dir.resolve(folder + SUFFIX).resolve(PROGRESS);
+        Set<Long> keys = new HashSet<>();
+        try {
+            if (Files.isRegularFile(file)) {
+                java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(Files.readAllBytes(file));
+                while (buffer.remaining() >= 8) {
+                    keys.add(buffer.getLong());
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Could not read the progress of the Nether ceiling map, drawing it all", e);
+        }
+        return keys;
     }
 
     /** One picture of a zoom from the four of the next closer zoom, each at half size. */
