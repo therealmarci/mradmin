@@ -226,10 +226,21 @@
 
   // ---------------------------------------------------------------- players
 
-  /** The players as drawn: they glide to each new position instead of jumping. */
+  /**
+   * The players as drawn. The server sends snapshots with their time ({@code at}); the map plays them back a little
+   * later than they happened and slides evenly from one snapshot to the next - so the players move without pauses,
+   * even if an answer arrives late. Without {@code at} (older server) the answer's arrival time counts.
+   */
   let drawn = $state([]);
-  let glide = 0;
   let opened = false;
+  /** uuid -> {name, self, samples: [{t, world, x, z, yaw}]} */
+  const tracks = new Map();
+  /** server clock - performance.now(), the best seen (= the least delayed answer) of the last answers */
+  let offsets = [];
+  let frame = 0;
+
+  /** How far behind the playback runs: one round of asking plus room for a late answer. */
+  const lag = $derived(Math.max(1, page.updateSeconds ?? 1) * 1000 + 450);
 
   $effect(() => {
     const p = positions;
@@ -240,26 +251,63 @@
     ];
     untrack(() => {
       openAtPlayer(p.self);
-      moveTo(targets);
+      take(targets, p.at ?? Date.now());
     });
   });
 
-  $effect(() => () => cancelAnimationFrame(glide));
+  $effect(() => () => cancelAnimationFrame(frame));
 
-  function moveTo(targets) {
-    const from = new Map(drawn.map((d) => [d.uuid + d.world, d]));
-    const begin = performance.now();
-    cancelAnimationFrame(glide);
-    const step = (now) => {
-      const k = Math.min(1, (now - begin) / 700);
-      drawn = targets.map((tg) => {
-        const f = from.get(tg.uuid + tg.world);
-        return f ? { ...tg, x: f.x + (tg.x - f.x) * k, z: f.z + (tg.z - f.z) * k } : tg;
-      });
-      if (follow) keepCentered();
-      if (k < 1) glide = requestAnimationFrame(step);
-    };
-    glide = requestAnimationFrame(step);
+  function take(targets, at) {
+    offsets.push(at - performance.now());
+    if (offsets.length > 12) offsets.shift();
+    const seen = new Set();
+    for (const tg of targets) {
+      seen.add(tg.uuid);
+      let tr = tracks.get(tg.uuid);
+      if (!tr) tracks.set(tg.uuid, (tr = { samples: [] }));
+      tr.name = tg.name;
+      tr.self = tg.self;
+      const last = tr.samples.at(-1);
+      if (last && at <= last.t) continue; // the same snapshot again (the server keeps it a moment)
+      // A new world or a long gap (tab was in the background) is a jump, not a slide.
+      if (last && (last.world !== tg.world || at - last.t > lag * 3)) tr.samples = [];
+      tr.samples.push({ t: at, world: tg.world, x: tg.x, z: tg.z, yaw: tg.yaw });
+      if (tr.samples.length > 8) tr.samples.shift();
+    }
+    for (const id of [...tracks.keys()]) if (!seen.has(id)) tracks.delete(id);
+    if (!frame) frame = requestAnimationFrame(play);
+  }
+
+  function play() {
+    frame = 0;
+    if (!tracks.size) {
+      drawn = [];
+      return;
+    }
+    const now = performance.now() + Math.max(...offsets) - lag;
+    const list = [];
+    for (const [uuid, tr] of tracks) {
+      const at = sample(tr.samples, now);
+      list.push({ uuid, name: tr.name, self: tr.self, ...at });
+    }
+    drawn = list;
+    if (follow) keepCentered();
+    frame = requestAnimationFrame(play);
+  }
+
+  /** Where a player was at the time {@code now}: between the two snapshots around it, else the nearest one. */
+  function sample(samples, now) {
+    if (now <= samples[0].t || samples.length === 1) return samples[0];
+    for (let i = 1; i < samples.length; i++) {
+      const b = samples[i];
+      if (now <= b.t) {
+        const a = samples[i - 1];
+        const k = (now - a.t) / (b.t - a.t);
+        let turn = (((b.yaw - a.yaw) % 360) + 540) % 360 - 180; // the short way round
+        return { world: b.world, x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k, yaw: a.yaw + turn * k };
+      }
+    }
+    return samples.at(-1);
   }
 
   /** Once, at the first answer: the map starts where the player stands (unless a link names a spot). */
@@ -659,7 +707,7 @@
       {/if}
     {/each}
     {#each visiblePlayers as p (p.uuid)}
-      <div class="player" class:self={p.self} style="left:{sx(p.x)}px;top:{sz(p.z)}px">
+      <div class="player" class:self={p.self} style="transform:translate3d({sx(p.x)}px,{sz(p.z)}px,0)">
         <span class="look" style="rotate:{p.yaw}deg" aria-hidden="true"></span>
         <img class="face" src={head(p.uuid)} alt="" width="22" height="22" draggable="false" />
         <span class="pname">{p.name}</span>
@@ -1678,6 +1726,9 @@
 
   .player {
     position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
     z-index: 4;
     display: grid;
     justify-items: center;

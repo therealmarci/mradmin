@@ -32,7 +32,7 @@
 
   // Where the player and the others stand - only if the server offers it (map.player-page), as often as it says.
   let positions = $state(null);
-  const every = $derived(data?.page?.positions ? Math.max(1, data.page.updateSeconds ?? 2) * 1000 : 0);
+  const every = $derived(data?.page?.positions ? Math.max(1, data.page.updateSeconds ?? 1) * 1000 : 0);
 
   async function locate() {
     try {

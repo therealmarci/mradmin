@@ -60,7 +60,7 @@ public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideMo
                         c.getBoolean(p + "chunk-grid", true),
                         c.getBoolean(p + "players.self", true),
                         c.getBoolean(p + "players.others", true),
-                        Math.clamp(c.getInt(p + "players.update-seconds", 2), 1, 60),
+                        Math.clamp(c.getInt(p + "players.update-seconds", 1), 1, 60),
                         c.getBoolean(p + "players.hide-admin-mode", true),
                         c.getBoolean(p + "players.hide-spectators", true),
                         c.getBoolean(p + "players.hide-invisible", true),

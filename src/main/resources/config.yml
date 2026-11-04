@@ -830,7 +830,7 @@ map:
       # false e.g. for a manhunt.
       others: true
       # How often the positions are updated while the map is open (seconds, 1-60).
-      update-seconds: 2
+      update-seconds: 1
       # Never shown to others: players in admin mode, in spectator mode, invisible players.
       hide-admin-mode: true
       hide-spectators: true

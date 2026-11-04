@@ -40,7 +40,7 @@ final class SelfMap {
     /** Who may see the other online players on the map. */
     static final String PERM_PLAYERS = "mradmin.map.players";
 
-    /** Positions of all online players, taken at most once a second (every open map asks every few seconds). */
+    /** Positions of all online players, taken at most every 0.4 s (every open map asks about once a second). */
     private volatile List<Spot> spots = List.of();
     private volatile long spotsAt;
 
@@ -184,12 +184,14 @@ final class SelfMap {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("self", self);
         result.put("players", list);
+        // When the positions were taken (server clock): the browser plays them back evenly instead of jerking.
+        result.put("at", spotsAt);
         http.json(200, result);
     }
 
     private List<Spot> spots(MapSettings.PlayerPage page) throws Exception {
         long now = System.currentTimeMillis();
-        if (now - spotsAt < 1000) {
+        if (now - spotsAt < 400) {
             return spots;
         }
         List<Spot> list = server.sync(() -> {
