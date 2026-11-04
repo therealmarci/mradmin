@@ -855,6 +855,38 @@
 
 <svelte:window onkeydown={keys} />
 
+{#snippet headButtons()}
+  <button class="x" aria-label={t('map.center')} title={t('map.center')} onclick={centerOn}>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="6" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
+  </button>
+  <button class="x" aria-label={t('common.close')} onclick={() => (selectedKey = null)}>✕</button>
+{/snippet}
+
+<!-- Where the selected marker is (click copies), how far, how big - with plain details also its lines. -->
+{#snippet facts(withDetails)}
+  <div class="facts">
+    <button class="fact spotline" title={t('map.copy')} onclick={copySpot}>
+      <span class="fk">{worldName(selected.world)}</span>
+      <span class="fv mono">X {spot.x} · Z {spot.z}</span>
+      <span class="copy" aria-hidden="true">{copied ? '✓' : '⧉'}</span>
+    </button>
+    {#if distance !== null}
+      <div class="fact"><span class="fk">{t('map.distance')}</span><span class="fv">{t('map.away', { n: distance.toLocaleString() })}</span></div>
+    {/if}
+    {#if selected.width > 0}
+      <div class="fact"><span class="fk">{t('map.area')}</span><span class="fv">{t('map.size', { w: selected.width, l: selected.length })}</span></div>
+    {/if}
+    {#each withDetails ? selected.details : [] as text}
+      {@const l = line(text)}
+      <div class="fact" class:wide={!l.key}>
+        {#if l.key}<span class="fk">{l.key}</span>{/if}<span class="fv">{l.value}</span>
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 {#snippet layerList()}
   {#each groups as g (g.key)}
     {@const open = !collapsed.has(g.key)}
@@ -1106,37 +1138,19 @@
     <div class="dock d-detail" class:moving={moving?.id === 'detail'} style={dockStyle('detail')} use:measure={'detail'}
       transition:fly={{ y: phone ? 220 : 12, duration: 200 }}>
       {@render handle('detail')}
-      <div class="panel detail" style="--c:{selected.color || selected.layer.color || 'var(--accent)'}">
+      <div class="panel detail" class:carded={selected.card} style="--c:{selected.color || selected.layer.color || 'var(--accent)'}">
         {#if phone}<span class="grip" aria-hidden="true"></span>{/if}
-        <div class="dhead">
-          <span class="dbadge" aria-hidden="true">
-            {#if selected.width > 0}
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
-            {:else}
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
-                <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" />
-              </svg>
-            {/if}
-          </span>
-          <div class="dtitle">
-            <strong>{selected.label}</strong>
-            <span class="crumb">{selected.layer.group || selected.layer.module} <span aria-hidden="true">›</span> {selected.layer.name}</span>
-          </div>
-          <button class="x" aria-label={t('map.center')} title={t('map.center')} onclick={centerOn}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="6" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-            </svg>
-          </button>
-          <button class="x" aria-label={t('common.close')} onclick={() => (selectedKey = null)}>✕</button>
-        </div>
-
         {#if selected.card}
           {@const c = selected.card}
-          <!-- The module's card (API 11), like on its own page: status, figures, bars, buttons, link to the page. -->
+          <!-- The module's card (API 11), like on its own page: everything in one tile in the colour of its state. -->
           <div class="mcard tone-{c.tone || 'none'}">
-            <div class="mchead">
-              {#if c.subtitle}<span class="msub">{c.subtitle}</span>{/if}
+            <div class="mtop">
+              <div class="dtitle">
+                <strong>{c.title || selected.label}</strong>
+                <span class="crumb">{selected.layer.group || selected.layer.module} <span aria-hidden="true">›</span> {selected.layer.name}</span>
+              </div>
               {#if c.badge}<span class="mbadge">{c.badge}</span>{/if}
+              {@render headButtons()}
             </div>
             {#if c.stats.length}
               <div class="mchips">
@@ -1152,33 +1166,32 @@
                 {/each}
               </div>
             {/if}
+            {@render facts(false)}
             {#if onopen}
               <button class="mlink" onclick={() => onopen(`/me/${selected.layer.module}/${selected.area}#card=${encodeURIComponent(c.id)}`)}>
                 {t('map.openPage')} <span aria-hidden="true">→</span>
               </button>
             {/if}
           </div>
-        {/if}
-
-        <div class="facts">
-          <button class="fact spotline" title={t('map.copy')} onclick={copySpot}>
-            <span class="fk">{worldName(selected.world)}</span>
-            <span class="fv mono">X {spot.x} · Z {spot.z}</span>
-            <span class="copy" aria-hidden="true">{copied ? '✓' : '⧉'}</span>
-          </button>
-          {#if distance !== null}
-            <div class="fact"><span class="fk">{t('map.distance')}</span><span class="fv">{t('map.away', { n: distance.toLocaleString() })}</span></div>
-          {/if}
-          {#if selected.width > 0}
-            <div class="fact"><span class="fk">{t('map.area')}</span><span class="fv">{t('map.size', { w: selected.width, l: selected.length })}</span></div>
-          {/if}
-          {#each selected.card ? [] : selected.details as text}
-            {@const l = line(text)}
-            <div class="fact" class:wide={!l.key}>
-              {#if l.key}<span class="fk">{l.key}</span>{/if}<span class="fv">{l.value}</span>
+        {:else}
+          <div class="dhead">
+            <span class="dbadge" aria-hidden="true">
+              {#if selected.width > 0}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+              {:else}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" />
+                </svg>
+              {/if}
+            </span>
+            <div class="dtitle">
+              <strong>{selected.label}</strong>
+              <span class="crumb">{selected.layer.group || selected.layer.module} <span aria-hidden="true">›</span> {selected.layer.name}</span>
             </div>
-          {/each}
-        </div>
+            {@render headButtons()}
+          </div>
+          {@render facts(true)}
+        {/if}
 
         {#if selected.actions.length && !selected.card}
           {@const parts = split(selected.actions.map((a) => ({ layer: selected.layer, action: a })))}
@@ -2142,20 +2155,21 @@
     --tone: var(--bad);
   }
 
-  .mchead {
+  .mtop {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     min-width: 0;
   }
 
-  .msub {
-    font-size: 0.78rem;
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  /* With a card the panel is only its frame: the tile carries everything. */
+  .detail.carded {
+    padding: 6px;
+  }
+
+  .mcard .facts {
+    border-color: color-mix(in srgb, var(--tone) 25%, var(--border));
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
   }
 
   .mbadge {
