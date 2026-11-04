@@ -91,12 +91,24 @@
       toast = { text: errorText(e), tone: 'bad' };
     }
   }
+
+  // Hide oneself on the map (or show again) - the positions are asked anew right away.
+  async function hide(hidden) {
+    try {
+      await api('POST', '/self/map/hide', { hidden: String(hidden) });
+      toast = { text: t(hidden ? 'map.hiddenDone' : 'map.shownDone'), tone: 'good' };
+      await locate();
+    } catch (e) {
+      toast = { text: errorText(e), tone: 'bad' };
+      throw e;
+    }
+  }
 </script>
 
 <div class="full" style="top:{top}px;bottom:{bottom}px" aria-label={t('map.title')}>
   {#if data?.worlds.length}
     <MapView worlds={data.worlds} layers={data.layers} {tileUrl} {stamps} {initial} onaction={action} storageKey="mradmin.self.map"
-      page={data.page ?? {}} {positions} />
+      page={data.page ?? {}} {positions} onhide={hide} />
   {:else}
     <div class="state">
       {#if loadError}

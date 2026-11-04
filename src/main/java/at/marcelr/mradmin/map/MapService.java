@@ -39,7 +39,7 @@ public final class MapService {
     private MapSettings settings;
     private SquaremapBridge squaremap;
     private BukkitTask installCheck;
-    private @Nullable RoofRenderer roof;
+    private volatile @Nullable RoofRenderer roof;
     /** Language key of the squaremap status (map-state-*). */
     private String status = "map-state-missing";
     private String error = "";
@@ -230,9 +230,15 @@ public final class MapService {
      * (so the map of the player page switches to it by itself).
      */
     public String mapKey(World world, double y) {
-        String key = world.getKey().asString();
-        return roof != null && roof.covers(world) && y >= roof.fromY() ? key + ROOF_KEY : key;
+        return mapKey(world.getKey().asString(), y);
     }
+
+    /** The same by the world's key (e.g. of a marker) - safe on any thread. */
+    public String mapKey(String worldKey, double y) {
+        RoofRenderer r = roof;
+        return r != null && y >= r.fromY() && r.coversFolder(worldKey.replace(':', '_')) ? worldKey + ROOF_KEY : worldKey;
+    }
+
     /** squaremap's tile folder, or null without an active squaremap. */
     public @Nullable Path tilesDir() {
         try {

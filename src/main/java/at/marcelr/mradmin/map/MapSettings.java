@@ -43,10 +43,11 @@ public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideMo
      * @param hideSpectators players in spectator mode are never shown to others
      * @param hideInvisible  invisible players are never shown to others
      * @param hiddenWorlds   world keys in which nobody is shown
+     * @param allowHide      players may hide themselves on the map (they then see no one else either)
      */
     public record PlayerPage(boolean openAtPlayer, boolean follow, boolean chunkGrid, boolean self, boolean others,
                              int updateSeconds, boolean hideAdminMode, boolean hideSpectators, boolean hideInvisible,
-                             Set<String> hiddenWorlds) {
+                             Set<String> hiddenWorlds, boolean allowHide) {
 
         /** Whether positions are needed at all (open at the player, follow or players on the map). */
         public boolean positions() {
@@ -75,7 +76,8 @@ public record MapSettings(boolean enabled, boolean autoConfigure, boolean hideMo
                         c.getBoolean(p + "players.hide-admin-mode", true),
                         c.getBoolean(p + "players.hide-spectators", true),
                         c.getBoolean(p + "players.hide-invisible", true),
-                        Set.copyOf(hidden)),
+                        Set.copyOf(hidden),
+                        c.getBoolean(p + "players.allow-hide", true)),
                 new Roof(c.getBoolean("map.nether-roof.enabled", true),
                         Math.clamp(c.getInt("map.nether-roof.from-y", 128), 1, 320),
                         c.getBoolean("map.nether-roof.full-render", true),

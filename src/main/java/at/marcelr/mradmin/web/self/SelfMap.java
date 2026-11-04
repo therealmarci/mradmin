@@ -5,6 +5,7 @@ import at.marcelr.mradmin.api.AdminModule;
 import at.marcelr.mradmin.api.SelfMapLayer;
 import at.marcelr.mradmin.api.SelfViewer;
 import at.marcelr.mradmin.api.WebModule;
+import at.marcelr.mradmin.map.MapService;
 import at.marcelr.mradmin.map.MapSettings;
 import at.marcelr.mradmin.player.Npcs;
 import at.marcelr.mradmin.web.Http;
@@ -16,10 +17,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 import org.jspecify.annotations.Nullable;
@@ -34,6 +37,7 @@ import org.jspecify.annotations.Nullable;
  *  GET  /api/self/map/tiles/{world}/{zoom}/{tile}           one map picture (x_z.png) from squaremap's folder
  *  GET  /api/self/map/stamps?world=&zoom=&tiles=x_z,…       when those pictures were last drawn
  *  POST /api/self/map/action {module, layer, action, args, lang}   an action -> 400 {message} on refusal
+ *  POST /api/self/map/hide {hidden}                         hide oneself on the map (and see no one else)
  * </pre>
  * squaremap's own web server and page are not needed for this - MRadmin reads the pictures from its folder.
  * Players on the map, the chunk grid, opening at the player and following are set in {@code map.player-page}.
@@ -42,6 +46,8 @@ final class SelfMap {
 
     /** Who may see the other online players on the map. */
     static final String PERM_PLAYERS = "mradmin.map.players";
+    /** Players who hid themselves on the map (they see no one else either). */
+    private static final String HIDDEN_FILE = "map-hidden";
 
     /** Positions of all online players, taken at most every 0.4 s (every open map asks about once a second). */
     private volatile List<Spot> spots = List.of();
@@ -54,6 +60,8 @@ final class SelfMap {
     private final WebServer server;
     private final MRAdmin plugin;
     private final SelfRoutes routes;
+    private final java.util.Set<UUID> hiddenSelf = new java.util.HashSet<>();
+    private boolean hiddenLoaded;
 
     SelfMap(WebServer server, SelfRoutes routes) {
         this.server = server;
@@ -68,6 +76,7 @@ final class SelfMap {
         server.self("GET", "/api/self/map/stamps", this::stamps);
         server.self("GET", "/api/self/map/players", this::players);
         server.self("POST", "/api/self/map/action", this::action);
+        server.self("POST", "/api/self/map/hide", this::hide);
     }
 
     /** Whether there is a map (squaremap renders, at least one world). */
@@ -108,10 +117,12 @@ final class SelfMap {
         offers.put("others", page.others() && server.permissions().has(http.player().player(), PERM_PLAYERS));
         offers.put("positions", page.positions());
         offers.put("updateSeconds", page.updateSeconds());
+        offers.put("allowHide", page.allowHide());
+        offers.put("hidden", hiddenOnMap().contains(http.player().player()));
         http.json(200, Map.of("worlds", worlds, "layers", layers, "page", offers));
     }
 
-    private static Map<String, Object> layer(String module, String fallbackGroup, SelfMapLayer layer) {
+    private Map<String, Object> layer(String module, String fallbackGroup, SelfMapLayer layer) {
         Map<String, Object> l = new LinkedHashMap<>();
         l.put("module", module);
         l.put("group", layer.group() == null || layer.group().isBlank() ? fallbackGroup : layer.group());
@@ -122,7 +133,8 @@ final class SelfMap {
         for (SelfMapLayer.Marker m : layer.markers()) {
             Map<String, Object> marker = new LinkedHashMap<>();
             marker.put("id", m.id());
-            marker.put("world", m.world());
+            // With a height (API 10) a marker in the Nether belongs to the ceiling map or to the one below.
+            marker.put("world", m.y() == null || plugin.map() == null ? m.world() : plugin.map().mapKey(m.world(), m.y()));
             marker.put("x", m.x());
             marker.put("z", m.z());
             marker.put("width", m.width());
@@ -183,13 +195,15 @@ final class SelfMap {
         MapSettings.PlayerPage page = plugin.map().settings().page();
         UUID me = http.player().player();
         List<Spot> all = page.positions() ? spots(page) : List.of();
-        boolean others = page.others() && server.permissions().has(me, PERM_PLAYERS);
+        Set<UUID> hiddenNow = hiddenOnMap();
+        // Who hid themselves sees no one else either.
+        boolean others = page.others() && server.permissions().has(me, PERM_PLAYERS) && !hiddenNow.contains(me);
         Map<String, Object> self = null;
         List<Map<String, Object>> list = new ArrayList<>();
         for (Spot s : all) {
             if (s.uuid().equals(me)) {
                 self = spot(s);
-            } else if (others && !s.hidden() && !page.hiddenWorlds().contains(s.world())) {
+            } else if (others && !s.hidden() && !hiddenNow.contains(s.uuid()) && !page.hiddenWorlds().contains(baseKey(s.world()))) {
                 list.add(spot(s));
             }
         }
@@ -199,6 +213,54 @@ final class SelfMap {
         // When the positions were taken (server clock): the browser plays them back evenly instead of jerking.
         result.put("at", spotsAt);
         http.json(200, result);
+    }
+
+    /** The player hides themselves on the map - or shows themselves again (map.player-page.players.allow-hide). */
+    private void hide(Http http) throws Exception {
+        routes.check(http);
+        if (!plugin.map().settings().page().allowHide()) {
+            throw new Http.WebException(403, "forbidden");
+        }
+        boolean hide = "true".equals(http.string("hidden"));
+        UUID me = http.player().player();
+        synchronized (hiddenSelf) {
+            hiddenOnMap();
+            if (hide ? hiddenSelf.add(me) : hiddenSelf.remove(me)) {
+                YamlConfiguration y = new YamlConfiguration();
+                y.options().setHeader(List.of("MRadmin - players who hid themselves on the map of the player page "
+                        + "(managed by the plugin)."));
+                y.set("players", hiddenSelf.stream().map(UUID::toString).toList());
+                plugin.storage().saveYaml(HIDDEN_FILE, y);
+            }
+        }
+        http.json(200, Map.of("hidden", hide));
+    }
+
+    /** Who hid themselves - nobody while the setting is off. */
+    private Set<UUID> hiddenOnMap() {
+        if (!plugin.map().settings().page().allowHide()) {
+            return Set.of();
+        }
+        synchronized (hiddenSelf) {
+            if (!hiddenLoaded) {
+                YamlConfiguration y = plugin.storage().loadYaml(HIDDEN_FILE, plugin.getLogger());
+                for (String raw : y.getStringList("players")) {
+                    try {
+                        hiddenSelf.add(UUID.fromString(raw));
+                    } catch (IllegalArgumentException ignored) {
+                        // broken entry
+                    }
+                }
+                hiddenLoaded = true;
+            }
+            return Set.copyOf(hiddenSelf);
+        }
+    }
+
+    /** The dimension of a map key (the Nether ceiling belongs to the Nether, e.g. for hidden-worlds). */
+    private static String baseKey(String mapKey) {
+        return mapKey.endsWith(MapService.ROOF_KEY) ? mapKey.substring(0, mapKey.length() - MapService.ROOF_KEY.length())
+                : mapKey;
     }
 
     private List<Spot> spots(MapSettings.PlayerPage page) throws Exception {

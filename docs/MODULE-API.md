@@ -259,7 +259,8 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
   - `Action.choice` = `SelfMapLayer.Choice(label, value, options)` mit `Option(id, label, color)`: eine Auswahl im selben Dialog wie `input`, kommt als Argument `choice` an (MRwaypoints: Kategorie beim Erstellen und Bearbeiten).
   - `Action.icon`: Symbol im Menü - `plus`, `edit`, `trash`, `power`, `compass`, `eye` oder leer. Aktionen mit `tone` `bad` stehen rot am Ende des Menüs.
   - MRadmin selbst zeichnet zusätzlich Spieler (eigene Position, andere Online-Spieler) und das Chunkraster (`map.player-page`) - dafür braucht ein Modul nichts.
-- Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `POST /api/self/map/action`.
+- **Ab API 10** (`api-1.9.0`, vorher `apiVersion() >= 10` prüfen, sonst den Konstruktor ohne Höhe nutzen): `Marker.y` (letzter Wert, `null` = keine Höhe). Im Nether zeigt MRadmin einen Marker mit Höhe nur auf der Karte der Decke (ab `map.nether-roof.from-y`) bzw. nur darunter; ohne Höhe auf beiden.
+- Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `GET /api/self/map/stamps`, `GET /api/self/map/worlds`, `POST /api/self/map/action`.
 
 ## Versionen
 
@@ -272,7 +273,7 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -35,9 +35,17 @@ public record SelfMapLayer(String id, String name, String color, List<Marker> ma
      * @param color   "#RRGGBB", or "" for the layer's colour
      * @param details lines shown when the marker is clicked (plain text)
      * @param actions in its right-click menu (and below the details) - they get the marker's id as arg "marker"
+     * @param y       its height, or null if it has none: in the Nether MRadmin then shows it on the ceiling map
+     *                (from map.nether-roof.from-y) or below - without a height on both (since API 10)
      */
     public record Marker(String id, String world, int x, int z, int width, int length, String label, String color,
-                         List<String> details, List<Action> actions) {
+                         List<String> details, List<Action> actions, @Nullable Integer y) {
+
+        /** A marker without a height (as in API 8 and 9). */
+        public Marker(String id, String world, int x, int z, int width, int length, String label, String color,
+                      List<String> details, List<Action> actions) {
+            this(id, world, x, z, width, length, label, color, details, actions, null);
+        }
     }
 
     /**

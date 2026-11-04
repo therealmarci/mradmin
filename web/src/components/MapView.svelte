@@ -16,9 +16,10 @@
    * positions: {self: {world, x, z, yaw} | null, players: [{uuid, name, world, x, z, yaw}]} - asked by the page.
    * stamps(folder, zoom, ["x_z", …]): when those pictures were last drawn ({"x_z": seconds}) - asked every 15 seconds,
    * changed pictures are loaded again (tileUrl gets their time as 5th argument).
+   * onhide(hidden): the player hides themselves on the map or shows themselves again (page.allowHide) - a promise.
    */
   let { worlds = [], layers = [], tileUrl, onaction, storageKey = 'mradmin.map', initial = null, page = {},
-    positions = null, stamps = null } = $props();
+    positions = null, stamps = null, onhide = null } = $props();
 
   const TILE = 512;
   const LONG_PRESS = 500;
@@ -196,31 +197,55 @@
   // Areas first, so the pins stay on top of them.
   const markers = $derived(
     allMarkers
-      .filter((m) => m.world === mapKey && !hidden.has(layerKey(m.layer)))
+      .filter((m) => inView(m) && !hidden.has(layerKey(m.layer)))
       .sort((a, b) => (b.width > 0) - (a.width > 0)),
   );
 
   // The marker stays selected over a reload (the page asks again every few seconds) - gone markers close the panel.
   const selected = $derived(selectedKey ? allMarkers.find((m) => markerKey(m) === selectedKey) ?? null : null);
 
+  // Search: players (who may be seen) first, then the markers of every map.
   const results = $derived.by(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return allMarkers.filter((m) => m.label.toLowerCase().includes(q)).slice(0, 8);
+    const people = drawn.filter((d) => !d.self && d.name.toLowerCase().includes(q))
+      .map((d) => ({ player: true, key: 'p:' + d.uuid, label: d.name, world: d.world, x: d.x, z: d.z, color: '#f59e0b' }));
+    const found = allMarkers.filter((m) => m.label.toLowerCase().includes(q)).map((m) => ({ ...m, key: markerKey(m) }));
+    return [...people, ...found].slice(0, 10);
   });
+
+  /** Whether a marker shows on the map in view: its world, or without a height also on the ceiling of its dimension. */
+  const inView = (m) => m.world === worldKey || m.world === world?.base;
 
   // The Nether ceiling is a map of its own over the same dimension: markers belong to the dimension (base).
   const mapKey = $derived(world ? (world.base ?? world.key) : null);
   const baseOf = (key) => worlds.find((w) => w.key === key)?.base ?? key;
   const label = (w) => (w.roof ? `${w.name} · ${t('map.roof')}` : w.name);
   const worldName = (key) => { const w = worlds.find((x) => x.key === key); return w ? label(w) : key; };
-  const countIn = (l) => l.markers.filter((m) => m.world === mapKey).length;
+  const countIn = (l) => l.markers.filter(inView).length;
 
   // ---------------------------------------------------------------- layer list in groups
 
   const SELF = 'mradmin:self';
   const PLAYERS = 'mradmin:players';
 
+
+  // Hidden on the map for the others (saved on the server) - then the player sees no one else either.
+  let selfHidden = $state(false);
+  $effect(() => {
+    selfHidden = !!page.hidden;
+  });
+  let hiding = $state(false);
+  async function toggleHidden() {
+    if (!onhide || hiding) return;
+    hiding = true;
+    try {
+      await onhide(!selfHidden);
+      selfHidden = !selfHidden;
+    } finally {
+      hiding = false;
+    }
+  }
   /** The layers under their headings: the plugins' groups in their order, then players and the chunk grid. */
   const groups = $derived.by(() => {
     const list = [];
@@ -232,10 +257,10 @@
     }
     const people = [];
     if (page.self && positions?.self) people.push({ key: SELF, name: t('map.me'), color: 'var(--accent)', count: null });
-    if (page.others) {
+    if (page.others && !selfHidden) {
       people.push({ key: PLAYERS, name: t('map.others'), color: '#f59e0b', count: (positions?.players ?? []).filter((p) => p.world === worldKey).length });
     }
-    if (people.length) list.push({ key: 'g:players', title: t('map.players'), rows: people });
+    if (people.length || (page.allowHide && page.others)) list.push({ key: 'g:players', title: t('map.players'), rows: people });
     if (page.chunkGrid) list.push({ key: 'g:map', title: t('map.extras'), rows: [{ key: 'grid', name: t('map.chunkGrid'), grid: true }] });
     return list;
   });
@@ -614,7 +639,7 @@
     while (z > 0 && size * Math.pow(2, z - w.zoomMax) > Math.min(width, height) * 0.6) z--;
     return z;
   }
-  /** Jump to a marker (from the search) at the closest zoom, also into another world. */
+  /** Jump to a marker or player (from the search) at the closest zoom, also into another map. */
   function goTo(m) {
     // Already on a map of that dimension (e.g. the Nether ceiling): stay on it.
     const target = world?.base === m.world ? world : worlds.find((w) => w.key === m.world);
@@ -624,8 +649,13 @@
     zoom = closest(target, m);
     cx = m.x + (m.width > 0 ? m.width / 2 : 0.5);
     cz = m.z + (m.width > 0 ? m.length / 2 : 0.5);
-    if (hidden.has(layerKey(m.layer))) toggleLayer(m.layer);
-    selectedKey = markerKey(m);
+    if (m.player) {
+      if (hidden.has(PLAYERS)) toggleRow({ key: PLAYERS });
+      selectedKey = null;
+    } else {
+      if (hidden.has(layerKey(m.layer))) toggleLayer(m.layer);
+      selectedKey = markerKey(m);
+    }
     query = '';
     searchFocus = false;
   }
@@ -855,6 +885,19 @@
           {#if toggles.length}
             <p class="legend"><span class="ltoggle on" aria-hidden="true"></span>= {toggles.join(', ')}</p>
           {/if}
+          {#if g.key === 'g:players' && page.allowHide && onhide}
+            <div class="lrow" class:off={selfHidden}>
+              <button class="lname" aria-pressed={!selfHidden} disabled={hiding} onclick={toggleHidden}
+                title={t('map.visibleHint')}>
+                <svg class="gicon" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+                  <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" /><circle cx="8" cy="8" r="2" />
+                </svg>
+                <span class="lt">{t('map.visible')}</span>
+                <span class="check" class:on={!selfHidden} aria-hidden="true">{#if !selfHidden}✓{/if}</span>
+              </button>
+            </div>
+            {#if selfHidden}<p class="legend">{t('map.hiddenHint')}</p>{/if}
+          {/if}
         </div>
       {/if}
     </div>
@@ -936,11 +979,12 @@
     </div>
     {#if searchFocus && query.trim()}
       <div class="panel results" transition:fade={{ duration: 100 }}>
-        {#each results as m (markerKey(m))}
-          <button class="result" style="--c:{m.color}" onmousedown={(e) => e.preventDefault()} onclick={() => goTo(m)}>
+        {#each results as m (m.key)}
+          <button class="result" class:person={m.player} style="--c:{m.color}" onmousedown={(e) => e.preventDefault()}
+            onclick={() => goTo(m)}>
             <span class="dot" aria-hidden="true"></span>
             <span class="rt">{m.label}</span>
-            <span class="rs">{m.layer.name}{m.world !== mapKey ? ' · ' + worldName(m.world) : ''}</span>
+            <span class="rs">{m.player ? t('map.player') : m.layer.name} · {worldName(m.world)}</span>
           </button>
         {:else}
           <p class="muted small empty">{t('map.noResults')}</p>

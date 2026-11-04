@@ -15,7 +15,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 41
+config-version: 42
 
 # Language of the texts (chat, menus, titles, boss bars). The texts are in plugins/MRadmin/lang/<language>.yml.
 #   auto = every player gets the language set in their Minecraft client:
@@ -849,3 +849,6 @@ map:
       hide-invisible: true
       # Worlds in which other players are not shown (keys like minecraft:the_nether).
       hidden-worlds: []
+      # Players may hide themselves on the map (switch on the map, saved per player) - they then see no one else and
+      # cannot search for players either.
+      allow-hide: true
