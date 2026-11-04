@@ -27,9 +27,10 @@ public final class WebEvents {
     private static final Pattern SAFE = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
     /**
+     * @param log     may see the page Log (gets {@code event: log} on new entries)
      * @param plugins plugins whose pages the member may see (they get that plugin's events)
      */
-    private record Client(UUID account, boolean tickets, Set<String> plugins, BlockingQueue<String> queue) {
+    private record Client(UUID account, boolean tickets, boolean log, Set<String> plugins, BlockingQueue<String> queue) {
     }
 
     private final Set<Client> clients = ConcurrentHashMap.newKeySet();
@@ -37,6 +38,11 @@ public final class WebEvents {
     /** A ticket was created or changed. */
     public void ticket(int id) {
         publish(Client::tickets, "ticket", "{\"id\":" + id + "}");
+    }
+
+    /** New entries in the log - the page Log loads the ones after its newest. */
+    public void log() {
+        publish(Client::log, "log", "{}");
     }
 
     /**
@@ -61,12 +67,12 @@ public final class WebEvents {
     }
 
     /** GET /api/events: keeps the answer open and writes events (and a ping every 20 s) until the page closes. */
-    void stream(Http http, boolean tickets, Set<String> plugins) throws IOException {
+    void stream(Http http, boolean tickets, boolean log, Set<String> plugins) throws IOException {
         UUID account = http.account().id();
         if (clients.size() >= MAX_TOTAL || clients.stream().filter(c -> c.account().equals(account)).count() >= MAX_PER_ACCOUNT) {
             throw new Http.WebException(429, "too-many-connections");
         }
-        Client client = new Client(account, tickets, Set.copyOf(plugins), new LinkedBlockingQueue<>(100));
+        Client client = new Client(account, tickets, log, Set.copyOf(plugins), new LinkedBlockingQueue<>(100));
         clients.add(client);
         try (OutputStream out = http.stream("text/event-stream; charset=utf-8")) {
             write(out, "retry: 5000\n\n");

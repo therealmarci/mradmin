@@ -418,6 +418,7 @@ final class SqlStorage implements Storage {
                 ps.setString(7, row.detail());
                 ps.executeUpdate();
             }
+            plugin.logChanged();
         });
     }
 

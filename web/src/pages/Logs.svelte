@@ -1,10 +1,21 @@
 <script>
   // Page Log: events of MRadmin and of every plugin (the same as in their Discord logs) plus the actions in the web
   // interface, newest first, kept up to 14 days. Filters: source, text, time range. See LogRoutes.java.
+  // Live: MRadmin sends "log" on the event stream (lib/live.svelte.js), the page then loads only what is newer.
+  // Second tab "Server log" (with the web console's permission): components/ServerLog.svelte.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
   import { ICONS } from '../lib/icons.js';
+  import { live } from '../lib/live.svelte.js';
+  import ServerLog from '../components/ServerLog.svelte';
+
+  let { me } = $props();
+
+  // events | server - remembered for this browser tab
+  let tab = $state(sessionStorage.getItem('mradmin.logs.tab') === 'server' ? 'server' : 'events');
+  const server = $derived(tab === 'server' && !!me?.may?.console);
+  $effect(() => sessionStorage.setItem('mradmin.logs.tab', tab));
 
   let entries = $state([]);
   let sources = $state({});
@@ -16,6 +27,7 @@
   let range = $state('24h');
 
   const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
+  const since = $derived(Date.now() - RANGES[range]);
 
   async function load(older = false) {
     loading = true;
@@ -36,7 +48,7 @@
     }
   }
 
-  // Reload when a filter changes (the text after a short pause), and every 15 seconds while nothing older is loaded.
+  // Reload when a filter changes (the text after a short pause).
   let timer;
   $effect(() => {
     source;
@@ -45,10 +57,36 @@
     clearTimeout(timer);
     timer = setTimeout(() => load(), q ? 300 : 0);
   });
+  /** Only the entries after the newest one shown, put on top (same filters). */
+  async function loadNew() {
+    if (loading || !entries.length) return load();
+    try {
+      const newest = entries[0].time;
+      const p = new URLSearchParams({ limit: '200', since: String(newest) });
+      if (source) p.set('source', source);
+      if (query.trim()) p.set('q', query.trim());
+      const data = await api('GET', '/logs?' + p);
+      const seen = new Set(entries.filter((e) => e.time === newest).map(key));
+      const fresh = data.entries.filter((e) => !seen.has(key(e)));
+      if (fresh.length) entries = [...fresh, ...entries];
+      sources = data.sources;
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+  const key = (e) => e.time + '|' + e.source + '|' + e.event + '|' + e.text;
+
+  // A short pause collects bursts (e.g. many events in one second) into one request.
+  let liveTimer;
   $effect(() => {
-    const id = setInterval(() => {
-      if (!document.hidden && entries.length <= 200) load();
-    }, 15000);
+    if (!live.log.tick) return;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => !document.hidden && loadNew(), 250);
+  });
+  // Without the event stream (connection lost): every 15 seconds.
+  $effect(() => {
+    if (live.connected) return;
+    const id = setInterval(() => !document.hidden && loadNew(), 15000);
     return () => clearInterval(id);
   });
 
@@ -88,15 +126,24 @@
     </div>
   </header>
 
+  {#if me?.may?.console}
+    <span class="segments tabs" role="tablist">
+      <button type="button" role="tab" aria-selected={tab === 'events'} class:on={tab === 'events'} onclick={() => (tab = 'events')}>{t('logs.tab.events')}</button>
+      <button type="button" role="tab" aria-selected={tab === 'server'} class:on={tab === 'server'} onclick={() => (tab = 'server')}>{t('logs.tab.server')}</button>
+    </span>
+  {/if}
+
   <div class="filters">
+    {#if !server}
     <div class="chips" role="group" aria-label={t('logs.source')}>
       <button type="button" class:on={source === ''} onclick={() => (source = '')}>{t('logs.all')}</button>
       {#each Object.keys(sources) as s}
         <button type="button" class:on={source === s} onclick={() => (source = s)}>{label(s)}</button>
       {/each}
     </div>
+    {/if}
     <div class="row">
-      <input class="search" type="search" placeholder={t('logs.search')} bind:value={query} />
+      <input class="search" type="search" placeholder={t(server ? 'logs.search.server' : 'logs.search')} bind:value={query} />
       <span class="segments" role="radiogroup" aria-label={t('logs.range')}>
         {#each Object.keys(RANGES) as r}
           <button type="button" role="radio" aria-checked={range === r} class:on={range === r} onclick={() => (range = r)}>{t('logs.range.' + r)}</button>
@@ -105,6 +152,9 @@
     </div>
   </div>
 
+  {#if server}
+    <ServerLog {query} {since} />
+  {:else}
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if days.length}
@@ -127,6 +177,7 @@
     {/if}
   {:else if !loading}
     <p class="muted">{t('logs.empty')}</p>
+  {/if}
   {/if}
 </div>
 
@@ -242,6 +293,10 @@
     background: var(--surface);
     color: var(--text);
     box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  }
+
+  .tabs {
+    justify-self: start;
   }
 
   .day h2 {

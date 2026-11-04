@@ -23,12 +23,14 @@ import java.util.concurrent.ConcurrentHashMap;
  *  POST /api/console/unlock  {code}
  *  POST /api/console/lock
  *  GET  /api/console/log?after=n        lines after n (unlocked only)
+ *  GET  /api/console/history?since=&before=&q=   older lines from Paper's log files (unlocked only, page Log)
  *  POST /api/console/command {command}  (unlocked, mradmin.web.console.execute)
  * </pre>
  */
 public final class ConsoleRoutes {
 
     private static final int MAX_LINES = 500;
+    private static final int MAX_HISTORY = 1000;
     private static final int MAX_COMMAND = 500;
     private static final int MAX_FAILURES = 5;
     private static final long FAILURE_LOCK_MILLIS = 15 * 60_000L;
@@ -54,6 +56,7 @@ public final class ConsoleRoutes {
         server.route("POST", "/api/console/unlock", r::unlock);
         server.route("POST", "/api/console/lock", r::lock);
         server.route("GET", "/api/console/log", r::lines);
+        server.route("GET", "/api/console/history", r::history);
         server.route("POST", "/api/console/command", r::command);
         // The log reader runs while the web interface runs (and web.console.enabled is on).
         server.lifecycle(() -> {
@@ -157,6 +160,35 @@ public final class ConsoleRoutes {
             lines.add(Map.of("seq", line.seq(), "text", line.text()));
         }
         http.json(200, Map.of("lines", lines, "last", log.last()));
+    }
+
+    /**
+     * The page Log, tab "Server log": lines of Paper's log files (today and up to 13 days before), newest first.
+     * {@code last} = number of the newest live line when reading started - the page follows from there with /log.
+     */
+    private void history(Http http) throws Exception {
+        requireUnlocked(http);
+        Map<String, String> query = http.query();
+        long last = log.last();
+        boolean links = plugin.getConfig().getBoolean("web.console.hide-links", true);
+        boolean ips = plugin.getConfig().getBoolean("web.console.hide-ips", true);
+        java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+        ServerLogFiles files = new ServerLogFiles(plugin.getServer().getWorldContainer().toPath().resolve("logs"), zone);
+        ServerLogFiles.Result result = files.find(java.time.LocalDate.now(zone), number(query.get("since")),
+                number(query.get("before")), query.get("q"), MAX_HISTORY, links, ips);
+        List<Map<String, Object>> lines = new ArrayList<>();
+        for (ServerLogFiles.Line line : result.lines()) {
+            lines.add(Map.of("key", line.key(), "time", line.time(), "text", line.text()));
+        }
+        http.json(200, Map.of("lines", lines, "more", result.more(), "last", last));
+    }
+
+    private static long number(String value) {
+        try {
+            return value == null || value.isBlank() ? 0 : Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     // ---------------------------------------------------------------- command

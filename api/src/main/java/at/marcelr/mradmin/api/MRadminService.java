@@ -76,7 +76,10 @@ public interface MRadminService {
      */
     void webChanged(String moduleId, String type, String id);
 
-    /** A line in MRadmin's Discord admin log (event "plugin-alert"). */
+    /**
+     * A line in MRadmin's Discord admin log (event "plugin-alert"). Only Discord: the log of the web interface gets
+     * its entry from {@link #log} (API 13), so a module that does both does not appear twice.
+     */
     void adminLog(String moduleId, String text);
 
     /**

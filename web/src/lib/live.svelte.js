@@ -5,6 +5,8 @@ export const live = $state({
   connected: false,
   ticket: { id: 0, tick: 0 },
   plugin: { plugin: '', type: '', id: '', tick: 0 },
+  // New entries in the log (page Log, mradmin.web.audit).
+  log: { tick: 0 },
 });
 
 let source = null;
@@ -21,6 +23,9 @@ export function connect() {
   source.addEventListener('plugin', (e) => {
     const { plugin, type, id } = JSON.parse(e.data);
     live.plugin = { plugin, type, id, tick: live.plugin.tick + 1 };
+  });
+  source.addEventListener('log', () => {
+    live.log = { tick: live.log.tick + 1 };
   });
 }
 

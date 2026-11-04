@@ -180,7 +180,7 @@
     {:else if pluginName && me.may.versions}
       {#key pluginName}<PluginView name={pluginName} tab={pluginMatch[2] ?? null} />{/key}
     {:else if route.path === '/logs' && me.may.audit}
-      <Logs />
+      <Logs {me} />
     {:else if route.path === '/plugins' && me.may.versions}
       <Plugins />
     {:else if route.path === '/maintenance' && me.may.maintenance}

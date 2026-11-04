@@ -140,7 +140,8 @@ public final class Modules implements MRadminService {
     @Override
     public void adminLog(String moduleId, String text) {
         if (plugin.isEnabled()) {
-            plugin.discord().log("plugin-alert", "plugin", displayName(moduleId), "text", text);
+            // Modules write the same text into the log themselves (log(...), API 13) - not a second time here.
+            plugin.discord().discordOnly("plugin-alert", "plugin", displayName(moduleId), "text", text);
         }
     }
 

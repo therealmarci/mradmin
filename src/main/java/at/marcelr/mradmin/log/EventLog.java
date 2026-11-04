@@ -45,6 +45,8 @@ public final class EventLog {
         return thread;
     });
     private volatile int keepDays = MAX_DAYS;
+    /** Called after every new entry (live updates of the page Log). */
+    private volatile Runnable listener = () -> { };
 
     public EventLog(Path folder, Logger logger) {
         this.folder = folder;
@@ -78,6 +80,10 @@ public final class EventLog {
         }
     }
 
+    public void onAdd(Runnable listener) {
+        this.listener = listener;
+    }
+
     public void keepDays(int days) {
         keepDays = Math.clamp(days, 1, MAX_DAYS);
     }
@@ -93,6 +99,7 @@ public final class EventLog {
             }
         }
         writer.execute(() -> write(entry));
+        listener.run();
     }
 
     private void write(Entry entry) {

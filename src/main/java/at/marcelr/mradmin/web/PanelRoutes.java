@@ -203,7 +203,8 @@ public final class PanelRoutes {
                 plugins.add(id);
             }
         }
-        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW), plugins);
+        server.events().stream(http, plugin.feature(Feature.TICKETS) && may(http, Perms.TICKETS_VIEW),
+                may(http, Perms.WEB_AUDIT), plugins);
     }
 
     // ---------------------------------------------------------------- tickets

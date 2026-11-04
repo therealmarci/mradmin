@@ -332,6 +332,10 @@ wenn Discord aus ist: Text fertig in der Server-Sprache (Discord-Markdown wie `*
 Discord-Farbe. Vorher `apiVersion() >= 13` prüfen. Muster: `DiscordWebhook#log` in MRsleep/MRchunks ruft vor dem
 Discord-Teil `plugin.mradmin().log(...)`.
 
+`adminLog(id, text)` geht nur in MRadmins Discord-Log (Ereignis „plugin-alert“), **nicht** ins Protokoll - dafür
+sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-mradmin-webhook`, eigene
+`webhook-url` leer): `log(...)` fürs Protokoll, `adminLog(...)` statt des eigenen Webhooks.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).

@@ -129,6 +129,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         loadConfiguration();
         storage = Storage.create(this);
         eventLog.load(getConfig().getInt("logging.keep-days", 14));
+        eventLog.onAdd(this::logChanged);
         // Old days go at midnight - checked every hour.
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, eventLog::prune, 72_000L, 72_000L);
         getLogger().info("Storage: " + storage.type() + " (" + storage.describe() + ").");
@@ -460,6 +461,14 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public WebServer web() {
         return web;
+    }
+
+    /** A new entry in the log or the web log: open pages Log load the new ones (any thread). */
+    public void logChanged() {
+        WebServer server = web;
+        if (server != null) {
+            server.events().log();
+        }
     }
 
     public HealthMonitor health() {

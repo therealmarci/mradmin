@@ -144,18 +144,23 @@ final class ConsoleLog {
         boolean ips = plugin.getConfig().getBoolean("web.console.hide-ips", true);
         int keep = Math.clamp(plugin.getConfig().getInt("web.console.lines", 1000), 100, 10_000);
         for (String line : raw) {
-            String text = ANSI.matcher(line.replace("\r", "")).replaceAll("");
-            if (links) {
-                text = LINK.matcher(text).replaceAll("[Link]");
-            }
-            if (ips) {
-                text = IPV4.matcher(text).replaceAll("[IP]");
-                text = IPV6.matcher(text).replaceAll("[IP]");
-            }
-            lines.addLast(new Line(++seq, text));
+            lines.addLast(new Line(++seq, clean(line, links, ips)));
         }
         while (lines.size() > keep) {
             lines.removeFirst();
         }
+    }
+
+    /** Without colour codes, and with links / IP addresses hidden if asked (also for the older log files). */
+    static String clean(String line, boolean links, boolean ips) {
+        String text = ANSI.matcher(line.replace("\r", "")).replaceAll("");
+        if (links) {
+            text = LINK.matcher(text).replaceAll("[Link]");
+        }
+        if (ips) {
+            text = IPV4.matcher(text).replaceAll("[IP]");
+            text = IPV6.matcher(text).replaceAll("[IP]");
+        }
+        return text;
     }
 }

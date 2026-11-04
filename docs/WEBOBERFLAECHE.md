@@ -299,6 +299,21 @@ Unter **Konto → Benachrichtigungen**.
 - Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
 
+## Protokoll (`mradmin.web.audit`)
+Alles, was auf dem Server passiert ist, auf einer Seite - neueste oben, nach Tagen gegliedert.
+
+- **Ereignisse:** dieselben Ereignisse, die MRadmin und die anderen MRtechnology-Plugins in ihre Discord-Logs
+  schicken (auch wenn Discord aus ist), in der Farbe aus `discord.events`, dazu jede Aktion in der Weboberfläche
+  (wer, was, von welchem Konto). Filter nach Herkunft (MRadmin, Weboberfläche, je Plugin), Suche in Text und
+  Ereignis, Zeitraum 1 Std. bis 14 Tage, „Ältere laden“. Neue Einträge erscheinen sofort.
+- Aufgehoben `logging.keep-days` Tage (höchstens 14) in `plugins/MRadmin/logs/events-<datum>.log` (eine Zeile pro
+  Ereignis). Plugins schreiben erst ab der Version mit Modul-API 13 hinein.
+- **Server-Log** (Reiter, nur mit `mradmin.web.console.view`): die Zeilen der Server-Konsole - neue live, ältere
+  aus Papers `logs/latest.log` und `logs/<datum>-<n>.log.gz` (bis zu 14 Tage) - mit derselben Suche und demselben
+  Zeitraum, Warnungen gelb, Fehler rot. Links und IP-Adressen ausgeblendet wie in der Konsole. Geschützt wie die
+  Konsole: erst dort mit einem frischen Code entsperren, dann gilt das für beide (pro Gerät). MRadmin speichert
+  dafür nichts - die Dateien hält Paper selbst.
+
 ## Konsole
 `mradmin.web.console.view` ansehen (in `mradmin.groups.support`), `mradmin.web.console.execute` Befehle ausführen (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole).
 
