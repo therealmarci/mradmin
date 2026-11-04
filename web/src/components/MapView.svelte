@@ -566,13 +566,21 @@
     phoneLayers = false;
   }
 
-  /** Jump to a marker (from the search), also into another world. */
+
+  /** The closest zoom of a world; an area (chunk loader) still has to fit into the view. */
+  function closest(w, m = null) {
+    let z = w.zoomMax + w.zoomExtra;
+    const size = m && m.width > 0 ? Math.max(m.width, m.length) : 0;
+    while (z > 0 && size * Math.pow(2, z - w.zoomMax) > Math.min(width, height) * 0.6) z--;
+    return z;
+  }
+  /** Jump to a marker (from the search) at the closest zoom, also into another world. */
   function goTo(m) {
     const target = worlds.find((w) => w.key === m.world);
     if (!target) return;
     follow = false;
     worldKey = target.key;
-    zoom = Math.max(zoom ?? 0, target.zoomMax - 1);
+    zoom = closest(target, m);
     cx = m.x + (m.width > 0 ? m.width / 2 : 0.5);
     cz = m.z + (m.width > 0 ? m.length / 2 : 0.5);
     if (hidden.has(layerKey(m.layer))) toggleLayer(m.layer);
@@ -690,17 +698,16 @@
     zoom = world.zoomDefault;
   }
 
-  /** The cross hair: to the player (also into their world), without a position to the spawn. */
+  /** The cross hair: to the player at the closest zoom (also into their world), without a position to the spawn. */
   function aim() {
     const self = drawn.find((d) => d.self) ?? me;
     if (!self || !worlds.some((w) => w.key === self.world)) {
       toSpawn();
       return;
     }
-    if (self.world !== worldKey) {
-      worldKey = self.world;
-      zoom = worlds.find((w) => w.key === self.world).zoomDefault;
-    }
+    const target = worlds.find((w) => w.key === self.world);
+    worldKey = target.key;
+    zoom = closest(target);
     cx = self.x;
     cz = self.z;
   }
@@ -719,6 +726,7 @@
   function centerOn() {
     if (!spot) return;
     follow = false;
+    zoom = closest(world, selected);
     cx = spot.x;
     cz = spot.z;
   }
