@@ -9,6 +9,7 @@
   import { go } from '../lib/router.svelte.js';
   import Toast from '../components/Toast.svelte';
   import ItemIcon from '../components/ItemIcon.svelte';
+  import Dropdown from '../components/Dropdown.svelte';
   import { ICONS } from '../lib/icons.js';
 
   let { me } = $props();
@@ -42,7 +43,8 @@
 
   async function load() {
     try {
-      overview = await moduleData('mrwaypoints', 'overview');
+      // Without MRwaypoints the page only has MRadmin's map switches.
+      if (me.may.mrwaypoints) overview = await moduleData('mrwaypoints', 'overview');
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -105,6 +107,14 @@
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
   const onMap = $derived(categories.filter((c) => c.map).length);
+
+  // The entries of the selections (Dropdown instead of the browser's <select>).
+  const categoryOptions = $derived(categories.map((c) => ({ value: c.id, label: catName(c), color: c.color })));
+  const worldOptions = $derived([{ value: '', label: t('wp.filter.allWorlds') }, ...worlds.map((w) => ({ value: w, label: w }))]);
+  const creatorOptions = $derived([{ value: '', label: t('wp.filter.allCreators') },
+    ...creators.map((c) => ({ value: c.uuid, label: c.name }))]);
+  const sortOptions = $derived([{ value: 'new', label: t('wp.sort.new') }, { value: 'old', label: t('wp.sort.old') },
+    { value: 'name', label: t('wp.sort.name') }]);
 
   const filtered = $derived.by(() => {
     const q = search.trim().toLowerCase();
@@ -237,13 +247,15 @@
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 
-  {#if overview}
+  {#if overview || locks}
     <div class="kpis">
+      {#if overview}
       <div class="kpi"><div class="label">{t('wp.kpi.waypoints')}</div><div class="value">{waypoints.length}</div>
         <div class="sub">{t('wp.kpi.inWorlds', { n: worlds.length })}</div></div>
       <div class="kpi"><div class="label">{t('wp.kpi.categories')}</div><div class="value">{categories.length}</div>
         <div class="sub">{t('wp.kpi.onMapSub', { n: onMap })}</div></div>
       <div class="kpi"><div class="label">{t('wp.kpi.creators')}</div><div class="value">{creators.length}</div></div>
+      {/if}
       {#if locks}
         <!-- MRadmin's switches for the map of the player page (mradmin.map.admin), like the controls of the loaders. -->
         {#each ['page', 'players'] as which}
@@ -263,6 +275,7 @@
       {/if}
     </div>
 
+    {#if overview}
     <div class="tabs">
       <div class="switch" role="tablist">
         <button role="tab" class:active={tab === 'waypoints'} aria-selected={tab === 'waypoints'} onclick={() => (tab = 'waypoints')}>
@@ -281,19 +294,9 @@
       <section class="block">
         <div class="toolbar">
           <input class="search" type="search" bind:value={search} placeholder={t('wp.search')} />
-          <select bind:value={world} aria-label={t('wp.filter.world')}>
-            <option value="">{t('wp.filter.allWorlds')}</option>
-            {#each worlds as w}<option value={w}>{w}</option>{/each}
-          </select>
-          <select bind:value={creator} aria-label={t('wp.filter.creator')}>
-            <option value="">{t('wp.filter.allCreators')}</option>
-            {#each creators as c (c.uuid)}<option value={c.uuid}>{c.name}</option>{/each}
-          </select>
-          <select bind:value={sort} aria-label={t('wp.filter.sort')}>
-            <option value="new">{t('wp.sort.new')}</option>
-            <option value="old">{t('wp.sort.old')}</option>
-            <option value="name">{t('wp.sort.name')}</option>
-          </select>
+          <Dropdown options={worldOptions} value={world} onchange={(v) => (world = v)} label={t('wp.filter.world')} width="170px" />
+          <Dropdown options={creatorOptions} value={creator} onchange={(v) => (creator = v)} label={t('wp.filter.creator')} width="180px" />
+          <Dropdown options={sortOptions} value={sort} onchange={(v) => (sort = v)} label={t('wp.filter.sort')} width="170px" />
           {#if filtering}<button class="secondary small" onclick={resetFilters}>{t('wp.filter.reset')}</button>{/if}
         </div>
         <div class="filters">
@@ -334,7 +337,7 @@
                     {:else}
                       <strong title={w.name}>{w.name}</strong>
                     {/if}
-                    <span class="cat"><span class="cdot" aria-hidden="true"></span>{catName(c)}</span>
+                    {#if !manage}<span class="cat"><span class="cdot" aria-hidden="true"></span>{catName(c)}</span>{/if}
                   </div>
                 </div>
                 <div class="where mono">{w.world} · {w.x} {w.y} {w.z}</div>
@@ -348,10 +351,8 @@
                 {#if manage}
                   <div class="wactions">
                     <button class="secondary mini" disabled={busy} onclick={() => startRename(w)}>{t('wp.rename')}</button>
-                    <select class="mini" disabled={busy} value={w.category} aria-label={t('wp.moveTo')}
-                      onchange={(e) => act({ action: 'recategorize', id: w.id, category: e.currentTarget.value }, t('wp.done.moved'))}>
-                      {#each categories as k (k.id)}<option value={k.id}>{catName(k)}</option>{/each}
-                    </select>
+                    <Dropdown options={categoryOptions} value={w.category} size="small" label={t('wp.moveTo')} disabled={busy}
+                      onchange={(v) => act({ action: 'recategorize', id: w.id, category: v }, t('wp.done.moved'))} />
                     <button class="danger mini" disabled={busy}
                       onclick={() => act({ action: 'delete', id: w.id }, t('wp.done.deletedWaypoint'), t('wp.deleteConfirm', { name: w.name }))}>{t('wp.delete')}</button>
                   </div>
@@ -407,6 +408,7 @@
         {/if}
       </section>
     {/if}
+    {/if}
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
@@ -417,10 +419,8 @@
   <div class="bulkbar">
     <strong>{t('wp.bulk.count', { n: chosen.size })}</strong>
     <span class="sep" aria-hidden="true"></span>
-    <select bind:value={target} aria-label={t('wp.moveTo')}>
-      <option value="">{t('wp.bulk.pick')}</option>
-      {#each categories as k (k.id)}<option value={k.id}>{catName(k)}</option>{/each}
-    </select>
+    <Dropdown options={categoryOptions} value={target} onchange={(v) => (target = v)} placeholder={t('wp.bulk.pick')}
+      label={t('wp.moveTo')} size="small" width="190px" />
     <button class="secondary small" disabled={busy || !target} onclick={bulkMove}>{t('wp.bulk.move')}</button>
     <button class="danger small" disabled={busy} onclick={bulkDelete}>{t('wp.bulk.delete')}</button>
     <button class="linkish" onclick={() => (chosen = new Set())}>{t('wp.bulk.clear')}</button>
@@ -509,6 +509,65 @@
 {/if}
 
 <style>
+  /* The global form rules are made for big fields: checkboxes, labels and small buttons get their own size here. */
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  input[type='checkbox']:focus {
+    box-shadow: none;
+  }
+
+  .all,
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.mini {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+
+  button.small {
+    padding: 7px 12px;
+    border-radius: 9px;
+    font-size: 0.84rem;
+  }
+
+  .fields label {
+    margin: 0;
+  }
+
+  .fields input {
+    box-sizing: border-box;
+    height: 40px;
+    padding: 0 11px;
+  }
+
+  .search {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+  }
+
+  .wactions :global(.dd) {
+    flex: 1;
+    min-width: 0;
+  }
+
   .page {
     --cl: var(--accent);
     display: grid;
@@ -919,11 +978,6 @@
     border-top: 1px solid var(--border);
   }
 
-  .wactions select {
-    flex: 1;
-    min-width: 0;
-  }
-
   .more {
     justify-self: center;
   }
@@ -1116,6 +1170,7 @@
   .fields label {
     display: grid;
     gap: 4px;
+    align-content: start;
   }
 
   .fields label > span {

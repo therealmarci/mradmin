@@ -265,7 +265,7 @@ Die Karte gibt es **nur in MRadmin** - squaremaps eigene Webseite (Port 8080) is
 
 `/mradmin map` gibt Spielern den Link zur Karte. Admins (`mradmin.map.admin`) sehen dort zusätzlich die squaremap-Version und ob ein Update auf den Neustart wartet oder die Installation fehlgeschlagen ist.
 
-**Karte für alle ausschalten:** Auf der Seite **Wegpunkte** im Adminportal stehen zwei Schalter (`mradmin.map.admin`): **Karte der Spielerseite** (aus = der Tab „Karte“ verschwindet für alle Spieler) und **Spieler auf der Karte** (aus = niemand sieht andere Spieler oder kann nach ihnen suchen). Beide wirken sofort und bleiben über Neustarts.
+**Karte für alle ausschalten:** Auf der Seite **Karte** im Adminportal (früher „Wegpunkte“, mit MRwaypoints auch Kategorien und Wegpunkte) stehen zwei Schalter (`mradmin.map.admin`): **Karte der Spielerseite** (aus = der Tab „Karte“ verschwindet für alle Spieler) und **Spieler auf der Karte** (aus = niemand sieht andere Spieler oder kann nach ihnen suchen). Beide wirken sofort und bleiben über Neustarts.
 
 > [!NOTE]
 > Bis MRadmin 1.1 hat MRchunks squaremap angebunden, und die Karte war eine öffentliche squaremap-Webseite. Aktualisiere MRadmin und MRchunks gemeinsam - MRadmin übernimmt die Einrichtung aus der alten MRchunks-Config. Ein Reverse-Proxy oder eine Portfreigabe für squaremap kann danach weg.

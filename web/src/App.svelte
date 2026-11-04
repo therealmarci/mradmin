@@ -107,7 +107,7 @@
           ...(me.may.mrchunks ? [{ path: '/chunks', label: t('nav.chunks'), icon: 'grid' }] : []),
           ...(me.may.mrsleep ? [{ path: '/sleep', label: t('nav.sleep'), icon: 'moon' }] : []),
           ...(me.may.mrpvp ? [{ path: '/pvp', label: t('nav.pvp'), icon: 'swords' }] : []),
-          ...(me.may.mrwaypoints ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
+          ...(me.may.mrwaypoints || me.may.mapAdmin ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
           ...(me.may.versions ? [{ path: '/versions', label: t('nav.versions'), icon: 'box' }] : []),
@@ -185,7 +185,7 @@
       {/if}
     {:else if route.path === '/pvp' && me.may.mrpvp}
       <Pvp {me} />
-    {:else if route.path === '/waypoints' && me.may.mrwaypoints}
+    {:else if route.path === '/waypoints' && (me.may.mrwaypoints || me.may.mapAdmin)}
       <Waypoints {me} />
     {:else if route.path === '/sleep' && me.may.mrsleep}
       <Sleep {me} />
