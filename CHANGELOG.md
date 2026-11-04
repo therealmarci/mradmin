@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Netherdecke voller Lücken:** Für das Komplett-Rendern suchte MRadmin die Region-Dateien des Nethers nur an einer Stelle. Auf Servern mit anderem Ordneraufbau (z.B. ältere Welten mit `world_nether/DIM-1/region`) fand es keine, merkte sich die Decke trotzdem als fertig und zeichnete danach nur neu erzeugte Chunks und die Umgebung von Spielern auf dem Dach. Jetzt sucht es an allen üblichen Stellen, meldet in der Konsole, wo es die Dateien gefunden hat (oder warnt, wenn keine da sind), und zeichnet jeden geladenen Chunk nach - Lücken schließen sich auch dort, wo Spieler vorbeikommen. **Nach dem Update rendert MRadmin die Netherdecke einmal komplett neu** (im Hintergrund, `map.nether-roof.chunks-per-second`).
+
 ## [1.2.0] - 2026-11-04
 
 ### Neu
