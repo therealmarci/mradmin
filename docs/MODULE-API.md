@@ -260,6 +260,7 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
   - `Action.icon`: Symbol im Menü - `plus`, `edit`, `trash`, `power`, `compass`, `eye` oder leer. Aktionen mit `tone` `bad` stehen rot am Ende des Menüs.
   - MRadmin selbst zeichnet zusätzlich Spieler (eigene Position, andere Online-Spieler) und das Chunkraster (`map.player-page`) - dafür braucht ein Modul nichts.
 - **Ab API 10** (`api-1.9.0`, vorher `apiVersion() >= 10` prüfen, sonst den Konstruktor ohne Höhe nutzen): `Marker.y` (letzter Wert, `null` = keine Höhe). Im Nether zeigt MRadmin einen Marker mit Höhe nur auf der Karte der Decke (ab `map.nether-roof.from-y`) bzw. nur darunter; ohne Höhe auf beiden.
+- **Ab API 11** (`api-1.10.0`, vorher `apiVersion() >= 11` prüfen): `Marker.card` (eine `SelfBlock.Card` wie im eigenen Bereich, am besten ohne `details`) und `Marker.area` (Id des Bereichs). Ein Klick auf den Punkt zeigt dann die Kachel statt der `details`; ihre Knöpfe gehen an `selfAction(viewer, area, …)`, „Einstellungen öffnen“ führt zu `/me/<modul>/<area>#card=<id>` (die Seite öffnet dort diese Kachel). MRchunks: Auslastung, Ein/Aus, Dummy.
 - Routen: `GET /api/self/map`, `GET /api/self/map/players`, `GET /api/self/map/tiles/<welt>/<zoom>/<x>_<z>.png`, `GET /api/self/map/stamps`, `GET /api/self/map/worlds`, `POST /api/self/map/action`.
 
 ## Versionen
