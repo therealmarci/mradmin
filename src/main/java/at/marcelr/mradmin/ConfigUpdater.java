@@ -51,7 +51,7 @@ public final class ConfigUpdater {
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
      */
-    public static final int CURRENT_VERSION = 46;
+    public static final int CURRENT_VERSION = 48;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

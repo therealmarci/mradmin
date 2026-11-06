@@ -111,6 +111,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private final at.marcelr.mradmin.log.EventLog eventLog = new at.marcelr.mradmin.log.EventLog(
             new java.io.File(getDataFolder(), "logs").toPath(), getLogger());
     private at.marcelr.mradmin.versions.RestartManager restarts;
+    private at.marcelr.mradmin.versions.StarterLink starter;
     private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
     private TicketManager tickets;
@@ -176,6 +177,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         adminMode = new AdminModeManager(this);
         updateChecker = new UpdateChecker(this);
         versions = new at.marcelr.mradmin.versions.VersionManager(this);
+        starter = new at.marcelr.mradmin.versions.StarterLink(this);
         restarts = new at.marcelr.mradmin.versions.RestartManager(this);
         menuListener = new MenuListener(this);
 
@@ -217,6 +219,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        // First: tell the starter what comes after the shutdown, even if something below fails.
+        if (starter != null) {
+            starter.stop();
+        }
         eventLog.shutdown();
         if (xpPeaks != null) {
             xpPeaks.stop();
@@ -292,6 +298,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private void startServices() {
         web.permissions().clear();
         web.start();
+        starter.start();
         items.start();
         if (feature(Feature.SERVER_STATUS)) {
             health.start();
@@ -515,6 +522,16 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     /** Item pictures and names for the web interface. */
     public at.marcelr.mradmin.items.ItemAssets items() {
         return items;
+    }
+
+    /** The starter (mrserver) - active only if it started this server. */
+    public at.marcelr.mradmin.versions.StarterLink starter() {
+        return starter;
+    }
+
+    /** The JAR MRadmin was loaded from (the starter copies it). */
+    public java.io.File jarFile() {
+        return getFile();
     }
 
     public at.marcelr.mradmin.versions.RestartManager restarts() {

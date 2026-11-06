@@ -164,10 +164,16 @@
   function addItem(f) {
     const raw = String(adding[f.key] ?? '').trim();
     if (!raw) return;
-    const v = f.type === 'ints' ? Number(raw) : raw;
+    let v = f.type === 'ints' ? Number(raw) : raw;
     if (f.type === 'ints' && !Number.isInteger(v)) return;
+    if (f.item === 'time') {
+      const m = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)/);
+      if (!m) return;
+      v = m[1].padStart(2, '0') + ':' + m[2];
+    }
     const list = [...value(f)];
     if (!list.includes(v)) list.push(v);
+    if (f.item === 'time') list.sort();
     set(f, list);
     adding = { ...adding, [f.key]: '' };
   }
@@ -288,6 +294,20 @@
         value={adding[f.key] ?? ''} oninput={(e) => (adding = { ...adding, [f.key]: e.currentTarget.value })}
         onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addItem(f))} onblur={() => addItem(f)} />
     </span>
+  {:else if f.type === 'strings' && f.item === 'time'}
+    <!-- Times of day: the browser's time field (HH:MM with a fixed colon), added with a button - not on blur, so a
+         click on Save cannot race with adding. -->
+    <span class="chips">
+      {#each v as item, i}
+        <span class="item mono">{item}<button type="button" aria-label={t('config.remove')} onclick={() => removeItem(f, i)}>×</button></span>
+      {/each}
+      <span class="time-add">
+        <input class="add time" type="time" step="60" value={adding[f.key] ?? ''}
+          oninput={(e) => (adding = { ...adding, [f.key]: e.currentTarget.value })}
+          onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addItem(f))} />
+        <button type="button" class="secondary small-add" disabled={!adding[f.key]} onclick={() => addItem(f)}>+ {t('config.addTime')}</button>
+      </span>
+    </span>
   {:else if f.type === 'strings'}
     <span class="chips">
       {#each v as item, i}
@@ -380,6 +400,10 @@
             <header>
               <h3>{tx(s.name)}</h3>
               {#if tx(s.help)}<p class="muted">{tx(s.help)}</p>{/if}
+              {#if data.status?.[s.id]}
+                {@const st = data.status[s.id]}
+                <p class="state {st.tone}"><span class="state-dot"></span>{t('config.status.' + st.key, { mode: st.mode ?? '' })}</p>
+              {/if}
             </header>
             {#each s.list as f (f.key)}
               <div class="field" class:wide={f.type === 'table' || f.type === 'text'} class:changed={f.key in draft}
@@ -919,6 +943,57 @@
   .good-chip {
     color: var(--good);
     background: color-mix(in srgb, var(--good) 15%, transparent);
+  }
+
+  /* Times of day: time field + add button */
+  .time-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chips .add.time {
+    width: 7.5rem;
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .small-add {
+    justify-content: flex-start;
+    padding: 6px 12px;
+    font-size: 0.84rem;
+    white-space: nowrap;
+  }
+
+  /* Live state of a section (e.g. MRadmin: is the starter set up?) */
+  .state {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    --st: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--st) 40%, var(--border));
+    background: color-mix(in srgb, var(--st) 10%, transparent);
+  }
+
+  .state.good {
+    --st: var(--good);
+  }
+
+  .state.warn {
+    --st: var(--warn);
+  }
+
+  .state-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    margin-top: 0.38em;
+    border-radius: 50%;
+    background: var(--st);
   }
 
   .notice {

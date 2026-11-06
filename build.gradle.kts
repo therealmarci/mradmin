@@ -147,6 +147,8 @@ tasks.shadowJar {
     relocate("com.upokecenter", "$lib.upokecenter")
     relocate("org.jspecify", "$lib.jspecify")
     exclude("META-INF/maven/**", "META-INF/*.kotlin_module")
+    // Die Plugin-JAR ist zugleich der Starter: java -jar MRadmin-....jar setup (siehe starter/Main).
+    manifest { attributes["Main-Class"] = "at.marcelr.mradmin.starter.Main" }
     mergeServiceFiles()
 }
 

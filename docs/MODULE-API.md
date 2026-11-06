@@ -314,7 +314,7 @@ sections:
 | `choice` | bis 4 kurze Werte als Umschalter, sonst Auswahlliste | `options`: Liste aus `{value, de, en}` oder einfachen Werten |
 | `color` | Farbwähler + `#RRGGBB` | |
 | `duration` | Dauer wie `15m`, `1h30m`, `2d` (Zahl = Minuten), mit Klartext daneben | `permanent: true` erlaubt `permanent` |
-| `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent` |
+| `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent`, `item: time` (Uhrzeiten `HH:MM` mit Zeitwähler und Knopf „Hinzufügen“, sortiert, ohne Doppelte; ohne Anführungszeichen geschriebene Zahlen wie 330 werden als 05:30 gelesen) |
 | `ints` | Liste ganzer Zahlen als Chips | `min`, `max`, `count`, `unit` |
 | `choices` | Mehrfachauswahl aus festen Werten (Chips zum Anklicken) | `options` wie bei `choice` |
 | `worlds` | Welten des Servers zum Anklicken | |

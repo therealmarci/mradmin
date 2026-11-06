@@ -56,7 +56,7 @@
 </script>
 
 <div class="page">
-  <a class="back" href="/plugins" onclick={(e) => { e.preventDefault(); go('/plugins'); }}>← {t('plugins.back')}</a>
+  <a class="back" href="/server/plugins" onclick={(e) => { e.preventDefault(); go('/server/plugins'); }}>← {t('plugins.back')}</a>
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />

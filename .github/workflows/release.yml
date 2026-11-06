@@ -75,7 +75,10 @@ jobs:
         with:
           name: MRadmin ${{ env.VERSION }} (MC ${{ env.MC }})
           body_path: release-notes.md
-          files: build/libs/MRadmin-${{ env.FULL }}.jar
+          files: |
+            build/libs/MRadmin-${{ env.FULL }}.jar
+            src/main/resources/starter/mrserver.sh
+            src/main/resources/starter/mrserver.cmd
           prerelease: ${{ env.PRERELEASE == 'true' }}
           make_latest: ${{ env.LATEST }}
 

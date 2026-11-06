@@ -26,10 +26,8 @@
   import Players from './pages/Players.svelte';
   import Maintenance from './pages/Maintenance.svelte';
   import News from './pages/News.svelte';
-  import Plugins from './pages/Plugins.svelte';
   import PluginView from './pages/PluginView.svelte';
-  import Logs from './pages/Logs.svelte';
-  import Console from './pages/Console.svelte';
+  import Server from './pages/Server.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -100,11 +98,15 @@
   // /plugins = all plugins, /plugins/<name>[/config] = one plugin (the old address /versions leads to the list)
   const pluginMatch = $derived(route.path.match(/^\/plugins\/([A-Za-z0-9_-]+)(?:\/(config))?$/));
   const pluginName = $derived(pluginMatch?.[1] ?? null);
+  // /server = overview, /server/plugins|logs|console = the other tabs
+  const serverMatch = $derived(route.path.match(/^\/server(?:\/(plugins|logs|console))?$/));
   $effect(() => {
-    if (route.path === '/versions') go('/plugins', true);
+    // Plugins, Log and Console are tabs of the page Server now - old addresses and bookmarks lead there.
+    const old = { '/versions': '/server/plugins', '/plugins': '/server/plugins', '/logs': '/server/logs', '/console': '/server/console' };
+    if (old[route.path]) go(old[route.path], true);
   });
   const section = $derived(ticketId ? '/tickets' : chunkId ? '/chunks' : playerId ? '/players' : pvpId || kitMatch ? '/pvp'
-    : pluginName ? '/plugins' : route.path);
+    : pluginName || serverMatch ? '/server' : route.path);
 
   const nav = $derived(
     me
@@ -119,9 +121,9 @@
           ...(me.may.mrwaypoints || me.may.mapAdmin ? [{ path: '/waypoints', label: t('nav.waypoints'), icon: 'pin' }] : []),
           ...(me.may.maintenance ? [{ path: '/maintenance', label: t('nav.maintenance'), icon: 'tool' }] : []),
           ...(me.may.news || me.may.announce ? [{ path: '/news', label: t('nav.news'), icon: 'news' }] : []),
-          ...(me.may.versions ? [{ path: '/plugins', label: t('nav.versions'), icon: 'box' }] : []),
-          ...(me.may.audit || me.may.console ? [{ path: '/logs', label: t('nav.logs'), icon: 'news' }] : []),
-          ...(me.may.consoleExecute ? [{ path: '/console', label: t('nav.console'), icon: 'terminal' }] : []),
+          // One entry for plugins, log, console and restarts - the page shows the tabs this account may use.
+          ...(me.may.versions || me.may.audit || me.may.console
+            ? [{ path: '/server', label: t('nav.server'), icon: 'server' }] : []),
         ]
       : [],
   );
@@ -179,16 +181,12 @@
       <Players />
     {:else if pluginName && me.may.versions}
       {#key pluginName}<PluginView name={pluginName} tab={pluginMatch[2] ?? null} />{/key}
-    {:else if route.path === '/logs' && (me.may.audit || me.may.console)}
-      <Logs {me} />
-    {:else if route.path === '/plugins' && me.may.versions}
-      <Plugins />
+    {:else if serverMatch && (me.may.versions || me.may.audit || me.may.console)}
+      <Server {me} tab={serverMatch[1] ?? null} />
     {:else if route.path === '/maintenance' && me.may.maintenance}
       <Maintenance {me} />
     {:else if route.path === '/news' && (me.may.news || me.may.announce)}
       <News {me} />
-    {:else if route.path === '/console' && me.may.consoleExecute}
-      <Console {me} />
     {:else if pvpId && me.may.mrpvp}
       {#key pvpId}<PvpGame id={pvpId} {me} />{/key}
     {:else if kitMatch && me.may.mrpvpKits}

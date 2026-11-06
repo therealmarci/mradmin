@@ -19,7 +19,7 @@ import java.util.Set;
  * interface, from the storage) - mradmin.web.audit - and the console output (source "console", from Paper's log files,
  * mradmin.web.console.view), newest first. New console lines come from /api/console/tail (memory, not the files).
  * <pre>
- *  GET /api/logs?sources=a,b&q=&since=&until=&offset=&limit=&buckets=
+ *  GET /api/logs?sources=a,b&q=&since=&until=&offset=&limit=&buckets=&events=1 (events=1: without console lines)
  *      {entries: [{time, source, name, event, text, color}], total, counts, sources, chart}
  * </pre>
  * sources (empty = all): "web" = the web log, "mradmin" = MRadmin itself, "console", otherwise the id of a module.
@@ -78,7 +78,9 @@ public final class LogRoutes {
 
     private void list(Http http) throws Exception {
         boolean events = server.permissions().has(http.account().id(), Perms.WEB_AUDIT);
-        boolean console = ConsoleRoutes.enabled(plugin) && server.permissions().has(http.account().id(), Perms.WEB_CONSOLE_VIEW);
+        // events=1: only events, no console lines (the short list on the server overview).
+        boolean console = ConsoleRoutes.enabled(plugin) && server.permissions().has(http.account().id(), Perms.WEB_CONSOLE_VIEW)
+                && !"1".equals(http.query().get("events"));
         if (!events && !console) {
             throw new Http.WebException(403, "no-permission");
         }

@@ -7,7 +7,8 @@
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
 
-  let { me } = $props();
+  // embedded: inside a tab of the page Server - without its own title.
+  let { me, embedded = false } = $props();
 
   let info = $state(null);
   let error = $state('');
@@ -149,11 +150,13 @@
 </script>
 
 <div class="stack">
-  <div class="head">
+  <div class="head" class:bare={embedded}>
+    {#if !embedded}
     <div>
       <h1>{t('console.title')}</h1>
       <p class="muted small">{t('console.subtitle')}</p>
     </div>
+    {/if}
     {#if info?.unlocked}
       <button class="secondary" onclick={lock}>🔒 {t('console.lock')}</button>
     {/if}
@@ -216,6 +219,15 @@
 </div>
 
 <style>
+  /* Inside the page Server: no card of its own, only the controls (on the right) */
+  .head.bare {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    justify-content: flex-end;
+  }
+
   .head {
     display: flex;
     flex-wrap: wrap;

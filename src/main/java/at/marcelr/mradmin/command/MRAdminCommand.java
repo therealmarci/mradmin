@@ -52,10 +52,12 @@ public final class MRAdminCommand implements TabExecutor {
 
     private final MRAdmin plugin;
     private final WebCommand webCommand;
+    private final ServerCommand serverCommand;
 
     public MRAdminCommand(MRAdmin plugin) {
         this.plugin = plugin;
         this.webCommand = new WebCommand(plugin);
+        this.serverCommand = new ServerCommand(plugin);
     }
 
     private Messages messages() {
@@ -135,6 +137,7 @@ public final class MRAdminCommand implements TabExecutor {
                 }
             }
             case "map", "karte" -> map(sender, args);
+            case "restart", "neustart", "stop", "shutdown", "starter" -> serverCommand.handle(sender, args);
             case "version", "ver" -> {
                 // For players too (in mradmin.player).
                 if (sender.hasPermission("mradmin.version")) {
@@ -165,6 +168,9 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (sender.hasPermission(PERM_RELOAD)) {
             messages().send(sender, "help-reload");
+        }
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.SERVER_RESTART)) {
+            messages().send(sender, "help-server");
         }
         if (sender.hasPermission(at.marcelr.mradmin.Perms.ADMIN_STORAGE)) {
             messages().send(sender, "help-storage");
@@ -648,6 +654,7 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, at.marcelr.mradmin.Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, options, "maintenance");
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
+            addIf(sender, at.marcelr.mradmin.Perms.SERVER_RESTART, options, "restart", "stop", "starter");
             addIf(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE, options, "storage");
             addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
             addIf(sender, at.marcelr.mradmin.Perms.WEB_MANAGE, options, "mail");
@@ -698,6 +705,7 @@ public final class MRAdminCommand implements TabExecutor {
                     }
                 }
                 case "web" -> options.addAll(WebCommand.complete(sender, args));
+                case "restart", "neustart", "stop", "shutdown", "starter" -> options.addAll(ServerCommand.complete(sender, args));
                 case "mail" -> {
                     if (args.length == 2) {
                         options.add("test");

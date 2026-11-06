@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 46
+config-version: 48
 
 
 # ------------------------------------------------------------------------------
@@ -365,9 +365,43 @@ versions:
   #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again
   #   script = the server's own restart: runs restart-script from spigot.yml (settings.restart-script)
   # Only switch it on if you know the server comes back - otherwise the button just stops it.
+  # Not needed with the starter (section server below): then the button always works.
   restart-method: none
   # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
   restart-delays: ["5m", "1m", "now"]
+
+# Starter and planned restarts. The starter (mrserver.sh / mrserver.cmd in the server folder) starts the server,
+# brings it back after restarts, crashes and hangs and keeps Paper up to date - controlled from here and the web
+# interface. Optional: set it up once with /mradmin starter setup (existing server) or "sh mrserver.sh setup" in an
+# empty folder (new server). Without the starter only restart-times is used (and only if versions.restart-method
+# brings the server back). Guide: https://mrtechnology.marcelr.at/wiki/mradmin/starter/
+server:
+  # Memory of the server (e.g. 1G, 4096M) - takes effect on the next start.
+  memory-min: "1G"
+  memory-max: "4G"
+  # Extra Java options, e.g. Aikar's flags. Only tuning options: anything that could run programs or read and write
+  # files is ignored (with a warning in the console). Set other options in mrserver.properties on the machine.
+  java-flags: ""
+  # Paper updates on every start of the starter: "auto" = newest stable build of this Minecraft version (never a
+  # new Minecraft version, e.g. 26.3 -> 26.4), "notify" = only show it, "off". If a new build does not start, the
+  # starter goes back to the old one by itself.
+  paper-update: "auto"
+  # Planned restarts every day at these times (HH:MM in quotes, time zone general.timezone), e.g. ["05:00", "17:30"].
+  # [] = none.
+  # The countdown starts before, so the server goes down at the time.
+  restart-times: []
+  # Countdown of planned restarts and of "mrserver stop" / "mrserver restart" without a time (up to 1h).
+  countdown: "5m"
+  # What /stop (console or game) does under the starter: "stop" = the server stays down, "restart" = it comes back.
+  plain-stop: "stop"
+  crashes:
+    # The starter gives up after this many crashes within window-minutes - the server then stays down.
+    max: 3
+    window-minutes: 15
+  # The server counts as hanging if it has not ticked for this many seconds: the starter ends and starts it. 0 = off.
+  hang-seconds: 180
+  # How long stopping may take (seconds) before the starter ends the server.
+  stop-timeout-seconds: 180
 
 
 # ------------------------------------------------------------------------------
@@ -785,6 +819,28 @@ discord:
     server-restart-cancelled:
       enabled: true
       color: "#95A5A6"
+    server-stop:
+      enabled: true
+      color: "#E67E22"
+    server-stop-cancelled:
+      enabled: true
+      color: "#95A5A6"
+    # Reported by the starter (section server): crash, hang, giving up after crashes, Paper updates.
+    server-crash:
+      enabled: true
+      color: "#E74C3C"
+    server-hang:
+      enabled: true
+      color: "#E74C3C"
+    server-gave-up:
+      enabled: true
+      color: "#992D22"
+    paper-updated:
+      enabled: true
+      color: "#3498DB"
+    paper-rollback:
+      enabled: true
+      color: "#E67E22"
 
 
 # ------------------------------------------------------------------------------
