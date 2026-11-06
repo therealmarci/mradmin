@@ -99,3 +99,5 @@ mradmin.map.players:
   de: "Karte der Spielerseite: die anderen Online-Spieler sehen (`map.player-page.players.others`)"
 mradmin.map.admin:
   de: "`/mradmin map [setup]` - Zustand der Karte und von squaremap, squaremap neu einrichten; im Adminportal die Schalter Karte und Spieler auf der Karte"
+mradmin.server.setup:
+  de: "`/mradmin starter setup` - Start-Dateien (`mrserver.sh`, `mrserver.cmd`) in den Server-Ordner schreiben"
