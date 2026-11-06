@@ -22,7 +22,7 @@ sections:
   - title: {de: Für Admins - im Browser, en: For admins - in the browser}
     audience: admin
     pages:
-      - {id: web, file: /docs/WEBOBERFLAECHE.md, title: {de: Weboberfläche, en: Web interface}}
+      - {id: web, file: /docs/WEBOBERFLAECHE.md, fileEn: en/weboberflaeche.md, title: {de: Weboberfläche, en: Web interface}}
       - {id: plugins, file: plugins.md, title: {de: Plugins & Updates, en: Plugins & updates}}
       - {id: karte, file: karte.md, title: {de: Karte (squaremap), en: Map (squaremap)}}
   - title: {de: Für Admins - Einrichtung, en: For admins - setup}
@@ -30,7 +30,7 @@ sections:
     pages:
       - {id: befehle, file: befehle.md, title: {de: Befehle, en: Commands}}
       - {id: permissions, file: permissions.md, title: {de: Permissions, en: Permissions}}
-      - {id: alle-permissions, file: /docs/PERMISSIONS.md, title: {de: Permissions aller Plugins, en: Permissions of all plugins}}
+      - {id: alle-permissions, file: /docs/PERMISSIONS.md, fileEn: en/alle-permissions.md, title: {de: Permissions aller Plugins, en: Permissions of all plugins}}
       - {id: konfiguration, file: konfiguration.md, title: {de: Konfiguration, en: Configuration}}
       - {id: zusammenarbeit, file: zusammenarbeit.md, title: {de: Zusammenarbeit mit anderen Plugins, en: Working with other plugins}}
       - {id: faq, file: faq.md, title: {de: Häufige Fragen, en: FAQ}}
