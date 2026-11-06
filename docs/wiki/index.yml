@@ -1,0 +1,43 @@
+# Seitenbaum des Wikis (https://mrtechnology.marcelr.at/wiki/mradmin/).
+# Abschnitte mit Seiten; "file" relativ zu docs/wiki/, mit "/" am Anfang relativ zum Repo.
+# id "" = Einstieg. audience: player | admin | dev (Etikett und Einordnung auf der Wiki-Startseite).
+# "web" und "permissions" behalten die ids der alten Website-Tabs, damit alte Links passen.
+sections:
+  - title: {de: Einstieg, en: Getting started}
+    pages:
+      - {id: "", file: einstieg.md, title: {de: Überblick, en: Overview}}
+      - {id: schnellstart, file: schnellstart.md, title: {de: Schnellstart, en: Quick start}}
+  - title: {de: Für Spieler, en: For players}
+    audience: player
+    pages:
+      - {id: report, file: report.md, title: {de: Tickets & Reports (/report), en: Tickets & reports (/report)}}
+      - {id: spielerseite, file: spielerseite.md, title: {de: Spielerseite (/web), en: Player page (/web)}}
+  - title: {de: Für Admins - im Spiel, en: For admins - in game}
+    audience: admin
+    pages:
+      - {id: dashboard, file: dashboard.md, title: {de: Dashboard & Admin-Modus, en: Dashboard & admin mode}}
+      - {id: tickets, file: tickets.md, title: {de: Tickets bearbeiten, en: Handling tickets}}
+      - {id: wartung, file: wartung.md, title: {de: Wartungsarbeiten, en: Maintenance}}
+      - {id: ankuendigungen, file: ankuendigungen.md, title: {de: Ankündigungen, en: Announcements}}
+  - title: {de: Für Admins - im Browser, en: For admins - in the browser}
+    audience: admin
+    pages:
+      - {id: web, file: /docs/WEBOBERFLAECHE.md, title: {de: Weboberfläche, en: Web interface}}
+      - {id: plugins, file: plugins.md, title: {de: Plugins & Updates, en: Plugins & updates}}
+      - {id: karte, file: karte.md, title: {de: Karte (squaremap), en: Map (squaremap)}}
+  - title: {de: Für Admins - Einrichtung, en: For admins - setup}
+    audience: admin
+    pages:
+      - {id: befehle, file: befehle.md, title: {de: Befehle, en: Commands}}
+      - {id: permissions, file: permissions.md, title: {de: Permissions, en: Permissions}}
+      - {id: alle-permissions, file: /docs/PERMISSIONS.md, title: {de: Permissions aller Plugins, en: Permissions of all plugins}}
+      - {id: konfiguration, file: konfiguration.md, title: {de: Konfiguration, en: Configuration}}
+      - {id: zusammenarbeit, file: zusammenarbeit.md, title: {de: Zusammenarbeit mit anderen Plugins, en: Working with other plugins}}
+      - {id: faq, file: faq.md, title: {de: Häufige Fragen, en: FAQ}}
+  - title: {de: Mehr, en: More}
+    pages:
+      - {id: changelog, file: /CHANGELOG.md, title: {de: Changelog, en: Changelog}}
+  - title: {de: Für Entwickler, en: For developers}
+    audience: dev
+    pages:
+      - {id: dev, file: /docs/MODULE-API.md, title: {de: Modul-API, en: Module API}}

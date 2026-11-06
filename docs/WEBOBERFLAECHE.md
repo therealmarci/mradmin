@@ -1,6 +1,6 @@
 # MRadmin - Weboberfläche
 
-MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail, die Einrichtung in Kurzform steht auch in der [README](../README.md#weboberfläche).
+MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail. Was Spieler auf ihrer eigenen Seite sehen, steht unter [Spielerseite](wiki/spielerseite.md), Updates und Neustart unter [Plugins & Updates](wiki/plugins.md).
 
 ## Einrichten
 1. In der Config `web.enabled: true` und `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`), dann `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
@@ -286,7 +286,7 @@ Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` 
   `none` - ein Server kann sich nicht selbst wieder starten). Countdown aus `versions.restart-delays`, angekündigt mit
   den Vorlagen `restart` und `restart-now`, abbrechbar. Danach stoppt der Server (`stop` - ein Start-Skript mit
   Schleife, ein Wächter oder das Panel startet ihn wieder) oder startet über das `restart-script` der `spigot.yml` neu
-  (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: README.
+  (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: [Plugins & Updates](wiki/plugins.md#server-neu-starten).
 - Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
 
 ## Push-Benachrichtigungen
