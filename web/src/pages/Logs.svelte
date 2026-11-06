@@ -13,7 +13,8 @@
   import LogTable from '../components/LogTable.svelte';
   import SourcePicker from '../components/SourcePicker.svelte';
 
-  let { me } = $props();
+  // embedded: inside a tab of the page Server - without its own title.
+  let { me, embedded = false } = $props();
 
   const SIZE = 50;
   const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
@@ -277,7 +278,8 @@
 </script>
 
 <div class="page">
-  <header class="head">
+  <header class="head" class:bare={embedded}>
+    {#if !embedded}
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         stroke-linejoin="round"><path d={ICONS.news} /></svg>
@@ -286,6 +288,7 @@
       <h1>{t('logs.title')}</h1>
       <p class="muted">{t('logs.subtitle')}</p>
     </div>
+    {/if}
     <button type="button" class="live" class:paused={!following} aria-pressed={paused} title={t(paused ? 'logs.resume' : following ? 'logs.pause' : 'logs.notlive.hint')}
       onclick={() => (paused = !paused)}>
       <span class="pulse" aria-hidden="true"></span>
@@ -332,6 +335,15 @@
 </div>
 
 <style>
+  /* Inside the page Server: no card of its own, only the controls (on the right) */
+  .head.bare {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    justify-content: flex-end;
+  }
+
   .page {
     container-type: inline-size;
     display: grid;

@@ -18,7 +18,7 @@ import java.util.Map;
  *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.install
  *  POST /api/versions/{name}/download    newest version into plugins/update/               mradmin.versions.install
  *  POST /api/versions/{name}/install     plugin that is not installed into plugins/        mradmin.versions.install
- *  POST /api/restart       {delay}       restart after delay ms (0 = now)                  mradmin.server.restart
+ *  POST /api/restart       {delay, kind} restart (or kind=stop: stop) after delay ms         mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
  * </pre>
  * Downloads and restarts go into the web log.
@@ -99,6 +99,24 @@ public final class VersionRoutes {
         restart.put("by", plugin.restarts().by());
         restart.put("method", plugin.settings().versions().restartMethod());
         restart.put("delays", plugin.settings().versions().restartDelays());
+        // The server tab: countdown kind, starter, Paper build, next planned restart, since when the server runs.
+        restart.put("kind", plugin.restarts().restarting() ? "restart" : "stop");
+        restart.put("enabled", plugin.restarts().enabled());
+        var starter = plugin.starter();
+        Map<String, Object> starterInfo = new LinkedHashMap<>();
+        starterInfo.put("active", starter.active());
+        starterInfo.put("mode", starter.active() ? System.getenv("MRADMIN_STARTER_MODE") : null);
+        restart.put("starter", starterInfo);
+        Map<String, Object> paper = new LinkedHashMap<>();
+        paper.put("build", at.marcelr.mradmin.starter.Paper.buildOf(org.bukkit.Bukkit.getVersion()));
+        paper.put("minecraft", org.bukkit.Bukkit.getMinecraftVersion());
+        var update = starter.paperUpdate();
+        paper.put("latest", update == null ? null : update.id());
+        paper.put("update", starter.settings() == null ? "auto" : starter.settings().paperUpdate());
+        restart.put("paper", paper);
+        var next = starter.nextPlanned();
+        restart.put("nextPlanned", next == null ? 0 : next.toInstant().toEpochMilli());
+        restart.put("startedAt", java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("plugins", plugins);
         result.put("checkedAt", versions.checkedAt());
@@ -106,7 +124,8 @@ public final class VersionRoutes {
         result.put("auto", plugin.settings().versions().autoDownload().name().toLowerCase(java.util.Locale.ROOT));
         result.put("restart", restart);
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
-                "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART)));
+                "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
+                "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
     }
 
@@ -162,7 +181,9 @@ public final class VersionRoutes {
 
     private void restart(Http http) throws Exception {
         require(http, may(http, Perms.SERVER_RESTART));
-        if (!plugin.restarts().enabled()) {
+        // A stop works without anything that brings the server back - a restart does not.
+        boolean stop = "stop".equals(http.string("kind"));
+        if (!stop && !plugin.restarts().enabled()) {
             throw new Http.WebException(400, "restart-disabled");
         }
         long delay;
@@ -176,10 +197,10 @@ public final class VersionRoutes {
             throw new Http.WebException(400, "invalid-duration");
         }
         String by = http.account().name() + " (web)";
-        if (!server.sync(() -> plugin.restarts().start(delay, by))) {
+        if (!server.sync(() -> plugin.restarts().start(delay, by, !stop))) {
             throw new Http.WebException(409, "restart-running");
         }
-        audit(http, "server-restart", delay / 1000 + " s");
+        audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s");
         http.json(200, Map.of());
     }
 

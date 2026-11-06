@@ -8,7 +8,7 @@ The starter is **optional**. Without it MRadmin works as before.
 > The starter is part of the MRadmin JAR - there is nothing extra to download. It runs on **Linux** (screen or systemd) and **Windows**.
 
 ## What it does
-- **Restart and stop with a countdown** from the browser (page Plugins), in game (`/mradmin restart`, `/mradmin stop`) or on the machine (`mrserver restart`, `mrserver stop`). Announced in game like `/mradmin announce restart` (presets `restart` and `stop` in the language file).
+- **Restart and stop with a countdown** from the browser (page **Server**, tab Overview), in game (`/mradmin restart`, `/mradmin stop`) or on the machine (`mrserver restart`, `mrserver stop`). Announced in game like `/mradmin announce restart` (presets `restart` and `stop` in the language file).
 - **Daily restarts** at fixed times (`server.restart-times`); the countdown starts before.
 - **Crashes:** if the server goes down, the starter starts it again after 10 seconds. After `server.crashes.max` crashes within `server.crashes.window-minutes` minutes (default 3 in 15) it gives up - then something is fundamentally wrong and the server stays down until you look.
 - **Hangs:** if the server has not ticked for `server.hang-seconds` seconds (default 180), the starter ends it and starts it again.

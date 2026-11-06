@@ -128,6 +128,18 @@ What is already pinned at server start is not announced to everyone again. Incid
 
 The built-in templates of the language file (`restart`, `restart-now`, `update`, `event`) are not listed here and in the game menu - MRadmin uses `restart` itself. They keep working with `/mradmin announce` and in scripts. They are stored in MRadmin's storage under `announce-templates`.
 
+## Server
+Everything around the running server is under one entry in the bar: **Server**. At the top tabs, each only with its permission:
+
+| Tab | What is there | Permission |
+|---|---|---|
+| **Overview** | Running for how long, [starter](starter.md) active or not, Paper build (and whether a new one is ready), next planned restart. On the right **Restart** and **Stop** with a countdown (`versions.restart-delays`) or the running countdown with **Cancel**. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
+| **Plugins** | Versions, updates, installing, configuration in the browser - see [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
+| **Log** | Events and console output - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
+| **Console** | Run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+
+Restarting only works if something brings the server back: the starter or `versions.restart-method`. Stopping always works - without the starter the server then stays down until someone starts it. Old addresses (`/plugins`, `/logs`, `/console`) lead to the matching tab.
+
 ## Plugins (`mradmin.versions.view`)
 Page "Plugin configuration" under `/plugins` (the old address `/versions` redirects).
 - **On this server:** one card per installed MRtechnology plugin with version, state (up to date / update available / waiting for restart / error) and update button. A click opens the plugin's page (`/plugins/<name>`) with installed and newest version, release date, "What's new", links to the website and to GitHub; for MRtoolbar also the newest version of the client mod (for information only, players install it themselves), for MRadmin the squaremap version.

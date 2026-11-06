@@ -404,7 +404,7 @@
             { label: t('home.versionsAvailable'), value: v.updates, tone: v.updates ? 'warn' : '' },
             { label: t('home.versionsWaiting'), value: v.staged },
           ]}
-          link={t('home.toVersions')} onclick={() => go('/plugins')} />
+          link={t('home.toVersions')} onclick={() => go('/server/plugins')} />
       {/if}
     </div>
 

@@ -10,6 +10,9 @@
   import { pluginIcon, pluginDescription, pluginState, pluginError, clock } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
 
+  // embedded: inside the tab Plugins of the page Server - without its own title.
+  let { embedded = false } = $props();
+
   let data = $state(null);
   let error = $state('');
   let message = $state('');
@@ -121,7 +124,8 @@
 {/snippet}
 
 <div class="page">
-  <header class="head">
+  <header class="head" class:bare={embedded}>
+    {#if !embedded}
     <div class="intro">
       <span class="icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -132,6 +136,7 @@
         <p class="muted">{t('plugins.subtitle')}</p>
       </div>
     </div>
+    {/if}
     {#if data}
       <div class="check">
         <span class="check-state" class:busy={data.checking}>
@@ -175,7 +180,7 @@
         <div class="r-text">
           <span class="status">{t('plugins.restartNeeded', { n: waiting.length })}</span>
           <span class="muted small">{waiting.map((p) => `${p.name} ${p.staged || p.pending}`).join(' · ')}</span>
-          <span class="muted small">{data.may.restart ? t('versions.restartHint.' + data.restart.method) : t('versions.restartManual')}</span>
+          <span class="muted small">{data.may.restart ? t('versions.restartHint.' + (data.restart.starter?.active ? 'starter' : data.restart.method)) : t('versions.restartManual')}</span>
         </div>
         {#if data.may.restart}
           <div class="r-actions">
@@ -214,6 +219,15 @@
 </div>
 
 <style>
+  /* Inside the page Server: no card of its own, only the controls (on the right) */
+  .head.bare {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    justify-content: flex-end;
+  }
+
   .page {
     display: grid;
     gap: 18px;

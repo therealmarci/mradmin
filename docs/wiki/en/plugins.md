@@ -10,7 +10,7 @@ The page of an installed plugin has the tab **Configuration** (`mradmin.config`,
 
 ## Updates
 - **Download** (`mradmin.versions.install`) gets the new version from the official release on GitHub - only for your Minecraft version and only if the checksum (SHA-256) matches. It goes to `plugins/update/`, **it is installed on the next restart** (Paper does that itself). Nothing is swapped while the server runs.
-- The file name stays the old one (e.g. `MRsleep-mc26.3-v1.1.5.jar` with version 1.2.0 inside) - only this way Paper knows which plugin is replaced. Which version runs is shown on the Plugins page or with `/<plugin> version`.
+- The file name stays the old one (e.g. `MRsleep-mc26.3-v1.1.5.jar` with version 1.2.0 inside) - only this way Paper knows which plugin is replaced. Which version runs is shown under **Server → Plugins** or with `/<plugin> version`.
 - **Automatically:** `versions.auto-download: patch` downloads e.g. hotfixes (1.2.x) by itself, `minor` also new features, `all` everything. The default is `off`.
 - It is checked every `versions.check-interval-hours` and with **Check now** (`mradmin.versions.install`).
 - Downloads and restarts are recorded in the log and the Discord log (`plugin-update-downloaded`, `server-restart`).

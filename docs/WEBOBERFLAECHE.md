@@ -251,6 +251,18 @@ Die eingebauten Vorlagen der Sprachdatei (`restart`, `restart-now`, `update`, `e
 nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten gehen sie weiter. Gespeichert wird im
 Speicher von MRadmin unter `announce-templates`.
 
+## Server
+Alles rund um den laufenden Server steht unter einem Eintrag in der Leiste: **Server**. Oben Reiter, die jeder nur mit dem passenden Recht sieht:
+
+| Reiter | Was dort ist | Recht |
+|---|---|---|
+| **Übersicht** | Läuft seit wann, [Starter](wiki/starter.md) aktiv oder nicht, Paper-Build (und ob ein neuer bereitsteht), nächster geplanter Neustart. Rechts **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`) bzw. der laufende Countdown mit **Abbrechen**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
+| **Plugins** | Versionen, Updates, Installieren, Konfiguration im Browser - siehe [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
+| **Protokoll** | Ereignisse und Konsolenausgabe - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
+| **Konsole** | Befehle ausführen - siehe [Konsole](#konsole-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+
+Neu starten geht nur, wenn etwas den Server zurückbringt: der Starter oder `versions.restart-method`. Stoppen geht immer - ohne Starter bleibt der Server dann aus, bis ihn jemand startet. Alte Adressen (`/plugins`, `/logs`, `/console`) leiten auf den passenden Reiter weiter.
+
 ## Plugins (`mradmin.versions.view`)
 Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` leitet weiter).
 - **Auf diesem Server:** eine Karte pro installiertem MRtechnology-Plugin mit Version, Zustand (aktuell / Update
