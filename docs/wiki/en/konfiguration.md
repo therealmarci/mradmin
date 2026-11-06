@@ -12,6 +12,7 @@ Easiest in the browser: web interface → **Plugins → MRadmin → Configuratio
 | `tickets` | Categories, cooldowns, limits, how long closed tickets are kept | [Handling tickets](tickets.md) |
 | `health` | History and TPS alarm | |
 | `versions` | Plugins page: how often it is checked, automatic downloads, pre-releases, how the restart button restarts | [Plugins & updates](plugins.md) |
+| `server` | [Starter](starter.md): memory, Java options, Paper updates, daily restarts, crash and hang rules | [Starter](starter.md#settings) |
 | `storage` | Storage: `yaml` (default), `sqlite` or `mysql` | [Storage](#storage-yaml-sqlite-or-mysql) |
 | `web` · `mail` | Web interface, mails for contact and unban requests | [Web interface](/docs/WEBOBERFLAECHE.md) |
 | `player-web` | Player page (`/web`): on/off, sign-in with a code, rankings, news, own statistics tile | [Player page](spielerseite.md) |

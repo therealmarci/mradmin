@@ -28,6 +28,7 @@ sections:
   - title: {de: Für Admins - Einrichtung, en: For admins - setup}
     audience: admin
     pages:
+      - {id: starter, file: starter.md, title: {de: Starter (mrserver), en: Starter (mrserver)}}
       - {id: befehle, file: befehle.md, title: {de: Befehle, en: Commands}}
       - {id: permissions, file: permissions.md, title: {de: Permissions, en: Permissions}}
       - {id: alle-permissions, file: /docs/PERMISSIONS.md, fileEn: en/alle-permissions.md, title: {de: Permissions aller Plugins, en: Permissions of all plugins}}

@@ -15,7 +15,7 @@ description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcem
 commands:
   mradmin:
     description: Management of MRadmin (announcements, admin mode, maintenance).
-    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|map|discord|storage|reload|version|help]
+    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|map|discord|storage|reload|restart|stop|starter|version|help]
     aliases: [mra]
   report:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
@@ -109,6 +109,7 @@ permissions:
       mradmin.versions.install: true
       mradmin.config: true
       mradmin.server.restart: true
+      mradmin.server.setup: true
       mradmin.web.console.execute: true
       mradmin.map.admin: true
       # LibertyBans: ban and unban players (also decide unban requests)
@@ -260,7 +261,10 @@ permissions:
     children:
       mradmin.versions.view: true
   mradmin.server.restart:
-    description: "Web interface: restart the server with a countdown."
+    description: "Restart or stop the server with a countdown: web interface and /mradmin restart|stop; /mradmin starter shows the starter."
+    default: op
+  mradmin.server.setup:
+    description: "/mradmin starter setup - write the starter files (mrserver.sh, mrserver.cmd) into the server folder."
     default: op
 
   # ------------------------------------------------------------ Web map

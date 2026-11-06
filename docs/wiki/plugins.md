@@ -16,6 +16,9 @@ Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration** (
 - Downloads und Neustarts stehen im Protokoll und im Discord-Log (`plugin-update-downloaded`, `server-restart`).
 
 ## Server neu starten
+> [!TIP]
+> Am einfachsten mit dem **[Starter](starter.md)**, der in MRadmin steckt: Er startet den Server nach jedem Neustart, Absturz oder Hänger wieder, spielt Paper-Updates ein und kann täglich neu starten. Dann brauchst du `versions.restart-method` nicht; neu starten geht außerdem jederzeit mit `/mradmin restart`.
+
 Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** (`mradmin.server.restart`) mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
 
 | `versions.restart-method` | Was passiert |

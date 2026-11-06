@@ -8,7 +8,7 @@ mradmin.groups.support:
 mradmin.groups.staff:
   de: "Support + Spieler herholen, einfrieren und kicken, die Konsole im Protokoll mitlesen · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben)"
 mradmin.groups.admin:
-  de: "Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Plugins im Browser einstellen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden)"
+  de: "Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Plugins im Browser einstellen, Server neu starten und stoppen, Starter einrichten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden)"
 mradmin.version:
   de: "`/mradmin version` - Version, Update-Stand und Links"
 mradmin.dashboard:
@@ -92,7 +92,7 @@ mradmin.config:
 mradmin.versions.install:
   de: "Weboberfläche: jetzt nach Updates suchen, Updates herunterladen und fehlende MRtechnology-Plugins installieren (aktiv nach dem nächsten Start)"
 mradmin.server.restart:
-  de: "Weboberfläche: Server mit Countdown neu starten"
+  de: "Server mit Countdown neu starten oder stoppen: Weboberfläche, `/mradmin restart`, `/mradmin stop`, Zustand des Starters (`/mradmin starter`)"
 mradmin.map:
   de: "`/mradmin map` - Link zur Karte auf der Spielerseite"
 mradmin.map.players:

@@ -63,6 +63,7 @@ public final class Perms {
     public static final String VERSIONS_VIEW = "mradmin.versions.view";
     public static final String VERSIONS_INSTALL = "mradmin.versions.install";
     public static final String SERVER_RESTART = "mradmin.server.restart";
+    public static final String SERVER_SETUP = "mradmin.server.setup";
 
     // web map (squaremap)
     public static final String MAP = "mradmin.map";

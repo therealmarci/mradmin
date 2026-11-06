@@ -16,6 +16,9 @@ The page of an installed plugin has the tab **Configuration** (`mradmin.config`,
 - Downloads and restarts are recorded in the log and the Discord log (`plugin-update-downloaded`, `server-restart`).
 
 ## Restarting the server
+> [!TIP]
+> Easiest with the **[starter](starter.md)** built into MRadmin: it starts the server again after every restart, crash or hang, installs Paper updates and can restart daily. Then you do not need `versions.restart-method`; you can also restart at any time with `/mradmin restart`.
+
 After a download or installation the page shows "Restart needed". A **restart button** (`mradmin.server.restart`) with a countdown (`versions.restart-delays`, default 5 minutes, 1 minute, right away, announced like `/mradmin announce restart`) only exists while an update or a newly installed plugin waits for the restart, and only once you set `versions.restart-method` - because a server cannot start itself again, something outside has to do it:
 
 | `versions.restart-method` | What happens |

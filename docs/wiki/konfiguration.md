@@ -12,6 +12,7 @@ Am einfachsten im Browser: Weboberfläche → **Plugins → MRadmin → Konfigur
 | `tickets` | Kategorien, Cooldowns, Limits, wie lange geschlossene Tickets bleiben | [Tickets bearbeiten](tickets.md) |
 | `health` | Verlauf und TPS-Alarm | |
 | `versions` | Seite Plugins: wie oft geprüft wird, automatische Downloads, Vorabversionen, wie der Neustart-Knopf neu startet | [Plugins & Updates](plugins.md) |
+| `server` | [Starter](starter.md): Arbeitsspeicher, Java-Optionen, Paper-Updates, tägliche Neustarts, Absturz- und Hänger-Regeln | [Starter](starter.md#einstellungen) |
 | `storage` | Speicher: `yaml` (Standard), `sqlite` oder `mysql` | [Speicher](#speicher-yaml-sqlite-oder-mysql) |
 | `web` · `mail` | Weboberfläche, Mails für Kontakt- und Entbannungsanfragen | [Weboberfläche](/docs/WEBOBERFLAECHE.md) |
 | `player-web` | Spielerseite (`/web`): an/aus, Anmeldung per Code, Ranglisten, Neuigkeiten, eigene Statistik-Kachel | [Spielerseite](spielerseite.md) |

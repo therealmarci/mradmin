@@ -509,6 +509,69 @@ sections:
         name: {de: Countdown zur Auswahl, en: Countdown choices}
         help: {de: "Z.B. 5m, 1m - „now“ = sofort.", en: "E.g. 5m, 1m - \"now\" = right away."}
 
+  - id: server
+    name: {de: Starter & geplante Neustarts, en: Starter & planned restarts}
+    help: {de: "Der Starter (mrserver) startet den Server, holt ihn nach Neustart, Absturz und Hänger zurück und hält Paper aktuell. Einrichten mit /mradmin starter setup. Ohne Starter gelten nur die geplanten Neustarts.", en: "The starter (mrserver) starts the server, brings it back after restarts, crashes and hangs and keeps Paper up to date. Set it up with /mradmin starter setup. Without the starter only the planned restarts apply."}
+    fields:
+      - key: server.memory-min
+        type: string
+        name: {de: Arbeitsspeicher min., en: Memory min.}
+        help: {de: "Z.B. 1G oder 4096M - ab dem nächsten Start.", en: "E.g. 1G or 4096M - from the next start on."}
+      - key: server.memory-max
+        type: string
+        name: {de: Arbeitsspeicher max., en: Memory max.}
+        help: {de: "Z.B. 4G - ab dem nächsten Start.", en: "E.g. 4G - from the next start on."}
+      - key: server.java-flags
+        type: text
+        name: {de: Java-Optionen, en: Java options}
+        help: {de: "Nur Optionen zum Abstimmen (z.B. Aikar-Flags). Alles, was Programme startet oder Dateien liest und schreibt, wird ignoriert.", en: "Tuning options only (e.g. Aikar's flags). Anything that starts programs or reads and writes files is ignored."}
+      - key: server.paper-update
+        type: choice
+        name: {de: Paper-Updates, en: Paper updates}
+        help: {de: "Nur Builds derselben Minecraft-Version, nie eine neue Minecraft-Version. Startet ein neuer Build nicht, nimmt der Starter wieder den alten.", en: "Only builds of the same Minecraft version, never a new Minecraft version. If a new build does not start, the starter uses the old one again."}
+        options:
+          - {value: auto, de: Bei jedem Start, en: On every start}
+          - {value: notify, de: Nur anzeigen, en: Only show}
+          - {value: "off", de: Aus, en: "Off"}
+      - key: server.restart-times
+        type: strings
+        name: {de: Täglicher Neustart um, en: Daily restart at}
+        help: {de: "Uhrzeiten wie 05:00 (Zeitzone aus Allgemein). Der Countdown beginnt vorher.", en: "Times like 05:00 (time zone from General). The countdown starts before."}
+      - key: server.countdown
+        type: duration
+        name: {de: Countdown, en: Countdown}
+        help: {de: "Für geplante Neustarts und mrserver stop/restart ohne Zeitangabe, höchstens 1h.", en: "For planned restarts and mrserver stop/restart without a time, at most 1h."}
+      - key: server.plain-stop
+        type: choice
+        name: {de: Nach /stop, en: After /stop}
+        options:
+          - {value: stop, de: Server bleibt aus, en: Server stays down}
+          - {value: restart, de: Server startet neu, en: Server restarts}
+      - key: server.crashes.max
+        type: int
+        min: 1
+        max: 100
+        name: {de: Aufgeben nach Abstürzen, en: Give up after crashes}
+      - key: server.crashes.window-minutes
+        type: int
+        min: 1
+        max: 1440
+        unit: {de: Minuten, en: minutes}
+        name: {de: innerhalb von, en: within}
+      - key: server.hang-seconds
+        type: int
+        min: 0
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Hänger nach, en: Hang after}
+        help: {de: "So lange ohne Tick, dann beendet und startet der Starter den Server. 0 = aus.", en: "That long without a tick, then the starter ends and starts the server. 0 = off."}
+      - key: server.stop-timeout-seconds
+        type: int
+        min: 30
+        max: 3600
+        unit: {de: Sekunden, en: seconds}
+        name: {de: Herunterfahren höchstens, en: Shutdown at most}
+
   - id: storage
     name: {de: Speicher, en: Storage}
     help: {de: "Wo Tickets, Wartungen und Web-Konten liegen. Wirkt erst nach einem Neustart; beim ersten Start mit SQLite oder MySQL werden die YAML-Daten übernommen.", en: "Where tickets, maintenance and web accounts are kept. Takes effect after a restart; on the first start with SQLite or MySQL the YAML data is taken over."}
@@ -1097,6 +1160,13 @@ sections:
           plugin-update-downloaded: {de: Update heruntergeladen, en: Update downloaded}
           server-restart: {de: Neustart geplant, en: Restart planned}
           server-restart-cancelled: {de: Neustart abgebrochen, en: Restart cancelled}
+          server-stop: {de: Stopp geplant, en: Stop planned}
+          server-stop-cancelled: {de: Stopp abgebrochen, en: Stop cancelled}
+          server-crash: {de: Server abgestürzt (Starter), en: Server crashed (starter)}
+          server-hang: {de: Server hing (Starter), en: Server hung (starter)}
+          server-gave-up: {de: Starter gibt auf, en: Starter gave up}
+          paper-updated: {de: Paper aktualisiert, en: Paper updated}
+          paper-rollback: {de: Paper-Build zurückgesetzt, en: Paper build rolled back}
 
   - id: discord-announce
     name: {de: Discord-Ankündigungen (Community), en: Discord announcements (community)}
