@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.3.0] - 2026-11-06
+
 ### Neu
 - **Starter (mrserver) - Server-Start komplett aus MRadmin steuern:** Optionaler Starter für Linux (screen oder systemd) und Windows, der in der MRadmin-JAR steckt. Er startet Paper, **bringt den Server nach einem Neustart, einem Absturz oder einem Hänger von selbst zurück** (Absturz: nach 10 Sekunden; Hänger: `server.hang-seconds` ohne Tick, Standard 180; nach `server.crashes.max` Abstürzen in `server.crashes.window-minutes` Minuten, Standard 3 in 15, gibt er auf) und richtet Autostart beim Hochfahren ein. **Neuer Server:** `mrserver.sh` bzw. `mrserver.cmd` (liegen jedem Release bei) in einen leeren Ordner legen, `setup` - lädt MRadmin und Paper selbst (mit Prüfsumme). **Bestehender Server:** `/mradmin starter setup` (Permission `mradmin.server.setup`, in `mradmin.groups.admin`). Befehle auf dem Rechner: `mrserver setup|install|uninstall|start|run|stop|restart|cancel|status|console|attach`. Wie er läuft (Java, Paper-JAR, `mode`) steht in `mrserver.properties` auf dem Rechner. Mit dem Starter braucht der Neustart-Knopf `versions.restart-method` nicht mehr. Anleitung im Wiki auf der Seite „Starter“.
 - **Paper-Updates bei jedem Start:** `server.paper-update: auto` (Standard) spielt vor jedem Start den neuesten **stabilen** Build der eigenen Minecraft-Version aus dem offiziellen PaperMC-Download ein (SHA-256 geprüft) - **nie eine neue Minecraft-Version**. Startet ein neuer Build nicht, nimmt der Starter von selbst wieder den alten und überspringt den fehlerhaften. `notify` zeigt neue Builds nur an (Server-Übersicht, `/mradmin starter`, Konsole; geprüft alle 15 Minuten), `off` schaltet es ab.
