@@ -1,0 +1,101 @@
+# Texte der Permission-Tabellen im Wiki (Platzhalter <!-- auto:permissions --> und <!-- auto:permission-groups -->).
+# Die Tabelle selbst (Permissions, Standard, Gruppe) erzeugt die Website aus plugin.yml - hier steht nur, wofür eine
+# Permission ist, auf Deutsch (de) und optional Englisch (en). Ohne Eintrag gilt die description aus plugin.yml.
+mradmin.player:
+  de: "`/report` - Tickets erstellen und die eigenen ansehen, beantworten, schließen · `/web` - eigene Spielerseite · `/mradmin map` - Link zur Karte, andere Spieler darauf (`mradmin.map.players`) · `/mradmin version`"
+mradmin.groups.support:
+  de: "Spieler + Übersicht, Serverzustand und Health, Tickets komplett bearbeiten (auch Teleport zum Ticket), Spieler ansehen, zu Spielern teleportieren, Inventar ansehen, Staff-Chat, **Admin-Modus**, Weboberfläche, Wartung ansehen und währenddessen joinen, Seite Plugins ansehen (ohne „Jetzt prüfen“)"
+mradmin.groups.staff:
+  de: "Support + Spieler herholen, einfrieren und kicken, die Konsole im Protokoll mitlesen · mit LibertyBans: kicken, muten, verwarnen (und Mutes/Verwarnungen aufheben)"
+mradmin.groups.admin:
+  de: "Alles: Staff + Wartung steuern, Ankündigungen, Admin-Modus anderer, Web-Konten und -Protokoll, Reload, Speicher, Discord, Update-Hinweis, Updates herunterladen, Plugins im Browser einstellen, Server neu starten, Karte (squaremap) einrichten, **Befehle in der Web-Konsole** · mit LibertyBans: bannen und entbannen (auch Entbannungsanträge entscheiden)"
+mradmin.version:
+  de: "`/mradmin version` - Version, Update-Stand und Links"
+mradmin.dashboard:
+  de: "Dashboard öffnen (`/mradmin`) bzw. die Übersicht in der Weboberfläche"
+mradmin.status:
+  de: "Serverzustand (`/mradmin status`, Server-Kachel, Übersicht im Web)"
+mradmin.status.health:
+  de: "Health-Seite - Verlauf von TPS, MSPT, CPU, RAM und Lag-Quellen"
+mradmin.web.self:
+  de: "`/web` - Link und Anmeldecode für die eigene Spielerseite (braucht `player-web.enabled`)"
+mradmin.tickets.create:
+  de: "`/report` - Tickets erstellen, die eigenen ansehen, beantworten und schließen"
+mradmin.tickets.notify:
+  de: "Hinweis bei neuen Tickets und Antworten, beim Betreten die Zahl offener Tickets"
+mradmin.tickets.view:
+  de: "Alle Tickets ansehen (`/mradmin tickets`, Dashboard, Web); kein Cooldown beim Erstellen"
+mradmin.tickets.reply:
+  de: "In Tickets anderer Spieler antworten"
+mradmin.tickets.claim:
+  de: "Tickets übernehmen und wieder freigeben"
+mradmin.tickets.close:
+  de: "Tickets anderer Spieler schließen (auch die automatischen Chunkloader-Tickets)"
+mradmin.tickets.reopen:
+  de: "Geschlossene Tickets wieder öffnen"
+mradmin.tickets.teleport:
+  de: "Zum Ort eines Tickets oder zum gemeldeten Spieler teleportieren"
+mradmin.maintenance.view:
+  de: "Wartungsstand ansehen (`/mradmin maintenance`, Dashboard, Web)"
+mradmin.maintenance.manage:
+  de: "Wartungen starten, planen, verlängern und beenden"
+mradmin.maintenance.bypass:
+  de: "Darf während einer Wartung joinen und wird beim Start nicht gekickt"
+mradmin.maintenance.notify:
+  de: "Hinweise zum Wartungsmodus (z.B. Verbindung zu Uptime Kuma verloren)"
+mradmin.news:
+  de: "Weboberfläche: Neuigkeiten und Changelogs für die Spielerseite (`/web`) schreiben"
+mradmin.announce:
+  de: "`/mradmin announce` - Ankündigungen auf dem Bildschirm aller Spieler"
+mradmin.announce.templates:
+  de: "Weboberfläche: Ankündigungs-Vorlagen anlegen, ändern und löschen (Seite Kommunikation)"
+mradmin.mode:
+  de: "`/mradmin mode` - Admin-Modus für sich selbst (das Menü-Item öffnet das Dashboard)"
+mradmin.mode.others:
+  de: "`/mradmin mode <on|off> <spieler>` - Admin-Modus anderer steuern"
+mradmin.staffchat:
+  de: "`/sc` - Staff-Chat lesen und schreiben"
+mradmin.player.view:
+  de: "Spielerliste und Spieler-Menü bzw. Spielerseite im Web (Infos, Tickets zum Spieler)"
+mradmin.player.teleport:
+  de: "Zu Spielern teleportieren (Spielerliste, Spieler-Menü, `/mradmin tp`, Serverzustand)"
+mradmin.player.summon:
+  de: "Spieler zu sich holen"
+mradmin.player.inventory:
+  de: "Inventar und Endertruhe anderer Spieler ansehen (nur lesen)"
+mradmin.player.freeze:
+  de: "Spieler einfrieren und wieder freigeben; Hinweis, wenn ein eingefrorener Spieler geht"
+mradmin.player.kick:
+  de: "Spieler vom Server kicken"
+mradmin.web:
+  de: "Weboberfläche benutzen (eigenes Konto über `/mradmin web setup`); im Web gelten dieselben Permissions wie im Spiel"
+mradmin.web.audit:
+  de: "Protokoll aller Aktionen in der Weboberfläche ansehen"
+mradmin.web.manage:
+  de: "Web-Konten anderer verwalten (`/mradmin web invite|logout|remove`)"
+mradmin.web.console.view:
+  de: "Konsolenausgabe auf der Seite Protokoll der Weboberfläche mitlesen (keine Befehle)"
+mradmin.web.console.execute:
+  de: "Seite Konsole der Weboberfläche: Befehle ausführen (so mächtig wie Konsolenzugriff!), nach dem Entsperren mit einem Code"
+mradmin.admin.reload:
+  de: "`/mradmin reload`"
+mradmin.admin.storage:
+  de: "`/mradmin storage` - Speicher anzeigen (YAML, SQLite, MySQL)"
+mradmin.admin.discord:
+  de: "`/mradmin discord [test]`"
+mradmin.admin.update:
+  de: "Hinweis beim Betreten des Servers, wenn ein Update da ist"
+mradmin.versions.view:
+  de: "Weboberfläche: Seite Plugins - alle MRtechnology-Plugins, ihre Versionen und Updates (nur ansehen)"
+mradmin.config:
+  de: "Weboberfläche: `config.yml` von MRadmin und den anderen MRtechnology-Plugins im Browser ansehen und ändern (wird sofort gespeichert und neu geladen)"
+mradmin.versions.install:
+  de: "Weboberfläche: jetzt nach Updates suchen, Updates herunterladen und fehlende MRtechnology-Plugins installieren (aktiv nach dem nächsten Start)"
+mradmin.server.restart:
+  de: "Weboberfläche: Server mit Countdown neu starten"
+mradmin.map:
+  de: "`/mradmin map` - Link zur Karte auf der Spielerseite"
+mradmin.map.players:
+  de: "Karte der Spielerseite: die anderen Online-Spieler sehen (`map.player-page.players.others`)"
+mradmin.map.admin:
+  de: "`/mradmin map [setup]` - Zustand der Karte und von squaremap, squaremap neu einrichten; im Adminportal die Schalter Karte und Spieler auf der Karte"

@@ -10,7 +10,7 @@ libraries:
   - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
 author: _therealmarci
 website: ${website}/docs/${websiteSlug}/
-description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcements, admin mode, web interface and the web map squaremap.
+description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcements, admin mode, web interface with a map for players.
 
 commands:
   mradmin:
@@ -265,11 +265,11 @@ permissions:
 
   # ------------------------------------------------------------ Web map
   mradmin.map:
-    description: /mradmin map - link to the web map (squaremap).
+    description: /mradmin map - link to the map on the player page.
     default: op
   mradmin.map.players:
     description: "Map of the player page: see the other online players (map.player-page.players.others)."
     default: op
   mradmin.map.admin:
-    description: "/mradmin map [setup] - status of the web map and the plugins' layers, set up squaremap again."
+    description: "/mradmin map [setup] - status of the map and of squaremap (which draws it), set up squaremap again."
     default: op

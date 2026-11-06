@@ -38,3 +38,8 @@ Umstellen: `type` ändern und den Server neu starten - die bisherigen Daten werd
 Für das **Admin-Log** einen Webhook anlegen (*Kanal bearbeiten → Integrationen → Webhooks*), unter `discord` aktivieren und die URL eintragen. Welche Ereignisse gesendet werden (Tickets, Wartung, Admin-Modus, Web-Anmeldungen …), stellst du unter `discord.events` ein. Test: `/mradmin discord test`.
 
 Die anderen MRtechnology-Plugins können ihre Logs über diesen Webhook schicken (`discord.use-mradmin-webhook` in ihrer Config). Alle Ereignisse stehen außerdem im **Protokoll** der Weboberfläche. Für Ankündigungen im öffentlichen Channel gibt es den getrennten Webhook `discord-announce` - siehe [Ankündigungen](ankuendigungen.md#im-community-discord).
+
+## Alle Einstellungen
+Jede Einstellung der `config.yml` mit Standardwert - dieselben Felder wie im Browser-Formular von MRadmin. Die Liste entsteht automatisch aus dem Plugin und ist damit immer auf dem Stand dieser Version.
+
+<!-- auto:config -->

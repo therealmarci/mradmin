@@ -10,7 +10,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 ## [Unveröffentlicht]
 
 ### Behoben & geändert
-- **Anleitung als Wiki:** Die Anleitung steht jetzt im Wiki auf der Website (https://mrtechnology.marcelr.at/wiki/mradmin/) - aufgeteilt in Seiten für Spieler (Tickets & Reports, Spielerseite) und für Admins (Dashboard & Admin-Modus, Tickets, Wartung, Ankündigungen, Weboberfläche, Plugins & Updates, Karte, Befehle, Permissions, Permissions aller Plugins, Konfiguration, Häufige Fragen), mit Suche über alle Plugins. Die README ist nur noch eine kurze Übersicht. Alte Links auf `/docs/mradmin/` (auch die Tabs Weboberfläche und Permissions) führen automatisch ins Wiki.
+- **Anleitung als Wiki:** Die Anleitung steht jetzt im Wiki auf der Website (https://mrtechnology.marcelr.at/wiki/mradmin/) - aufgeteilt in Seiten für Spieler (Tickets & Reports, Spielerseite) und für Admins (Dashboard & Admin-Modus, Tickets, Wartung, Ankündigungen, Weboberfläche, Plugins & Updates, Karte, Befehle, Permissions, Permissions aller Plugins, Konfiguration, Häufige Fragen), mit Suche über alle Plugins. Die README ist nur noch eine kurze Übersicht. Alte Links auf `/docs/mradmin/` (auch die Tabs Weboberfläche und Permissions) führen automatisch ins Wiki. Die Seiten **Permissions** und **Konfiguration** listen jede Permission bzw. Einstellung mit Standardwert automatisch aus dem Plugin - sie sind also immer auf dem Stand der Version.
 
 ## [1.2.1] - 2026-11-04
 
