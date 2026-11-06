@@ -92,8 +92,14 @@ final class Service {
                     return code;
                 }
                 // Without "linger" the user's services only run while the user is logged in.
+                // Only root may switch it on - check first, then try quietly (no polkit noise), else tell what to do.
                 String user = System.getProperty("user.name");
-                if (exec(List.of("loginctl", "enable-linger", user)) != 0) {
+                if (Files.exists(Path.of("/var/lib/systemd/linger", user))) {
+                    System.out.println("Linger is on - the server also runs while you are logged out.");
+                } else if (quiet(List.of("loginctl", "enable-linger", user)) == 0
+                        && Files.exists(Path.of("/var/lib/systemd/linger", user))) {
+                    System.out.println("Linger switched on - the server also runs while you are logged out.");
+                } else {
                     System.out.println("Note: run once as root:  loginctl enable-linger " + user
                             + "  - otherwise the server stops when you log out.");
                 }
@@ -233,6 +239,16 @@ final class Service {
                     .redirectError(ProcessBuilder.Redirect.INHERIT).start().waitFor();
         } catch (IOException e) {
             System.out.println("Could not run " + command.getFirst() + ": " + e.getMessage());
+            return 127;
+        }
+    }
+
+    /** Runs without showing its output (for tries that may fail, e.g. loginctl without root). */
+    private static int quiet(List<String> command) throws InterruptedException {
+        try {
+            return new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD).start().waitFor();
+        } catch (IOException e) {
             return 127;
         }
     }

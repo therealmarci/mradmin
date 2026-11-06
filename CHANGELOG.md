@@ -8,6 +8,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 > Befehle und Permissions noch ändern.
 
 ## [Unveröffentlicht]
+### Behoben & geändert- **mrserver install meldete linger fälschlich als Fehler:** War linger schon eingeschaltet, versuchte `mrserver install` es trotzdem erneut (geht nur als root) und zeigte "Access denied" samt pkttyagent-Fehler. Jetzt prüft es vorher und meldet "Linger is on"; der Hinweis auf `loginctl enable-linger` kommt nur noch, wenn linger wirklich fehlt.
 
 ## [1.3.0] - 2026-11-06
 
