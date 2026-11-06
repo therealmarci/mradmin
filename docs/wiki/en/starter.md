@@ -32,6 +32,9 @@ Java 25 must be installed (e.g. `sudo apt install openjdk-25-jre-headless`, on W
 2. Stop the server **one last time the old way** and switch off your old start script or its autostart (otherwise two programs start the server).
 3. `./mrserver.sh install` and `./mrserver.sh start` (Windows: `mrserver install`, `mrserver start`).
 
+> [!WARNING]
+> **Old script with a watchdog or daily restart via cron** (e.g. your own `start.sh` or `mc.sh`): remove the cron entries **before** switching (`crontab -e`) - otherwise the old watchdog starts the server a second time next to the starter. Set daily restarts in `server.restart-times` instead, memory in `server.memory-min` / `memory-max`.
+
 > [!TIP]
 > `/mradmin starter` shows whether the starter is active. With the starter you do not need `versions.restart-method` any more.
 

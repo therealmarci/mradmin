@@ -32,6 +32,9 @@ Java 25 muss installiert sein (z.B. `sudo apt install openjdk-25-jre-headless`, 
 2. Den Server **ein letztes Mal auf dem alten Weg stoppen** und dein altes Start-Skript bzw. dessen Autostart abschalten (sonst starten zwei Programme den Server).
 3. `./mrserver.sh install` und `./mrserver.sh start` (Windows: `mrserver install`, `mrserver start`).
 
+> [!WARNING]
+> **Altes Skript mit Wächter oder täglichem Neustart per cron** (z.B. ein eigenes `start.sh` oder `mc.sh`): Die cron-Einträge **vor** dem Umstieg entfernen (`crontab -e`) - sonst startet der alte Wächter den Server neben dem Starter ein zweites Mal. Tägliche Neustarts stellst du stattdessen in `server.restart-times` ein, Arbeitsspeicher in `server.memory-min` / `memory-max`.
+
 > [!TIP]
 > Ob der Starter aktiv ist, zeigt `/mradmin starter`. `versions.restart-method` brauchst du mit dem Starter nicht mehr.
 
