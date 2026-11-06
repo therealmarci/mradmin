@@ -12,7 +12,7 @@ Der Starter ist **freiwillig**. Ohne ihn läuft MRadmin wie bisher.
 - **Tägliche Neustarts** zu festen Uhrzeiten (`server.restart-times`), der Countdown beginnt vorher.
 - **Abstürze:** Fällt der Server aus, startet der Starter ihn nach 10 Sekunden wieder. Nach `server.crashes.max` Abstürzen in `server.crashes.window-minutes` Minuten (Standard 3 in 15) gibt er auf - dann stimmt etwas Grundsätzliches nicht und der Server bleibt aus, bis du nachsiehst.
 - **Hänger:** Tickt der Server `server.hang-seconds` Sekunden lang nicht (Standard 180), beendet der Starter ihn und startet ihn neu.
-- **Paper-Updates** (`server.paper-update: auto`): vor jedem Start der neueste **stabile** Build deiner Minecraft-Version aus dem offiziellen PaperMC-Download, nur mit passender Prüfsumme. **Eine neue Minecraft-Version (z.B. 26.3 → 26.4) spielt er nie ein.** Startet ein neuer Build nicht, nimmt der Starter von selbst wieder den alten und überspringt den fehlerhaften.
+- **Paper-Updates** (`server.paper-update: auto`): vor jedem Start der neueste **stabile** Build deiner Minecraft-Version aus dem offiziellen PaperMC-Download, nur mit passender Prüfsumme. **Eine neue Minecraft-Version (z.B. 26.3 → 26.4) spielt er nie ein.** Startet ein neuer Build nicht, nimmt der Starter von selbst wieder den alten und überspringt den fehlerhaften. Ob Paper aktuell ist, prüft MRadmin alle 15 Minuten (auch ohne Starter) und zeigt es auf der Seite **Server**.
 - **Meldungen:** Abstürze, Hänger, Aufgeben und Paper-Updates stehen nach dem nächsten Start in der Konsole, im [Protokoll](/docs/WEBOBERFLAECHE.md#protokoll-mradminwebaudit) und im Discord-Log (Ereignisse `server-crash`, `server-hang`, `server-gave-up`, `paper-updated`, `paper-rollback`).
 - **Autostart** beim Hochfahren des Rechners.
 
@@ -65,7 +65,7 @@ Im Serverordner `./mrserver.sh <befehl>` (Linux) bzw. `mrserver <befehl>` (Windo
 Zeiten wie `30s`, `5m`, `1h`, eine Zahl (Sekunden) oder `now`. Antwortet MRadmin nicht (z.B. nicht installiert), stoppt bzw. startet `mrserver` sofort ohne Countdown.
 
 ## Einstellungen
-**Im Browser bzw. in der `config.yml`** (Abschnitt `server`, Plugins → MRadmin → Konfiguration → „Starter & geplante Neustarts“). Arbeitsspeicher und Java-Optionen gelten ab dem nächsten Start.
+**Im Browser bzw. in der `config.yml`** (Abschnitt `server`, Server → Plugins → MRadmin → Konfiguration → „Starter & geplante Neustarts“ - dort steht oben auch, ob der Starter eingerichtet und aktiv ist). Arbeitsspeicher und Java-Optionen gelten ab dem nächsten Start.
 
 | Schlüssel | Standard | Wofür |
 |---|---|---|

@@ -380,6 +380,10 @@
             <header>
               <h3>{tx(s.name)}</h3>
               {#if tx(s.help)}<p class="muted">{tx(s.help)}</p>{/if}
+              {#if data.status?.[s.id]}
+                {@const st = data.status[s.id]}
+                <p class="state {st.tone}"><span class="state-dot"></span>{t('config.status.' + st.key, { mode: st.mode ?? '' })}</p>
+              {/if}
             </header>
             {#each s.list as f (f.key)}
               <div class="field" class:wide={f.type === 'table' || f.type === 'text'} class:changed={f.key in draft}
@@ -919,6 +923,37 @@
   .good-chip {
     color: var(--good);
     background: color-mix(in srgb, var(--good) 15%, transparent);
+  }
+
+  /* Live state of a section (e.g. MRadmin: is the starter set up?) */
+  .state {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    --st: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--st) 40%, var(--border));
+    background: color-mix(in srgb, var(--st) 10%, transparent);
+  }
+
+  .state.good {
+    --st: var(--good);
+  }
+
+  .state.warn {
+    --st: var(--warn);
+  }
+
+  .state-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    margin-top: 0.38em;
+    border-radius: 50%;
+    background: var(--st);
   }
 
   .notice {

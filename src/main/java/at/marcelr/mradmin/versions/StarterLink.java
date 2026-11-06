@@ -41,7 +41,10 @@ public final class StarterLink {
     private BukkitTask ioTask;
     private BukkitTask scheduleTask;
     private volatile Paper.Build paperLatest;
-    private long paperChecked;
+    private volatile long paperChecked;
+    private volatile boolean paperFailed;
+    private int paperAnnounced = -1;
+    private BukkitTask paperTask;
 
     public StarterLink(MRAdmin plugin) {
         this.plugin = plugin;
@@ -70,6 +73,8 @@ public final class StarterLink {
         warnedNoRestart = false;
         stopTasks();
         scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 200L, 200L);
+        // Paper: first check after 10 seconds, then every 15 minutes (shown on the server overview).
+        paperTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::checkPaper, 200L, 15 * 60 * 20L);
         if (!active()) {
             return;
         }
@@ -92,12 +97,12 @@ public final class StarterLink {
     }
 
     private void stopTasks() {
-        for (BukkitTask t : new BukkitTask[] {tickTask, ioTask, scheduleTask}) {
+        for (BukkitTask t : new BukkitTask[] {tickTask, ioTask, scheduleTask, paperTask}) {
             if (t != null) {
                 t.cancel();
             }
         }
-        tickTask = ioTask = scheduleTask = null;
+        tickTask = ioTask = scheduleTask = paperTask = null;
     }
 
     /** RestartManager, right before the server goes down. */
@@ -132,13 +137,6 @@ public final class StarterLink {
                 // Answered anyway.
             }
             Bukkit.getScheduler().runTask(plugin, () -> answer(request));
-        }
-        if (settings.paperUpdate().equals("notify") || settings.paperUpdate().equals("auto")) {
-            long hours = plugin.settings().versions().checkHours();
-            if (System.currentTimeMillis() - paperChecked > hours * 3_600_000L) {
-                paperChecked = System.currentTimeMillis();
-                checkPaper();
-            }
         }
     }
 
@@ -312,20 +310,45 @@ public final class StarterLink {
         }
     }
 
+    /** Every 15 minutes, with or without the starter: is the running Paper the newest stable build? */
     private void checkPaper() {
         try {
             Paper.Build build = new Paper(at.marcelr.mradmin.starter.Main.userAgent()).latestStable(Bukkit.getMinecraftVersion());
             paperLatest = build;
-            if (paperUpdate() != null) {
-                plugin.getLogger().info("Paper build " + build.id() + " is available (running "
-                        + Paper.buildOf(Bukkit.getVersion()) + ")" + (settings.paperUpdate().equals("auto")
-                        ? " - the starter installs it on the next restart." : "."));
+            paperFailed = false;
+            Paper.Build update = paperUpdate();
+            // Once per new build in the console, not every 15 minutes.
+            if (update != null && update.id() != paperAnnounced) {
+                paperAnnounced = update.id();
+                boolean auto = active() && settings.paperUpdate().equals("auto");
+                plugin.getLogger().info("Paper build " + update.id() + " is available (running "
+                        + Paper.buildOf(Bukkit.getVersion()) + ")" + (auto
+                        ? " - the starter installs it on the next restart." : " - install it by hand or use the starter."));
             }
         } catch (IOException | RuntimeException e) {
+            paperFailed = true;
             plugin.getLogger().fine("Paper update check failed: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } finally {
+            paperChecked = System.currentTimeMillis();
         }
+    }
+
+    /** Newest stable Paper build of this Minecraft version, -1 if not known (yet). */
+    public int paperLatestBuild() {
+        Paper.Build b = paperLatest;
+        return b == null ? -1 : b.id();
+    }
+
+    /** When Paper was last checked (epoch ms), 0 = not yet. */
+    public long paperChecked() {
+        return paperChecked;
+    }
+
+    /** Whether the last check failed (no connection to PaperMC). */
+    public boolean paperFailed() {
+        return paperFailed;
     }
 
     /** /mradmin starter setup: the files for the starter in the server folder (no downloads). */

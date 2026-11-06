@@ -133,7 +133,7 @@ Everything around the running server is under one entry in the bar: **Server**. 
 
 | Tab | What is there | Permission |
 |---|---|---|
-| **Overview** | Running for how long, [starter](starter.md) active or not, Paper build (and whether a new one is ready), next planned restart. On the right **Restart** and **Stop** with a countdown (`versions.restart-delays`) or the running countdown with **Cancel**. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
+| **Overview** | Running for how long, [starter](starter.md) active or not, Paper build and whether it is up to date (checked every 15 minutes, also without the starter), next planned restart. On the right **Restart** and **Stop** with a countdown (`versions.restart-delays`) or the running countdown with **Cancel**. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
 | **Plugins** | Versions, updates, installing, configuration in the browser - see [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
 | **Log** | Events and console output - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
 | **Console** | Run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |

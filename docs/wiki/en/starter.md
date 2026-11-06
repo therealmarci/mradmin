@@ -12,7 +12,7 @@ The starter is **optional**. Without it MRadmin works as before.
 - **Daily restarts** at fixed times (`server.restart-times`); the countdown starts before.
 - **Crashes:** if the server goes down, the starter starts it again after 10 seconds. After `server.crashes.max` crashes within `server.crashes.window-minutes` minutes (default 3 in 15) it gives up - then something is fundamentally wrong and the server stays down until you look.
 - **Hangs:** if the server has not ticked for `server.hang-seconds` seconds (default 180), the starter ends it and starts it again.
-- **Paper updates** (`server.paper-update: auto`): before every start the newest **stable** build of your Minecraft version from the official PaperMC download, only with a matching checksum. **It never installs a new Minecraft version (e.g. 26.3 → 26.4).** If a new build does not start, the starter goes back to the old one by itself and skips the broken one.
+- **Paper updates** (`server.paper-update: auto`): before every start the newest **stable** build of your Minecraft version from the official PaperMC download, only with a matching checksum. **It never installs a new Minecraft version (e.g. 26.3 → 26.4).** If a new build does not start, the starter goes back to the old one by itself and skips the broken one. MRadmin checks every 15 minutes whether Paper is up to date (also without the starter) and shows it on the page **Server**.
 - **Reports:** crashes, hangs, giving up and Paper updates appear after the next start in the console, in the [log](weboberflaeche.md#log-mradminwebaudit) and in the Discord log (events `server-crash`, `server-hang`, `server-gave-up`, `paper-updated`, `paper-rollback`).
 - **Autostart** when the machine boots.
 
@@ -65,7 +65,7 @@ In the server folder `./mrserver.sh <command>` (Linux) or `mrserver <command>` (
 Times like `30s`, `5m`, `1h`, a number (seconds) or `now`. If MRadmin does not answer (e.g. not installed), `mrserver` stops or restarts right away without a countdown.
 
 ## Settings
-**In the browser or in `config.yml`** (section `server`, Plugins → MRadmin → Configuration → "Starter & planned restarts"). Memory and Java options apply from the next start on.
+**In the browser or in `config.yml`** (section `server`, Server → Plugins → MRadmin → Configuration → "Starter & planned restarts" - it also shows at the top whether the starter is set up and active). Memory and Java options apply from the next start on.
 
 | Key | Default | What for |
 |---|---|---|

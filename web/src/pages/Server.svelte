@@ -142,22 +142,32 @@
                 <span class="chip good">{t('server.starterOn')}</span>
                 {#if r.starter.mode}<span class="muted">{r.starter.mode}</span>{/if}
               {:else}
-                <span class="chip">{t('server.starterOff')}</span>
+                <span class="chip" class:warn={r.starter.ready}>{t(r.starter.ready ? 'server.starterReady' : 'server.starterOff')}</span>
               {/if}
             </dd>
             <dt>{t('server.paper')}</dt>
             <dd>
               <span>{r.paper.minecraft} · {t('server.paperBuild', { build: r.paper.build })}</span>
               {#if r.paper.latest}
-                <span class="chip info" title={t('server.paperMode.' + r.paper.update)}>{t('server.paperLatest', { build: r.paper.latest })}</span>
-              {:else if r.starter.active}
-                <span class="muted">{t('server.paperCurrent')}</span>
+                <span class="chip warn">{t('server.paperLatest', { build: r.paper.latest })}</span>
+              {:else if r.paper.newest >= 0}
+                <span class="chip good">{t('server.paperCurrent')}</span>
+              {:else if r.paper.failed}
+                <span class="muted small">{t('server.paperFailed')}</span>
+              {:else}
+                <span class="muted small">{t('server.paperChecking')}</span>
+              {/if}
+              {#if r.paper.checkedAt > 0}
+                <span class="sub muted small">
+                  {t('server.paperChecked', { time: ago(r.paper.checkedAt) })}{#if r.paper.latest}{' · '}{r.starter.active
+                    ? t('server.paperMode.' + r.paper.update) : t('server.paperManual')}{/if}
+                </span>
               {/if}
             </dd>
             <dt>{t('server.next')}</dt>
             <dd>{nextText || t('server.nextNone')}</dd>
           </dl>
-          {#if !r.starter.active}<p class="muted small hint">{t('server.starterHint')}</p>{/if}
+          {#if !r.starter.active}<p class="muted small hint">{t(r.starter.ready ? 'config.status.starter-ready' : 'server.starterHint')}</p>{/if}
         </div>
 
         <div class="control">
@@ -387,6 +397,16 @@
     color: var(--good);
     border-color: color-mix(in srgb, var(--good) 40%, transparent);
     background: color-mix(in srgb, var(--good) 12%, transparent);
+  }
+
+  .chip.warn {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+  }
+
+  .sub {
+    flex-basis: 100%;
   }
 
   .chip.info {

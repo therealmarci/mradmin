@@ -63,6 +63,10 @@ public final class ConfigRoutes {
         result.put("version", loaded.version());
         result.put("sections", loaded.form().view(loaded.file(), loaded.defaults()));
         result.put("worlds", server.sync(() -> Bukkit.getWorlds().stream().map(World::getName).toList()));
+        // Live state next to a section (only MRadmin itself: is the starter set up and in use?).
+        if (plugin.getName().equals(http.param("plugin"))) {
+            result.put("status", Map.of("server", starterStatus()));
+        }
         http.json(200, result);
     }
 
@@ -131,5 +135,26 @@ public final class ConfigRoutes {
         result.put("version", loaded.version());
         result.put("sections", loaded.form().view(loaded.file(), loaded.defaults()));
         http.json(200, result);
+    }
+
+    /**
+     * Section "server" of MRadmin's config: active = the server runs under the starter, ready = the files are there
+     * but the server was started another way, none = not set up. The page shows a text for the key.
+     */
+    private Map<String, Object> starterStatus() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (plugin.starter().active()) {
+            String mode = System.getenv("MRADMIN_STARTER_MODE");
+            m.put("tone", "good");
+            m.put("key", "starter-active");
+            m.put("mode", mode == null ? "?" : mode);
+        } else if (new java.io.File(Bukkit.getWorldContainer(), "mrserver.properties").isFile()) {
+            m.put("tone", "warn");
+            m.put("key", "starter-ready");
+        } else {
+            m.put("tone", "info");
+            m.put("key", "starter-none");
+        }
+        return m;
     }
 }

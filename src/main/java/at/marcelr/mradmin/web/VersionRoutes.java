@@ -106,12 +106,18 @@ public final class VersionRoutes {
         Map<String, Object> starterInfo = new LinkedHashMap<>();
         starterInfo.put("active", starter.active());
         starterInfo.put("mode", starter.active() ? System.getenv("MRADMIN_STARTER_MODE") : null);
+        // Set up (mrserver.properties there) but the server was started another way.
+        starterInfo.put("ready", !starter.active() && new java.io.File(org.bukkit.Bukkit.getWorldContainer(), "mrserver.properties").isFile());
         restart.put("starter", starterInfo);
         Map<String, Object> paper = new LinkedHashMap<>();
         paper.put("build", at.marcelr.mradmin.starter.Paper.buildOf(org.bukkit.Bukkit.getVersion()));
         paper.put("minecraft", org.bukkit.Bukkit.getMinecraftVersion());
         var update = starter.paperUpdate();
+        // latest = a newer build (null if current or unknown); newest = newest stable build at all, -1 = not checked yet.
         paper.put("latest", update == null ? null : update.id());
+        paper.put("newest", starter.paperLatestBuild());
+        paper.put("checkedAt", starter.paperChecked());
+        paper.put("failed", starter.paperFailed());
         paper.put("update", starter.settings() == null ? "auto" : starter.settings().paperUpdate());
         restart.put("paper", paper);
         var next = starter.nextPlanned();
