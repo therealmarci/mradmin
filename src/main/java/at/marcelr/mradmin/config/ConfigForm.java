@@ -47,7 +47,7 @@ public final class ConfigForm {
     /**
      * @param when     shown only if this is true: "key" (a bool is on), "!key" (off), "key=a|b" (one of the values)
      * @param count    lists: exactly this many entries (0 = any)
-     * @param item     lists: "duration" = every entry is a duration
+     * @param item     lists: "duration" = every entry is a duration, "time" = a time of day HH:MM (sorted, no doubles)
      * @param permanent durations: "permanent" is allowed too
      * @param rows     tables: names of the rows (rows without a name show their key)
      */
@@ -278,7 +278,9 @@ public final class ConfigForm {
             case BOOL -> raw instanceof Boolean b ? b : Boolean.parseBoolean(String.valueOf(raw));
             case INT -> raw instanceof Number n ? (Object) n.longValue() : parseLong(raw);
             case DECIMAL -> raw instanceof Number n ? (Object) n.doubleValue() : parseDouble(raw);
-            case STRINGS, CHOICES, WORLDS -> raw instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+            // Times written by hand without quotes: YAML reads 5:30 as the number 330 (minutes) - shown as 05:30 again.
+            case STRINGS, CHOICES, WORLDS -> raw instanceof List<?> l ? l.stream().map(o -> "time".equals(f.item()) && o instanceof Number n
+                    ? String.format("%02d:%02d", n.intValue() / 60 % 24, n.intValue() % 60) : String.valueOf(o)).toList() : List.of();
             case INTS -> raw instanceof List<?> l ? l.stream().map(ConfigForm::parseLong).toList() : List.of();
             case TABLE -> {
                 Map<String, Object> rows = new LinkedHashMap<>();
@@ -431,7 +433,13 @@ public final class ConfigForm {
                     if (s.isEmpty() || s.length() > 200 || s.indexOf('\n') >= 0) {
                         throw new Invalid(key, "config-invalid");
                     }
-                    result.add("duration".equals(f.item()) ? duration(f, s) : s);
+                    String entry = "duration".equals(f.item()) ? duration(f, s) : "time".equals(f.item()) ? time(f, s) : s;
+                    if (!"time".equals(f.item()) || !result.contains(entry)) {
+                        result.add(entry);
+                    }
+                }
+                if ("time".equals(f.item())) {
+                    result.sort(null);
                 }
                 return result;
             }
@@ -483,6 +491,15 @@ public final class ConfigForm {
             }
             default -> throw new Invalid(key, "config-invalid");
         }
+    }
+
+    /** A time of day as HH:MM (5:30 -> 05:30), otherwise {@link Invalid}. */
+    static String time(Field f, String raw) throws Invalid {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^([01]?\\d|2[0-3]):([0-5]\\d)$").matcher(raw.trim());
+        if (!m.matches()) {
+            throw new Invalid(f.key(), "config-time");
+        }
+        return String.format("%02d:%s", Integer.parseInt(m.group(1)), m.group(2));
     }
 
     private static String duration(Field f, String raw) throws Invalid {

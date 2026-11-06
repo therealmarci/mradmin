@@ -22,6 +22,20 @@ public record ServerSettings(String memoryMin, String memoryMax, String javaFlag
                              List<LocalTime> restartTimes, long countdown, String plainStop, int crashMax,
                              int crashWindowMinutes, int hangSeconds, int stopTimeoutSeconds) {
 
+    /**
+     * "05:00" or "5:00"; a number is a time written without quotes, which YAML reads as minutes (5:30 -> 330).
+     *
+     * @return null if it is no time of day
+     */
+    static LocalTime time(Object raw) {
+        if (raw instanceof Number n) {
+            int minutes = n.intValue();
+            return n.doubleValue() == minutes && minutes >= 0 && minutes < 1440 ? LocalTime.of(minutes / 60, minutes % 60) : null;
+        }
+        var m = java.util.regex.Pattern.compile("^([01]?\\d|2[0-3]):([0-5]\\d)$").matcher(String.valueOf(raw).trim());
+        return m.matches() ? LocalTime.of(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))) : null;
+    }
+
     public static ServerSettings load(FileConfiguration c, Logger log) {
         String min = JavaFlags.memory(c.getString("server.memory-min", "1G"));
         String max = JavaFlags.memory(c.getString("server.memory-max", "4G"));
@@ -43,11 +57,12 @@ public record ServerSettings(String memoryMin, String memoryMax, String javaFlag
             update = "auto";
         }
         List<LocalTime> times = new ArrayList<>();
-        for (String raw : c.getStringList("server.restart-times")) {
-            try {
-                times.add(LocalTime.parse(raw.trim().length() == 4 ? "0" + raw.trim() : raw.trim()));
-            } catch (RuntimeException e) {
-                log.warning("server.restart-times: '" + raw + "' is not a time like 05:00, skipped.");
+        for (Object raw : c.getList("server.restart-times", List.of())) {
+            LocalTime time = time(raw);
+            if (time == null) {
+                log.warning("server.restart-times: '" + raw + "' is not a time like \"05:00\", skipped.");
+            } else if (!times.contains(time)) {
+                times.add(time);
             }
         }
         long countdown = DurationUtil.parse(c.getString("server.countdown", "5m"));

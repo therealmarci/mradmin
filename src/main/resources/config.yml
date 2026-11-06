@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 47
+config-version: 48
 
 
 # ------------------------------------------------------------------------------
@@ -386,7 +386,8 @@ server:
   # new Minecraft version, e.g. 26.3 -> 26.4), "notify" = only show it, "off". If a new build does not start, the
   # starter goes back to the old one by itself.
   paper-update: "auto"
-  # Planned restarts every day at these times (HH:MM, time zone general.timezone), e.g. ["05:00"]. [] = none.
+  # Planned restarts every day at these times (HH:MM in quotes, time zone general.timezone), e.g. ["05:00", "17:30"].
+  # [] = none.
   # The countdown starts before, so the server goes down at the time.
   restart-times: []
   # Countdown of planned restarts and of "mrserver stop" / "mrserver restart" without a time (up to 1h).

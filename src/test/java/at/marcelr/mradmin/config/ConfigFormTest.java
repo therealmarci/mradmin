@@ -149,4 +149,28 @@ class ConfigFormTest {
             return e.error;
         }
     }
+
+    @Test
+    void timesOfDayAreCheckedSortedAndReadBack() throws Exception {
+        ConfigForm form = ConfigForm.parse("""
+                sections:
+                  - id: server
+                    fields:
+                      - {key: server.restart-times, type: strings, item: time}
+                """);
+        YamlConfiguration defaults = yaml("server:\n  restart-times: []\n");
+        YamlConfiguration file = yaml("server:\n  restart-times: []\n");
+        form.apply(file, defaults, Map.of("server.restart-times", List.of("17:30", "5:00", "05:00")));
+        assertEquals(List.of("05:00", "17:30"), file.getStringList("server.restart-times"));
+        // Written so that it reads back as text, not as a number.
+        assertEquals(List.of("05:00", "17:30"), yaml(file.saveToString()).getList("server.restart-times"));
+        for (String bad : List.of("5", "0500", "24:00", "12:60", "abends")) {
+            assertEquals("config-time", invalid(form, defaults, Map.of("server.restart-times", List.of(bad))), bad);
+        }
+        // By hand without quotes YAML makes 5:30 the number 330 - the form shows 05:30.
+        List<Map<String, Object>> view = form.view(yaml("server:\n  restart-times: [5:30, \"06:00\"]\n"), defaults);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) view.get(0).get("fields");
+        assertEquals(List.of("05:30", "06:00"), fields.get(0).get("value"));
+    }
 }
