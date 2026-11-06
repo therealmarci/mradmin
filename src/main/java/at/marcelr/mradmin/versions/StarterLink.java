@@ -34,6 +34,7 @@ public final class StarterLink {
     private final StarterFiles files;
     private ServerSettings settings;
     private final Set<String> planned = new HashSet<>();
+    private boolean warnedNoRestart;
     private volatile long lastTick;
     private volatile String wish;
     private BukkitTask tickTask;
@@ -66,6 +67,7 @@ public final class StarterLink {
     /** On enable and after /mradmin reload. */
     public void start() {
         settings = ServerSettings.load(plugin.getConfig(), plugin.getLogger());
+        warnedNoRestart = false;
         stopTasks();
         scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 200L, 200L);
         if (!active()) {
@@ -174,7 +176,15 @@ public final class StarterLink {
     // ------------------------------------------------------------------ planned restarts
 
     private void checkSchedule() {
-        if (settings.restartTimes().isEmpty() || !plugin.restarts().enabled() || plugin.restarts().running()) {
+        if (settings.restartTimes().isEmpty() || plugin.restarts().running()) {
+            return;
+        }
+        if (!plugin.restarts().enabled()) {
+            if (!warnedNoRestart) {
+                warnedNoRestart = true;
+                plugin.getLogger().warning("server.restart-times is set, but nothing brings the server back - planned "
+                        + "restarts are skipped. Use the starter (/mradmin starter setup) or versions.restart-method.");
+            }
             return;
         }
         ZonedDateTime now = ZonedDateTime.now(plugin.settings().zone());
