@@ -10,6 +10,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 ## [Unveröffentlicht]
 
 ### Behoben & geändert
+- **Konfiguration von MRadmin im Browser zeigte nach dem Speichern weiter „Änderungen · Speichern“:** Beim Speichern lädt MRadmin neu, und dabei startete der Webserver jedes Mal neu - das brach genau die Speichern-Anfrage ab, ihre Antwort kam nie an. Gespeichert war trotzdem. Jetzt startet der Webserver beim Neuladen nur noch neu, wenn sich Adresse oder Port ändern (oder er aus- bzw. eingeschaltet wird), und dann kurz verzögert. Geht eine Antwort doch einmal verloren, liest die Seite die Konfiguration neu und zählt nur noch, was wirklich nicht gespeichert ist.
 - **Ruhigere Ausgabe beim Einrichten:** `mrserver install` versucht linger ohne root nur noch, wenn eine Passwortabfrage möglich ist (keine Meldung „Failed to execute pkttyagent“ mehr), und `mrserver.sh` lädt MRadmin ohne Fortschrittsbalken.
 
 ## [1.3.1] - 2026-11-07

@@ -208,9 +208,38 @@
         document.getElementById('field-' + key)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
         error = errorText(e);
+        await recheck();
       }
     } finally {
       busy = false;
+    }
+  }
+
+  /**
+   * The answer got lost (connection gone, server busy restarting): read the config again and drop every change that
+   * is already in the file - so the save bar only counts what is really not saved yet.
+   */
+  async function recheck() {
+    try {
+      const fresh = await api('GET', `/config/${encodeURIComponent(plugin)}`);
+      const keys = Object.fromEntries(fresh.sections.flatMap((s) => s.fields).map((f) => [f.key, f]));
+      const next = {};
+      for (const [key, v] of Object.entries($state.snapshot(draft))) {
+        const f = keys[key];
+        if (!f) continue;
+        const saved = f.type === 'table'
+          ? Object.entries(v).every(([row, cells]) => Object.entries(cells).every(([col, c]) => same(c, f.value[row]?.[col])))
+          : same(v, f.value);
+        if (!saved) next[key] = v;
+      }
+      data = fresh;
+      draft = next;
+      if (!Object.keys(next).length) {
+        error = '';
+        message = t('config.saved', { plugin });
+      }
+    } catch {
+      // still not reachable - keep everything as it is, the error stays visible
     }
   }
 
