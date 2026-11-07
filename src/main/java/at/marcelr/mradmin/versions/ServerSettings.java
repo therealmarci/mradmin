@@ -17,10 +17,11 @@ import java.util.logging.Logger;
  *
  * @param countdown  ms before planned restarts and for mrserver stop/restart without a time
  * @param plainStop  "stop" or "restart": what a plain /stop does with the starter
+ * @param discordAnnounce countdowns of restarts and stops also go to the community Discord (default off)
  */
 public record ServerSettings(String memoryMin, String memoryMax, String javaFlags, String paperUpdate,
                              List<LocalTime> restartTimes, long countdown, String plainStop, int crashMax,
-                             int crashWindowMinutes, int hangSeconds, int stopTimeoutSeconds) {
+                             int crashWindowMinutes, int hangSeconds, int stopTimeoutSeconds, boolean discordAnnounce) {
 
     /**
      * "05:00" or "5:00"; a number is a time written without quotes, which YAML reads as minutes (5:30 -> 330).
@@ -78,6 +79,7 @@ public record ServerSettings(String memoryMin, String memoryMax, String javaFlag
                 countdown, plainStop, Math.clamp(c.getInt("server.crashes.max", 3), 1, 100),
                 Math.clamp(c.getInt("server.crashes.window-minutes", 15), 1, 1440),
                 Math.clamp(c.getInt("server.hang-seconds", 180), 0, 3600),
-                Math.clamp(c.getInt("server.stop-timeout-seconds", 180), 30, 3600));
+                Math.clamp(c.getInt("server.stop-timeout-seconds", 180), 30, 3600),
+                c.getBoolean("server.discord-announce", false));
     }
 }

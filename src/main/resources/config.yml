@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 48
+config-version: 49
 
 
 # ------------------------------------------------------------------------------
@@ -394,6 +394,9 @@ server:
   countdown: "5m"
   # What /stop (console or game) does under the starter: "stop" = the server stays down, "restart" = it comes back.
   plain-stop: "stop"
+  # Countdowns of restarts and stops also in the community Discord (discord-announce). The team log (discord)
+  # always gets them, with the reason.
+  discord-announce: false
   crashes:
     # The starter gives up after this many crashes within window-minutes - the server then stays down.
     max: 3

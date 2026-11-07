@@ -256,7 +256,7 @@ Alles rund um den laufenden Server steht unter einem Eintrag in der Leiste: **Se
 
 | Reiter | Was dort ist | Recht |
 |---|---|---|
-| **Übersicht** | Läuft seit wann, [Starter](wiki/starter.md) aktiv oder nicht, Paper-Build und ob er aktuell ist (geprüft alle 15 Minuten, auch ohne Starter), nächster geplanter Neustart. Rechts **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`) bzw. der laufende Countdown mit **Abbrechen**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
+| **Übersicht** | Läuft seit wann, [Starter](wiki/starter.md) aktiv oder nicht, Paper-Build und ob er aktuell ist (geprüft alle 15 Minuten, auch ohne Starter), nächster geplanter Neustart. Rechts **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`) bzw. der laufende Countdown (mit Grund) und **Abbrechen**; optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
 | **Plugins** | Versionen, Updates, Installieren, Konfiguration im Browser - siehe [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
 | **Protokoll** | Ereignisse und Konsolenausgabe - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
 | **Konsole** | Befehle ausführen - siehe [Konsole](#konsole-mradminwebconsoleexecute) | `mradmin.web.console.execute` |

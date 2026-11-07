@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(19, Map.ofEntries(
+    private final Messages messages = new Messages(20, Map.ofEntries(
+            // 20: restarts and stops name their reason.
+            Map.entry(20, Set.of("discord.server-restart", "discord.server-stop", "server-usage")),
             // 19: the map is shown by MRadmin (player page), squaremap only renders.
             Map.entry(19, Set.of("help-map", "help-map-admin", "map-link", "map-unavailable", "map-status-on", "map-status-off")),
             // 18: only a short warning fills the screen, the text comes in the chat.

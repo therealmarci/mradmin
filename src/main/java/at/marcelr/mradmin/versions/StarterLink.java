@@ -175,7 +175,9 @@ public final class StarterLink {
 
     /** mrserver stop|restart|cancel [time] - answered in request.answer (English, console tool). */
     private void answer(String request) {
-        String[] parts = request.split(" ");
+        // "kind time timestamp [reason ...]" - the reason may contain spaces.
+        String[] parts = request.split(" ", 4);
+        String reason = parts.length > 3 ? parts[3] : null;
         String kind = parts[0];
         String time = parts.length > 1 ? parts[1] : "-";
         String text;
@@ -190,7 +192,7 @@ public final class StarterLink {
                 text = "Invalid time: " + time;
             } else if (restarts.running()) {
                 text = "A countdown is already running - mrserver cancel first.";
-            } else if (restarts.start(delay, "console (mrserver)", kind.equals("restart"))) {
+            } else if (restarts.start(delay, "console (mrserver)", kind.equals("restart"), reason)) {
                 text = "OK - " + (kind.equals("restart") ? "restart" : "stop")
                         + (delay == 0 ? " now." : " in " + Texts.duration(delay) + " (announced in game).");
             } else {
@@ -226,7 +228,9 @@ public final class StarterLink {
                 String key = at.toString();
                 if (until > 0 && until <= settings.countdown() + 15_000L && planned.add(key)) {
                     plugin.getLogger().info("Planned restart at " + time + ".");
-                    plugin.restarts().start(until, "schedule", true);
+                    String why = plugin.messages().server(() -> plugin.messages().plain("restart-reason-schedule"))
+                            .replace("{time}", time.toString());
+                    plugin.restarts().start(until, "schedule", true, why);
                     return;
                 }
             }

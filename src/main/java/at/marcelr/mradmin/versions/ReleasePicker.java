@@ -13,7 +13,8 @@ import java.util.regex.Pattern;
 /**
  * Picks the newest fitting release of an MRtechnology plugin from the GitHub releases list. Pure logic, no server
  * access. A release fits if it has a JAR named like the plugin for this Minecraft version
- * ({@code MRsleep-mc26.3-v1.2.0.jar}; the MRtoolbar mod: {@code MRtoolbar-mod-mc26.3-v0.2.1.jar}) - the tag does not
+ * ({@code MRsleep-mc26.3-STA-1.4.0-bu001.jar}, older {@code MRsleep-mc26.3-v1.2.0.jar}; the MRtoolbar mod:
+ * {@code MRtoolbar-mod-mc26.3-v0.2.1.jar}) - the tag does not
  * matter, so repositories with plugin and mod releases ({@code plugin-mc...}, {@code mod-mc...}) work too.
  */
 public final class ReleasePicker {
@@ -27,7 +28,7 @@ public final class ReleasePicker {
     /**
      * A fitting release.
      *
-     * @param version plugin version without prefix, e.g. "1.2.0"
+     * @param version plugin version without prefix, e.g. "STA-1.4.0-bu001" or (older releases) "1.2.0"
      * @param sha256  checksum GitHub keeps for the JAR (hex), null if there is none
      * @param notes   release text (Markdown)
      */
@@ -43,7 +44,7 @@ public final class ReleasePicker {
      */
     public static Release pick(JsonArray releases, String name, String minecraft, boolean mod, boolean prereleases) {
         Pattern jar = Pattern.compile("^" + Pattern.quote(name) + (mod ? "-mod" : "") + "-mc" + Pattern.quote(minecraft)
-                + "-v(.+)\\.jar$", Pattern.CASE_INSENSITIVE);
+                + "-(v.+|(?:STA|BET)-.+)\\.jar$", Pattern.CASE_INSENSITIVE);
         Release best = null;
         for (JsonElement element : releases) {
             if (!element.isJsonObject()) {
@@ -60,7 +61,7 @@ public final class ReleasePicker {
                 if (!m.matches()) {
                     continue;
                 }
-                String version = m.group(1);
+                String version = Versions.plugin(m.group(1));
                 if (best == null || Versions.compare(version, best.version()) > 0) {
                     String digest = string(asset, "digest");
                     best = new Release(string(release, "tag_name"), version, prerelease, string(release, "html_url"),
@@ -79,29 +80,15 @@ public final class ReleasePicker {
         if (Versions.compare(latest, installed) <= 0) {
             return false;
         }
-        int[] a = core(installed);
-        int[] b = core(latest);
+        // PATCH also covers new builds of the same version (BET-1.4.0-bu001 -> STA-1.4.0-bu002)
+        int[] a = Versions.parts(installed);
+        int[] b = Versions.parts(latest);
         return switch (mode) {
             case OFF -> false;
             case ALL -> true;
             case MINOR -> a[0] == b[0];
             case PATCH -> a[0] == b[0] && a[1] == b[1];
         };
-    }
-
-    /** MAJOR, MINOR of "1.2.3", "v1.2.3-rc.1" or "1.2.3+mc26.3"; missing parts are 0. */
-    private static int[] core(String version) {
-        String plain = Versions.plugin(version).split("[-+]", 2)[0];
-        String[] parts = plain.split("\\.");
-        int[] result = new int[2];
-        for (int i = 0; i < 2 && i < parts.length; i++) {
-            try {
-                result[i] = Integer.parseInt(parts[i]);
-            } catch (NumberFormatException e) {
-                result[i] = 0;
-            }
-        }
-        return result;
     }
 
     private static boolean bool(JsonObject o, String key) {

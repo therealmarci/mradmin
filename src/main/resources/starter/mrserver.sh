@@ -42,9 +42,9 @@ if [ ! -f "$JAR" ]; then
         mkdir -p plugins
         PLUGIN="plugins/${URL##*/}"
         if command -v curl >/dev/null 2>&1; then
-            curl -fL -o "$PLUGIN" "$URL" || { rm -f "$PLUGIN"; exit 1; }
+            curl -fsSL -o "$PLUGIN" "$URL" || { rm -f "$PLUGIN"; exit 1; }
         else
-            wget -O "$PLUGIN" "$URL" || { rm -f "$PLUGIN"; exit 1; }
+            wget -qO "$PLUGIN" "$URL" || { rm -f "$PLUGIN"; exit 1; }
         fi
         DOWNLOADED="--downloaded"
     fi

@@ -65,8 +65,8 @@ public final class Main {
                   mrserver uninstall          no autostart any more
                   mrserver start              start the server (in the background)
                   mrserver run                run the server in this terminal
-                  mrserver stop [time|now]    stop with a countdown (e.g. 60, 5m, now)
-                  mrserver restart [time|now] restart with a countdown
+                  mrserver stop [time|now] [reason]     stop with a countdown (e.g. 5m Hardware)
+                  mrserver restart [time|now] [reason]  restart with a countdown
                   mrserver cancel             cancel a countdown
                   mrserver status             is the server running?
                   mrserver console <command>  send a command to the server console

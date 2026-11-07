@@ -19,11 +19,14 @@ final class Control {
     }
 
     static int request(StarterFiles files, String kind, List<String> args) throws IOException, InterruptedException {
-        String time = args.isEmpty() ? "" : args.getFirst().toLowerCase(Locale.ROOT);
-        if (!time.isEmpty() && !time.matches("now|jetzt|[0-9]+|([0-9]+[smhd])+")) {
-            System.out.println("'" + time + "' is not a time - e.g. 60 (seconds), 5m, 1h or now.");
-            return 2;
+        // [time] [reason ...] - without a time, MRadmin's countdown applies and everything is the reason.
+        String time = "";
+        List<String> rest = args;
+        if (!args.isEmpty() && args.getFirst().toLowerCase(Locale.ROOT).matches("now|jetzt|[0-9]+|([0-9]+[smhd])+")) {
+            time = args.getFirst().toLowerCase(Locale.ROOT);
+            rest = args.subList(1, args.size());
         }
+        String reason = String.join(" ", rest).replaceAll("[\\r\\n]+", " ").strip();
         boolean running = Main.supervisorRunning(files);
         if (!running) {
             if (kind.equals("restart")) {
@@ -35,7 +38,8 @@ final class Control {
         }
         var answer = files.request().resolveSibling("request.answer");
         Files.deleteIfExists(answer);
-        StarterFiles.writeText(files.request(), kind + " " + (time.isEmpty() ? "-" : time) + " " + System.currentTimeMillis());
+        StarterFiles.writeText(files.request(), kind + " " + (time.isEmpty() ? "-" : time) + " " + System.currentTimeMillis()
+                + (reason.isEmpty() || kind.equals("cancel") ? "" : " " + reason));
         long until = System.currentTimeMillis() + ANSWER_MS;
         while (System.currentTimeMillis() < until) {
             Thread.sleep(200L);

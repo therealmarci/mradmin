@@ -115,9 +115,38 @@
     if (!needle) return true;
     return [tx(f.name), tx(f.help), f.key].some((s) => s.toLowerCase().includes(needle));
   }
+  // Advanced settings: folded away unless switched on (remembered per browser) - while searching, all are found.
+  let showAdvanced = $state((() => { try { return localStorage.getItem('mradmin.config.advanced') === '1'; } catch { return false; } })());
+  $effect(() => {
+    try { localStorage.setItem('mradmin.config.advanced', showAdvanced ? '1' : '0'); } catch { /* private window */ }
+  });
+  const folded = (f) => f.advanced && !showAdvanced && !needle && !(f.key in draft) && !fieldErrors[f.key];
+
+  /**
+   * Sections with the fields to show. A field's "heading" starts a block; it is printed before the first field of
+   * the block that is shown (sub), so a heading never stands alone. hidden = folded advanced fields of the section.
+   */
   const visible = $derived(
-    data ? data.sections.map((s) => ({ ...s, list: s.fields.filter((f) => shown(f) && matches(f)) })).filter((s) => s.list.length) : [],
+    data
+      ? data.sections
+          .map((s) => {
+            const list = [];
+            let block = '';
+            let printed = '';
+            let hidden = 0;
+            for (const f of s.fields) {
+              if (tx(f.heading)) block = tx(f.heading);
+              if (!shown(f) || !matches(f)) continue;
+              if (folded(f)) { hidden++; continue; }
+              list.push({ ...f, sub: block && block !== printed ? block : '' });
+              printed = block;
+            }
+            return { ...s, list, hidden };
+          })
+          .filter((s) => s.list.length || s.hidden)
+      : [],
   );
+  const anyAdvanced = $derived(!!data?.sections.some((s) => s.fields.some((f) => f.advanced)));
 
   let jumping = 0;
   function jump(id) {
@@ -208,9 +237,38 @@
         document.getElementById('field-' + key)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
         error = errorText(e);
+        await recheck();
       }
     } finally {
       busy = false;
+    }
+  }
+
+  /**
+   * The answer got lost (connection gone, server busy restarting): read the config again and drop every change that
+   * is already in the file - so the save bar only counts what is really not saved yet.
+   */
+  async function recheck() {
+    try {
+      const fresh = await api('GET', `/config/${encodeURIComponent(plugin)}`);
+      const keys = Object.fromEntries(fresh.sections.flatMap((s) => s.fields).map((f) => [f.key, f]));
+      const next = {};
+      for (const [key, v] of Object.entries($state.snapshot(draft))) {
+        const f = keys[key];
+        if (!f) continue;
+        const saved = f.type === 'table'
+          ? Object.entries(v).every(([row, cells]) => Object.entries(cells).every(([col, c]) => same(c, f.value[row]?.[col])))
+          : same(v, f.value);
+        if (!saved) next[key] = v;
+      }
+      data = fresh;
+      draft = next;
+      if (!Object.keys(next).length) {
+        error = '';
+        message = t('config.saved', { plugin });
+      }
+    } catch {
+      // still not reachable - keep everything as it is, the error stays visible
     }
   }
 
@@ -377,7 +435,17 @@
     <div class="layout">
       <nav class="sections" aria-label={t('config.sections')}>
         <input class="search" type="search" placeholder={t('config.search')} bind:value={query} />
-        {#each visible as s}
+        {#if anyAdvanced}
+          <label class="adv-switch">
+            <input type="checkbox" bind:checked={showAdvanced} />
+            <span class="track" aria-hidden="true"></span>
+            {t('config.advanced')}
+          </label>
+        {/if}
+        {#each visible as s, i}
+          {#if tx(s.group) && tx(s.group) !== tx(visible[i - 1]?.group ?? { de: '', en: '' })}
+            <span class="nav-group">{tx(s.group)}</span>
+          {/if}
           <button type="button" class:on={active === s.id} onclick={() => jump(s.id)}>
             {tx(s.name)}
             {#if s.list.some((f) => f.key in draft)}<span class="dirty" title={t('config.changed')}></span>{/if}
@@ -406,14 +474,21 @@
               {/if}
             </header>
             {#each s.list as f (f.key)}
+              {#if f.sub}<h4 class="sub">{f.sub}</h4>{/if}
               <div class="field" class:wide={f.type === 'table' || f.type === 'text'} class:changed={f.key in draft}
                 class:invalid={fieldErrors[f.key]} id={'field-' + f.key}>
                 <div class="label">
                   <span class="name">
                     {tx(f.name)}
+                    {#if tx(f.help)}
+                      <!-- Explanation behind a small "i": hover or focus (tap on phones) shows it -->
+                      <button type="button" class="info" aria-label={t('config.info')}>
+                        i<span class="tip" role="tooltip">{tx(f.help)}</span>
+                      </button>
+                    {/if}
+                    {#if f.advanced}<span class="tag adv">{t('config.advancedTag')}</span>{/if}
                     {#if f.restart}<span class="tag">{t('config.restart')}</span>{/if}
                   </span>
-                  {#if tx(f.help)}<span class="help">{tx(f.help)}</span>{/if}
                   {#if fieldErrors[f.key]}<span class="help bad-text">{fieldErrors[f.key]}</span>{/if}
                 </div>
                 <div class="input">
@@ -424,6 +499,11 @@
                 </div>
               </div>
             {/each}
+            {#if s.hidden}
+              <button type="button" class="more-adv" onclick={() => (showAdvanced = true)}>
+                + {t(s.hidden === 1 ? "config.moreAdvancedOne" : "config.moreAdvanced", { n: s.hidden })}
+              </button>
+            {/if}
           </section>
         {:else}
           <p class="muted">{t('config.noMatch')}</p>
@@ -563,7 +643,7 @@
     border: 1px solid var(--border);
     background: var(--surface);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    /* no overflow: hidden - the explanations (i) may reach over the edge */
   }
 
   .box header {
@@ -963,6 +1043,170 @@
     padding: 6px 12px;
     font-size: 0.84rem;
     white-space: nowrap;
+  }
+
+  /* Navigation: group headings and the switch for advanced settings */
+  .nav-group {
+    margin: 12px 10px 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0.8;
+  }
+
+  .adv-switch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 2px 0 4px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .adv-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+
+  .adv-switch .track {
+    position: relative;
+    flex: none;
+    width: 30px;
+    height: 17px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .adv-switch .track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.15s, background 0.15s;
+  }
+
+  .adv-switch input:checked + .track {
+    background: color-mix(in srgb, var(--accent) 30%, var(--surface-2));
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  }
+
+  .adv-switch input:checked + .track::after {
+    transform: translateX(13px);
+    background: var(--accent);
+  }
+
+  .adv-switch input:focus-visible + .track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Blocks inside a section */
+  .sub {
+    margin: 0;
+    padding: 14px 20px 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .box header + .sub {
+    border-top: 0;
+  }
+
+  /* Explanation behind a small "i" */
+  .info {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 17px;
+    height: 17px;
+    margin-left: 6px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+    background: transparent;
+    color: var(--muted);
+    font: italic 700 0.7rem/1 Georgia, 'Times New Roman', serif;
+    vertical-align: 1px;
+    cursor: help;
+  }
+
+  .info:hover,
+  .info:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .info .tip {
+    position: absolute;
+    left: -6px;
+    top: calc(100% + 8px);
+    z-index: 30;
+    width: max-content;
+    max-width: min(340px, 78vw);
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    font: 400 0.84rem/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-style: normal;
+    text-align: left;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-3px);
+    transition: opacity 0.12s, transform 0.12s, visibility 0.12s;
+    pointer-events: none;
+  }
+
+  .info:hover .tip,
+  .info:focus .tip {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .tag.adv {
+    color: var(--muted);
+    background: color-mix(in srgb, var(--muted) 14%, transparent);
+  }
+
+  .more-adv {
+    display: block;
+    width: 100%;
+    padding: 10px 20px;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .more-adv:hover {
+    color: var(--accent);
   }
 
   /* Live state of a section (e.g. MRadmin: is the starter set up?) */

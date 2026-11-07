@@ -57,6 +57,9 @@ public final class WebServer {
     private final List<Route> routes = new ArrayList<>();
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private HttpServer server;
+    /** Address the running server listens on (to see whether a reload must restart it). */
+    private String boundBind;
+    private int boundPort;
     private ExecutorService executor;
     private final WebEvents events = new WebEvents();
     private volatile Map<String, Object> snapshot = Map.of();
@@ -199,7 +202,24 @@ public final class WebServer {
     // --------------------------------------------------------------- lifecycle
 
     /** Starts (or restarts) with the current settings; does nothing if web.enabled is false. */
+    /**
+     * On enable and after every reload. A running server is only restarted if its address changes or it is switched
+     * off - and then a moment later: a restart ends all running requests, among them the one that caused the reload
+     * (saving the config in the browser), which would never get its answer.
+     */
     public void start() {
+        Settings.WebSettings s = plugin.settings().web();
+        if (server != null) {
+            if (s.enabled() && s.bind().equals(boundBind) && s.port() == boundPort) {
+                return;
+            }
+            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, this::restart, 40L);
+            return;
+        }
+        restart();
+    }
+
+    private void restart() {
         stop();
         Settings.WebSettings s = plugin.settings().web();
         if (!s.enabled()) {
@@ -211,6 +231,8 @@ public final class WebServer {
             server.setExecutor(executor);
             server.createContext("/", this::handle);
             server.start();
+            boundBind = s.bind();
+            boundPort = s.port();
             snapshotTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> snapshot = WebSnapshot.build(plugin), 1L, 20L);
             // Retention period of the log (web.privacy.audit-retention): now and every 6 hours.
             pruneTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, () -> plugin.storage().pruneAudit(
