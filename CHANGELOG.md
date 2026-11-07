@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Ruhigere Ausgabe beim Einrichten:** `mrserver install` versucht linger ohne root nur noch, wenn eine Passwortabfrage möglich ist (keine Meldung „Failed to execute pkttyagent“ mehr), und `mrserver.sh` lädt MRadmin ohne Fortschrittsbalken.
+
 ## [1.3.1] - 2026-11-07
 
 ### Neu

@@ -96,7 +96,8 @@ final class Service {
                 String user = System.getProperty("user.name");
                 if (Files.exists(Path.of("/var/lib/systemd/linger", user))) {
                     System.out.println("Linger is on - the server also runs while you are logged out.");
-                } else if (quiet(List.of("loginctl", "enable-linger", user)) == 0
+                } else if (("root".equals(user) || Files.isExecutable(Path.of("/usr/bin/pkttyagent")))
+                        && quiet(List.of("loginctl", "enable-linger", user)) == 0
                         && Files.exists(Path.of("/var/lib/systemd/linger", user))) {
                     System.out.println("Linger switched on - the server also runs while you are logged out.");
                 } else {
