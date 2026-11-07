@@ -60,6 +60,31 @@ class ReleasePickerTest {
     }
 
     @Test
+    void newSchemeNextToOldReleases() {
+        JsonArray releases = list(
+                release("mc26.3-v1.3.1", false, "MRadmin-mc26.3-v1.3.1.jar"),
+                release("mc26.3-BET-1.4.0-bu001", true, "MRadmin-mc26.3-BET-1.4.0-bu001.jar"),
+                release("mc26.3-STA-1.4.0-bu002", false, "MRadmin-mc26.3-STA-1.4.0-bu002.jar"),
+                release("mc26.3-BET-1.4.1-bu001", true, "MRadmin-mc26.3-BET-1.4.1-bu001.jar"),
+                release("plugin-mc26.3-BET-0.2.0-bu003", true, "MRtoolbar-mc26.3-BET-0.2.0-bu003.jar"),
+                release("mod-mc26.3-STA-1.1.0-bu001", false, "MRtoolbar-mod-mc26.3-STA-1.1.0-bu001.jar"));
+        assertEquals("STA-1.4.0-bu002", ReleasePicker.pick(releases, "MRadmin", "26.3", false, false).version());
+        assertEquals("BET-1.4.1-bu001", ReleasePicker.pick(releases, "MRadmin", "26.3", false, true).version());
+        assertEquals("BET-0.2.0-bu003", ReleasePicker.pick(releases, "MRtoolbar", "26.3", false, true).version());
+        assertEquals("STA-1.1.0-bu001", ReleasePicker.pick(releases, "MRtoolbar", "26.3", true, false).version());
+        assertNull(ReleasePicker.pick(releases, "MRadmin", "26.4", false, true));
+    }
+
+    @Test
+    void autoDownloadWithBuilds() {
+        assertTrue(ReleasePicker.autoAllowed(Auto.PATCH, "1.3.1+mc26.3", "STA-1.3.2-bu001"));
+        assertTrue(ReleasePicker.autoAllowed(Auto.PATCH, "BET-1.4.0-bu001+mc26.3", "STA-1.4.0-bu002"));
+        assertFalse(ReleasePicker.autoAllowed(Auto.PATCH, "1.3.1+mc26.3", "STA-1.4.0-bu001"));
+        assertTrue(ReleasePicker.autoAllowed(Auto.MINOR, "1.3.1+mc26.3", "STA-1.4.0-bu001"));
+        assertFalse(ReleasePicker.autoAllowed(Auto.ALL, "STA-1.4.0-bu002+mc26.3", "BET-1.4.0-bu001"));
+    }
+
+    @Test
     void noChecksumWithoutDigest() {
         JsonArray releases = JsonParser.parseString("[{\"tag_name\":\"mc26.3-v1.0.0\",\"prerelease\":false,\"assets\":"
                 + "[{\"name\":\"MRsleep-mc26.3-v1.0.0.jar\",\"browser_download_url\":\"x\"}]}]").getAsJsonArray();

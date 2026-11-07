@@ -354,8 +354,8 @@ public final class VersionManager {
     }
 
     private void checkOne(Entry e, boolean includePrereleases) {
-        // Whoever runs a pre-release (0.x, -rc...) also gets newer pre-releases - like the update check.
-        boolean prereleases = includePrereleases || (e.installed != null && Versions.isPrerelease(e.installed));
+        // Betas only when switched on or for 0.x - like the update check (Versions.wantsBeta).
+        boolean prereleases = Versions.wantsBeta(e.installed, includePrereleases);
         try {
             String body = fetch("https://api.github.com/repos/" + e.repository + "/releases?per_page=50");
             JsonArray releases = JsonParser.parseString(body).getAsJsonArray();
