@@ -10,10 +10,10 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 ## [Unveröffentlicht]
 
 ### Neu
-- **Kanäle Stable, Beta und Dev pro Plugin:** Auf **Server → Plugins** hat jedes Plugin einen Kanal - Stable (nur stabile Versionen), Beta (auch Betas) oder Dev (jeder Entwicklungsstand, nur für Testserver). Ohne eigene Wahl gilt der neue Standard-Kanal **`versions.channel`** (`stable`/`beta`, ersetzt `versions.include-prereleases` - war es an, steht der Kanal nach dem Update auf `beta`; `config-version` 50). Zurück auf Stable stuft nie zurück. **Dev** braucht den Freigabetoken **`versions.dev-token`** (vom Entwickler): MRadmin lädt dann die verschlüsselten Dev-Builds, entschlüsselt sie, prüft die Prüfsumme und legt sie wie ein Update ab; Plugins mit Dev-Build sind mit „Dev <Commit>“ markiert. Dev-Builds lädt `versions.auto-download` nur bei `all` von selbst.
+- **Kanäle Stable, Beta und Dev pro Plugin:** Auf **Server → Plugins** hat jedes Plugin einen Kanal - Stable (nur stabile Versionen), Beta (auch Betas) oder Dev (jeder Entwicklungsstand, nur für Testserver). Ohne eigene Wahl gilt der neue Standard-Kanal **`versions.channel`** (`stable`/`beta`, ersetzt `versions.include-prereleases` - war es an, steht der Kanal nach dem Update auf `beta`; `config-version` 50). Kanäle ohne Stand (z.B. Stable bei einem 0.x-Plugin) sind ausgegraut, Zurück auf Stable stuft nie zurück. **Dev** erscheint nur mit gültigem Freigabetoken **`versions.dev-token`** (vom Entwickler; ein falscher Token wird erkannt und gemeldet): MRadmin lädt dann die verschlüsselten Dev-Builds, entschlüsselt sie, prüft die Prüfsumme und legt sie wie ein Update ab; Plugins mit Dev-Build sind mit „Dev <Commit>“ markiert. Dev-Builds lädt `versions.auto-download` nur bei `all` von selbst.
 
 ### Behoben & geändert
-- **Seite Plugins neu:** Alle Plugins als Tabelle mit festen Spalten - installierte Version, Kanal, verfügbare Version, Zustand und Aktion; auf dem Handy als Karten. Die Plugin-Seite zeigt den Kanal und bei Dev den angebotenen Build.
+- **Seite Plugins neu:** Jedes Plugin als Kachel, die Spalten stehen über alle Kacheln in einer Linie - installierte Version, Kanal, verfügbare Version, Zustand und Aktion; auf dem Handy als Karten. Die Plugin-Seite zeigt den Kanal und bei Dev den angebotenen Build.
 
 ## [1.4.0] - 2026-11-07
 

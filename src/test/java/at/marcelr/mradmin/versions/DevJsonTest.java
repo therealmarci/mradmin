@@ -31,6 +31,17 @@ class DevJsonTest {
     }
 
     @Test
+    void tokenCheck() throws Exception {
+        String check = java.util.Base64.getEncoder().encodeToString(at.marcelr.mradmin.starter.DevSeal.seal(
+                DevJson.CHECK_TEXT.getBytes(java.nio.charset.StandardCharsets.UTF_8), "right"));
+        String json = JSON.replace("\"run\": 42,", "\"run\": 42, \"check\": \"" + check + "\",");
+        assertEquals(Boolean.TRUE, DevJson.tokenValid(json, "right"));
+        assertEquals(Boolean.FALSE, DevJson.tokenValid(json, "wrong"));
+        assertNull(DevJson.tokenValid(json, ""));
+        assertNull(DevJson.tokenValid(JSON, "right"));   // older dev.json without check
+    }
+
+    @Test
     void nothingForOtherPluginsMinecraftOrFormats() {
         assertNull(DevJson.pick(JSON, "MRsleep", "26.3"));
         assertNull(DevJson.pick(JSON, "MRtoolbar", "26.4"));

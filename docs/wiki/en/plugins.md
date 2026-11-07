@@ -13,7 +13,8 @@ Every plugin follows a **channel** - switch it in the column **Channel** (`mradm
 
 - Without a choice of its own a plugin follows the **default channel** `versions.channel` (`stable` or `beta`); "back to default" removes the own choice. 0.x plugins only exist as beta and always get betas.
 - **Back to stable never downgrades:** a running beta or dev build stays until a newer stable version comes (older versions could not handle the settings that were already migrated).
-- **Dev** can only be chosen when the **release token** is in the configuration (`versions.dev-token`, you get it from the developer). The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
+- Channels without anything in them are **greyed out** - e.g. stable for a plugin that only has betas so far (0.x).
+- **Dev** only appears when a **valid release token** is in the configuration (`versions.dev-token`, you get it from the developer). If it is wrong, dev stays hidden and the page shows a note. The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
 
 ## Install
 You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. What gets installed is what the channel of the plugin offers (see above); if there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them.

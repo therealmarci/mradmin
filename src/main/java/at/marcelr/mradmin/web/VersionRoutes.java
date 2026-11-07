@@ -87,7 +87,9 @@ public final class VersionRoutes {
             p.put("downloading", e.downloading);
             p.put("error", e.error);
             p.put("checksum", e.channel == VersionManager.Channel.DEV || (e.latest != null && e.latest.sha256() != null));
-            p.put("channel", e.channel.id());
+            p.put("channel", e.shownChannel().id());
+            // Which channels have anything in them (the others are greyed out); dev only with a valid release token.
+            p.put("channels", Map.of("stable", e.hasStable, "beta", e.hasBeta, "dev", versions.devAvailable() && e.dev != null));
             p.put("ownChannel", e.ownChannel);
             p.put("offered", e.offered());
             p.put("devBuild", e.runsDevBuild() ? e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())) : null);
@@ -145,7 +147,9 @@ public final class VersionRoutes {
         result.put("checking", versions.checking());
         result.put("auto", plugin.settings().versions().autoDownload().name().toLowerCase(java.util.Locale.ROOT));
         result.put("channel", versions.defaultChannel().id());
-        result.put("devToken", plugin.settings().versions().hasDevToken());
+        // Dev is only shown with a valid token; "invalid" = set but it does not open the token check of the dev channel.
+        result.put("devToken", versions.devAvailable());
+        result.put("devTokenState", versions.devTokenState());
         result.put("restart", restart);
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),

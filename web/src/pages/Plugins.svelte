@@ -93,14 +93,13 @@
 
 {#snippet channelSwitch(p)}
   <div class="channels" role="group" aria-label={t('plugins.col.channel')}>
-    {#each CHANNELS as c}
-      {@const locked = c === 'dev' && !data.devToken}
-      <button class="ch {c}" class:on={p.channel === c} aria-pressed={p.channel === c}
-        disabled={busy || !data.may.install || locked}
-        title={locked ? t('plugins.channel.devLocked') : t('plugins.channel.hint.' + c)}
+    {#each CHANNELS.filter((c) => c !== 'dev' || data.devToken) as c}
+      <!-- greyed out: nothing released in this channel yet (e.g. no stable of a 0.x plugin, no dev build) -->
+      {@const empty = !p.channels?.[c] && p.channel !== c}
+      <button class="ch {c}" class:on={p.channel === c} class:empty aria-pressed={p.channel === c}
+        disabled={busy || !data.may.install || empty}
+        title={empty ? t('plugins.channel.empty.' + c) : t('plugins.channel.hint.' + c)}
         onclick={() => setChannel(p, c)}>
-        {#if locked}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={ICONS.lock} /></svg>{/if}
         {t('plugins.channel.' + c)}
       </button>
     {/each}
@@ -275,10 +274,10 @@
 
     <p class="muted small legend">
       <b>{t('plugins.channel.stable')}</b> {t('plugins.channel.hint.stable')} ·
-      <b>{t('plugins.channel.beta')}</b> {t('plugins.channel.hint.beta')} ·
-      <b>{t('plugins.channel.dev')}</b> {t('plugins.channel.hint.dev')}
-      {#if !data.devToken}({t('plugins.channel.devLocked')}){/if}
+      <b>{t('plugins.channel.beta')}</b> {t('plugins.channel.hint.beta')}
+      {#if data.devToken}· <b>{t('plugins.channel.dev')}</b> {t('plugins.channel.hint.dev')}{/if}
     </p>
+    {#if data.devTokenState === 'invalid'}<p class="small bad-text legend">{t('plugins.channel.devInvalid')}</p>{/if}
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
@@ -529,42 +528,47 @@
     display: grid;
     /* fixed widths, so that both tables (on the server / more plugins) line up */
     grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) 200px minmax(150px, 1fr) 190px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    box-shadow: var(--shadow);
-    overflow: hidden;
+    gap: 10px;
   }
 
+  /* every plugin is a tile; the columns still line up over all tiles (subgrid) */
   .row {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: subgrid;
     align-items: center;
     gap: 6px 18px;
-    padding: 12px 18px;
-    border-top: 1px solid var(--border);
-    border-left: 4px solid var(--tn, transparent);
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--tn, var(--border));
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: border-color 0.15s;
   }
 
-  .row:first-child {
-    border-top: 0;
+  .row:not(.headrow):hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    border-left-color: var(--tn, color-mix(in srgb, var(--accent) 45%, var(--border)));
   }
 
   .headrow {
-    padding-top: 9px;
-    padding-bottom: 9px;
+    padding: 0 18px 0 22px;
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--muted);
-    background: var(--surface-2);
-    border-left-color: transparent;
+    border: 0;
+    background: none;
+    box-shadow: none;
   }
 
   .row.missing {
-    background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+    border-style: dashed;
+    border-left-style: solid;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    box-shadow: none;
   }
 
   .cell {
@@ -690,6 +694,13 @@
     opacity: 0.55;
   }
 
+  /* nothing in this channel yet */
+  .ch.empty {
+    opacity: 0.35;
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+
   .ch:disabled.on {
     opacity: 1;
   }
@@ -744,13 +755,8 @@
   /* Narrow: every row becomes a small card, the labels appear */
   @container (max-width: 860px) {
     .table {
-      display: grid;
       grid-template-columns: 1fr;
       gap: 12px;
-      border: 0;
-      background: none;
-      box-shadow: none;
-      overflow: visible;
     }
 
     .headrow {
@@ -761,15 +767,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px 16px;
       padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--tn, var(--border));
-      border-radius: var(--radius);
-      background: var(--surface);
-      box-shadow: var(--shadow);
-    }
-
-    .row:first-child {
-      border-top: 1px solid var(--border);
     }
 
     .plugin,
@@ -807,6 +804,10 @@
   @media (prefers-reduced-motion: reduce) {
     .check-state.busy .dot {
       animation: none;
+    }
+
+    .row {
+      transition: none;
     }
   }
 </style>

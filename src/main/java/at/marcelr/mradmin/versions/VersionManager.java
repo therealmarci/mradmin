@@ -116,8 +116,11 @@ public final class VersionManager {
         public volatile Channel channel = Channel.STABLE;
         /** True if the team chose the channel for this plugin, false if it follows versions.channel. */
         public volatile boolean ownChannel;
-        /** Current dev build (only looked up on the dev channel), or null. */
+        /** Current dev build (looked up whenever a release token is set), or null. */
         public volatile DevBuild dev;
+        /** Whether a stable / a beta release exists for this Minecraft version (else the channel is greyed out). */
+        public volatile boolean hasStable;
+        public volatile boolean hasBeta;
 
         Entry(String name, String installed, String minecraft, String repository, String website, File jar,
               String installedCommit, String installedBranch) {
@@ -164,6 +167,13 @@ public final class VersionManager {
             return channel == Channel.DEV ? dev != null : latest != null && latest.sha256() != null;
         }
 
+        /**
+         * The channel as shown: a plugin without any stable release (0.x) gets betas anyway, so it counts as beta.
+         */
+        public Channel shownChannel() {
+            return channel == Channel.STABLE && !hasStable && hasBeta ? Channel.BETA : channel;
+        }
+
         /** What would be downloaded: version of the release, or "dev abc1234" on the dev channel. */
         public String offered() {
             return channel == Channel.DEV ? (dev == null ? null : "dev " + dev.shortCommit())
@@ -191,6 +201,9 @@ public final class VersionManager {
     private final Map<String, Channel> chosen = new ConcurrentHashMap<>();
     private volatile long checkedAt;
     private volatile boolean checking;
+    /** Whether versions.dev-token opens the token check of the dev channel; null = not known yet (or no token). */
+    private volatile Boolean devTokenValid;
+    private volatile String devTokenChecked = "";
     private BukkitTask task;
 
     public VersionManager(MRAdmin plugin) {
@@ -212,13 +225,37 @@ public final class VersionManager {
         return settings().includePrereleases() ? Channel.BETA : Channel.STABLE;
     }
 
-    /** Channel of a plugin: its own choice, else the default. Dev without release token counts as the default. */
+    /** Channel of a plugin: its own choice, else the default. Dev without (valid) release token counts as the default. */
     private Channel channelOf(String name) {
         Channel own = chosen.get(name);
-        if (own == Channel.DEV && !settings().hasDevToken()) {
+        if (own == Channel.DEV && !devAllowed()) {
             return defaultChannel();
         }
         return own == null ? defaultChannel() : own;
+    }
+
+    /** A release token is set and not known to be wrong (unknown right after the start counts as fine). */
+    private boolean devAllowed() {
+        return settings().hasDevToken() && !Boolean.FALSE.equals(validity());
+    }
+
+    /** Validity of the current token (forgotten when the token changes). */
+    private Boolean validity() {
+        return settings().devToken().equals(devTokenChecked) ? devTokenValid : null;
+    }
+
+    /** "none" (no token), "valid", "invalid" or "unknown" (not checked yet). */
+    public String devTokenState() {
+        if (!settings().hasDevToken()) {
+            return "none";
+        }
+        Boolean valid = validity();
+        return valid == null ? "unknown" : valid ? "valid" : "invalid";
+    }
+
+    /** Whether the dev channel is offered: a release token is set and it opened the token check. */
+    public boolean devAvailable() {
+        return settings().hasDevToken() && Boolean.TRUE.equals(validity());
     }
 
     /**
@@ -234,6 +271,14 @@ public final class VersionManager {
         }
         if (channel == Channel.DEV && !settings().hasDevToken()) {
             return "versions-dev-token-missing";
+        }
+        if (channel == Channel.DEV && Boolean.FALSE.equals(validity())) {
+            return "versions-dev-token-invalid";
+        }
+        // A channel without anything in it (no stable yet, no beta, no dev build) cannot be chosen.
+        if (channel == Channel.STABLE && !e.hasStable || channel == Channel.BETA && !e.hasBeta
+                || channel == Channel.DEV && e.dev == null && validity() != null) {
+            return "versions-channel-empty";
         }
         if (channel == null) {
             chosen.remove(name);
@@ -528,11 +573,17 @@ public final class VersionManager {
                 e.latest = ReleasePicker.pick(releases, e.name, e.minecraft, false, true);
             }
             e.mod = ReleasePicker.pick(releases, e.name, e.minecraft, true, true);
+            ReleasePicker.Release newest = ReleasePicker.pick(releases, e.name, e.minecraft, false, true);
+            e.hasStable = ReleasePicker.pick(releases, e.name, e.minecraft, false, false) != null;
+            e.hasBeta = newest != null && newest.prerelease();
             e.error = e.latest == null ? "no-release" : null;
             e.dev = null;
-            if (e.channel == Channel.DEV) {
+            if (settings().hasDevToken()) {
                 e.dev = devBuild(e);
-                e.error = e.dev == null ? "dev-none" : null;
+                e.channel = channelOf(e.name);
+                if (e.channel == Channel.DEV) {
+                    e.error = e.dev == null ? "dev-none" : null;
+                }
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -552,6 +603,12 @@ public final class VersionManager {
         }
         if (response.statusCode() / 100 != 2) {
             throw new IOException("dev.json: HTTP " + response.statusCode());
+        }
+        String token = settings().devToken();
+        Boolean valid = DevJson.tokenValid(response.body(), token);
+        if (valid != null) {
+            devTokenChecked = token;
+            devTokenValid = valid;
         }
         return DevJson.pick(response.body(), e.name, e.minecraft);
     }

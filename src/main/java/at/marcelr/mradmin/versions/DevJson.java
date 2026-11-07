@@ -58,6 +58,29 @@ public final class DevJson {
         return null;
     }
 
+    /** The known text dev-channel.sh seals into "check". */
+    static final String CHECK_TEXT = "mrtechnology-dev-token-check";
+
+    /**
+     * Whether {@code token} is the release token of this dev channel: true if the sealed "check" opens with it, false if
+     * not, null if the dev.json has no check (older builds) or no token is given.
+     */
+    public static Boolean tokenValid(String json, String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        String check = string(JsonParser.parseString(json).getAsJsonObject(), "check");
+        if (check.isEmpty()) {
+            return null;
+        }
+        try {
+            byte[] plain = at.marcelr.mradmin.starter.DevSeal.open(java.util.Base64.getDecoder().decode(check), token);
+            return CHECK_TEXT.equals(new String(plain, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IllegalArgumentException | java.security.GeneralSecurityException e) {
+            return false;
+        }
+    }
+
     private static String string(JsonObject o, String key) {
         return o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsString() : "";
     }
