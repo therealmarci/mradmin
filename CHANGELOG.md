@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.3.1] - 2026-11-07
+
 ### Neu
 - **Neuen Server mit einem Befehl installieren:** Auf der Download-Seite der Website steht ein Befehl für Linux (`curl -fsSL https://mrtechnology.marcelr.at/install.sh | sh`) und Windows (`irm https://mrtechnology.marcelr.at/install.ps1 | iex`). Er prüft Java 25 (installiert es auf Wunsch), fragt nach Ordner, Arbeitsspeicher, Adresse der Weboberfläche und EULA, lädt MRadmin und Paper und richtet auf Wunsch Autostart und Start ein. Weitere Plugins dann im Browser unter Server → Plugins. Anleitung im Wiki auf der Seite „Starter“.
 - **`mrserver setup` mit Startwerten:** `--memory-min`, `--memory-max` (z.B. `2G`, `4096M`), `--web` (Weboberfläche an, nur lokal, Speicher SQLite) und `--web-url <adresse>`. Der Starter nutzt den Arbeitsspeicher gleich beim ersten Start, MRadmin übernimmt die Werte beim ersten Start einmalig in die `config.yml` (`server.memory-*`, `web.enabled`, `web.public-url`, `storage.type`) - danach im Browser änderbar.
