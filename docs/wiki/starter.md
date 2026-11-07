@@ -27,10 +27,13 @@ Der Starter ist **freiwillig**. Ohne ihn läuft MRadmin wie bisher.
 | Linux (als normaler Benutzer, nicht root) | `curl -fsSL https://mrtechnology.marcelr.at/install.sh \| sh` |
 | Windows (PowerShell) | `irm https://mrtechnology.marcelr.at/install.ps1 \| iex` |
 
-Das Skript prüft Java 25 und installiert es auf Wunsch (Debian/Ubuntu mit `sudo apt`, Windows mit `winget`), fragt nach dem **Ordner** (Standard `~/MINECRAFT/Server` bzw. `%USERPROFILE%\MINECRAFT\Server`, muss leer sein), dem **Arbeitsspeicher** (min./max.), der **öffentlichen Adresse der Weboberfläche** (optional) und der [Minecraft-EULA](https://aka.ms/MinecraftEULA). Dann lädt es MRadmin und Paper (beides mit Prüfsumme), schaltet die Weboberfläche ein (nur lokal auf Port 8125, Speicher SQLite) und richtet auf Wunsch Autostart und Start ein. Weitere MRtechnology-Plugins installierst du danach im Browser unter **Server → Plugins**.
+Das Skript prüft Java 25 und installiert es auf Wunsch (Debian/Ubuntu mit `sudo apt`, Windows mit `winget`), fragt nach dem **Ordner** (Standard `~/MINECRAFT/Server` bzw. `%USERPROFILE%\MINECRAFT\Server`, muss leer sein), dem **Arbeitsspeicher** (min./max.), der **öffentlichen Adresse der Weboberfläche** (optional), ob du **Beta-Versionen** willst (Standard nein; ja = die neueste MRadmin-Beta, falls neuer als die stabile Version, und `versions.channel: beta` für alle Plugins) und der [Minecraft-EULA](https://aka.ms/MinecraftEULA). Dann lädt es MRadmin und Paper (beides mit Prüfsumme), schaltet die Weboberfläche ein (nur lokal auf Port 8125, Speicher SQLite) und richtet auf Wunsch Autostart und Start ein. Weitere MRtechnology-Plugins installierst du danach im Browser unter **Server → Plugins**.
 
 > [!TIP]
-> Ohne Fragen, z.B. für Skripte: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (dazu `--dir <ordner>`, `--no-start`); Windows über Umgebungsvariablen `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` vor dem Befehl. Die Skripte sind öffentlich einsehbar: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+> Ohne Fragen, z.B. für Skripte: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (dazu `--dir <ordner>`, `--no-start`, `--beta` bzw. `--stable`); Windows über Umgebungsvariablen `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_CHANNEL=beta`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` vor dem Befehl. Die Skripte sind öffentlich einsehbar: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+
+> [!NOTE]
+> Testserver mit **Dev-Builds** (jeder Entwicklungsstand) nur mit dem Freigabetoken des Entwicklers: Linux `--dev` (fragt nach dem Token) bzw. `MR_DEV_TOKEN`, Windows `MR_DEV_TOKEN`. MRadmin kommt dann als Dev-Build, die anderen Plugins folgen Beta; der Token landet als `versions.dev-token` in der `config.yml`.
 
 **Von Hand:**
 1. Leeren Ordner anlegen und **`mrserver.sh`** (Linux) bzw. **`mrserver.cmd`** (Windows) aus dem [MRadmin-Download](https://mrtechnology.marcelr.at/download/mradmin/) hineinlegen.
@@ -70,7 +73,7 @@ Im Serverordner `./mrserver.sh <befehl>` (Linux) bzw. `mrserver <befehl>` (Windo
 
 | Befehl | Was er tut |
 |---|---|
-| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …]` | Ordner einrichten, fehlendes Paper herunterladen; Arbeitsspeicher und Weboberfläche übernimmt MRadmin beim ersten Start in die `config.yml` |
+| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …] [--channel stable\|beta\|dev]` | Ordner einrichten, fehlendes Paper herunterladen; Arbeitsspeicher, Weboberfläche und Kanal übernimmt MRadmin beim ersten Start in die `config.yml`. `--channel` gilt nur für einen neuen Server (Dev braucht den Token in `MRSERVER_DEV_TOKEN`) |
 | `install` · `uninstall` | Autostart an · aus (ein laufender Server läuft weiter) |
 | `start` · `run` | im Hintergrund starten · im aktuellen Terminal starten |
 | `stop [zeit\|now]` · `restart [zeit\|now]` | mit Countdown stoppen bzw. neu starten (ohne Zeit: `server.countdown`, Standard 5 Minuten) |

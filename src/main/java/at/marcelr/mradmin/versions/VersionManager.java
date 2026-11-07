@@ -322,6 +322,17 @@ public final class VersionManager {
                 chosen.put(name, c);
             }
         }
+        // Chosen in the installer (mrserver setup --channel dev): taken over once.
+        if (!StarterLink.SEEDED_CHANNELS.isEmpty()) {
+            StarterLink.SEEDED_CHANNELS.forEach((name, id) -> {
+                Channel c = Channel.of(id.toLowerCase(java.util.Locale.ROOT));
+                if (c != null) {
+                    chosen.putIfAbsent(name, c);
+                }
+            });
+            StarterLink.SEEDED_CHANNELS.clear();
+            saveChannels();
+        }
     }
 
     private void saveChannels() {

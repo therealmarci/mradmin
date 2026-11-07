@@ -93,6 +93,9 @@ public final class StarterLink {
      * written once into config.yml on the first start - before storage and web interface start - and the file is
      * deleted. Only these keys, so nothing else can be set this way.
      */
+    /** Plugin channels from the installation (seed.properties) - the VersionManager takes them over once. */
+    static final java.util.Map<String, String> SEEDED_CHANNELS = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void applySeed(MRAdmin plugin) {
         String env = System.getenv(StarterFiles.ENV);
         if (env == null || env.isBlank()) {
@@ -110,7 +113,14 @@ public final class StarterLink {
                 continue;
             }
             plugin.getConfig().set(key, key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value) : value);
-            taken.add(key.equals("web.public-url") ? key : key + "=" + value);
+            taken.add(key.equals("web.public-url") || key.equals("versions.dev-token") ? key : key + "=" + value);
+        }
+        for (String key : seed.stringPropertyNames()) {
+            if (key.startsWith(at.marcelr.mradmin.starter.Setup.SEED_PLUGIN_CHANNEL)) {
+                String name = key.substring(at.marcelr.mradmin.starter.Setup.SEED_PLUGIN_CHANNEL.length());
+                SEEDED_CHANNELS.put(name, seed.getProperty(key).trim());
+                taken.add("channel of " + name + "=" + seed.getProperty(key).trim());
+            }
         }
         plugin.saveConfig();
         try {

@@ -60,7 +60,9 @@ public final class Main {
         System.out.println("""
                 MRadmin starter %s - starts your Paper server and brings it back after restarts and crashes.
                   mrserver setup [--accept-eula] [--mode screen|systemd|window|foreground]
-                                              set up this folder (downloads Paper if missing)
+                         [--channel stable|beta|dev]
+                                              set up this folder (downloads Paper if missing); beta = newest
+                                              MRadmin beta, dev = dev build (token in MRSERVER_DEV_TOKEN)
                   mrserver install            start the server automatically when the machine starts
                   mrserver uninstall          no autostart any more
                   mrserver start              start the server (in the background)

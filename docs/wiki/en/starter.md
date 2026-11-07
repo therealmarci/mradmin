@@ -27,10 +27,13 @@ The starter is **optional**. Without it MRadmin works as before.
 | Linux (as a normal user, not root) | `curl -fsSL https://mrtechnology.marcelr.at/install.sh \| sh` |
 | Windows (PowerShell) | `irm https://mrtechnology.marcelr.at/install.ps1 \| iex` |
 
-The script checks Java 25 and installs it on request (Debian/Ubuntu with `sudo apt`, Windows with `winget`), asks for the **folder** (default `~/MINECRAFT/Server` or `%USERPROFILE%\MINECRAFT\Server`, must be empty), the **memory** (min./max.), the **public address of the web interface** (optional) and the [Minecraft EULA](https://aka.ms/MinecraftEULA). Then it downloads MRadmin and Paper (both with checksum), switches on the web interface (only locally on port 8125, storage SQLite) and on request sets up the autostart and starts. Install more MRtechnology plugins afterwards in the browser under **Server → Plugins**.
+The script checks Java 25 and installs it on request (Debian/Ubuntu with `sudo apt`, Windows with `winget`), asks for the **folder** (default `~/MINECRAFT/Server` or `%USERPROFILE%\MINECRAFT\Server`, must be empty), the **memory** (min./max.), the **public address of the web interface** (optional), whether you want **beta versions** (default no; yes = the newest MRadmin beta if it is newer than the stable version, and `versions.channel: beta` for all plugins) and the [Minecraft EULA](https://aka.ms/MinecraftEULA). Then it downloads MRadmin and Paper (both with checksum), switches on the web interface (only locally on port 8125, storage SQLite) and on request sets up the autostart and starts. Install more MRtechnology plugins afterwards in the browser under **Server → Plugins**.
 
 > [!TIP]
-> Without questions, e.g. for scripts: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (also `--dir <folder>`, `--no-start`); Windows with the environment variables `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` before the command. The scripts are public: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+> Without questions, e.g. for scripts: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (also `--dir <folder>`, `--no-start`, `--beta` or `--stable`); Windows with the environment variables `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_CHANNEL=beta`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` before the command. The scripts are public: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+
+> [!NOTE]
+> Test servers with **dev builds** (every development state) only with the developer's release token: Linux `--dev` (asks for the token) or `MR_DEV_TOKEN`, Windows `MR_DEV_TOKEN`. MRadmin then comes as a dev build, the other plugins follow beta; the token goes into `config.yml` as `versions.dev-token`.
 
 **By hand:**
 1. Create an empty folder and put **`mrserver.sh`** (Linux) or **`mrserver.cmd`** (Windows) from the [MRadmin download](https://mrtechnology.marcelr.at/download/mradmin/) into it.
@@ -70,7 +73,7 @@ In the server folder `./mrserver.sh <command>` (Linux) or `mrserver <command>` (
 
 | Command | What it does |
 |---|---|
-| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …]` | set up the folder, download Paper if missing; MRadmin takes memory and web interface over into `config.yml` on its first start |
+| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …] [--channel stable\|beta\|dev]` | set up the folder, download Paper if missing; MRadmin takes memory, web interface and channel over into `config.yml` on its first start. `--channel` only works on a new server (dev needs the token in `MRSERVER_DEV_TOKEN`) |
 | `install` · `uninstall` | autostart on · off (a running server keeps running) |
 | `start` · `run` | start in the background · start in the current terminal |
 | `stop [time\|now]` · `restart [time\|now]` | stop or restart with a countdown (without a time: `server.countdown`, default 5 minutes) |
