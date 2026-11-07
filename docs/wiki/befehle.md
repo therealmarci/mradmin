@@ -17,7 +17,7 @@
 | `/mradmin discord [test]` | Discord-Status · Testnachricht | `mradmin.admin.discord` |
 | `/mradmin storage` | Speicher-Status (yaml, sqlite, mysql) | `mradmin.admin.storage` |
 | `/mradmin map [setup]` | Link zur Karte der Spielerseite · für Admins Zustand von squaremap, squaremap neu einrichten | `mradmin.map` · `mradmin.map.admin` |
-| `/mradmin restart [zeit\|now\|cancel]` · `stop [zeit\|now\|cancel]` | Server mit Countdown neu starten bzw. stoppen, Countdown abbrechen | `mradmin.server.restart` |
+| `/mradmin restart [zeit\|now\|cancel] [grund]` · `stop [zeit\|now\|cancel] [grund]` | Server mit Countdown neu starten bzw. stoppen (optional mit Grund), Countdown abbrechen | `mradmin.server.restart` |
 | `/mradmin starter [setup [modus]]` | Zustand des [Starters](starter.md), nächster geplanter Neustart, Paper-Update · Starter im Serverordner einrichten | `mradmin.server.restart` · `mradmin.server.setup` |
 | `/mradmin reload` · `version` | Config und Sprachdateien neu laden · Version | `mradmin.admin.reload` · `mradmin.version` |
 

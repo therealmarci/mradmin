@@ -8,7 +8,8 @@ Der Starter ist **freiwillig**. Ohne ihn läuft MRadmin wie bisher.
 > Der Starter steckt in der MRadmin-JAR - es gibt nichts extra herunterzuladen. Er läuft unter **Linux** (screen oder systemd) und **Windows**.
 
 ## Was er kann
-- **Neustart und Stopp mit Countdown** aus dem Browser (Seite **Server**, Reiter Übersicht), im Spiel (`/mradmin restart`, `/mradmin stop`) oder auf dem Rechner (`mrserver restart`, `mrserver stop`). Angekündigt wird im Spiel wie bei `/mradmin announce restart` (Vorlagen `restart` und `stop` in der Sprachdatei).
+- **Neustart und Stopp mit Countdown** aus dem Browser (Seite **Server**, Reiter Übersicht), im Spiel (`/mradmin restart`, `/mradmin stop`) oder auf dem Rechner (`mrserver restart`, `mrserver stop`). Angekündigt wird im Spiel wie bei `/mradmin announce restart` (Vorlagen `restart` und `stop` in der Sprachdatei), im Community-Discord nur mit `server.discord-announce: true`.
+- **Mit Grund:** Jeder Neustart und Stopp steht mit Grund in der Konsole, im [Protokoll](weboberflaeche.md) und im Team-Discord. Eigenen Grund einfach hinten anhängen (`/mradmin restart 5m Hardware-Tausch`, `mrserver stop 10m Umzug`) bzw. im Browser ins Feld **Grund** schreiben. Ohne eigenen Grund nennt MRadmin ihn selbst: „Geplanter Neustart (05:00)“, wartende Updates (z.B. „Updates: MRchunks 1.2.2, Paper 244“) oder „kein Grund angegeben“.
 - **Tägliche Neustarts** zu festen Uhrzeiten (`server.restart-times`), der Countdown beginnt vorher.
 - **Abstürze:** Fällt der Server aus, startet der Starter ihn nach 10 Sekunden wieder. Nach `server.crashes.max` Abstürzen in `server.crashes.window-minutes` Minuten (Standard 3 in 15) gibt er auf - dann stimmt etwas Grundsätzliches nicht und der Server bleibt aus, bis du nachsiehst.
 - **Hänger:** Tickt der Server `server.hang-seconds` Sekunden lang nicht (Standard 180), beendet der Starter ihn und startet ihn neu.
@@ -91,6 +92,7 @@ Zeiten wie `30s`, `5m`, `1h`, eine Zahl (Sekunden) oder `now`. Antwortet MRadmin
 | `server.restart-times` | `[]` | tägliche Neustarts, z.B. `["05:00"]` (Zeitzone `general.timezone`) |
 | `server.countdown` | `5m` | Countdown der geplanten Neustarts und von `mrserver stop/restart` ohne Zeit |
 | `server.plain-stop` | `stop` | was ein einfaches `/stop` macht: `stop` = Server bleibt aus, `restart` = er kommt wieder |
+| `server.discord-announce` | `false` | Countdown von Neustart/Stopp auch im Community-Discord (das Team-Log bekommt ihn immer) |
 | `server.crashes.max` · `window-minutes` | `3` · `15` | wann der Starter aufgibt |
 | `server.hang-seconds` | `180` | Hänger-Erkennung, `0` = aus |
 | `server.stop-timeout-seconds` | `180` | so lange darf das Herunterfahren dauern |

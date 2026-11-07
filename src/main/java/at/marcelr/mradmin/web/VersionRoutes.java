@@ -18,7 +18,7 @@ import java.util.Map;
  *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.install
  *  POST /api/versions/{name}/download    newest version into plugins/update/               mradmin.versions.install
  *  POST /api/versions/{name}/install     plugin that is not installed into plugins/        mradmin.versions.install
- *  POST /api/restart       {delay, kind} restart (or kind=stop: stop) after delay ms         mradmin.server.restart
+ *  POST /api/restart       {delay, kind, reason} restart (kind=stop: stop) after delay ms mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
  * </pre>
  * Downloads and restarts go into the web log.
@@ -97,6 +97,7 @@ public final class VersionRoutes {
         Map<String, Object> restart = new LinkedHashMap<>();
         restart.put("endsAt", server.sync(() -> plugin.restarts().endsAt()));
         restart.put("by", plugin.restarts().by());
+        restart.put("reason", server.sync(() -> plugin.restarts().reason()));
         restart.put("method", plugin.settings().versions().restartMethod());
         restart.put("delays", plugin.settings().versions().restartDelays());
         // The server tab: countdown kind, starter, Paper build, next planned restart, since when the server runs.
@@ -203,7 +204,8 @@ public final class VersionRoutes {
             throw new Http.WebException(400, "invalid-duration");
         }
         String by = http.account().name() + " (web)";
-        if (!server.sync(() -> plugin.restarts().start(delay, by, !stop))) {
+        String reason = http.string("reason");
+        if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
         }
         audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s");

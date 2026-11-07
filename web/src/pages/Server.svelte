@@ -28,6 +28,8 @@
   let events = $state(null);
   let error = $state('');
   let message = $state('');
+  // Optional own reason for the next restart / stop (empty = MRadmin names one).
+  let reason = $state('');
   let busy = $state(false);
   let now = $state(Date.now());
 
@@ -74,6 +76,7 @@
     message = '';
     try {
       await api('POST', path, body);
+      reason = '';
       if (done) message = done;
       await load();
     } catch (e) {
@@ -86,9 +89,9 @@
   const r = $derived(data?.restart);
   const left = $derived(r && r.endsAt > 0 ? Math.max(0, r.endsAt - now) : 0);
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
-  const restart = (d) => act('/restart', { delay: String(d), kind: 'restart' }, t('versions.restartStarted'),
+  const restart = (d) => act('/restart', { delay: String(d), kind: 'restart', reason: reason.trim() }, t('versions.restartStarted'),
     t('versions.restartConfirm', { time: delayText(d) }));
-  const stop = (d) => act('/restart', { delay: String(d), kind: 'stop' }, t('server.stopStarted'),
+  const stop = (d) => act('/restart', { delay: String(d), kind: 'stop', reason: reason.trim() }, t('server.stopStarted'),
     t(r.starter.active ? 'server.stopConfirm' : 'server.stopConfirmNoStarter', { time: delayText(d) }));
 
   const installed = $derived(data ? data.plugins.filter((p) => p.installed) : []);
@@ -175,12 +178,17 @@
             <span class="status">{t('server.countdown.' + r.kind)}</span>
             <span class="clock mono">{left > 0 ? clock(left) : t('versions.restartNow')}</span>
             <span class="muted small">{t('versions.restartBy', { name: r.by })}</span>
+            {#if r.reason}<span class="reason small">{t('server.reasonShown', { reason: r.reason })}</span>{/if}
             {#if data.may.stop}
               <button class="ghost" disabled={busy} onclick={() => act('/restart/cancel', {}, t('server.cancelled'))}>
                 {t('versions.restartCancel')}
               </button>
             {/if}
           {:else if data.may.stop}
+            <label class="row">
+              <span class="label">{t('server.reason')}</span>
+              <input class="reason-input" type="text" maxlength="200" bind:value={reason} placeholder={t('server.reasonPlaceholder')} />
+            </label>
             <div class="row">
               <span class="label">{t('server.restart')}</span>
               <div class="choices">
@@ -434,6 +442,22 @@
 
   .label {
     font-weight: 600;
+  }
+
+  label.row {
+    display: grid;
+    margin: 0;
+  }
+
+  .reason-input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.86rem;
+  }
+
+  .reason {
+    color: var(--text);
+    overflow-wrap: anywhere;
   }
 
   .choices {

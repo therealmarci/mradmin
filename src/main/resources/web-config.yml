@@ -215,6 +215,11 @@ sections:
         options:
           - {value: stop, de: Server bleibt aus, en: Server stays down}
           - {value: restart, de: Server startet neu, en: Server restarts}
+      - key: server.discord-announce
+        type: bool
+        advanced: true
+        name: {de: Countdown im Community-Discord, en: Countdown in the community Discord}
+        help: {de: "Neustarts und Stopps zusätzlich im Community-Kanal ankündigen (discord-announce). Das Team-Log bekommt sie immer, mit Grund.", en: "Also announce restarts and stops in the community channel (discord-announce). The team log always gets them, with the reason."}
       - key: server.crashes.max
         heading: {de: "Abstürze & Hänger", en: "Crashes & hangs"}
         type: int

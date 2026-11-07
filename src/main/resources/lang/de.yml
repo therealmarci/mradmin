@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 19
+lang-version: 20
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -697,9 +697,9 @@ discord:
   health-alert: "🐢 Der Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
   health-recovered: "✅ Der Server läuft wieder flüssig: **{tps} TPS**."
   plugin-update-downloaded: "⬇️ **{plugin} {version}** heruntergeladen (installiert: {installed}) - wird beim nächsten Neustart aktiv. Von: {admin}"
-  server-restart: "🔄 **{admin}** startet den Server neu (Countdown: {time})."
+  server-restart: "🔄 **{admin}** startet den Server neu (Countdown: {time}, Grund: {reason})."
   server-restart-cancelled: "❎ **{admin}** hat den Neustart abgebrochen."
-  server-stop: "🛑 **{admin}** fährt den Server herunter (Countdown: {time})."
+  server-stop: "🛑 **{admin}** fährt den Server herunter (Countdown: {time}, Grund: {reason})."
   server-stop-cancelled: "❎ **{admin}** hat den Server-Stopp abgebrochen."
   server-crash: "💥 Der Server ist um {time} abgestürzt ({reason}) - der Starter hat ihn neu gestartet."
   server-hang: "🧊 Der Server hing um {time} ({seconds} s ohne Tick) - der Starter hat ihn beendet und neu gestartet."
@@ -768,8 +768,11 @@ restart-cancelled: "<prefix><green>Der geplante Neustart wurde abgebrochen."
 
 # --- Starter und geplante Neustarts (/mradmin restart, stop, starter)------------------------
 stop-cancelled: "<prefix><green>Der geplante Server-Stopp wurde abgebrochen."
-help-server: "<gold>/mradmin restart|stop [Zeit|now|cancel]</gold> <dark_gray>- <gray>Neustart oder Stopp mit Countdown, <gold>/mradmin starter [setup]</gold> <dark_gray>- <gray>Starter"
-server-usage: "<prefix><hover:show_text:'<gray>Zeiten wie 30s, 5m, 1h oder now<newline><gray>Modi für setup: screen, systemd, window, foreground'><gray>Verwendung: <gold>/mradmin restart|stop [Zeit|now|cancel]</gold>, <gold>/mradmin starter [setup [Modus]]</gold></hover>"
+restart-reason-none: "kein Grund angegeben"
+restart-reason-updates: "Updates: {list}"
+restart-reason-schedule: "Geplanter Neustart ({time})"
+help-server: "<gold>/mradmin restart|stop [Zeit|now|cancel] [Grund]</gold> <dark_gray>- <gray>Neustart oder Stopp mit Countdown, <gold>/mradmin starter [setup]</gold> <dark_gray>- <gray>Starter"
+server-usage: "<prefix><hover:show_text:'<gray>Zeiten wie 30s, 5m, 1h oder now<newline><gray>Modi für setup: screen, systemd, window, foreground'><gray>Verwendung: <gold>/mradmin restart|stop [Zeit|now|cancel] [Grund]</gold>, <gold>/mradmin starter [setup [Modus]]</gold></hover>"
 server-status-on: "<prefix><hover:show_text:'<gray>Modus <white><mode></white>, Paper-Build <white><build></white><newline><gray>Abstürze, Hänger und Paper-Updates übernimmt der Starter'><green>Starter aktiv</green> <gray>- Neustart und Stopp funktionieren</hover>"
 server-status-off: "<prefix><hover:show_text:'<gray>Einrichten mit /mradmin starter setup<newline><gray>Neustart-Knopf jetzt: versions.restart-method <white><method></white>'><gray>Starter nicht in Benutzung</hover>"
 server-status-next: "<prefix><gray>Nächster geplanter Neustart: <white><time>"

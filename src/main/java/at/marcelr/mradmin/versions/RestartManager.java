@@ -25,6 +25,7 @@ public final class RestartManager {
     private long endsAt;
     private String by;
     private boolean restart = true;
+    private String reason;
 
     public RestartManager(MRAdmin plugin) {
         this.plugin = plugin;
@@ -50,26 +51,34 @@ public final class RestartManager {
 
     /** Restart with a countdown. */
     public boolean start(long delayMillis, String by) {
-        return start(delayMillis, by, true);
+        return start(delayMillis, by, true, null);
+    }
+
+    public boolean start(long delayMillis, String by, boolean restart) {
+        return start(delayMillis, by, restart, null);
     }
 
     /**
      * @param restart true = restart, false = stop (the server stays down; only with the starter or a script that
      *                knows the difference - without the starter a stop is like restart-method stop)
+     * @param reason  why (shown in console, log and team Discord); empty = MRadmin names one itself (waiting
+     *                updates, otherwise "no reason given")
      * @return false if a countdown is already running or restarts are off ({@link #enabled()})
      */
-    public boolean start(long delayMillis, String by, boolean restart) {
+    public boolean start(long delayMillis, String by, boolean restart, String reason) {
         if (task != null || (restart && !enabled())) {
             return false;
         }
         this.by = by;
         this.restart = restart;
+        this.reason = clean(reason).isEmpty() ? autoReason() : clean(reason);
         endsAt = System.currentTimeMillis() + delayMillis;
         // The first announcement is the start itself - the next one is the next step below it (not 4m 59s after 5m).
         long[] lastStep = {(delayMillis + 999) / 1000};
         String time = delayMillis <= 0 ? "-" : Texts.duration(delayMillis);
-        plugin.getLogger().info(by + (restart ? " restarts" : " stops") + " the server in " + Texts.duration(delayMillis) + ".");
-        plugin.discord().log(restart ? "server-restart" : "server-stop", "admin", by, "time", time);
+        plugin.getLogger().info(by + (restart ? " restarts" : " stops") + " the server in " + Texts.duration(delayMillis)
+                + " (reason: " + this.reason + ").");
+        plugin.discord().log(restart ? "server-restart" : "server-stop", "admin", by, "time", time, "reason", this.reason);
         if (delayMillis > 0) {
             announce(delayMillis, true);
         }
@@ -113,9 +122,43 @@ public final class RestartManager {
     private void announce(long millis, boolean first) {
         String preset = restart ? "restart" : "stop";
         if (plugin.announcer().preset(preset).isPresent()) {
-            // Only the first step may go to the community Discord (the preset's cooldown would stop the rest anyway).
-            plugin.announcer().announcePreset(preset, List.of(Texts.duration(millis)), by, first);
+            // Community Discord only if switched on (server.discord-announce), and only the first step.
+            boolean discord = first && plugin.starter().settings() != null && plugin.starter().settings().discordAnnounce();
+            plugin.announcer().announcePreset(preset, List.of(Texts.duration(millis)), by, discord);
         }
+    }
+
+    /** Why the planned countdown runs, null if none. */
+    public String reason() {
+        return task == null ? null : reason;
+    }
+
+    /** One line, at most 200 characters. */
+    static String clean(String reason) {
+        if (reason == null) {
+            return "";
+        }
+        String s = reason.replaceAll("[\\r\\n\\t]+", " ").strip();
+        return s.length() > 200 ? s.substring(0, 200) : s;
+    }
+
+    /** Without an own reason: what waits for the restart (plugin updates, a new Paper build), else "no reason given". */
+    private String autoReason() {
+        java.util.List<String> waiting = new java.util.ArrayList<>();
+        if (plugin.versions() != null) {
+            for (VersionManager.Entry e : plugin.versions().list()) {
+                String v = e.staged != null ? e.staged : e.pending;
+                if (v != null) {
+                    waiting.add(e.name + " " + v);
+                }
+            }
+        }
+        var paper = plugin.starter().paperUpdate();
+        if (paper != null && plugin.starter().active() && "auto".equals(plugin.starter().settings().paperUpdate())) {
+            waiting.add("Paper " + paper.id());
+        }
+        return plugin.messages().server(() -> waiting.isEmpty() ? plugin.messages().plain("restart-reason-none")
+                : plugin.messages().plain("restart-reason-updates").replace("{list}", String.join(", ", waiting)));
     }
 
     private void goDown() {
@@ -126,7 +169,7 @@ public final class RestartManager {
         plugin.starter().prepare(restart);
         // A moment to read it, then down.
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            plugin.getLogger().info((restart ? "Restarting" : "Stopping") + " the server (requested by " + by + ").");
+            plugin.getLogger().info((restart ? "Restarting" : "Stopping") + " the server (requested by " + by + ", reason: " + reason + ").");
             if (restart && !plugin.starter().active() && plugin.settings().versions().restartMethod().equals("script")) {
                 Bukkit.restart();
             } else {

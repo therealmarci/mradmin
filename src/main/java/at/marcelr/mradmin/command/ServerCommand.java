@@ -66,6 +66,13 @@ final class ServerCommand {
             messages().send(sender, "server-restart-off");
             return;
         }
+        // [time] [reason ...] - without a time the configured countdown applies and everything is the reason.
+        int from = 2;
+        if (!time.isEmpty() && !time.matches("now|jetzt|[0-9]+|([0-9]+[smhdw])+")) {
+            time = "";
+            from = 1;
+        }
+        String reason = args.length > from ? String.join(" ", java.util.Arrays.copyOfRange(args, from, args.length)) : null;
         long delay = time.isEmpty() ? plugin.starter().settings().countdown()
                 : time.equals("now") || time.equals("jetzt") ? 0 : DurationUtil.parse(time);
         if (delay < 0 || delay > 24 * 3_600_000L) {
@@ -76,7 +83,7 @@ final class ServerCommand {
             messages().send(sender, "server-countdown-busy");
             return;
         }
-        if (restarts.start(delay, sender.getName(), restart)) {
+        if (restarts.start(delay, sender.getName(), restart, reason)) {
             messages().send(sender, "server-countdown-started",
                     unparsed("what", messages().plain(restart ? "server-what-restart" : "server-what-stop")),
                     unparsed("time", delay == 0 ? "0s" : Texts.duration(delay)), unparsed("cmd", cmd));

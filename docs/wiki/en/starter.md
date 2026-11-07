@@ -8,7 +8,8 @@ The starter is **optional**. Without it MRadmin works as before.
 > The starter is part of the MRadmin JAR - there is nothing extra to download. It runs on **Linux** (screen or systemd) and **Windows**.
 
 ## What it does
-- **Restart and stop with a countdown** from the browser (page **Server**, tab Overview), in game (`/mradmin restart`, `/mradmin stop`) or on the machine (`mrserver restart`, `mrserver stop`). Announced in game like `/mradmin announce restart` (presets `restart` and `stop` in the language file).
+- **Restart and stop with a countdown** from the browser (page **Server**, tab Overview), in game (`/mradmin restart`, `/mradmin stop`) or on the machine (`mrserver restart`, `mrserver stop`). Announced in game like `/mradmin announce restart` (presets `restart` and `stop` in the language file), in the community Discord only with `server.discord-announce: true`.
+- **With a reason:** Every restart and stop is shown with its reason in the console, the [log](weboberflaeche.md) and the team Discord. Add your own reason at the end (`/mradmin restart 5m hardware swap`, `mrserver stop 10m moving`) or type it into the **Reason** field in the browser. Without one, MRadmin names it itself: "Planned restart (05:00)", waiting updates (e.g. "Updates: MRchunks 1.2.2, Paper 244") or "no reason given".
 - **Daily restarts** at fixed times (`server.restart-times`); the countdown starts before.
 - **Crashes:** if the server goes down, the starter starts it again after 10 seconds. After `server.crashes.max` crashes within `server.crashes.window-minutes` minutes (default 3 in 15) it gives up - then something is fundamentally wrong and the server stays down until you look.
 - **Hangs:** if the server has not ticked for `server.hang-seconds` seconds (default 180), the starter ends it and starts it again.
@@ -91,6 +92,7 @@ Times like `30s`, `5m`, `1h`, a number (seconds) or `now`. If MRadmin does not a
 | `server.restart-times` | `[]` | daily restarts, e.g. `["05:00"]` (time zone `general.timezone`) |
 | `server.countdown` | `5m` | countdown of planned restarts and of `mrserver stop/restart` without a time |
 | `server.plain-stop` | `stop` | what a plain `/stop` does: `stop` = the server stays down, `restart` = it comes back |
+| `server.discord-announce` | `false` | countdown of restarts/stops also in the community Discord (the team log always gets it) |
 | `server.crashes.max` · `window-minutes` | `3` · `15` | when the starter gives up |
 | `server.hang-seconds` | `180` | hang detection, `0` = off |
 | `server.stop-timeout-seconds` | `180` | how long shutting down may take |
