@@ -291,7 +291,7 @@ MRadmin rufen `webConfig()` nie auf.
 ```yaml
 sections:
   - id: sleep
-    help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
+    name: {de: Schlafen, en: Sleeping}
     group: {de: Server & Neustarts, en: Server & restarts}   # optional: Überschrift in der Navigation (gleiche Gruppen nebeneinander)
     help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
     fields:
