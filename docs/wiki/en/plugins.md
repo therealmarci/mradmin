@@ -1,9 +1,22 @@
 # Plugins & updates
 
-In the web interface under **Plugins** (page "Plugin configuration") you see **all MRtechnology plugins**: at the top the ones on your server with installed and newest version and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+In the web interface under **Server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, available version and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+
+## Channels: stable, beta, dev
+Every plugin follows a **channel** - switch it in the column **Channel** (`mradmin.versions.install`):
+
+| Channel | What comes | For whom |
+|---|---|---|
+| **Stable** | stable versions only (`STA-…`) | every server - default |
+| **Beta** | also betas (`BET-…`) - new features earlier, not quite finished | if you want to try new things early |
+| **Dev** | every development build (after every commit), unfinished | test servers only, only with the release token |
+
+- Without a choice of its own a plugin follows the **default channel** `versions.channel` (`stable` or `beta`); "back to default" removes the own choice. 0.x plugins only exist as beta and always get betas.
+- **Back to stable never downgrades:** a running beta or dev build stays until a newer stable version comes (older versions could not handle the settings that were already migrated).
+- **Dev** can only be chosen when the **release token** is in the configuration (`versions.dev-token`, you get it from the developer). The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
 
 ## Install
-You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. If there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them is offered.
+You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. What gets installed is what the channel of the plugin offers (see above); if there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them.
 
 ## Configure in the browser
 The page of an installed plugin has the tab **Configuration** (`mradmin.config`, in `mradmin.groups.admin`): all settings of `config.yml` as a form with explanations (German/English). Saving checks every value, writes the file (comments stay, the old file is kept next to it as `config.backup-web.yml`) and reloads the plugin right away - without a command, without a restart. Editing by hand still works. Available for MRadmin and all MRtechnology plugins in a current version.

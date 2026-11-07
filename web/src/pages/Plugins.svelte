@@ -1,13 +1,13 @@
 <script>
-  // Page Plugins: every MRtechnology plugin - those on this server (open their page, load updates) and the others
-  // (install with one click, loaded by Paper on the next start). Restart with countdown when something waits for it.
-  // Data from VersionRoutes.java.
+  // Page Plugins: every MRtechnology plugin as one row - installed version, channel (Stable / Beta / Dev), what the
+  // channel offers and the action (update, install). Below the plugins that are not on the server. Restart with
+  // countdown when something waits for it. Data from VersionRoutes.java.
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { ago, duration } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
-  import { pluginIcon, pluginDescription, pluginState, pluginError, clock } from '../lib/plugins.js';
+  import { pluginIcon, pluginDescription, pluginState, pluginError, clock, CHANNELS } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
 
   // embedded: inside the tab Plugins of the page Server - without its own title.
@@ -60,10 +60,27 @@
 
   const update = (p) =>
     act(`/versions/${encodeURIComponent(p.name)}/download`, {}, t('versions.downloadStarted', { name: p.name }),
-      t('versions.downloadConfirm', { name: p.name, version: p.latest.version }));
+      t('versions.downloadConfirm', { name: p.name, version: offeredText(p) }));
   const install = (p) =>
     act(`/versions/${encodeURIComponent(p.name)}/install`, {}, t('plugins.installStarted', { name: p.name }),
-      t('plugins.installConfirm', { name: p.name, version: p.latest.version }));
+      t('plugins.installConfirm', { name: p.name, version: offeredText(p) }));
+
+  function setChannel(p, channel) {
+    if (channel === p.channel && p.ownChannel) return;
+    const sure = channel === 'dev' ? t('plugins.channel.devConfirm', { name: p.name })
+      : channel === 'beta' ? t('plugins.channel.betaConfirm', { name: p.name }) : null;
+    act(`/versions/${encodeURIComponent(p.name)}/channel`, { channel },
+      t('plugins.channel.set', { name: p.name, channel: t('plugins.channel.' + channel) }), sure);
+  }
+  const resetChannel = (p) =>
+    act(`/versions/${encodeURIComponent(p.name)}/channel`, { channel: 'default' },
+      t('plugins.channel.set', { name: p.name, channel: t('plugins.channel.' + data.channel) }));
+
+  /** What the channel offers, as text: "STA-1.4.0-bu002" or "Dev abc1234". */
+  function offeredText(p) {
+    if (p.channel === 'dev') return p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–';
+    return p.latest ? p.latest.version : '–';
+  }
 
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
   const byName = (a, b) => a.name.localeCompare(b.name);
@@ -74,68 +91,105 @@
   const left = $derived(data && data.restart.endsAt > 0 ? Math.max(0, data.restart.endsAt - now) : 0);
 </script>
 
-{#snippet card(p)}
+{#snippet channelSwitch(p)}
+  <div class="channels" role="group" aria-label={t('plugins.col.channel')}>
+    {#each CHANNELS as c}
+      {@const locked = c === 'dev' && !data.devToken}
+      <button class="ch {c}" class:on={p.channel === c} aria-pressed={p.channel === c}
+        disabled={busy || !data.may.install || locked}
+        title={locked ? t('plugins.channel.devLocked') : t('plugins.channel.hint.' + c)}
+        onclick={() => setChannel(p, c)}>
+        {#if locked}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={ICONS.lock} /></svg>{/if}
+        {t('plugins.channel.' + c)}
+      </button>
+    {/each}
+  </div>
+  <span class="ch-note small muted">
+    {#if p.ownChannel}
+      {t('plugins.channel.own')}
+      {#if data.may.install}<button class="link" disabled={busy} onclick={() => resetChannel(p)}>{t('plugins.channel.reset')}</button>{/if}
+    {:else}
+      {t('plugins.channel.default')}
+    {/if}
+  </span>
+{/snippet}
+
+{#snippet row(p)}
   {@const st = pluginState(p)}
   {@const err = pluginError(p)}
-  <li class="card {st.tone}" class:missing={!p.installed}>
-    <div class="c-head">
-      <span class="c-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+  <li class="row {st.tone}" class:missing={!p.installed}>
+    <div class="cell plugin">
+      <span class="r-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round"><path d={ICONS[pluginIcon(p.name)]} /></svg>
       </span>
-      <div class="c-title">
+      <div class="r-name">
         {#if p.installed}
-          <a class="c-link" href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
+          <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
         {:else}
           <strong>{p.name}</strong>
         {/if}
-        <span class="c-version mono">
-          {#if p.installed}
-            {p.installed}
-            {#if p.update || p.staged}<span class="arrow">→</span><span class="new">{p.staged || p.latest.version}</span>{/if}
-          {:else if p.latest}
-            {t('plugins.newest')} {p.latest.version}{#if p.latest.prerelease}<span class="pre">{t('plugins.prerelease')}</span>{/if}
-          {:else}
-            –
-          {/if}
-        </span>
+        <span class="small muted desc">{pluginDescription(p.name)}</span>
       </div>
+    </div>
+
+    <div class="cell">
+      <span class="label">{t('plugins.col.installed')}</span>
       {#if p.installed}
-        <svg class="chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        <span class="mono">{p.installed}</span>
+        {#if p.devBuild}<span class="tag dev">{t('plugins.devBuild', { commit: p.devBuild })}</span>{/if}
+      {:else if p.pending}
+        <span class="mono muted">{p.pending}</span>
+      {:else}
+        <span class="muted">–</span>
       {/if}
     </div>
 
-    <p class="c-desc">{pluginDescription(p.name)}</p>
+    <div class="cell">
+      <span class="label">{t('plugins.col.channel')}</span>
+      {@render channelSwitch(p)}
+    </div>
 
-    <div class="c-foot">
+    <div class="cell">
+      <span class="label">{t('plugins.col.available')}</span>
+      <span class="mono">{offeredText(p)}</span>
+      {#if p.channel === 'dev' && p.dev}
+        <span class="small muted">{t('plugins.devFrom', { time: ago(p.dev.date), base: p.dev.base })}</span>
+      {:else if p.channel !== 'dev' && p.latest?.published}
+        <span class="small muted">{ago(p.latest.published)}</span>
+      {/if}
+    </div>
+
+    <div class="cell action">
       <span class="state"><span class="dot"></span>{st.text}</span>
       {#if p.installed && p.update && p.checksum && data.may.install}
         <button class="act" disabled={busy || p.downloading} onclick={() => update(p)}>⬇ {t('plugins.update')}</button>
       {:else if p.installable && data.may.install}
         <button class="act" disabled={busy || p.downloading} onclick={() => install(p)}>{t('plugins.install')}</button>
       {:else if !p.installed}
-        <a class="web" href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
+        <a class="web small" href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
       {/if}
     </div>
-    {#if p.notLoaded}<p class="c-note bad-text">{t('plugins.notLoadedHint')}</p>{/if}
-    {#if err}<p class="c-note bad-text">{err}</p>{/if}
+
+    {#if p.notLoaded}<p class="note bad-text">{t('plugins.notLoadedHint')}</p>{/if}
+    {#if err}<p class="note bad-text">{err}</p>{/if}
   </li>
 {/snippet}
 
 <div class="page">
   <header class="head" class:bare={embedded}>
     {#if !embedded}
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.box} /></svg>
-      </span>
-      <div>
-        <h1>{t('plugins.title')}</h1>
-        <p class="muted">{t('plugins.subtitle')}</p>
+      <div class="intro">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round"><path d={ICONS.box} /></svg>
+        </span>
+        <div>
+          <h1>{t('plugins.title')}</h1>
+          <p class="muted">{t('plugins.subtitle')}</p>
+        </div>
       </div>
-    </div>
     {/if}
     {#if data}
       <div class="check">
@@ -143,6 +197,7 @@
           <span class="dot"></span>
           {data.checking ? t('versions.checking') : data.checkedAt ? t('versions.checkedAt', { time: ago(data.checkedAt) }) : t('versions.neverChecked')}
         </span>
+        <span class="chip" title={t('plugins.channel.defaultHint')}>{t('plugins.channel.defaultChip', { channel: t('plugins.channel.' + data.channel) })}</span>
         <span class="chip">{t('versions.auto.' + data.auto)}</span>
         {#if data.may.install}
           <button class="ghost" disabled={busy || data.checking} onclick={() => act('/versions/check', {}, t('versions.checkStarted'))}>
@@ -196,8 +251,12 @@
     <section class="group">
       <h2>{t('plugins.onServer')}</h2>
       {#if installed.length}
-        <ul class="grid">
-          {#each installed as p (p.name)}{@render card(p)}{/each}
+        <ul class="table">
+          <li class="row headrow" aria-hidden="true">
+            <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.channel')}</span>
+            <span>{t('plugins.col.available')}</span><span></span>
+          </li>
+          {#each installed as p (p.name)}{@render row(p)}{/each}
         </ul>
       {:else}
         <p class="muted">{t('versions.none')}</p>
@@ -208,11 +267,18 @@
       <section class="group">
         <h2>{t('plugins.more')}</h2>
         <p class="muted small hint">{t('plugins.moreHint')}</p>
-        <ul class="grid">
-          {#each others as p (p.name)}{@render card(p)}{/each}
+        <ul class="table">
+          {#each others as p (p.name)}{@render row(p)}{/each}
         </ul>
       </section>
     {/if}
+
+    <p class="muted small legend">
+      <b>{t('plugins.channel.stable')}</b> {t('plugins.channel.hint.stable')} ·
+      <b>{t('plugins.channel.beta')}</b> {t('plugins.channel.hint.beta')} ·
+      <b>{t('plugins.channel.dev')}</b> {t('plugins.channel.hint.dev')}
+      {#if !data.devToken}({t('plugins.channel.devLocked')}){/if}
+    </p>
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
@@ -231,6 +297,7 @@
   .page {
     display: grid;
     gap: 18px;
+    container-type: inline-size;
   }
 
   .head {
@@ -327,12 +394,25 @@
     border-color: var(--accent);
   }
 
+  button.link {
+    display: inline;
+    padding: 0;
+    margin-left: 4px;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-size: inherit;
+    font-weight: 600;
+    justify-content: flex-start;
+  }
+
   .mono {
     font-family: ui-monospace, monospace;
+    overflow-wrap: anywhere;
   }
 
   .small {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
   }
 
   .bad-text {
@@ -426,7 +506,7 @@
     gap: 8px;
   }
 
-  /* Groups of cards */
+  /* Groups */
   .group {
     display: grid;
     gap: 10px;
@@ -441,139 +521,193 @@
     margin: -6px 0 0;
   }
 
-  .grid {
+  /* Table: one row per plugin, the columns line up over all rows (subgrid). */
+  .table {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
-  }
-
-  /* Card: name links to the plugin page and covers the whole card; the buttons lie above it. */
-  .card {
-    position: relative;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    gap: 10px;
-    padding: 16px 18px;
+    /* fixed widths, so that both tables (on the server / more plugins) line up */
+    grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) 200px minmax(150px, 1fr) 190px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface);
     box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    gap: 6px 18px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    border-left: 4px solid var(--tn, transparent);
+  }
+
+  .row:first-child {
+    border-top: 0;
+  }
+
+  .headrow {
+    padding-top: 9px;
+    padding-bottom: 9px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-left-color: transparent;
+  }
+
+  .row.missing {
+    background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+  }
+
+  .cell {
+    display: grid;
+    gap: 3px;
     min-width: 0;
-    transition: border-color 0.15s, transform 0.15s;
+    justify-items: start;
   }
 
-  .card:not(.missing):hover {
-    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-    transform: translateY(-1px);
+  .label {
+    display: none;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
   }
 
-  .card.missing {
-    border-style: dashed;
-    background: color-mix(in srgb, var(--surface) 70%, transparent);
-    box-shadow: none;
-  }
-
-  .c-head {
+  .plugin {
     display: flex;
     align-items: center;
     gap: 12px;
   }
 
-  .c-icon {
+  .r-icon {
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     flex-shrink: 0;
-    border-radius: 11px;
+    border-radius: 10px;
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 13%, var(--surface-2));
   }
 
-  .missing .c-icon {
+  .missing .r-icon {
     color: var(--muted);
     background: var(--surface-2);
   }
 
-  .c-title {
+  .r-name {
     display: grid;
     min-width: 0;
-    flex: 1;
   }
 
-  .c-title strong,
-  .c-link {
-    font-size: 1.08rem;
+  .r-name a,
+  .r-name strong {
     font-weight: 700;
     color: var(--text);
     text-decoration: none;
   }
 
-  .c-link::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
+  .r-name a:hover {
+    color: var(--accent);
   }
 
-  .c-version {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 0.86rem;
-    color: var(--muted);
+  .desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .arrow {
-    font-size: 0.8rem;
-  }
-
-  .new {
-    font-weight: 700;
-    color: var(--tn);
-  }
-
-  .pre {
-    font-family: inherit;
+  .tag {
     font-size: 0.7rem;
     font-weight: 700;
-    padding: 1px 6px;
+    padding: 1px 7px;
     border-radius: 999px;
-    color: var(--warn);
-    background: color-mix(in srgb, var(--warn) 15%, transparent);
   }
 
-  .chevron {
-    color: var(--muted);
-    flex-shrink: 0;
+  .tag.dev {
+    color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 14%, transparent);
   }
 
-  .c-desc {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.4;
+  /* Channel switch: three segments; beta yellow, dev red when chosen */
+  .channels {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--surface-2);
   }
 
-  .c-foot {
-    display: flex;
+  .ch {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    min-height: 34px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 4px 11px;
+    border: 0;
+    border-radius: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .ch + .ch {
+    border-left: 1px solid var(--border);
+  }
+
+  .ch:hover:not(:disabled) {
+    color: var(--text);
+  }
+
+  .ch.on {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .ch.beta.on {
+    background: var(--warn);
+    color: #1b1300;
+  }
+
+  .ch.dev.on {
+    background: var(--bad);
+  }
+
+  .ch:disabled:not(.on) {
+    opacity: 0.55;
+  }
+
+  .ch:disabled.on {
+    opacity: 1;
+  }
+
+  .ch-note {
+    font-size: 0.74rem;
+  }
+
+  .action {
+    justify-items: end;
+    text-align: right;
   }
 
   .state {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--tn, var(--muted));
   }
@@ -587,23 +721,73 @@
   }
 
   button.act {
-    position: relative;
-    z-index: 1;
     padding: 5px 14px;
     font-size: 0.84rem;
   }
 
   .web {
-    position: relative;
-    z-index: 1;
-    font-size: 0.84rem;
     color: var(--accent);
   }
 
-  .c-note {
+  .note {
+    grid-column: 1 / -1;
     margin: 0;
     font-size: 0.82rem;
     overflow-wrap: anywhere;
+  }
+
+  .legend {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Narrow: every row becomes a small card, the labels appear */
+  @container (max-width: 860px) {
+    .table {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      border: 0;
+      background: none;
+      box-shadow: none;
+      overflow: visible;
+    }
+
+    .headrow {
+      display: none;
+    }
+
+    .row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--tn, var(--border));
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .row:first-child {
+      border-top: 1px solid var(--border);
+    }
+
+    .plugin,
+    .action {
+      grid-column: 1 / -1;
+    }
+
+    .action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .label {
+      display: block;
+    }
   }
 
   @media (max-width: 640px) {
@@ -623,10 +807,6 @@
   @media (prefers-reduced-motion: reduce) {
     .check-state.busy .dot {
       animation: none;
-    }
-
-    .card {
-      transition: none;
     }
   }
 </style>

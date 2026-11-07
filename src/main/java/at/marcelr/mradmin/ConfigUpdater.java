@@ -51,7 +51,7 @@ public final class ConfigUpdater {
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
      */
-    public static final int CURRENT_VERSION = 49;
+    public static final int CURRENT_VERSION = 50;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -196,6 +196,10 @@ public final class ConfigUpdater {
             }
             if (version < 37) {
                 takeOverMap(plugin, template);
+            }
+            // v50: versions.include-prereleases became versions.channel (stable / beta, per plugin also dev).
+            if (version < 50 && existing.getBoolean("versions.include-prereleases", false)) {
+                template.set("versions.channel", "beta");
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

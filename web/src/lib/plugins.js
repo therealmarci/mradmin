@@ -6,6 +6,9 @@ export const PLUGIN_ICONS = { mradmin: 'shield', mrtoolbar: 'hotbar', ...MODULE_
 
 export const pluginIcon = (name) => PLUGIN_ICONS[name.toLowerCase()] ?? 'box';
 
+/** Channels of a plugin in the order of the switch (VersionManager.Channel). */
+export const CHANNELS = ['stable', 'beta', 'dev'];
+
 /** Short description of a known plugin (empty for unknown ones). */
 export function pluginDescription(name) {
   const key = 'plugins.desc.' + name.toLowerCase();
@@ -28,8 +31,9 @@ export function pluginState(p) {
   }
   if (p.staged) return { tone: 'info', text: t('versions.state.staged', { version: p.staged }) };
   if (p.update) return { tone: 'warn', text: t('versions.state.update') };
-  if (p.error) return { tone: 'bad', text: t('versions.state.error') };
-  if (!p.latest) return { tone: '', text: t('versions.state.unknown') };
+  if (p.channel === 'dev' && !p.dev) return { tone: '', text: t('plugins.state.noDev') };
+  if (p.error && p.error !== 'dev-none') return { tone: 'bad', text: t('versions.state.error') };
+  if (p.channel !== 'dev' && !p.latest) return { tone: '', text: t('versions.state.unknown') };
   return { tone: 'good', text: t('versions.state.current') };
 }
 
@@ -42,5 +46,5 @@ export function clock(ms) {
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 }
 
-/** The error text of a plugin, or '' (no release for this Minecraft version is no error). */
-export const pluginError = (p) => (!p.error || p.error === 'no-release' ? '' : p.error);
+/** The error text of a plugin, or '' (no release / no dev build for this Minecraft version is no error). */
+export const pluginError = (p) => (!p.error || p.error === 'no-release' || p.error === 'dev-none' ? '' : p.error);

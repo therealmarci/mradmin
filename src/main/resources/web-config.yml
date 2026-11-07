@@ -278,11 +278,20 @@ sections:
           - {value: patch, de: Hotfixes, en: Hotfixes}
           - {value: minor, de: Neue Funktionen, en: New features}
           - {value: all, de: Alle, en: All}
-      - key: versions.include-prereleases
-        type: bool
+      - key: versions.channel
+        type: choice
         when: versions.enabled
-        name: {de: Auch Vorabversionen, en: Pre-releases too}
-        help: {de: "Auch Vorabversionen anbieten. Ist eine 0.x installiert, werden neuere 0.x immer angeboten.", en: "Also offer pre-releases. If a 0.x is installed, newer 0.x versions are always offered."}
+        name: {de: Standard-Kanal, en: Default channel}
+        help: {de: "Welche Releases die Plugins bekommen. Pro Plugin änderbar auf der Seite Server - Plugins, dort auch Dev. Zurück auf Stable stuft nie zurück.", en: "Which releases the plugins get. Per plugin on the page Server - Plugins, there also dev. Back to stable never downgrades."}
+        options:
+          - {value: stable, de: Stable, en: Stable}
+          - {value: beta, de: Beta (auch Vorabversionen), en: Beta (also pre-releases)}
+      - key: versions.dev-token
+        type: secret
+        when: versions.enabled
+        advanced: true
+        name: {de: Freigabetoken Dev-Kanal, en: Dev channel release token}
+        help: {de: "Vom Entwickler. Nur damit lässt sich pro Plugin der Kanal Dev wählen (unfertige Builds). Geheim halten.", en: "From the developer. Only with it the channel dev can be chosen per plugin (unfinished builds). Keep it secret."}
       - key: versions.restart-method
         heading: {de: "Neustart-Knopf", en: "Restart button"}
         type: choice

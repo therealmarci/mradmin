@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 49
+config-version: 50
 
 
 # ------------------------------------------------------------------------------
@@ -358,8 +358,14 @@ versions:
   check-interval-hours: 6
   # Download new versions by themselves: "off", "patch" (only hotfixes 1.2.x), "minor" (1.x), "all".
   auto-download: "off"
-  # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
-  include-prereleases: false
+  # Default channel of the plugins: "stable" (default) or "beta" (also beta releases, BET-...). Each plugin can get
+  # its own channel on the page Server > Plugins - also "dev" (unfinished builds, only with dev-token). 0.x plugins
+  # exist only as beta and always get betas. Switching back to stable never downgrades: a beta stays until a newer
+  # stable comes.
+  channel: "stable"
+  # Release token of the dev channel (from the developer). Only with it "dev" can be chosen; the dev builds are
+  # sealed with it. Keep it secret.
+  dev-token: ""
   # Restart button in the web interface. A server cannot start itself again - something outside has to do it:
   #   none   = no restart button (default); after downloading, the page says "restart needed"
   #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again

@@ -3,6 +3,7 @@
 
 export const ICONS = {
   more: 'M4 6h16M4 12h16M4 18h16',
+  lock: 'M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
   terminal: 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5',
   box: 'M12 3 4 7.5v9L12 21l8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
   server: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01M12 7h4M12 17h4',

@@ -46,7 +46,16 @@ public record Settings(
      * @param restartDelays countdown choices in ms (0 = now)
      */
     public record VersionsSettings(boolean enabled, int checkHours, at.marcelr.mradmin.versions.ReleasePicker.Auto autoDownload,
-                                   boolean includePrereleases, String restartMethod, List<Long> restartDelays) {
+                                   String channel, String devToken, String restartMethod, List<Long> restartDelays) {
+
+        /** Whether the default channel offers betas. */
+        public boolean includePrereleases() {
+            return channel.equals("beta");
+        }
+
+        public boolean hasDevToken() {
+            return !devToken.isBlank();
+        }
     }
 
     /**
@@ -363,6 +372,11 @@ public record Settings(
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {
+        String channel = c.getString("versions.channel", "stable").trim().toLowerCase(Locale.ROOT);
+        if (!channel.equals("stable") && !channel.equals("beta")) {
+            log.warning("versions.channel '" + channel + "' is unknown (stable, beta - dev only per plugin), using stable.");
+            channel = "stable";
+        }
         // "off" without quotes is a boolean in YAML - false counts as off.
         String auto = c.getString("versions.auto-download", "off").trim().toUpperCase(Locale.ROOT);
         at.marcelr.mradmin.versions.ReleasePicker.Auto mode;
@@ -394,7 +408,7 @@ public record Settings(
         }
         return new VersionsSettings(c.getBoolean("versions.enabled", true),
                 Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
-                c.getBoolean("versions.include-prereleases", false), method, List.copyOf(delays));
+                channel, c.getString("versions.dev-token", "").trim(), method, List.copyOf(delays));
     }
 
     private static MailSettings mail(FileConfiguration c, Logger log) {

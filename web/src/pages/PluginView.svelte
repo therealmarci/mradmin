@@ -37,7 +37,7 @@
   });
 
   async function update() {
-    if (!confirm(t('versions.downloadConfirm', { name: p.name, version: p.latest.version }))) return;
+    if (!confirm(t('versions.downloadConfirm', { name: p.name, version: offered }))) return;
     busy = true;
     error = '';
     try {
@@ -52,6 +52,8 @@
   }
 
   const st = $derived(p ? pluginState(p) : null);
+  // What the channel offers: release version, or "Dev abc1234" on the dev channel.
+  const offered = $derived(!p ? '' : p.channel === 'dev' ? (p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–') : p.latest ? p.latest.version : '–');
   const showConfig = $derived(tab === 'config' && !!p?.config);
 </script>
 
@@ -91,7 +93,9 @@
       <section class="box">
         <h2>{t('plugins.tab.version')}</h2>
         <div class="facts">
-          <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}</div>
+          <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}{#if p.devBuild} <em class="pre">{t('plugins.devBuild', { commit: p.devBuild })}</em>{/if}</div>
+          <div><span>{t('plugins.col.channel')}</span>{t('plugins.channel.' + p.channel)}{#if !p.ownChannel} <span class="muted">({t('plugins.channel.default')})</span>{/if}</div>
+          {#if p.channel === 'dev'}<div><span>{t('plugins.col.available')}</span>{offered}{#if p.dev} <span class="muted">({t('plugins.devFrom', { time: dateTime(p.dev.date), base: p.dev.base })})</span>{/if}</div>{/if}
           <div><span>{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}{#if p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}</div>
           <div><span>{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
           <div><span>Minecraft</span>{p.minecraft}</div>
@@ -106,7 +110,7 @@
         <div class="row">
           {#if p.update && data.may.install}
             {#if p.checksum}
-              <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: p.latest.version })}</button>
+              <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: offered })}</button>
             {:else}
               <span class="muted small">{t('versions.noChecksum')}</span>
             {/if}

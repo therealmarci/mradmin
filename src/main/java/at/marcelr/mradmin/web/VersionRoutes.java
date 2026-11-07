@@ -18,6 +18,7 @@ import java.util.Map;
  *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.install
  *  POST /api/versions/{name}/download    newest version into plugins/update/               mradmin.versions.install
  *  POST /api/versions/{name}/install     plugin that is not installed into plugins/        mradmin.versions.install
+ *  POST /api/versions/{name}/channel {channel: default|stable|beta|dev}                     mradmin.versions.install
  *  POST /api/restart       {delay, kind, reason} restart (kind=stop: stop) after delay ms mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
  * </pre>
@@ -39,6 +40,7 @@ public final class VersionRoutes {
         server.route("POST", "/api/versions/check", r::check);
         server.route("POST", "/api/versions/{name}/download", r::download);
         server.route("POST", "/api/versions/{name}/install", r::install);
+        server.route("POST", "/api/versions/{name}/channel", r::channel);
         server.route("POST", "/api/restart", r::restart);
         server.route("POST", "/api/restart/cancel", r::cancel);
     }
@@ -84,7 +86,20 @@ public final class VersionRoutes {
             p.put("config", configurable.contains(e.name));
             p.put("downloading", e.downloading);
             p.put("error", e.error);
-            p.put("checksum", e.latest != null && e.latest.sha256() != null);
+            p.put("checksum", e.channel == VersionManager.Channel.DEV || (e.latest != null && e.latest.sha256() != null));
+            p.put("channel", e.channel.id());
+            p.put("ownChannel", e.ownChannel);
+            p.put("offered", e.offered());
+            p.put("devBuild", e.runsDevBuild() ? e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())) : null);
+            if (e.dev != null) {
+                Map<String, Object> dev = new LinkedHashMap<>();
+                dev.put("commit", e.dev.shortCommit());
+                dev.put("date", e.dev.date());
+                dev.put("run", e.dev.run());
+                dev.put("base", e.dev.base());
+                dev.put("size", e.dev.size());
+                p.put("dev", dev);
+            }
             if (e.name.equals(plugin.getName()) && plugin.map() != null) {
                 // squaremap belongs to MRadmin (it renders the map, MRadmin installs and updates it).
                 Map<String, Object> squaremap = new LinkedHashMap<>();
@@ -129,6 +144,8 @@ public final class VersionRoutes {
         result.put("checkedAt", versions.checkedAt());
         result.put("checking", versions.checking());
         result.put("auto", plugin.settings().versions().autoDownload().name().toLowerCase(java.util.Locale.ROOT));
+        result.put("channel", versions.defaultChannel().id());
+        result.put("devToken", plugin.settings().versions().hasDevToken());
         result.put("restart", restart);
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
@@ -170,7 +187,7 @@ public final class VersionRoutes {
         if (error != null) {
             throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
         }
-        audit(http, "plugin-download", name + " " + e.latest.version());
+        audit(http, "plugin-download", name + " " + e.offered());
         http.json(200, Map.of());
     }
 
@@ -182,7 +199,23 @@ public final class VersionRoutes {
         if (error != null) {
             throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
         }
-        audit(http, "plugin-install", name + " " + e.latest.version());
+        audit(http, "plugin-install", name + " " + e.offered());
+        http.json(200, Map.of());
+    }
+
+    private void channel(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        String name = http.param("name");
+        String raw = String.valueOf(http.string("channel")).trim().toLowerCase(java.util.Locale.ROOT);
+        VersionManager.Channel channel = VersionManager.Channel.of(raw);
+        if (channel == null && !raw.equals("default")) {
+            throw new Http.WebException(400, "invalid-value");
+        }
+        String error = plugin.versions().setChannel(name, channel, http.account().name() + " (web)");
+        if (error != null) {
+            throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
+        }
+        audit(http, "plugin-channel", name + " " + raw);
         http.json(200, Map.of());
     }
 
