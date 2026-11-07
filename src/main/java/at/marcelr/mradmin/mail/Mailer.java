@@ -2,6 +2,7 @@ package at.marcelr.mradmin.mail;
 
 import at.marcelr.mradmin.Settings;
 
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedReader;
@@ -81,14 +82,12 @@ public final class Mailer {
     // ------------------------------------------------------------------ SMTP
 
     private void deliver(Settings.MailSettings s, String to, String subject, String body) throws IOException {
-        Socket socket;
-        if (s.security().equals("ssl")) {
-            socket = SSLSocketFactory.getDefault().createSocket();
-        } else {
-            socket = new Socket();
-        }
+        Socket socket = new Socket();
         socket.connect(new InetSocketAddress(s.host(), s.port()), TIMEOUT_MS);
         socket.setSoTimeout(TIMEOUT_MS);
+        if (s.security().equals("ssl")) {
+            socket = tls(socket, s);
+        }
         Connection c = new Connection(socket);
         try {
             c.expect(220);
@@ -96,10 +95,7 @@ public final class Mailer {
             c.command("EHLO " + helo, 250);
             if (s.security().equals("starttls")) {
                 c.command("STARTTLS", 220);
-                SSLSocket tls = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
-                        .createSocket(socket, s.host(), s.port(), true);
-                tls.startHandshake();
-                c = new Connection(tls);
+                c = new Connection(tls(socket, s));
                 c.command("EHLO " + helo, 250);
             }
             if (!s.username().isEmpty()) {
@@ -151,6 +147,22 @@ public final class Mailer {
                 .encodeToString(body.replace("\r\n", "\n").replace("\n", "\r\n").getBytes(StandardCharsets.UTF_8));
         m.append(encoded).append("\r\n");
         return m.toString();
+    }
+
+    /**
+     * TLS over an open connection (port 465 right away, 587 after STARTTLS). Checks the certificate chain and that the
+     * certificate belongs to the configured host - a raw SSLSocket does not check the host name by itself, then any
+     * valid certificate would do and someone in between could read the login.
+     */
+    static SSLSocket tls(Socket plain, Settings.MailSettings s) throws IOException {
+        SSLSocket tls = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                .createSocket(plain, s.host(), s.port(), true);
+        SSLParameters params = tls.getSSLParameters();
+        params.setEndpointIdentificationAlgorithm("HTTPS");
+        tls.setSSLParameters(params);
+        tls.setSoTimeout(TIMEOUT_MS);
+        tls.startHandshake();
+        return tls;
     }
 
     /** RFC 2047 for non-ASCII header text. */
