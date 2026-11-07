@@ -607,6 +607,10 @@ public final class VersionManager {
         String token = settings().devToken();
         Boolean valid = DevJson.tokenValid(response.body(), token);
         if (valid != null) {
+            if (!valid.equals(validity())) {
+                plugin.getLogger().info(valid ? "Dev channel: the release token (versions.dev-token) is valid."
+                        : "Dev channel: the release token (versions.dev-token) is wrong - the channel dev stays hidden.");
+            }
             devTokenChecked = token;
             devTokenValid = valid;
         }
