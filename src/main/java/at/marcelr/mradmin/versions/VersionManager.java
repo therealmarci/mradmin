@@ -578,18 +578,30 @@ public final class VersionManager {
             e.hasStable = ReleasePicker.pick(releases, e.name, e.minecraft, false, false) != null;
             e.hasBeta = newest != null && newest.prerelease();
             e.error = e.latest == null ? "no-release" : null;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return;
+        } catch (Exception ex) {
+            e.error = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+        }
+        // The dev channel on its own: dev.json is a plain download, not limited like the GitHub API above - it must
+        // work even while the API says "rate limit".
+        if (!settings().hasDevToken()) {
             e.dev = null;
-            if (settings().hasDevToken()) {
-                e.dev = devBuild(e);
-                e.channel = channelOf(e.name);
-                if (e.channel == Channel.DEV) {
-                    e.error = e.dev == null ? "dev-none" : null;
-                }
+            return;
+        }
+        try {
+            e.dev = devBuild(e);
+            e.channel = channelOf(e.name);
+            if (e.channel == Channel.DEV) {
+                e.error = e.dev == null ? "dev-none" : null;
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         } catch (Exception ex) {
-            e.error = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+            if (e.channel == Channel.DEV) {
+                e.error = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+            }
         }
     }
 
