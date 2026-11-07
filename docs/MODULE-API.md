@@ -291,7 +291,8 @@ MRadmin rufen `webConfig()` nie auf.
 ```yaml
 sections:
   - id: sleep
-    name: {de: Schlafen, en: Sleeping}
+    help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
+    group: {de: Server & Neustarts, en: Server & restarts}   # optional: Überschrift in der Navigation (gleiche Gruppen nebeneinander)
     help: {de: "Kurzer Satz, was der Abschnitt einstellt.", en: "..."}
     fields:
       - key: sleep.percentage          # Schlüssel in config.yml
@@ -300,7 +301,9 @@ sections:
         max: 100
         unit: {de: "%", en: "%"}
         name: {de: Anteil der Schläfer, en: Share of sleepers}
-        help: {de: "...", en: "..."}
+        help: {de: "...", en: "..."}    # Erklärung - im Web hinter einem kleinen „i“ (Hover/Tippen)
+        heading: {de: Bossbar, en: Boss bar}   # optional: Zwischenüberschrift vor diesem Feld (beginnt einen Block)
+        advanced: true                 # optional: erst nach „Erweiterte Einstellungen“ sichtbar (die Suche findet es immer)
         restart: false                 # true = wirkt erst nach einem Neustart (Hinweis im Web)
         when: sleep.enabled            # nur zeigen, wenn: "key" (Schalter an), "!key" (aus), "key=a|b" (Wert)
 ```

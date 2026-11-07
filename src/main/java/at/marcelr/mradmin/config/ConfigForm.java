@@ -50,13 +50,16 @@ public final class ConfigForm {
      * @param item     lists: "duration" = every entry is a duration, "time" = a time of day HH:MM (sorted, no doubles)
      * @param permanent durations: "permanent" is allowed too
      * @param rows     tables: names of the rows (rows without a name show their key)
+     * @param heading  a small heading before this field (starts a block inside the section), empty = none
+     * @param advanced shown only after "show advanced settings" (the search finds it anyway)
      */
     public record Field(String key, Type type, Text name, Text help, Text unit, boolean restart, String when,
                         Double min, Double max, int maxLength, int count, String item, boolean permanent,
-                        List<Option> options, List<Column> columns, Map<String, Text> rows) {
+                        List<Option> options, List<Column> columns, Map<String, Text> rows, Text heading, boolean advanced) {
     }
 
-    public record Section(String id, Text name, Text help, String icon, List<Field> fields) {
+    /** @param group heading the section is listed under in the navigation, empty = none */
+    public record Section(String id, Text name, Text help, String icon, List<Field> fields, Text group) {
     }
 
     /** A value that does not fit the form: {@code key} of the field, {@code error} the error key for the browser. */
@@ -113,7 +116,8 @@ public final class ConfigForm {
                     }
                 }
             }
-            sections.add(new Section(id, text(s.get("name"), id), text(s.get("help"), ""), string(s.get("icon")), List.copyOf(fields)));
+            sections.add(new Section(id, text(s.get("name"), id), text(s.get("help"), ""), string(s.get("icon")), List.copyOf(fields),
+                    text(s.get("group"), "")));
         }
         return new ConfigForm(List.copyOf(sections));
     }
@@ -171,7 +175,7 @@ public final class ConfigForm {
                 Boolean.TRUE.equals(f.get("restart")), string(f.get("when")), number(f.get("min")), number(f.get("max")),
                 Math.clamp(maxLength, 1, MAX_TEXT), f.get("count") instanceof Number n ? n.intValue() : 0,
                 string(f.get("item")), Boolean.TRUE.equals(f.get("permanent")), List.copyOf(options), List.copyOf(columns),
-                rows);
+                rows, text(f.get("heading"), ""), Boolean.TRUE.equals(f.get("advanced")));
     }
 
     private static Text text(Object value, String fallback) {
@@ -218,6 +222,8 @@ public final class ConfigForm {
                 m.put("count", f.count());
                 m.put("item", f.item());
                 m.put("permanent", f.permanent());
+                m.put("heading", f.heading().json());
+                m.put("advanced", f.advanced());
                 if (!f.options().isEmpty()) {
                     m.put("options", f.options().stream().map(o -> Map.of("value", o.value(), "name", o.name().json())).toList());
                 }
@@ -253,6 +259,7 @@ public final class ConfigForm {
             sm.put("name", s.name().json());
             sm.put("help", s.help().json());
             sm.put("icon", s.icon());
+            sm.put("group", s.group().json());
             sm.put("fields", list);
             result.add(sm);
         }
@@ -349,7 +356,7 @@ public final class ConfigForm {
                         Column col = f.columns().stream().filter(c -> c.key().equals(String.valueOf(cell.getKey()))).findFirst()
                                 .orElseThrow(() -> new Invalid(f.key(), "config-invalid"));
                         Field asField = new Field(f.key(), col.type(), col.name(), f.help(), f.unit(), false, "", col.min(), col.max(),
-                                200, 0, "", false, List.of(), List.of(), Map.of());
+                                200, 0, "", false, List.of(), List.of(), Map.of(), new Text("", ""), false);
                         checked.put(f.key() + "." + rowKey + "." + col.key(), check(asField, cell.getValue()));
                     }
                 }
