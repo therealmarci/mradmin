@@ -93,6 +93,10 @@ public final class VersionRoutes {
             p.put("channels", Map.of("stable", e.hasStable || !e.hasBeta, "beta", true, "dev", versions.devAvailable() && e.dev != null));
             p.put("ownChannel", e.ownChannel);
             p.put("offered", e.offered());
+            // A step back that is not offered (DowngradeGuard): reason config / lang / code, the two values.
+            if (e.blockedNow()) {
+                p.put("blocked", Map.of("reason", e.blocked.reason(), "have", e.blocked.have(), "offered", e.blocked.offered()));
+            }
             p.put("devBuild", e.runsDevBuild() ? e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())) : null);
             if (e.dev != null) {
                 Map<String, Object> dev = new LinkedHashMap<>();

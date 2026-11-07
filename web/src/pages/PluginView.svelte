@@ -116,6 +116,7 @@
             {/if}
           {/if}
           {#if p.staged}<span class="muted small">{t('plugins.stagedHint')}</span>{/if}
+          {#if p.blocked}<span class="small blocked">{t('plugins.blocked.' + p.blocked.reason, { name: p.name, version: offered, have: p.blocked.have, offered: p.blocked.offered })}</span>{/if}
           <span class="links">
             <a href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
             {#if p.latest}<a href={p.latest.page} target="_blank" rel="noopener noreferrer">GitHub ↗</a>{/if}
@@ -302,6 +303,10 @@
     color: var(--muted);
     font-size: 0.74rem;
     font-weight: 600;
+  }
+
+  .blocked {
+    color: var(--warn);
   }
 
   .pre {

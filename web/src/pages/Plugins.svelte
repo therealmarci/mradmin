@@ -171,6 +171,7 @@
       {/if}
     </div>
 
+    {#if p.blocked}<p class="note warn-text">{t('plugins.blocked.' + p.blocked.reason, { name: p.name, version: offeredText(p), have: p.blocked.have, offered: p.blocked.offered })}</p>{/if}
     {#if p.notLoaded}<p class="note bad-text">{t('plugins.notLoadedHint')}</p>{/if}
     {#if err}<p class="note bad-text">{err}</p>{/if}
   </li>
@@ -416,6 +417,10 @@
 
   .bad-text {
     color: var(--bad);
+  }
+
+  .warn-text {
+    color: var(--warn);
   }
 
   /* Numbers */

@@ -13,6 +13,10 @@ Every plugin follows a **channel** - switch it in the column **Channel** (`mradm
 
 - Without a choice of its own a plugin follows the **default channel** `versions.channel` (`stable` or `beta`); "back to default" removes the own choice. 0.x plugins only exist as beta and always get betas.
 - **Back to stable never downgrades:** a running beta or dev build stays until a newer stable version comes (older versions could not handle the settings that were already migrated).
+- **Protection against steps back** - for every channel, also for `versions.auto-download`:
+  - If the offered version has a lower `config-version` (config.yml) or `lang-version` (language files) than your server, it is **not installed**: your settings were already migrated by a newer version.
+  - If the running and the offered build both come from GitHub (all releases and dev builds), the offered one must be a **successor** of the running one. Important after dev: a dev build carries the number of the last release - a later hotfix would look "newer" but would remove the features of the dev build again. It is offered only once it contains the dev state.
+  - Blocked versions show **"Step back blocked"** with the reason on the page. If you really want to go back, do it by hand: put the old JAR in and restore the `config.yml` from a backup (`config.v<number>.backup.yml`).
 - **Stable is greyed out** as long as there is no stable version yet (plugins with only betas so far, 0.x). **Beta can always be chosen** - it also gets the stable versions, so you can stay on beta even while a stable is the newest.
 - **Dev** only appears when a **valid release token** is in the configuration (`versions.dev-token`, you get it from the developer). If it is wrong, dev stays hidden and the page shows a note. The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
 

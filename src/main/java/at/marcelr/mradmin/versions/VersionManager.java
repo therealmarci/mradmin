@@ -121,6 +121,9 @@ public final class VersionManager {
         /** Whether a stable / a beta release exists for this Minecraft version (no stable = stable greyed out). */
         public volatile boolean hasStable;
         public volatile boolean hasBeta;
+        /** A blocked step back (DowngradeGuard) and for which offer (release version / dev commit) it holds, or null. */
+        public volatile DowngradeGuard.Block blocked;
+        volatile String blockedFor;
 
         Entry(String name, String installed, String minecraft, String repository, String website, File jar,
               String installedCommit, String installedBranch) {
@@ -149,6 +152,22 @@ public final class VersionManager {
          * from beta or dev to stable waits for the next stable).
          */
         public boolean updateAvailable() {
+            return newerOffered() && !blockedNow();
+        }
+
+        /** The offer is blocked as a step back (DowngradeGuard) - no button, no automatic download. */
+        public boolean blockedNow() {
+            String key = offerKey();
+            return blocked != null && key != null && key.equals(blockedFor);
+        }
+
+        /** Release version or dev commit on offer - what a block refers to. */
+        String offerKey() {
+            return channel == Channel.DEV ? (dev == null ? null : dev.commit()) : latest == null ? null : latest.version();
+        }
+
+        /** Something newer than installed and downloaded on the channel (before the downgrade rules). */
+        boolean newerOffered() {
             if (installed == null) {
                 return false;
             }
@@ -161,7 +180,7 @@ public final class VersionManager {
 
         /** Not installed, nothing in plugins/ yet and something to install on its channel. */
         public boolean installable() {
-            if (installed != null || pending != null || notLoaded) {
+            if (installed != null || pending != null || notLoaded || blockedNow()) {
                 return false;
             }
             return channel == Channel.DEV ? dev != null : latest != null && latest.sha256() != null;
@@ -453,6 +472,8 @@ public final class VersionManager {
             entry.latest = old.latest;
             entry.mod = old.mod;
             entry.dev = old.dev;
+            entry.blocked = old.blocked;
+            entry.blockedFor = old.blockedFor;
             entry.error = old.error;
             entry.downloading = old.downloading;
         }
@@ -562,6 +583,11 @@ public final class VersionManager {
     }
 
     private void checkOne(Entry e) {
+        lookUp(e);
+        checkCode(e);
+    }
+
+    private void lookUp(Entry e) {
         e.channel = channelOf(e.name);
         // Betas on the beta and dev channel, and always for 0.x - like the update check (Versions.wantsBeta).
         boolean prereleases = Versions.wantsBeta(e.installed, e.channel != Channel.STABLE);
@@ -603,6 +629,58 @@ public final class VersionManager {
                 e.error = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
             }
         }
+    }
+
+    /** Commit comparisons already asked ("base...head" -> status), so GitHub is asked once per pair. */
+    private final Map<String, String> compared = new ConcurrentHashMap<>();
+
+    /**
+     * Downgrade rule 2 (code): if the running build and the offer are both known commits, the offer must be a descendant
+     * (GitHub compare "ahead"). Asked only when there is a newer offer - one API request per new pair.
+     */
+    private void checkCode(Entry e) {
+        String key = e.offerKey();
+        if (key == null || !e.newerOffered() || e.installedCommit.isEmpty()) {
+            return;
+        }
+        String head = e.channel == Channel.DEV ? e.dev.commit() : e.latest.tag();
+        String pair = e.installedCommit + "..." + head;
+        String status = compared.get(pair);
+        if (status == null) {
+            try {
+                String body = fetch("https://api.github.com/repos/" + e.repository + "/compare/" + pair);
+                status = JsonParser.parseString(body).getAsJsonObject().get("status").getAsString();
+                compared.put(pair, status);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                return;
+            } catch (Exception ex) {
+                return; // unknown - rule 1 still guards the download
+            }
+        }
+        DowngradeGuard.Block block = DowngradeGuard.code(status, e.installedCommit, head);
+        if (block != null) {
+            if (!key.equals(e.blockedFor)) {
+                plugin.getLogger().warning(e.name + " " + e.offered() + " is not offered: it would be a step back from the running"
+                        + " build (" + status + "). Going back is only possible by hand.");
+            }
+            e.blocked = block;
+            e.blockedFor = key;
+        }
+    }
+
+    /** Downgrade rule 1 (migrations) on the downloaded JAR; true = blocked (the file must not be installed). */
+    private boolean migrationsBlock(Entry e, File jar) throws IOException {
+        DowngradeGuard.Block block = DowngradeGuard.migrations(jar, new File(plugin.getDataFolder().getParentFile(), e.name));
+        if (block == null) {
+            return false;
+        }
+        e.blocked = block;
+        e.blockedFor = e.offerKey();
+        plugin.getLogger().warning("Not installing " + e.name + " " + e.offered() + ": its " + block.reason() + "-version "
+                + block.offered() + " is older than " + block.have() + " on this server - the settings were already migrated"
+                + " by a newer version. Going back is only possible by hand.");
+        return true;
     }
 
     /**
@@ -667,6 +745,9 @@ public final class VersionManager {
         }
         if (e.downloading) {
             return "versions-busy";
+        }
+        if (e.blockedNow()) {
+            return "versions-downgrade";
         }
         if (!e.updateAvailable()) {
             return "versions-no-update";
@@ -766,6 +847,9 @@ public final class VersionManager {
             if (meta == null || !meta[0].equals(e.name)) {
                 throw new IOException("the file does not contain " + e.name);
             }
+            if (migrationsBlock(e, temp.toFile())) {
+                return;
+            }
             // An update keeps the name of the installed JAR - that is how Paper knows which plugin it replaces.
             Files.move(temp, folder.resolve(fileName), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             temp = null;
@@ -850,6 +934,9 @@ public final class VersionManager {
             String[] meta = meta(temp.toFile());
             if (meta == null || !meta[0].equals(e.name)) {
                 throw new IOException("the file does not contain " + e.name);
+            }
+            if (migrationsBlock(e, temp.toFile())) {
+                return;
             }
             Files.move(temp, folder.resolve(fileName), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             temp = null;

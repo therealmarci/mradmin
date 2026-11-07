@@ -30,6 +30,7 @@ export function pluginState(p) {
     return { tone: '', text: t('plugins.state.available') };
   }
   if (p.staged) return { tone: 'info', text: t('versions.state.staged', { version: p.staged }) };
+  if (p.blocked) return { tone: 'warn', text: t('plugins.state.blocked') };
   if (p.update) return { tone: 'warn', text: t('versions.state.update') };
   if (p.channel === 'dev' && !p.dev) return { tone: '', text: t('plugins.state.noDev') };
   if (p.error && p.error !== 'dev-none') return { tone: 'bad', text: t('versions.state.error') };
