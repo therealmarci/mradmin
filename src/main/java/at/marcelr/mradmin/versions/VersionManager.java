@@ -118,7 +118,7 @@ public final class VersionManager {
         public volatile boolean ownChannel;
         /** Current dev build (looked up whenever a release token is set), or null. */
         public volatile DevBuild dev;
-        /** Whether a stable / a beta release exists for this Minecraft version (else the channel is greyed out). */
+        /** Whether a stable / a beta release exists for this Minecraft version (no stable = stable greyed out). */
         public volatile boolean hasStable;
         public volatile boolean hasBeta;
 
@@ -275,8 +275,9 @@ public final class VersionManager {
         if (channel == Channel.DEV && Boolean.FALSE.equals(validity())) {
             return "versions-dev-token-invalid";
         }
-        // A channel without anything in it (no stable yet, no beta, no dev build) cannot be chosen.
-        if (channel == Channel.STABLE && !e.hasStable || channel == Channel.BETA && !e.hasBeta
+        // Stable cannot be chosen before there is a stable release, dev not without a dev build. Beta always can - it
+        // also gets the stables, and one may want to stay on beta while the newest release is a stable.
+        if (channel == Channel.STABLE && !e.hasStable && e.hasBeta
                 || channel == Channel.DEV && e.dev == null && validity() != null) {
             return "versions-channel-empty";
         }

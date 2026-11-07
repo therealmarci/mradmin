@@ -13,7 +13,7 @@ Every plugin follows a **channel** - switch it in the column **Channel** (`mradm
 
 - Without a choice of its own a plugin follows the **default channel** `versions.channel` (`stable` or `beta`); "back to default" removes the own choice. 0.x plugins only exist as beta and always get betas.
 - **Back to stable never downgrades:** a running beta or dev build stays until a newer stable version comes (older versions could not handle the settings that were already migrated).
-- Channels without anything in them are **greyed out** - e.g. stable for a plugin that only has betas so far (0.x).
+- **Stable is greyed out** as long as there is no stable version yet (plugins with only betas so far, 0.x). **Beta can always be chosen** - it also gets the stable versions, so you can stay on beta even while a stable is the newest.
 - **Dev** only appears when a **valid release token** is in the configuration (`versions.dev-token`, you get it from the developer). If it is wrong, dev stays hidden and the page shows a note. The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
 
 ## Install

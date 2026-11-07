@@ -88,8 +88,9 @@ public final class VersionRoutes {
             p.put("error", e.error);
             p.put("checksum", e.channel == VersionManager.Channel.DEV || (e.latest != null && e.latest.sha256() != null));
             p.put("channel", e.shownChannel().id());
-            // Which channels have anything in them (the others are greyed out); dev only with a valid release token.
-            p.put("channels", Map.of("stable", e.hasStable, "beta", e.hasBeta, "dev", versions.devAvailable() && e.dev != null));
+            // Which channels can be chosen: stable only once there is a stable release (or nothing at all yet), beta
+            // always (it also gets stables), dev only with a valid release token and a dev build.
+            p.put("channels", Map.of("stable", e.hasStable || !e.hasBeta, "beta", true, "dev", versions.devAvailable() && e.dev != null));
             p.put("ownChannel", e.ownChannel);
             p.put("offered", e.offered());
             p.put("devBuild", e.runsDevBuild() ? e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())) : null);

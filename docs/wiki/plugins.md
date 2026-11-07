@@ -13,7 +13,7 @@ Jedes Plugin folgt einem **Kanal** - in der Spalte **Kanal** umschaltbar (`mradm
 
 - Ohne eigene Wahl folgt ein Plugin dem **Standard-Kanal** `versions.channel` (`stable` oder `beta`); „zurück auf Standard“ hebt die eigene Wahl wieder auf. 0.x-Plugins gibt es nur als Beta, sie bekommen immer Betas.
 - **Zurück auf Stable stuft nie zurück:** Läuft eine Beta oder ein Dev-Build, bleibt sie, bis eine neuere stabile Version erscheint (ältere Versionen könnten mit den bereits umgebauten Einstellungen nicht umgehen).
-- Kanäle, in denen es noch nichts gibt, sind **ausgegraut** - z.B. Stable bei einem Plugin, das bisher nur Betas hat (0.x).
+- **Stable ist ausgegraut**, solange es noch keine stabile Version gibt (Plugins mit bisher nur Betas, 0.x). **Beta ist immer wählbar** - sie bekommt auch die stabilen Versionen, du kannst also auf Beta bleiben, auch wenn gerade eine Stable die neueste ist.
 - **Dev** erscheint nur, wenn in der Konfiguration ein **gültiger Freigabetoken** steht (`versions.dev-token`, bekommst du vom Entwickler). Ist er falsch, bleibt Dev ausgeblendet und die Seite zeigt einen Hinweis. Die Dev-Builds liegen verschlüsselt im GitHub-Release `mc0-dev`; MRadmin entschlüsselt sie mit dem Token und prüft die Prüfsumme. Ein Plugin, auf dem ein Dev-Build läuft, ist mit **Dev** und dem Commit (z.B. `Dev c44ebd6`) markiert. Dev-Builds lädt `versions.auto-download` nur bei `all` von selbst.
 
 ## Installieren
