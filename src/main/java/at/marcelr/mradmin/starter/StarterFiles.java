@@ -84,6 +84,11 @@ public final class StarterFiles {
         return dir.resolve("events.log");
     }
 
+    /** One-time answers of the installer for config.yml (see StarterLink.applySeed). */
+    public Path seed() {
+        return dir.resolve("seed.properties");
+    }
+
     public Path lock() {
         return dir.resolve("starter.lock");
     }

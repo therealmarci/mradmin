@@ -120,4 +120,37 @@ class StarterLogicTest {
         assertFalse(Supervisor.crashLine("[08:52:27 WARN]: [SomePlugin] Encountered an unexpected exception while saving"));
         assertFalse(Supervisor.crashLine("[08:52:42 INFO]: Stopping server"));
     }
+
+    @Test
+    void installMemoryIsCheckedAndSeeded(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        assertNull(Setup.memoryProblem("2G", "6G"));
+        assertNull(Setup.memoryProblem(null, "4096M"));
+        assertNull(Setup.memoryProblem("4G", "4096M"));
+        assertNotNull(Setup.memoryProblem("8G", "4G"));
+        assertNotNull(Setup.memoryProblem("2 GB", null));
+        assertNotNull(Setup.memoryProblem(null, "lots"));
+        assertEquals(4096, Setup.megabytes("4G"));
+        assertEquals(1024, Setup.megabytes("1048576K"));
+
+        assertNull(Setup.webUrlProblem(null));
+        assertNull(Setup.webUrlProblem("https://admin.example.com"));
+        assertNull(Setup.webUrlProblem("http://10.0.0.5:8125/mradmin"));
+        assertNotNull(Setup.webUrlProblem("admin.example.com"));
+        assertNotNull(Setup.webUrlProblem("https://x.com/\"><script>"));
+
+        StarterFiles files = new StarterFiles(dir);
+        Setup.seed(files, "2G", "6G", true, "https://admin.example.com");
+        java.util.Properties launch = StarterFiles.read(files.launch());
+        assertEquals("2G", launch.getProperty("memory-min"));
+        assertEquals("6G", launch.getProperty("memory-max"));
+        // The starter uses it right away ...
+        assertEquals("6G", Supervisor.Launch.read(files).memoryMax());
+        // ... and MRadmin takes these over into config.yml on its first start - only allowed keys.
+        java.util.Properties seed = StarterFiles.read(files.seed());
+        assertEquals("6G", seed.getProperty("server.memory-max"));
+        assertEquals("true", seed.getProperty("web.enabled"));
+        assertEquals("sqlite", seed.getProperty("storage.type"));
+        assertEquals("https://admin.example.com", seed.getProperty("web.public-url"));
+        assertTrue(Setup.SEED_KEYS.containsAll(seed.stringPropertyNames()));
+    }
 }

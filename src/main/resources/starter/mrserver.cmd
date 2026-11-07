@@ -40,8 +40,17 @@ if not defined PLUGIN (
     for %%f in (plugins\MRadmin*.jar) do set "PLUGIN=%%f"
     set "DOWNLOADED=--downloaded"
 )
-if /i "%~1"=="setup" shift
-"%JAVA%" -jar "%PLUGIN%" setup %DOWNLOADED% %1 %2 %3 %4
+rem All arguments except the word "setup" go on to the setup (shift does not change %*).
+set "ARGS="
+:collect
+if "%~1"=="" goto runsetup
+if /i not "%~1"=="setup" set "ARGS=%ARGS% %1"
+shift
+goto collect
+:runsetup
+rem This file is running - the setup must not replace it (cmd reads it line by line while it runs).
+set "MRSERVER_SETUP_FROM_CMD=1"
+"%JAVA%" -jar "%PLUGIN%" setup %DOWNLOADED% %ARGS%
 exit /b %errorlevel%
 
 :ready

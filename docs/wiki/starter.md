@@ -19,6 +19,19 @@ Der Starter ist **freiwillig**. Ohne ihn läuft MRadmin wie bisher.
 ## Einrichten
 
 ### Neuer Server
+**Am einfachsten mit einem Befehl** (auch auf der [Download-Seite](https://mrtechnology.marcelr.at/de/downloads/) zum Kopieren):
+
+| System | Befehl |
+|---|---|
+| Linux (als normaler Benutzer, nicht root) | `curl -fsSL https://mrtechnology.marcelr.at/install.sh \| sh` |
+| Windows (PowerShell) | `irm https://mrtechnology.marcelr.at/install.ps1 \| iex` |
+
+Das Skript prüft Java 25 und installiert es auf Wunsch (Debian/Ubuntu mit `sudo apt`, Windows mit `winget`), fragt nach dem **Ordner** (Standard `~/MINECRAFT/Server` bzw. `%USERPROFILE%\MINECRAFT\Server`, muss leer sein), dem **Arbeitsspeicher** (min./max.), der **öffentlichen Adresse der Weboberfläche** (optional) und der [Minecraft-EULA](https://aka.ms/MinecraftEULA). Dann lädt es MRadmin und Paper (beides mit Prüfsumme), schaltet die Weboberfläche ein (nur lokal auf Port 8125, Speicher SQLite) und richtet auf Wunsch Autostart und Start ein. Weitere MRtechnology-Plugins installierst du danach im Browser unter **Server → Plugins**.
+
+> [!TIP]
+> Ohne Fragen, z.B. für Skripte: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (dazu `--dir <ordner>`, `--no-start`); Windows über Umgebungsvariablen `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` vor dem Befehl. Die Skripte sind öffentlich einsehbar: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+
+**Von Hand:**
 1. Leeren Ordner anlegen und **`mrserver.sh`** (Linux) bzw. **`mrserver.cmd`** (Windows) aus dem [MRadmin-Download](https://mrtechnology.marcelr.at/download/mradmin/) hineinlegen.
 2. Einrichten - lädt MRadmin und Paper selbst herunter (beides mit Prüfsumme) und fragt nach der [Minecraft-EULA](https://aka.ms/MinecraftEULA):
    - Linux: `sh mrserver.sh setup`
@@ -56,7 +69,7 @@ Im Serverordner `./mrserver.sh <befehl>` (Linux) bzw. `mrserver <befehl>` (Windo
 
 | Befehl | Was er tut |
 |---|---|
-| `setup [--accept-eula] [--mode …]` | Ordner einrichten, fehlendes Paper herunterladen |
+| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …]` | Ordner einrichten, fehlendes Paper herunterladen; Arbeitsspeicher und Weboberfläche übernimmt MRadmin beim ersten Start in die `config.yml` |
 | `install` · `uninstall` | Autostart an · aus (ein laufender Server läuft weiter) |
 | `start` · `run` | im Hintergrund starten · im aktuellen Terminal starten |
 | `stop [zeit\|now]` · `restart [zeit\|now]` | mit Countdown stoppen bzw. neu starten (ohne Zeit: `server.countdown`, Standard 5 Minuten) |
