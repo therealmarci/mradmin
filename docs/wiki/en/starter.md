@@ -19,6 +19,19 @@ The starter is **optional**. Without it MRadmin works as before.
 ## Setting it up
 
 ### New server
+**Easiest with one command** (also on the [downloads page](https://mrtechnology.marcelr.at/en/downloads/) to copy):
+
+| System | Command |
+|---|---|
+| Linux (as a normal user, not root) | `curl -fsSL https://mrtechnology.marcelr.at/install.sh \| sh` |
+| Windows (PowerShell) | `irm https://mrtechnology.marcelr.at/install.ps1 \| iex` |
+
+The script checks Java 25 and installs it on request (Debian/Ubuntu with `sudo apt`, Windows with `winget`), asks for the **folder** (default `~/MINECRAFT/Server` or `%USERPROFILE%\MINECRAFT\Server`, must be empty), the **memory** (min./max.), the **public address of the web interface** (optional) and the [Minecraft EULA](https://aka.ms/MinecraftEULA). Then it downloads MRadmin and Paper (both with checksum), switches on the web interface (only locally on port 8125, storage SQLite) and on request sets up the autostart and starts. Install more MRtechnology plugins afterwards in the browser under **Server → Plugins**.
+
+> [!TIP]
+> Without questions, e.g. for scripts: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (also `--dir <folder>`, `--no-start`); Windows with the environment variables `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` before the command. The scripts are public: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+
+**By hand:**
 1. Create an empty folder and put **`mrserver.sh`** (Linux) or **`mrserver.cmd`** (Windows) from the [MRadmin download](https://mrtechnology.marcelr.at/download/mradmin/) into it.
 2. Set it up - downloads MRadmin and Paper itself (both with checksum) and asks for the [Minecraft EULA](https://aka.ms/MinecraftEULA):
    - Linux: `sh mrserver.sh setup`
@@ -56,7 +69,7 @@ In the server folder `./mrserver.sh <command>` (Linux) or `mrserver <command>` (
 
 | Command | What it does |
 |---|---|
-| `setup [--accept-eula] [--mode …]` | set up the folder, download Paper if missing |
+| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …]` | set up the folder, download Paper if missing; MRadmin takes memory and web interface over into `config.yml` on its first start |
 | `install` · `uninstall` | autostart on · off (a running server keeps running) |
 | `start` · `run` | start in the background · start in the current terminal |
 | `stop [time\|now]` · `restart [time\|now]` | stop or restart with a countdown (without a time: `server.countdown`, default 5 minutes) |

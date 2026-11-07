@@ -88,6 +88,39 @@ public final class StarterLink {
         });
     }
 
+    /**
+     * Answers of the installer (mrserver setup --memory-min/--memory-max/--web/--web-url, file seed.properties):
+     * written once into config.yml on the first start - before storage and web interface start - and the file is
+     * deleted. Only these keys, so nothing else can be set this way.
+     */
+    public static void applySeed(MRAdmin plugin) {
+        String env = System.getenv(StarterFiles.ENV);
+        if (env == null || env.isBlank()) {
+            return;
+        }
+        StarterFiles starter = new StarterFiles(Path.of(env));
+        Properties seed = StarterFiles.read(starter.seed());
+        if (seed.isEmpty()) {
+            return;
+        }
+        List<String> taken = new java.util.ArrayList<>();
+        for (String key : at.marcelr.mradmin.starter.Setup.SEED_KEYS) {
+            String value = seed.getProperty(key);
+            if (value == null) {
+                continue;
+            }
+            plugin.getConfig().set(key, key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value) : value);
+            taken.add(key.equals("web.public-url") ? key : key + "=" + value);
+        }
+        plugin.saveConfig();
+        try {
+            Files.deleteIfExists(starter.seed());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not delete " + starter.seed() + ": " + e.getMessage());
+        }
+        plugin.getLogger().info("Settings from the installation taken over into config.yml: " + String.join(", ", taken) + ".");
+    }
+
     public void stop() {
         stopTasks();
         if (active() && !Files.isRegularFile(files.action())) {

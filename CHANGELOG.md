@@ -9,6 +9,16 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.3.1] - 2026-11-07
+
+### Neu
+- **Neuen Server mit einem Befehl installieren:** Auf der Download-Seite der Website steht ein Befehl für Linux (`curl -fsSL https://mrtechnology.marcelr.at/install.sh | sh`) und Windows (`irm https://mrtechnology.marcelr.at/install.ps1 | iex`). Er prüft Java 25 (installiert es auf Wunsch), fragt nach Ordner, Arbeitsspeicher, Adresse der Weboberfläche und EULA, lädt MRadmin und Paper und richtet auf Wunsch Autostart und Start ein. Weitere Plugins dann im Browser unter Server → Plugins. Anleitung im Wiki auf der Seite „Starter“.
+- **`mrserver setup` mit Startwerten:** `--memory-min`, `--memory-max` (z.B. `2G`, `4096M`), `--web` (Weboberfläche an, nur lokal, Speicher SQLite) und `--web-url <adresse>`. Der Starter nutzt den Arbeitsspeicher gleich beim ersten Start, MRadmin übernimmt die Werte beim ersten Start einmalig in die `config.yml` (`server.memory-*`, `web.enabled`, `web.public-url`, `storage.type`) - danach im Browser änderbar.
+
+### Behoben & geändert
+- **Windows: Einrichten über `mrserver.cmd` mit vielen Optionen:** Beim ersten Einrichten reichte `mrserver.cmd` nur vier Optionen weiter, und war die heruntergeladene `mrserver.cmd` eine andere Fassung als die in MRadmin, wurde die laufende Datei überschrieben - Windows las dann mitten in der neuen Datei weiter und startete den Server ungewollt. Jetzt gehen alle Optionen weiter, und die laufende Datei bleibt unangetastet.
+- **mrserver install meldete linger fälschlich als Fehler:** War linger schon eingeschaltet, versuchte `mrserver install` es trotzdem erneut (geht nur als root) und zeigte „Access denied“ samt pkttyagent-Fehler. Jetzt prüft es vorher und meldet „Linger is on“; der Hinweis auf `loginctl enable-linger` kommt nur noch, wenn linger wirklich fehlt.
+
 ## [1.3.0] - 2026-11-06
 
 ### Neu

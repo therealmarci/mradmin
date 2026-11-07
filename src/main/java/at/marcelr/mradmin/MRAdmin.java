@@ -127,6 +127,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     public void onEnable() {
         discordAnnounce = new DiscordAnnouncer(this);
         ConfigUpdater.update(this);
+        // Answers of the installer (mrserver setup), once on the very first start - before storage and web start.
+        at.marcelr.mradmin.versions.StarterLink.applySeed(this);
         loadConfiguration();
         storage = Storage.create(this);
         eventLog.load(getConfig().getInt("logging.keep-days", 14));

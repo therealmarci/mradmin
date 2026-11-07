@@ -19,6 +19,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -61,7 +62,11 @@ public final class Setup {
             }
         }
         writeWrapper(files.server().resolve("mrserver.sh"), "/starter/mrserver.sh", true);
-        writeWrapper(files.server().resolve("mrserver.cmd"), "/starter/mrserver.cmd", false);
+        // Started from a running mrserver.cmd (first setup on Windows): it must not be replaced while cmd reads it.
+        Path cmd = files.server().resolve("mrserver.cmd");
+        if (System.getenv("MRSERVER_SETUP_FROM_CMD") == null || !Files.isRegularFile(cmd)) {
+            writeWrapper(cmd, "/starter/mrserver.cmd", false);
+        }
 
         boolean newLocal = !Files.isRegularFile(files.local());
         LocalSettings local = LocalSettings.load(files);
@@ -150,6 +155,79 @@ public final class Setup {
 
     // ------------------------------------------------------------------ mrserver setup
 
+    private static String option(List<String> args, String name) {
+        int i = args.indexOf(name);
+        return i >= 0 && i + 1 < args.size() ? args.get(i + 1) : null;
+    }
+
+    /** null if the memory options are fine (each optional; minimum not above maximum), otherwise why not. */
+    static String memoryProblem(String min, String max) {
+        if (min != null && JavaFlags.memory(min) == null) {
+            return "'" + min + "' is not a memory size like 1G or 2048M.";
+        }
+        if (max != null && JavaFlags.memory(max) == null) {
+            return "'" + max + "' is not a memory size like 4G or 4096M.";
+        }
+        if (min != null && max != null && megabytes(JavaFlags.memory(min)) > megabytes(JavaFlags.memory(max))) {
+            return "The minimum memory (" + min + ") is larger than the maximum (" + max + ").";
+        }
+        return null;
+    }
+
+    /** "4G" -> 4096, "512M" -> 512, "1048576K" -> 1024. */
+    static long megabytes(String memory) {
+        long n = Long.parseLong(memory.substring(0, memory.length() - 1));
+        return switch (memory.charAt(memory.length() - 1)) {
+            case 'G' -> n * 1024;
+            case 'K' -> n / 1024;
+            default -> n;
+        };
+    }
+
+    /** The only config.yml keys the installer may set (seed.properties, applied once by MRadmin). */
+    public static final List<String> SEED_KEYS = List.of("server.memory-min", "server.memory-max", "web.enabled",
+            "web.public-url", "storage.type");
+
+    /** null if fine (empty = none), otherwise why not. */
+    static String webUrlProblem(String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        return url.matches("https?://[A-Za-z0-9.\\-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~\\-/]*)?")
+                ? null : "'" + url + "' is not an address like https://admin.example.com";
+    }
+
+    /**
+     * Answers of the installer. Memory goes into launch.properties (the starter uses it on the first start) and, like
+     * the web settings, into seed.properties, which MRadmin takes over into config.yml on its first start.
+     *
+     * @param web    switch the web interface on (listens only locally, storage SQLite)
+     * @param webUrl public address, null/empty = none yet
+     */
+    static void seed(StarterFiles files, String min, String max, boolean web, String webUrl) throws IOException {
+        Properties launch = StarterFiles.read(files.launch());
+        Properties seed = StarterFiles.read(files.seed());
+        if (min != null) {
+            launch.setProperty("memory-min", min);
+            seed.setProperty("server.memory-min", min);
+        }
+        if (max != null) {
+            launch.setProperty("memory-max", max);
+            seed.setProperty("server.memory-max", max);
+        }
+        if (web) {
+            seed.setProperty("web.enabled", "true");
+            seed.setProperty("storage.type", "sqlite");
+            if (webUrl != null && !webUrl.isEmpty()) {
+                seed.setProperty("web.public-url", webUrl);
+            }
+        }
+        StarterFiles.write(files.launch(), launch, "Written by MRadmin from config.yml (section server) - do not edit.");
+        if (!seed.isEmpty()) {
+            StarterFiles.write(files.seed(), seed, "Answers of the installer - MRadmin takes them over into config.yml on its first start.");
+        }
+    }
+
     static int fromCommandLine(StarterFiles files, List<String> args) throws IOException, InterruptedException {
         boolean acceptEula = args.contains("--accept-eula");
         boolean downloaded = args.contains("--downloaded");
@@ -162,6 +240,20 @@ public final class Setup {
                 return 2;
             }
         }
+        String memoryMin = option(args, "--memory-min");
+        String memoryMax = option(args, "--memory-max");
+        String memoryProblem = memoryProblem(memoryMin, memoryMax);
+        if (memoryProblem != null) {
+            System.out.println(memoryProblem);
+            return 2;
+        }
+        String webUrl = option(args, "--web-url");
+        boolean web = args.contains("--web") || webUrl != null;
+        String urlProblem = webUrlProblem(webUrl);
+        if (urlProblem != null) {
+            System.out.println(urlProblem);
+            return 2;
+        }
         Path own = ownJar();
         if (downloaded && !verifyDownload(own)) {
             Files.deleteIfExists(own);
@@ -171,6 +263,17 @@ public final class Setup {
         Result result = prepare(files, own, mode);
         if (result.copiedPlugin()) {
             System.out.println("  MRadmin copied to plugins/" + own.getFileName());
+        }
+        if (memoryMin != null || memoryMax != null || web) {
+            seed(files, JavaFlags.memory(memoryMin), JavaFlags.memory(memoryMax), web, webUrl);
+        }
+        if (memoryMin != null || memoryMax != null) {
+            System.out.println("  Memory: " + Objects.requireNonNullElse(JavaFlags.memory(memoryMin), "1G") + " - "
+                    + Objects.requireNonNullElse(JavaFlags.memory(memoryMax), "4G"));
+        }
+        if (web) {
+            System.out.println("  Web interface: on (http://127.0.0.1:8125" + (webUrl == null || webUrl.isEmpty()
+                    ? ", no public address yet)" : ", public address " + webUrl + ")"));
         }
         System.out.println("  mrserver.sh / mrserver.cmd written, mode: " + result.local().mode()
                 + (result.newLocal() ? " (change it in mrserver.properties)" : ""));
