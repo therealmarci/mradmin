@@ -14,7 +14,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Behoben & geändert
 - **Kein Zurückstufen mehr möglich:** MRadmin spielt keine Plugin-Version ein, die ein Rückschritt wäre - auch nicht automatisch. Zwei Regeln: Hat die neue Version eine kleinere `config-version` oder `lang-version` als die Dateien auf dem Server (die Einstellungen wurden schon von einer neueren Version umgebaut), wird sie nicht installiert; und wenn beide Builds aus GitHub stammen, muss der neue ein Nachfolger des laufenden sein (ein Dev-Build trägt die Nummer des letzten Releases - ein Hotfix wirkt dann „neuer“, hätte aber Funktionen und Umbauten des Dev-Builds wieder entfernt). Gesperrte Versionen zeigt die Seite Plugins mit „Zurückstufen gesperrt“ und dem Grund; zurück geht nur von Hand.
-- **Seite Plugins neu:** Jedes Plugin als Kachel, die Spalten stehen über alle Kacheln in einer Linie - installierte Version, Kanal, verfügbare Version, Zustand und Aktion; auf dem Handy als Karten. Die Plugin-Seite zeigt den Kanal und bei Dev den angebotenen Build.
+- **Seite Plugins neu:** Jedes Plugin als Kachel, die Spalten stehen über alle Kacheln in einer Linie - installierte Version, Kanal, verfügbare Version, Zustand und Aktion; „Installiert“ und „Verfügbar“ zeigen Kanal (Stable/Beta/Dev), Nummer, Build und - bei Builds aus GitHub - den Commit; auf dem Handy als Karten. Die Plugin-Seite zeigt den Kanal und bei Dev den angebotenen Build.
 
 ## [1.4.0] - 2026-11-07
 

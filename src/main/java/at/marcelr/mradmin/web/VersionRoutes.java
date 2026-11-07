@@ -93,6 +93,9 @@ public final class VersionRoutes {
             p.put("channels", Map.of("stable", e.hasStable || !e.hasBeta, "beta", true, "dev", versions.devAvailable() && e.dev != null));
             p.put("ownChannel", e.ownChannel);
             p.put("offered", e.offered());
+            if (e.installed != null) {
+                p.put("installedInfo", installedInfo(e));
+            }
             // A step back that is not offered (DowngradeGuard): reason config / lang / code, the two values.
             if (e.blockedNow()) {
                 p.put("blocked", Map.of("reason", e.blocked.reason(), "have", e.blocked.have(), "offered", e.blocked.offered()));
@@ -160,6 +163,20 @@ public final class VersionRoutes {
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /**
+     * What runs, in parts: channel (stable / beta / dev), number (1.4.0), build (null for old versions without one) and
+     * the commit if the JAR was built by GitHub Actions.
+     */
+    private static Map<String, Object> installedInfo(VersionManager.Entry e) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("channel", e.runsDevBuild() ? "dev"
+                : at.marcelr.mradmin.util.Versions.channel(e.installed).name().toLowerCase(java.util.Locale.ROOT));
+        m.put("number", at.marcelr.mradmin.util.Versions.number(e.installed));
+        m.put("build", at.marcelr.mradmin.util.Versions.isScheme(e.installed) ? at.marcelr.mradmin.util.Versions.build(e.installed) : null);
+        m.put("commit", e.installedCommit.isEmpty() ? null : e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())));
+        return m;
     }
 
     private static Map<String, Object> release(ReleasePicker.Release r) {

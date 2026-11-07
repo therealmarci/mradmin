@@ -6,6 +6,19 @@ export const PLUGIN_ICONS = { mradmin: 'shield', mrtoolbar: 'hotbar', ...MODULE_
 
 export const pluginIcon = (name) => PLUGIN_ICONS[name.toLowerCase()] ?? 'box';
 
+/**
+ * A version in parts, like util/Versions.java: "STA-1.4.0-bu002" -> {channel: 'stable', number: '1.4.0', build: 2},
+ * old "1.3.1" -> {channel: 'stable', number: '1.3.1', build: null}, "0.9.14" / "1.0.0-rc.1" -> beta.
+ */
+export function versionParts(v) {
+  if (!v) return null;
+  const s = String(v).replace(/\+.*$/, '');
+  const m = /^(STA|BET)-(\d+(?:\.\d+){0,2})-bu(\d+)$/i.exec(s);
+  if (m) return { channel: m[1].toUpperCase() === 'STA' ? 'stable' : 'beta', number: m[2], build: Number(m[3]) };
+  const plain = s.replace(/^v/i, '');
+  return { channel: plain.startsWith('0.') || plain.includes('-') ? 'beta' : 'stable', number: plain, build: null };
+}
+
 /** Channels of a plugin in the order of the switch (VersionManager.Channel). */
 export const CHANNELS = ['stable', 'beta', 'dev'];
 

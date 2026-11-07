@@ -7,7 +7,7 @@
   import { ago, duration } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
-  import { pluginIcon, pluginDescription, pluginState, pluginError, clock, CHANNELS } from '../lib/plugins.js';
+  import { pluginIcon, pluginDescription, pluginState, pluginError, clock, CHANNELS, versionParts } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
 
   // embedded: inside the tab Plugins of the page Server - without its own title.
@@ -82,6 +82,7 @@
     return p.latest ? p.latest.version : '–';
   }
 
+  const buildText = (build) => t('plugins.build', { build: String(build).padStart(3, '0') });
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
   const byName = (a, b) => a.name.localeCompare(b.name);
   const installed = $derived(data ? data.plugins.filter((p) => p.installed).sort(byName) : []);
@@ -114,6 +115,15 @@
   </span>
 {/snippet}
 
+<!-- A version in parts: channel tag + number, below build / commit / age -->
+{#snippet version(channel, number, notes)}
+  <span class="inst">
+    <span class="tag {channel}">{t('plugins.channel.' + channel)}</span>
+    <span class="mono strong">{number}</span>
+  </span>
+  <span class="small muted">{notes.filter(Boolean).join(' · ')}</span>
+{/snippet}
+
 {#snippet row(p)}
   {@const st = pluginState(p)}
   {@const err = pluginError(p)}
@@ -136,8 +146,10 @@
     <div class="cell">
       <span class="label">{t('plugins.col.installed')}</span>
       {#if p.installed}
-        <span class="mono">{p.installed}</span>
-        {#if p.devBuild}<span class="tag dev">{t('plugins.devBuild', { commit: p.devBuild })}</span>{/if}
+        {@const info = p.installedInfo ?? versionParts(p.installed)}
+        {@render version(info.channel, info.number, [
+          info.channel === 'dev' ? t('plugins.devState') : info.build != null ? buildText(info.build) : t('plugins.oldScheme'),
+          info.commit ? t('plugins.commit', { commit: info.commit }) : null])}
       {:else if p.pending}
         <span class="mono muted">{p.pending}</span>
       {:else}
@@ -152,11 +164,14 @@
 
     <div class="cell">
       <span class="label">{t('plugins.col.available')}</span>
-      <span class="mono">{offeredText(p)}</span>
       {#if p.channel === 'dev' && p.dev}
-        <span class="small muted">{t('plugins.devFrom', { time: ago(p.dev.date), base: p.dev.base })}</span>
-      {:else if p.channel !== 'dev' && p.latest?.published}
-        <span class="small muted">{ago(p.latest.published)}</span>
+        {@render version('dev', p.dev.commit, [t('plugins.devState'), ago(p.dev.date)])}
+      {:else if p.channel !== 'dev' && p.latest}
+        {@const v = versionParts(p.latest.version)}
+        {@render version(p.latest.prerelease ? 'beta' : v.channel, v.number, [v.build != null ? buildText(v.build) : t('plugins.oldScheme'),
+          p.latest.published ? ago(p.latest.published) : null])}
+      {:else}
+        <span class="muted">–</span>
       {/if}
     </div>
 
@@ -645,9 +660,30 @@
     border-radius: 999px;
   }
 
+  .tag.stable {
+    color: var(--good);
+    background: color-mix(in srgb, var(--good) 14%, transparent);
+  }
+
+  .tag.beta {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+
   .tag.dev {
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 14%, transparent);
+  }
+
+  .inst {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .strong {
+    font-weight: 700;
   }
 
   /* Channel switch: three segments; beta yellow, dev red when chosen */
