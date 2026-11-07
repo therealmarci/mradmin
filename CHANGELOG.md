@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [1.4.0] - 2026-11-07
+
 ### Neu
 - **Neustarts und Stopps mit Grund:** Konsole, Protokoll und Team-Discord nennen bei jedem Countdown den Grund. Eigener Grund hinten am Befehl (`/mradmin restart|stop <zeit> <grund>`, `mrserver restart|stop <zeit> <grund>`) oder im Feld **Grund** auf der Seite Server; ohne eigenen Grund nennt MRadmin ihn selbst (geplanter Neustart mit Uhrzeit, wartende Plugin- und Paper-Updates, sonst „kein Grund angegeben“).
 
