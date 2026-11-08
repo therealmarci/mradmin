@@ -22,6 +22,7 @@ import java.util.Map;
  *  POST /api/restart       {delay, kind, reason} restart (kind=stop: stop) after delay ms mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
  *  POST /api/restart/schedule {pause}   pause planned restarts for 24 h / switch them on   mradmin.server.restart
+ *  POST /api/restart/confirm {code | passkey}  sign in again for an emergency restart (2 min) mradmin.server.restart
  * </pre>
  * Downloads and restarts go into the web log.
  */
@@ -29,6 +30,14 @@ public final class VersionRoutes {
 
     private final WebServer server;
     private final MRAdmin plugin;
+    /** How long an emergency confirmation is valid, and how wrong codes lock it. */
+    private static final long CONFIRM_MILLIS = 120_000L;
+    private static final int MAX_FAILURES = 5;
+    private static final long FAILURE_LOCK_MILLIS = 15 * 60_000L;
+    /** session id -> emergency restart allowed until (epoch ms), used up by the restart */
+    private final java.util.Map<String, Long> emergencyOk = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, int[]> failures = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, Long> lockedUntil = new java.util.concurrent.ConcurrentHashMap<>();
 
     private VersionRoutes(WebServer server) {
         this.server = server;
@@ -45,6 +54,7 @@ public final class VersionRoutes {
         server.route("POST", "/api/restart", r::restart);
         server.route("POST", "/api/restart/cancel", r::cancel);
         server.route("POST", "/api/restart/schedule", r::schedule);
+        server.route("POST", "/api/restart/confirm", r::confirmEmergency);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -278,6 +288,13 @@ public final class VersionRoutes {
         if (emergency && (reason == null || reason.isBlank())) {
             throw new Http.WebException(400, "restart-reason-required");
         }
+        // An emergency needs a fresh sign-in (POST /api/restart/confirm) - used up here.
+        if (emergency) {
+            Long until = emergencyOk.remove(http.session().id());
+            if (until == null || until < System.currentTimeMillis()) {
+                throw new Http.WebException(403, "restart-confirm-required");
+            }
+        }
         String by = http.account().name() + " (web)";
         if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
@@ -294,6 +311,29 @@ public final class VersionRoutes {
         }
         audit(http, "server-restart-cancelled", "");
         http.json(200, Map.of());
+    }
+
+    /** Emergency restart: confirm with a fresh 2FA code or a passkey like the web console; 5 wrong codes lock 15 min. */
+    private void confirmEmergency(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        java.util.UUID account = http.account().id();
+        long now = System.currentTimeMillis();
+        if (lockedUntil.getOrDefault(account, 0L) > now) {
+            throw new Http.WebException(429, "console-code-locked");
+        }
+        if (!server.confirmed(http)) {
+            int[] count = failures.computeIfAbsent(account, k -> new int[1]);
+            if (++count[0] >= MAX_FAILURES) {
+                count[0] = 0;
+                lockedUntil.put(account, now + FAILURE_LOCK_MILLIS);
+                audit(http, "server-emergency-locked", "5 wrong codes");
+            }
+            throw new Http.WebException(400, "code-wrong");
+        }
+        failures.remove(account);
+        emergencyOk.put(http.session().id(), now + CONFIRM_MILLIS);
+        audit(http, "server-emergency-confirmed", "");
+        http.json(200, Map.of("until", now + CONFIRM_MILLIS));
     }
 
     private void schedule(Http http) throws Exception {

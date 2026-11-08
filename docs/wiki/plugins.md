@@ -37,7 +37,7 @@ Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration** (
 > [!TIP]
 > Am einfachsten mit dem **[Starter](starter.md)**, der in MRadmin steckt: Er startet den Server nach jedem Neustart, Absturz oder Hänger wieder, spielt Paper-Updates ein und kann täglich neu starten. Dann brauchst du `versions.restart-method` nicht; neu starten geht außerdem jederzeit mit `/mradmin restart`.
 
-Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** (`mradmin.server.restart`) mit Countdown (`versions.restart-delays`, Standard 15, 30 und 60 Minuten, angekündigt wie `/mradmin announce restart`; kürzere Zeiten nur im Bereich **Notfall** mit Grund, `versions.emergency-delays`) gibt es nur, solange ein Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
+Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** (`mradmin.server.restart`) mit Countdown (`versions.restart-delays`, Standard 15, 30 und 60 Minuten, angekündigt wie `/mradmin announce restart`; kürzere Zeiten nur über den Knopf **Notfall** mit erneuter Anmeldung und Grund, `versions.emergency-delays`) gibt es nur, solange ein Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
 
 | `versions.restart-method` | Was passiert |
 |---|---|

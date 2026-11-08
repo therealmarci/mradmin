@@ -11,7 +11,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Neu
 - **Geplante Neustarts 24 h aussetzen:** Auf **Server → Übersicht** setzt „Automatische Neustarts 24 h aussetzen“ alle geplanten Neustarts (`server.restart-times`) für einen Tag aus, ein laufender geplanter Countdown wird dabei abgebrochen; „Wieder einschalten“ hebt es vorher auf. Ein laufender geplanter Neustart lässt sich auch einzeln überspringen. Bleibt über Neustarts erhalten, steht im Protokoll und im Team-Discord (neue Ereignisse `server-schedule-paused` / `server-schedule-resumed`). Recht: `mradmin.server.restart`.
-- **Notfall-Neustart:** Normale Neustarts und Stopps im Browser haben jetzt 15, 30 und 60 Minuten Vorlauf (`versions.restart-delays`). Kürzere Zeiten stehen im aufklappbaren roten Bereich **Notfall** (`versions.emergency-delays`, Standard 5 min, 1 min, sofort) und gehen nur mit Grund. `config-version` 51.
+- **Notfall-Neustart:** Normale Neustarts und Stopps im Browser haben jetzt 15, 30 und 60 Minuten Vorlauf (`versions.restart-delays`). Kürzere Zeiten gibt es über den roten Knopf **Notfall** daneben: Er öffnet ein Fenster, in dem du dich zuerst neu bestätigst (Code aus der 2FA-App oder Passkey, wie beim Entsperren der Web-Konsole; 5 falsche Codes sperren 15 Minuten) und dann Neustart oder Stopp, die Zeit (`versions.emergency-delays`, Standard 5 min, 1 min, sofort) und einen Pflicht-Grund wählst. `config-version` 51.
 - **Neustarts für andere Plugins (Modul-API 14):** `MRadminService#nextRestart()` liefert den nächsten Neustart oder Stopp (Zeitpunkt, Neustart/Stopp, ob der Countdown schon läuft, ob geplant, Grund) - damit kann z.B. MRpvp kurz vor einem Neustart keine neuen Duelle mehr starten.
 
 ### Behoben & geändert

@@ -10,6 +10,7 @@
   import { ICONS } from '../lib/icons.js';
   import { clock } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
+  import EmergencyRestart from '../components/EmergencyRestart.svelte';
   import Plugins from './Plugins.svelte';
   import Logs from './Logs.svelte';
   import Console from './Console.svelte';
@@ -89,11 +90,17 @@
   const r = $derived(data?.restart);
   const left = $derived(r && r.endsAt > 0 ? Math.max(0, r.endsAt - now) : 0);
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
-  // emergency = the short choices (reason required, the server checks it too)
-  const restart = (d, emergency = false) => act('/restart', { delay: String(d), kind: 'restart', reason: reason.trim() },
-    t('versions.restartStarted'), t(emergency ? 'server.emergencyConfirm' : 'versions.restartConfirm', { time: delayText(d) }));
-  const stop = (d, emergency = false) => act('/restart', { delay: String(d), kind: 'stop', reason: reason.trim() }, t('server.stopStarted'),
-    t(emergency ? 'server.emergencyStopConfirm' : r.starter.active ? 'server.stopConfirm' : 'server.stopConfirmNoStarter', { time: delayText(d) }));
+  const restart = (d) => act('/restart', { delay: String(d), kind: 'restart', reason: reason.trim() }, t('versions.restartStarted'),
+    t('versions.restartConfirm', { time: delayText(d) }));
+  const stop = (d) => act('/restart', { delay: String(d), kind: 'stop', reason: reason.trim() }, t('server.stopStarted'),
+    t(r.starter.active ? 'server.stopConfirm' : 'server.stopConfirmNoStarter', { time: delayText(d) }));
+  // Emergency (shorter times): window with a fresh sign-in first.
+  let emergency = $state();
+  function emergencyDone(text) {
+    reason = '';
+    message = text;
+    load();
+  }
   const when = (ms) => new Date(ms).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
   // The values of the server card: one word each, the rest in the tooltip.
@@ -201,6 +208,10 @@
                   <button class="secondary" disabled={busy || !data.may.restart} title={data.may.restart ? '' : t('server.restartOff')}
                     onclick={() => restart(d)}>{delayText(d)}</button>
                 {/each}
+                {#if r.emergencyDelays.length}
+                  <button class="danger" disabled={busy} title={t('server.emergencyTip')}
+                    onclick={() => emergency.open()}>{t('server.emergencyButton')}</button>
+                {/if}
               </div>
             </div>
             <div class="row">
@@ -211,29 +222,6 @@
                 {/each}
               </div>
             </div>
-            {#if r.emergencyDelays.length}
-              <details class="emergency">
-                <summary>{t('server.emergency')}</summary>
-                <p class="small">{t(reason.trim() ? 'server.emergencyHint' : 'server.emergencyNeedsReason')}</p>
-                <div class="row">
-                  <span class="label">{t('server.restart')}</span>
-                  <div class="choices">
-                    {#each r.emergencyDelays as d (d)}
-                      <button class="danger" disabled={busy || !data.may.restart || !reason.trim()}
-                        onclick={() => restart(d, true)}>{delayText(d)}</button>
-                    {/each}
-                  </div>
-                </div>
-                <div class="row">
-                  <span class="label">{t('server.stop')}</span>
-                  <div class="choices">
-                    {#each r.emergencyDelays as d (d)}
-                      <button class="danger" disabled={busy || !reason.trim()} onclick={() => stop(d, true)}>{delayText(d)}</button>
-                    {/each}
-                  </div>
-                </div>
-              </details>
-            {/if}
             {#if !data.may.restart}<p class="muted small">{t('server.restartOff')}</p>{/if}
           {/if}
 
@@ -254,6 +242,11 @@
           {/if}
         </div>
       </section>
+
+      {#if data.may.stop && r.emergencyDelays.length}
+        <EmergencyRestart bind:this={emergency} {me} delays={r.emergencyDelays} canRestart={data.may.restart}
+          starterActive={r.starter.active} {reason} ondone={emergencyDone} />
+      {/if}
 
       <div class="tiles">
         <button class="card tile" onclick={() => open('plugins')}>
@@ -483,30 +476,6 @@
   .schedule {
     padding-top: 12px;
     border-top: 1px solid var(--border);
-  }
-
-  .emergency {
-    border: 1px solid color-mix(in srgb, var(--bad) 40%, var(--border));
-    border-radius: 12px;
-    padding: 8px 12px;
-    background: color-mix(in srgb, var(--bad) 6%, transparent);
-  }
-
-  .emergency summary {
-    cursor: pointer;
-    color: var(--bad);
-    font-weight: 600;
-    font-size: 0.88rem;
-  }
-
-  .emergency[open] {
-    display: grid;
-    gap: 10px;
-  }
-
-  .emergency p {
-    margin: 0;
-    color: var(--bad);
   }
 
   .choices .danger {
