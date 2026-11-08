@@ -213,7 +213,7 @@ public final class PushService {
     /** The account's devices that still have a valid session (the others are removed). */
     public synchronized List<Subscription> devices(UUID account) {
         List<Subscription> list = subscriptions.getOrDefault(account, List.of());
-        Set<String> alive = auth.sessions(account).stream().map(WebAuth.Session::id).collect(Collectors.toSet());
+        Set<String> alive = auth.sessions(account).stream().map(at.marcelr.mradmin.web.self.PlayerSessions.Session::id).collect(Collectors.toSet());
         List<Subscription> valid = list.stream().filter(s -> alive.contains(s.session())).toList();
         if (valid.size() != list.size()) {
             subscriptions.put(account, new ArrayList<>(valid));

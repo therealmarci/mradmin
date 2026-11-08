@@ -33,7 +33,7 @@ public final class Http {
     private boolean answered;
 
     /** Set by the server for requests with a valid session. */
-    WebAuth.Session session;
+    at.marcelr.mradmin.web.self.PlayerSessions.Session session;
     WebAuth.Account account;
     /** Set by the server for requests of the player area (/web) with a valid player session. */
     at.marcelr.mradmin.web.self.PlayerSessions.Session player;
@@ -99,7 +99,7 @@ public final class Http {
         return exchange.getRequestHeaders().getFirst(name);
     }
 
-    public WebAuth.Session session() {
+    public at.marcelr.mradmin.web.self.PlayerSessions.Session session() {
         return session;
     }
 

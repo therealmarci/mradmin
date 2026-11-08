@@ -219,13 +219,13 @@ permissions:
 
   # --------------------------------------------------------- Web interface
   mradmin.web:
-    description: Use the web interface (own account via /mradmin web setup). The web uses the same permissions as the game.
+    description: "Use the administration of the web interface (sign in with /web, plus an own sign-in: password, passkey or Discord). The web uses the same permissions as the game."
     default: op
   mradmin.web.audit:
     description: View the log of all web actions.
     default: op
   mradmin.web.manage:
-    description: Manage other players' web accounts (/mradmin web invite|logout|remove).
+    description: "Manage other players' web accounts (/mradmin web sessions|logout|reset|remove)."
     default: op
   mradmin.web.console.view:
     description: Read the console output on the page Log of the web interface (no commands).

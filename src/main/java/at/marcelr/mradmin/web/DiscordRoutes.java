@@ -43,7 +43,7 @@ public final class DiscordRoutes {
         server.open("POST", "/api/discord/start", r::start);
         server.open("GET", "/api/discord/callback", r::callback);
         server.open("POST", "/api/discord/finish", r::finish);
-        server.route("POST", "/api/discord/unlink", r::unlink);
+        server.account("POST", "/api/discord/unlink", r::unlink);
     }
 
     private DiscordLogin discord() throws Http.WebException {
@@ -57,12 +57,14 @@ public final class DiscordRoutes {
     private void options(Http http) throws Exception {
         // playerWeb: the start page offers the player page only when it is on.
         http.json(200, Map.of("discord", server.discord().enabled(), "passkeys", plugin.settings().web().passkeys(),
-                "password", plugin.settings().web().password(), "playerWeb", plugin.settings().playerWeb().enabled()));
+                "password", plugin.settings().web().password(), "playerWeb", plugin.settings().playerWeb().enabled(),
+                "mail", server.requests().mailer().enabled()));
     }
 
     /** The signed-in session of this browser (open routes read the cookie themselves), or null. */
-    private WebAuth.Session session(Http http) {
-        return auth.session(http.cookie(WebServer.COOKIE), http.storedIp());
+    private at.marcelr.mradmin.web.self.PlayerSessions.Session session(Http http) {
+        var session = auth.session(http.cookie(WebServer.COOKIE), http.storedIp());
+        return session != null ? session : auth.session(http.cookie(WebServer.PLAYER_COOKIE), http.storedIp());
     }
 
     private void start(Http http) throws Exception {
@@ -78,7 +80,7 @@ public final class DiscordRoutes {
         if (returnTo == null || !returnTo.startsWith("/") || returnTo.startsWith("//")) {
             returnTo = "/";
         }
-        WebAuth.Session session = null;
+        at.marcelr.mradmin.web.self.PlayerSessions.Session session = null;
         if (!mode.equals("login")) {
             session = session(http);
             if (session == null) {
@@ -135,7 +137,7 @@ public final class DiscordRoutes {
                     throw new Http.WebException(result.error().equals("locked") ? 423 : 401, result.error());
                 }
                 var s = plugin.settings().web();
-                http.setCookie(WebServer.COOKIE, result.token(), s.sessionDays() * 86_400L, s.secure());
+                http.setCookie(WebServer.COOKIE, result.token(), server.playerSessions().cookieSeconds(), s.secure());
                 audit(http, account.id(), account.name(), "login-discord", who.name());
                 plugin.discord().log("web-login", "player", account.name(), "ip", http.storedIp(),
                         "device", "Discord (" + who.name() + ")");
@@ -143,7 +145,7 @@ public final class DiscordRoutes {
             }
             case "link", "confirm" -> {
                 // Only the session that started it - another browser cannot finish someone else's link.
-                WebAuth.Session session = session(http);
+                at.marcelr.mradmin.web.self.PlayerSessions.Session session = session(http);
                 if (session == null || !session.id().equals(flow.session()) || !session.account().equals(flow.account())) {
                     throw new Http.WebException(403, "discord-failed");
                 }

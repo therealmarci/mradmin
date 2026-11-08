@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 51
+config-version: 52
 
 
 # ------------------------------------------------------------------------------
@@ -466,19 +466,23 @@ web:
   # Addresses of your reverse proxy. MRadmin only trusts these for the real visitor IP (X-Forwarded-For) - important for
   # limiting login attempts and for the log.
   trusted-proxies: ["127.0.0.1"]
-  # A device stays logged in this long (days). Logging out is possible at any time in the web or with /mradmin web logout.
-  session-days: 30
+  # Sign-in: everyone gets in with the code from /web in game (how long a browser stays signed in: player-web.session-days
+  # and idle-days). On top, everyone can set up an own sign-in under Account -> Sign-ins to get in without the game:
+  # a password (with the player name or a confirmed e-mail address; "forgot password" needs mail), a passkey or
+  # Discord. The team needs at least one own sign-in for the administration. /mradmin web reset <player> removes all
+  # own sign-ins of a player (lost device).
   login:
-    # Passkeys (fingerprint, Face ID, Windows Hello, password manager): add them in the web under "Account" (with a code
-    # from the app), then log in without password and code. They only work for the address from public-url (without it:
-    # only http://localhost for testing). A reset via setup link removes all passkeys of the account.
+    # The team additionally needs 2FA (code from an authenticator app) for the administration.
+    require-2fa: false
+    # Passkeys (fingerprint, Face ID, Windows Hello, password manager): sign in without password and code. They only
+    # work for the address from public-url (without it: only http://localhost for testing).
     passkeys: true
-    # Password - always together with a code from the authenticator app.
+    # Password (with name or confirmed e-mail address) - with a code from the app if the account has 2FA switched on.
     password: true
     # Log in with Discord: create a Discord application (https://discord.com/developers/applications), under OAuth2 add
     # the redirect "<public-url>/api/discord/callback" (without public-url: http://localhost:<port>/...),
-    # enter client ID and secret here. Everyone links their Discord in the web under Account -> Security (only
-    # possible while logged in). With Discord linked, 2FA can be switched off - like with a passkey.
+    # enter client ID and secret here. Everyone links their Discord in the web under Account -> Sign-ins (only
+    # possible while signed in).
     # The secret is secret: do not share it; if it happens anyway, regenerate it in Discord.
     discord:
       enabled: false

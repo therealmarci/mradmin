@@ -39,12 +39,14 @@ public final class SelfWebCommand implements TabExecutor {
                 messages.send(sender, "players-only");
                 return true;
             }
-            if (!sender.hasPermission(Perms.WEB_SELF)) {
+            // The one way into the web interface without an own sign-in: players with the player page, and the team.
+            boolean team = sender.hasPermission(at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB);
+            if (!team && !sender.hasPermission(Perms.WEB_SELF)) {
                 messages.send(sender, "no-permission");
                 return true;
             }
             var web = plugin.web();
-            if (!plugin.settings().playerWeb().enabled() || web == null || !web.running()) {
+            if ((!team && !plugin.settings().playerWeb().enabled()) || web == null || !web.running()) {
                 messages.send(sender, "web-self-disabled");
                 return true;
             }
@@ -68,7 +70,7 @@ public final class SelfWebCommand implements TabExecutor {
                 default -> {
                     // Always the same address (bookmark); the page asks for the code, a click in the chat copies it.
                     String code = web.playerSessions().code(player.getUniqueId(), player.getName());
-                    var link = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(url + "/me"));
+                    var link = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(url + (plugin.settings().playerWeb().enabled() ? "/me" : "/")));
                     var copy = messages.get("web-self-code", tag("code", code))
                             .clickEvent(ClickEvent.copyToClipboard(code))
                             .hoverEvent(messages.get("web-self-code-hover"));

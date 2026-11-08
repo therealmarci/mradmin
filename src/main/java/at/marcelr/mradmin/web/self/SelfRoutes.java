@@ -54,7 +54,7 @@ public final class SelfRoutes {
     public static void register(WebServer server) {
         SelfRoutes r = new SelfRoutes(server);
         server.open("POST", "/api/self/login", r::login);
-        server.route("POST", "/api/me/player-page", r::fromTeam);
+        server.account("POST", "/api/me/player-page", r::fromTeam);
         server.self("GET", "/api/self", r::me);
         server.self("POST", "/api/self/logout", r::logout);
         server.self("GET", "/api/self/devices", r::devices);
@@ -77,10 +77,11 @@ public final class SelfRoutes {
 
     // ------------------------------------------------------------- sign-in
 
+    /**
+     * Sign-in with the code from /web - for everyone (since 1.5 the one way in without an own sign-in). Players need
+     * the player page (player-web.enabled) and mradmin.web.self; the team gets in also without them.
+     */
     private void login(Http http) throws Exception {
-        if (!plugin.settings().playerWeb().enabled()) {
-            throw new Http.WebException(404, "player-web-off");
-        }
         // 6 digits: few tries per address (and PlayerSessions limits wrong codes from everyone together).
         if (!server.allow("me-login:" + http.ip(), 6)) {
             throw new Http.WebException(429, "rate-limit");
@@ -90,45 +91,34 @@ public final class SelfRoutes {
             throw new Http.WebException(401, result.error());
         }
         UUID player = result.session().player();
-        if (!server.permissions().has(player, Perms.WEB_SELF)) {
-            sessions().revokeAll(player);
-            throw new Http.WebException(403, "no-self-permission");
+        boolean team = server.permissions().has(player, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB);
+        if (!team && (!plugin.settings().playerWeb().enabled() || !server.permissions().has(player, Perms.WEB_SELF))) {
+            sessions().logout(result.token());
+            throw new Http.WebException(403, plugin.settings().playerWeb().enabled() ? "no-self-permission" : "player-web-off");
         }
         if (banned(player, http.ip())) {
             sessions().logout(result.token());
             throw new Http.WebException(403, "player-banned");
         }
-        http.setCookie(WebServer.PLAYER_COOKIE, result.token(),
-                sessions().cookieSeconds(), plugin.settings().web().secure());
-        plugin.getLogger().info(result.session().name() + " signed in to their own page in the web interface.");
+        server.auth().ensure(player, result.session().name());
+        http.setCookie(WebServer.COOKIE, result.token(), sessions().cookieSeconds(), plugin.settings().web().secure());
+        plugin.getLogger().info(result.session().name() + " signed in to the web interface with a code from /web.");
         http.json(200, Map.of("name", result.session().name(), "uuid", player.toString()));
     }
 
-    /**
-     * From the team area to the own player page without a code: the team sign-in (password and second factor) already
-     * proves who it is. Only for the signed-in account itself - the player comes from the session, never from the
-     * request - and with the same checks as a sign-in with a code.
-     */
+    /** From the team area to the own player page: since 1.5 the same sign-in - only the checks of the player area. */
     private void fromTeam(Http http) throws Exception {
         if (!plugin.settings().playerWeb().enabled()) {
             throw new Http.WebException(404, "player-web-off");
         }
         var account = http.account();
         UUID player = account.id();
-        if (!server.allow("me-login:" + http.ip(), 6)) {
-            throw new Http.WebException(429, "rate-limit");
-        }
         if (!server.permissions().has(player, Perms.WEB_SELF)) {
             throw new Http.WebException(403, "no-self-permission");
         }
         if (banned(player, http.ip())) {
             throw new Http.WebException(403, "player-banned");
         }
-        PlayerSessions.Result result = sessions().open(player, account.name(), http.storedIp(), http.header("User-Agent"));
-        http.setCookie(WebServer.PLAYER_COOKIE, result.token(), sessions().cookieSeconds(), plugin.settings().web().secure());
-        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), player, account.name(), http.storedIp(),
-                "player-page", ""));
-        plugin.getLogger().info(account.name() + " went from the team area to their own page in the web interface.");
         http.json(200, Map.of("name", account.name(), "uuid", player.toString()));
     }
 
@@ -138,8 +128,8 @@ public final class SelfRoutes {
      */
     public void check(Http http) throws Exception {
         UUID player = http.player().player();
+        // Without the permission only the player area closes - the sign-in stays (one account for everything).
         if (!server.permissions().has(player, Perms.WEB_SELF)) {
-            sessions().revokeAll(player);
             throw new Http.WebException(403, "no-self-permission");
         }
         if (banned(player, http.ip())) {

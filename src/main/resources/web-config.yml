@@ -876,22 +876,19 @@ sections:
         type: strings
         name: {de: Vertrauenswürdige Proxys, en: Trusted proxies}
         help: {de: Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For)., en: MRadmin only trusts these for the real visitor IP (X-Forwarded-For).}
-      - key: web.session-days
+      - key: web.login.require-2fa
         heading: {de: "Anmeldung", en: "Sign-in"}
-        type: int
-        min: 1
-        max: 365
-        unit: {de: Tage, en: days}
-        name: {de: Team-Geräte angemeldet für, en: Team devices signed in for}
-        help: {de: "So lange bleibt ein Gerät des Teams angemeldet. Abmelden geht jederzeit im Web oder mit /mradmin web logout.", en: "A team device stays signed in this long. Signing out is possible at any time in the web or with /mradmin web logout."}
+        type: bool
+        name: {de: 2FA fürs Team erzwingen, en: Require 2FA for the team}
+        help: {de: "Das Team braucht für die Verwaltung zusätzlich 2FA (Code aus einer App). Sonst reicht eine eigene Anmeldung (Passwort, Passkey oder Discord).", en: "The team additionally needs 2FA (code from an app) for the administration. Otherwise an own sign-in (password, passkey or Discord) is enough."}
       - key: web.login.passkeys
         type: bool
         name: {de: Anmeldung mit Passkey, en: Sign-in with passkey}
-        help: {de: "Anmelden mit Fingerabdruck, Face ID, Windows Hello oder Passwort-Manager statt Passwort und Code. Funktioniert nur unter der öffentlichen Adresse.", en: "Sign in with fingerprint, Face ID, Windows Hello or a password manager instead of password and code. Only works under the public address."}
+        help: {de: "Anmelden mit Fingerabdruck, Face ID, Windows Hello oder Passwort-Manager. Funktioniert nur unter der öffentlichen Adresse.", en: "Sign in with fingerprint, Face ID, Windows Hello or a password manager. Only works under the public address."}
       - key: web.login.password
         type: bool
         name: {de: Anmeldung mit Passwort, en: Sign-in with password}
-        help: {de: Immer zusammen mit dem Code aus der App., en: Always together with the code from the app.}
+        help: {de: "Mit Spielername oder bestätigter E-Mail-Adresse - mit Code aus der App, wenn 2FA an ist.", en: "With the player name or a confirmed e-mail address - with a code from the app if 2FA is on."}
       - key: web.login.discord.enabled
         type: bool
         name: {de: Anmeldung mit Discord, en: Sign-in with Discord}

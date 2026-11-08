@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 20
+lang-version: 21
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -44,19 +44,17 @@ health-recovered: "<prefix><green>✅ Server runs smoothly again <gray>(<tps> TP
 # --- Web interface (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>web interface: set up your account, signed-in devices"
 web-usage: |-
-  <gray>/mradmin web setup <dark_gray>- <gray>setup link for you (also to reset password and 2FA)
   <gray>/mradmin web sessions [player] <dark_gray>- <gray>signed-in devices
   <gray>/mradmin web logout [player] <dark_gray>- <gray>sign out all devices
-  <gray>/mradmin web invite <player> <dark_gray>- <gray>setup link for someone else (admins, console)
-  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the web account (admins)
-web-status: "<prefix><hover:show_text:'<gray><address><newline>Accounts: <accounts> · devices: <sessions>'><gray>Web interface: <state></hover>"
+  <gray>/mradmin web reset <player> <dark_gray>- <gray>remove own sign-ins, e.g. lost phone (admins, console)
+  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the account (admins)
+web-status: "<prefix><hover:show_text:'<gray><address><newline>Accounts with an own sign-in: <accounts> · devices: <sessions>'><gray>Web interface: <state></hover>"
+web-setup-moved: "<prefix><hover:show_text:'<gray>Sign in with /web and set up a password, a passkey or Discord under Sign-ins.'><yellow>There are no setup links any more - everything goes through /web.</hover>"
+web-reset-done: "<prefix><hover:show_text:'<gray>Password, 2FA, passkeys, Discord and e-mail removed, all devices signed out. They get in again with /web.'><green>Sign-ins of <white><player></white> reset.</hover>"
+web-reset-none: "<prefix><red><white><player></white> has no account in the web interface."
 web-state-on: "<green>running"
 web-state-off: "<red>off</red> <gray>(web.enabled in the config)"
 web-off: "<prefix><hover:show_text:'<gray>Set web.enabled: true, then /mradmin reload'><red>The web interface is off.</hover>"
-web-setup-console: "<prefix><gray>From the console: /mradmin web invite <player>"
-web-setup-link: "<prefix><green>Your setup link:</green> <link> <hover:show_text:'<gray>Valid for 10 minutes, works once.'><red>Do not share!</hover>"
-web-setup-link-other: "<prefix><green>Link for <white><player></white>:</green> <link> <hover:show_text:'<gray>Valid for 10 minutes, works once.'><red>Only for <player>!</hover>"
-web-link-label: "<aqua><u>[Open setup]</u></aqua>"
 # The player's own page in the web interface (/web). Placeholders: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Your page: <link> <gray>· code: <code> <hover:show_text:'<gray>Works <seconds> seconds and only once.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -77,8 +75,6 @@ alert-title: "<red><b>ATTENTION"
 alert-subtitle: "<white>Critical warning"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url is not set.'><yellow>The link only works on this machine.</hover>"
-web-target-no-permission: "<prefix><hover:show_text:'<gray>Signing in does not work without it.'><yellow><player> lacks mradmin.web.</hover>"
 web-sessions-header: "<prefix><gray>Signed-in devices of <white><player></white>:"
 web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, last <seen>)"
 web-sessions-none: "<prefix><gray><player> is not signed in anywhere."
@@ -821,6 +817,24 @@ mail-test-failed: "<prefix><red>Test mail failed: <white><error>"
 # Mails to requesters (plain text, no MiniMessage). Placeholders: <name> <id> <subject> <answer> <link> <server> <time>
 mail-server-name: "Minecraft server"
 mail-no-text: "(no further message)"
+mail-email-confirm-subject: "Confirm your e-mail address - <server>"
+mail-email-confirm-body: |-
+  Hello <name>,
+
+  you want to use this address to sign in to <server>. Confirm it with this link (valid for <minutes> minutes):
+
+  <link>
+
+  Was it not you? Then simply ignore this mail - nothing happens without a click.
+mail-reset-subject: "New password - <server>"
+mail-reset-body: |-
+  Hello <name>,
+
+  someone asked for a new password for your sign-in to <server>. Set it with this link (valid for <minutes> minutes):
+
+  <link>
+
+  Was it not you? Then ignore this mail - your password stays as it is.
 mail-test-subject: "MRadmin: test mail"
 mail-test-body: |-
   Hello,

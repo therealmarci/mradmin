@@ -5,7 +5,7 @@
   import { api, whenSignedOut } from '../lib/api.js';
   import { route, go } from '../lib/router.svelte.js';
   import { t, lang, errorText } from '../lib/i18n.js';
-  import SelfLogin from './SelfLogin.svelte';
+  import SignIn from '../components/SignIn.svelte';
   import SelfHome from './SelfHome.svelte';
   import SelfDevices from './SelfDevices.svelte';
   import SelfArea from './SelfArea.svelte';
@@ -73,7 +73,7 @@
 {#if player === undefined}
   <div class="center muted">{t('common.loading')}</div>
 {:else if player === null}
-  <SelfLogin {error} onSignedIn={() => { error = ''; player = undefined; }} />
+  <SignIn notice={error} onSignedIn={() => { error = ''; player = undefined; }} />
 {:else}
   <TopBar items={nav} current={current} onnav={(path) => go(path)} user={player} moreLabel={t('nav.more')} menu={[
     { label: t('self.nav.devices'), icon: '📱', active: route.path === '/me/devices', onclick: () => go('/me/devices') },

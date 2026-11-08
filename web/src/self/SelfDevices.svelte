@@ -2,6 +2,7 @@
   // The player's signed-in browsers: this one on top with how long the sign-in still lasts (the earlier of "at most
   // session-days after the code" and "idle-days without a visit"), the others below with "sign out". /web logout in game
   // signs out all of them.
+  import LoginsCard from '../components/LoginsCard.svelte';
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
@@ -98,6 +99,8 @@
   </header>
 
   {#if error}<div class="error">{error}</div>{/if}
+
+  <LoginsCard />
 
   {#if devices}
     {#if current}

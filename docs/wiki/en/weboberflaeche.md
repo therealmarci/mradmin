@@ -5,30 +5,34 @@ Use MRadmin from your phone, tablet or PC: answer tickets, manage players, sched
 ## Setup
 1. In the config set `web.enabled: true` and `web.public-url` to your address (e.g. `https://admin.yourserver.com`), then `/mradmin reload`. For many tickets `storage.type: sqlite` is recommended.
 2. Set up a **reverse proxy**: domain with HTTPS → `http://127.0.0.1:8125`. The built-in web server only listens locally and has no HTTPS of its own.
-3. **Create an account:** in game `/mradmin web setup` (permission `mradmin.web`) → open the link → set a password, connect an authenticator app via QR code → save the recovery codes. For others: `/mradmin web invite <player>` (also from the console).
+3. **Sign in:** everyone gets in with the code from `/web` in game - the account is made then. Team members (permission `mradmin.web`) then set up an own sign-in under **Account → Sign-ins**: password, passkey or Discord. Only then the administration opens.
 
 | Command | What it does | Permission |
 |---|---|---|
-| `/mradmin web` | Status (running, address, accounts, devices) | `mradmin.web` |
-| `/mradmin web setup` | Setup link for you | `mradmin.web` |
+| `/web` | Code to sign in (players and team) | `mradmin.web.self` or `mradmin.web` |
+| `/mradmin web` | Status (running, address, accounts with an own sign-in, devices) | `mradmin.web` |
 | `/mradmin web sessions [player]` | Signed-in devices | `mradmin.web` (others: `.manage`) |
 | `/mradmin web logout [player]` | Sign out all devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web invite <player>` | Setup link for someone else | `mradmin.web.manage` |
-| `/mradmin web remove <player>` | Delete a web account | `mradmin.web.manage` |
+| `/mradmin web reset <player>` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone | `mradmin.web.manage` |
+| `/mradmin web remove <player>` | Delete the account | `mradmin.web.manage` |
 
-**Forgot your password or lost your phone?** Simply get a new setup link. It resets password and 2FA and signs out all devices.
+**Forgot the password?** With a confirmed e-mail address, "Forgot password?" sends a link by mail (needs `mail.*`). And `/web` in game always works.
 
-## Security
-- **Start page:** whoever is not signed in first chooses "I am a player" (→ player page, sign-in with the code from `/web`) or "I am in the team" (→ team sign-in). If the player page is off (`player-web.enabled: false`), it goes straight to the team sign-in.
-- Sign-in in two steps: first Minecraft name and password, then the code from the authenticator app (or a recovery code) - everything is checked together. Passkey and Discord are offered in the first step as an alternative. Passwords are stored with PBKDF2 (600,000 rounds), session cookies only as a hash.
-- **Passkeys** (fingerprint, Face ID, Windows Hello, password manager): add them under **Account** - for safety with a fresh code from the app. After that, signing in works without name, password and code; the device check (fingerprint, PIN) is always required and replaces both factors. Passkeys are bound to the address from `web.public-url` (without it only `http://localhost` for testing). Only public keys are stored. Whoever resets their account with a setup link loses all passkeys (lost phone).
-- **Switching 2FA off** is possible under **Account** as soon as a passkey exists. Then the account only signs in with a passkey - with name and password 2FA is always required. Steps that otherwise require a fresh code (unlocking the console, adding a passkey) are then confirmed with a passkey. The last passkey cannot be removed without 2FA; 2FA can be switched on again any time (new QR code, new recovery codes). Switch off: `web.login.passkeys: false`.
-- **Sign in with Discord** (`web.login.discord`): create a Discord application, add the redirect `<public-url>/api/discord/callback`, put client ID and secret into the config. Everyone links their Discord under **Account → Security** (only while signed in, so nobody takes over someone else's account; without setup it says what is missing in the config). After that sign-in with one click; counts like a passkey - 2FA can be switched off, confirmations (console, 2FA, adding a passkey) also work via Discord. Only `identify` (ID, name, avatar) is requested.
-- After 5 failed attempts the account is locked for 15 minutes, plus at most 10 sign-in attempts per minute and IP. So that this works with the visitors' real IP, enter your proxy under `web.trusted-proxies`.
-- Cookies: `HttpOnly`, `SameSite=Strict`, `Secure` over HTTPS. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
-- The same permissions apply in the web as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` is signed out everywhere right away.
-- Every sign-in and action is recorded in the log (web: **Log**, with `mradmin.web.audit`), sign-ins and setups also in the Discord log (`web-login`, `web-setup`).
-- Forgot your password or lost your phone: simply get a new setup link. It resets password and 2FA and signs out all devices.
+## Sign-in and security
+- **One sign-in for everyone** (since 1.5): players and team use the same account (one per Minecraft UUID). Everyone gets in with the 6-digit code from `/web` (valid 2 minutes). A device stays signed in for `player-web.session-days` (default 14 days), without use at most `player-web.idle-days` (7 days).
+- **Own sign-in** under **Account → Sign-ins** (player area: **Sign-ins & devices**), to get in without the game:
+  - **Password** - sign in with the player name or a confirmed **e-mail address**. The address counts only after the click on the link in the confirmation mail; it makes "forgot password" possible. Passwords are stored with PBKDF2 (600,000 rounds).
+  - **Passkey** (fingerprint, Face ID, Windows Hello, password manager) - bound to the address from `web.public-url` (without it only `http://localhost` for testing). Only public keys are stored. Switch off: `web.login.passkeys: false`.
+  - **Discord** (`web.login.discord`): create a Discord application, add the redirect `<public-url>/api/discord/callback`, client ID and secret into the config; only `identify` is asked for.
+  - **2FA** (code from an authenticator app) is optional: when on, the password sign-in also asks for the code (or a recovery code).
+- The **first** own sign-in is set up just like that. Every further one - and changing or removing one - is confirmed with an existing one (password, 2FA code or passkey).
+- **Team:** the administration opens with `mradmin.web` **and** at least one own sign-in. `web.login.require-2fa: true` also requires 2FA (default off). A `/web` sign-in is enough once the own sign-in is set up. Without it the page shows the **Sign-ins** card right away.
+- **Sensitive steps** (unlocking the web console, emergency restart) are confirmed with an own sign-in: 2FA code, passkey, Discord or password.
+- After 5 failed attempts the account is locked for 15 minutes, plus at most 10 sign-in attempts per minute and IP. For this to work with the visitors' real IP, enter your proxy under `web.trusted-proxies`.
+- Cookies: `HttpOnly`, `SameSite=Strict`, over HTTPS `Secure`; session cookies, recovery codes and mail links only as hashes. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
+- The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
+- Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
+- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
 
 ## Overview (dashboard)
 - At the top the **situation**: if something gets out of hand, every message is listed here with an icon and a word, the most urgent first: low TPS, high tick time, full memory, little disk space, high CPU load, high ping, unanswered tickets and tickets assigned to you, locked, conspicuous or paused chunk loaders, /nosleep blocks, maintenance. If everything runs smoothly, the most important current values are shown there. Updates every 2 seconds.

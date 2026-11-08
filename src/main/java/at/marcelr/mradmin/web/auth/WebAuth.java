@@ -2,40 +2,44 @@ package at.marcelr.mradmin.web.auth;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.storage.Storage;
+import at.marcelr.mradmin.web.self.PlayerSessions;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Web accounts, setup links and sessions. Thread-safe (web threads and the server thread use it).
+ * Accounts of the web interface - one per player (UUID) - and their own sign-ins. Thread-safe (web threads and the
+ * server thread use it).
  * <p>
- * An account belongs to a Minecraft player. It is created - or reset - with a one-time setup link that only someone
- * in game ({@code /mradmin web setup}) or at the console ({@code mradmin web invite}) can make. Sign-in is with a
- * password <b>plus</b> a code from an authenticator app (or a one-time recovery code), later also with passkeys.
- * Session cookies and recovery codes are stored only as SHA-256 hashes.
+ * Everyone gets in with a code from {@code /web} in game; the account is made then. On top, a player can set up their
+ * own sign-in to get in without the game: a password (with their name or a confirmed e-mail address), a passkey or
+ * Discord - optionally with 2FA (authenticator app, then a password sign-in also asks for a code). The team needs at
+ * least one own sign-in for the administration ({@link #teamReady}). Signed-in browsers are kept in
+ * {@link PlayerSessions} - one kind of session for everyone. Cookie tokens, recovery codes and the tokens of e-mail
+ * links are stored only as SHA-256 hashes.
  */
 public final class WebAuth {
 
-    /** How long a setup link works. */
-    public static final long SETUP_MILLIS = 10 * 60_000L;
     /** Failed sign-ins in a row before the account is locked for {@link #LOCK_MILLIS}. */
     private static final int MAX_FAILED = 5;
     private static final long LOCK_MILLIS = 15 * 60_000L;
     private static final int RECOVERY_CODES = 8;
-    /** lastSeen of sessions is saved at most this often. */
-    private static final long TOUCH_SAVE_MILLIS = 60_000L;
+    /** How long the links in e-mails (confirm the address, new password) work. */
+    public static final long MAIL_LINK_MILLIS = 60 * 60_000L;
     private static final String ACCOUNTS = "web-accounts";
-    private static final String SESSIONS = "web-sessions";
+    /** Team sessions of MRadmin before 1.5 - taken over once into {@link PlayerSessions}. */
+    private static final String OLD_SESSIONS = "web-sessions";
+    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]{1,64}@[^@\\s]{1,190}\\.[^@\\s]{2,}$");
 
-    /** A web account; changed only inside WebAuth (synchronized). */
+    /** An account; changed only inside WebAuth (synchronized). */
     public static final class Account {
         final UUID id;
         String name;
@@ -54,6 +58,8 @@ public final class WebAuth {
         /** The linked Discord account (ID and the name it had when linked), or null. */
         String discordId;
         String discordName;
+        /** Confirmed e-mail address (sign-in, "forgot password"), or null. */
+        String email;
 
         Account(UUID id, String name) {
             this.id = id;
@@ -75,14 +81,18 @@ public final class WebAuth {
         public int recoveryLeft() {
             return recovery.size();
         }
-    }
 
-    /** A signed-in browser. {@code id} is public (shown in lists), the cookie token itself is stored only hashed. */
-    public record Session(String id, String hash, UUID account, long created, long lastSeen, long expires, String ip,
-                          String agent) {
+        public String email() {
+            return email;
+        }
 
-        Session touched(long now, String ip) {
-            return new Session(id, hash, account, created, now, expires, ip, agent);
+        public boolean hasPassword() {
+            return password != null;
+        }
+
+        /** Whether the player can sign in without the game: password, passkey or Discord. */
+        public boolean ownLogin() {
+            return password != null || !passkeys.isEmpty() || discordId != null;
         }
     }
 
@@ -93,12 +103,8 @@ public final class WebAuth {
     public record Passkey(String id, String publicKey, long signCount, String name, long created, long lastUsed) {
     }
 
-    /** What a setup link stands for; the 2FA secret is made once per link, so reloading the page keeps the QR code. */
-    private record Setup(UUID player, String name, long expires, String totp) {
-    }
-
-    /** Result of sign-in and setup: the cookie token (null on failure) and an error key. */
-    public record Result(String token, Session session, String error, List<String> recoveryCodes) {
+    /** Result of a sign-in: the cookie token (null on failure) and an error key. */
+    public record Result(String token, PlayerSessions.Session session, String error, List<String> recoveryCodes) {
 
         public static Result fail(String error) {
             return new Result(null, null, error, List.of());
@@ -109,118 +115,140 @@ public final class WebAuth {
         }
     }
 
+    /** A pending e-mail link: whose, for which address (confirm) and until when. */
+    private record MailLink(UUID account, String email, long expires) {
+    }
+
     private final MRAdmin plugin;
     private final Map<UUID, Account> accounts = new HashMap<>();
-    /** hash of the cookie token -> session */
-    private final Map<String, Session> sessions = new HashMap<>();
-    /** hash of the setup token -> setup */
-    private final Map<String, Setup> setups = new HashMap<>();
-    private long lastTouchSave;
-    private boolean touchDirty;
+    /** hash of the token -> address to confirm */
+    private final Map<String, MailLink> emailLinks = new HashMap<>();
+    /** hash of the token -> new password for this account */
+    private final Map<String, MailLink> resetLinks = new HashMap<>();
+    private PlayerSessions sessions;
 
     public WebAuth(MRAdmin plugin) {
         this.plugin = plugin;
+    }
+
+    /** The one place where signed-in browsers are kept (set by the web server). */
+    public synchronized void useSessions(PlayerSessions sessions) {
+        this.sessions = sessions;
     }
 
     private Storage storage() {
         return plugin.storage();
     }
 
-    // ------------------------------------------------------------------- setup
+    // ------------------------------------------------------------------- accounts
 
-    /** A new one-time setup link token for this player (any older link of them stops working). */
-    public synchronized String createSetup(UUID player, String name) {
-        setups.values().removeIf(s -> s.player().equals(player) || s.expires() < System.currentTimeMillis());
-        String token = Secrets.token(24);
-        setups.put(Secrets.sha256(token), new Setup(player, name, System.currentTimeMillis() + SETUP_MILLIS, Totp.newSecret()));
-        return token;
+    public synchronized Account account(UUID id) {
+        return accounts.get(id);
     }
 
-    /** For the setup page: name, whether an account exists (reset) and the 2FA secret. Null if the link is invalid. */
-    public synchronized Map<String, Object> setupInfo(String token) {
-        Setup setup = validSetup(token);
-        if (setup == null) {
-            return null;
-        }
-        return Map.of("name", setup.name(), "existing", accounts.containsKey(setup.player()),
-                "secret", setup.totp(), "uri", Totp.uri(issuer(), setup.name(), setup.totp()),
-                "expires", setup.expires(), "minPassword", Passwords.MIN_LENGTH);
-    }
-
-    /**
-     * Finishes a setup: checks the 2FA code against the new secret, sets password and 2FA, makes new recovery codes,
-     * signs out all other sessions of the account and signs this browser in. The link is used up.
-     * Slow (password hashing) - call it from a web thread.
-     */
-    public Result finishSetup(String token, String password, String code, String ip, String agent) {
-        Setup setup;
-        synchronized (this) {
-            setup = validSetup(token);
-        }
-        if (setup == null) {
-            return Result.fail("setup-invalid");
-        }
-        if (password == null || password.length() < Passwords.MIN_LENGTH || password.length() > 200) {
-            return Result.fail("password-short");
-        }
-        long step = Totp.verify(setup.totp(), code, System.currentTimeMillis());
-        if (step < 0) {
-            return Result.fail("code-wrong");
-        }
-        String hash = Passwords.hash(password);
-        List<String> codes = new ArrayList<>();
-        List<String> hashes = new ArrayList<>();
-        for (int i = 0; i < RECOVERY_CODES; i++) {
-            String raw = Secrets.base32(Secrets.random(7)).substring(0, 10);
-            String pretty = raw.substring(0, 5) + "-" + raw.substring(5);
-            codes.add(pretty);
-            hashes.add(Secrets.sha256(raw));
-        }
-        synchronized (this) {
-            if (setups.remove(Secrets.sha256(token)) == null) {
-                return Result.fail("setup-invalid");
-            }
-            Account account = accounts.computeIfAbsent(setup.player(), id -> new Account(id, setup.name()));
-            account.name = setup.name();
-            account.password = hash;
-            account.totp = setup.totp();
-            account.recovery = hashes;
-            account.failed = 0;
-            account.lockedUntil = 0;
-            account.lastTotpStep = step;
-            // A reset (lost phone, forgotten password) also removes the passkeys - a lost device must not sign in.
-            account.passkeys = new ArrayList<>();
-            account.discordId = null;
-            account.discordName = null;
-            if (account.created == 0) {
-                account.created = System.currentTimeMillis();
-            }
-            sessions.values().removeIf(s -> s.account().equals(account.id));
-            Result result = startSession(account, ip, agent);
+    /** The player's account, made if they have none yet (first /web sign-in); the name is kept up to date. */
+    public synchronized Account ensure(UUID id, String name) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            account = new Account(id, name);
+            account.created = System.currentTimeMillis();
+            accounts.put(id, account);
             saveAccounts();
-            saveSessions();
-            return new Result(result.token(), result.session(), null, List.copyOf(codes));
+        } else if (name != null && !name.isBlank() && !name.equals(account.name)) {
+            account.name = name;
+            saveAccounts();
         }
+        return account;
     }
 
-    private Setup validSetup(String token) {
-        if (token == null) {
+    public synchronized Account byName(String name) {
+        if (name == null) {
             return null;
         }
-        Setup setup = setups.get(Secrets.sha256(token));
-        return setup == null || setup.expires() < System.currentTimeMillis() ? null : setup;
+        return accounts.values().stream().filter(a -> a.name.equalsIgnoreCase(name.trim())).findFirst().orElse(null);
     }
 
-    // ------------------------------------------------------------------- login
+    /** The account with this confirmed e-mail address, or null. */
+    public synchronized Account byEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String wanted = email.trim().toLowerCase(Locale.ROOT);
+        return accounts.values().stream().filter(a -> wanted.equals(a.email)).findFirst().orElse(null);
+    }
+
+    public synchronized Collection<Account> accounts() {
+        return List.copyOf(accounts.values());
+    }
+
+    /** Accounts with an own sign-in (password, passkey or Discord) - the former "web accounts". */
+    public synchronized long ownLoginCount() {
+        return accounts.values().stream().filter(Account::ownLogin).count();
+    }
 
     /**
-     * Password + 2FA code (or a recovery code). The answer never says whether the name or the password was wrong.
-     * Slow on purpose (password hashing) - call it from a web thread.
+     * Whether the account may open the administration (besides the permission): an own sign-in, and 2FA if
+     * {@code web.login.require-2fa} asks for it.
      */
-    public Result login(String name, String password, String code, String ip, String agent) {
+    public synchronized boolean teamReady(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null || !account.ownLogin()) {
+            return false;
+        }
+        return !plugin.settings().web().require2fa() || account.totp != null;
+    }
+
+    /** Deletes an account with all its browsers. @return whether it existed */
+    public synchronized boolean remove(UUID id) {
+        boolean existed = accounts.remove(id) != null;
+        if (sessions != null) {
+            sessions.revokeAll(id);
+        }
+        if (existed) {
+            saveAccounts();
+        }
+        return existed;
+    }
+
+    /**
+     * Removes all own sign-ins of a player (password, 2FA, passkeys, Discord, e-mail) and signs out all their browsers
+     * - for a lost device or a taken-over account. Afterwards they get in again only with /web.
+     * @return whether the account existed
+     */
+    public synchronized boolean resetLogins(UUID id) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            return false;
+        }
+        account.password = null;
+        account.totp = null;
+        account.recovery = new ArrayList<>();
+        account.passkeys = new ArrayList<>();
+        account.discordId = null;
+        account.discordName = null;
+        account.email = null;
+        account.failed = 0;
+        account.lockedUntil = 0;
+        emailLinks.values().removeIf(l -> l.account().equals(id));
+        resetLinks.values().removeIf(l -> l.account().equals(id));
+        if (sessions != null) {
+            sessions.revokeAll(id);
+        }
+        saveAccounts();
+        return true;
+    }
+
+    // ------------------------------------------------------------------- password sign-in
+
+    /**
+     * Name or confirmed e-mail address + password, plus a 2FA code (or a recovery code) if the account has 2FA. The
+     * answer never says whether the name or the password was wrong. Slow on purpose (password hashing) - call it from
+     * a web thread. Error "code-needed": password right, but the account wants its 2FA code (the page asks for it).
+     */
+    public Result login(String identifier, String password, String code, String ip, String agent) {
         Account account;
         synchronized (this) {
-            account = byName(name);
+            account = identifier != null && identifier.contains("@") ? byEmail(identifier) : byName(identifier);
             if (account != null && account.lockedUntil > System.currentTimeMillis()) {
                 return Result.fail("locked");
             }
@@ -230,14 +258,12 @@ public final class WebAuth {
             Passwords.verify(password == null ? "" : password, Dummy.HASH);
             return Result.fail("invalid");
         }
-        boolean passwordOk = Passwords.verify(password, account.password);
+        boolean passwordOk = Passwords.verify(password == null ? "" : password, account.password);
         synchronized (this) {
-            // Password sign-in always needs 2FA. Without 2FA (switched off, passkeys only) it is not possible - only
-            // said once the password was right, so the answer reveals nothing to strangers.
-            if (passwordOk && account.totp == null) {
-                return Result.fail("passkey-only");
+            if (passwordOk && account.totp != null && (code == null || code.isBlank())) {
+                return Result.fail("code-needed");
             }
-            if (!passwordOk || !secondFactor(account, code)) {
+            if (!passwordOk || (account.totp != null && !secondFactor(account, code))) {
                 if (++account.failed >= MAX_FAILED) {
                     account.failed = 0;
                     account.lockedUntil = System.currentTimeMillis() + LOCK_MILLIS;
@@ -247,10 +273,8 @@ public final class WebAuth {
             }
             account.failed = 0;
             account.lastLogin = System.currentTimeMillis();
-            Result result = startSession(account, ip, agent);
             saveAccounts();
-            saveSessions();
-            return result;
+            return startSession(account, ip, agent);
         }
     }
 
@@ -264,7 +288,7 @@ public final class WebAuth {
         if (code == null) {
             return false;
         }
-        long step = Totp.verify(account.totp, code, System.currentTimeMillis());
+        long step = Totp.verify(account.totp, code.replace(" ", ""), System.currentTimeMillis());
         if (step >= 0) {
             if (step <= account.lastTotpStep) {
                 return false;
@@ -274,6 +298,151 @@ public final class WebAuth {
         }
         String recovery = Secrets.sha256(code.replace("-", "").replace(" ", "").toUpperCase(Locale.ROOT));
         return account.recovery.remove(recovery);
+    }
+
+    /**
+     * Sets or changes the password. Slow (hashing) - web thread. The caller checks who it is (signed in, and for a
+     * change the current password or another confirmation). @return null or "password-short"
+     */
+    public String setPassword(UUID id, String password) {
+        if (password == null || password.length() < Passwords.MIN_LENGTH || password.length() > 200) {
+            return "password-short";
+        }
+        String hash = Passwords.hash(password);
+        synchronized (this) {
+            Account account = accounts.get(id);
+            if (account == null) {
+                return "invalid";
+            }
+            account.password = hash;
+            account.failed = 0;
+            account.lockedUntil = 0;
+            saveAccounts();
+            return null;
+        }
+    }
+
+    /** Removes the password (the player keeps /web and their other sign-ins). */
+    public synchronized void removePassword(UUID id) {
+        Account account = accounts.get(id);
+        if (account != null && account.password != null) {
+            account.password = null;
+            saveAccounts();
+        }
+    }
+
+    /** Checks the account's password (confirming a sensitive step). Slow - web thread. */
+    public boolean checkPassword(UUID id, String password) {
+        String hash;
+        synchronized (this) {
+            Account account = accounts.get(id);
+            hash = account == null ? null : account.password;
+        }
+        if (hash == null || password == null || password.isEmpty()) {
+            return false;
+        }
+        return Passwords.verify(password, hash);
+    }
+
+    // ------------------------------------------------------------------- e-mail
+
+    public static boolean validEmail(String email) {
+        return email != null && email.length() <= 254 && EMAIL.matcher(email.trim()).matches();
+    }
+
+    /**
+     * Step 1 of a new address: a token for the confirmation link (sent by mail). The address counts only after the
+     * link. @return the token, or an error ("email-invalid", "email-taken")
+     */
+    public synchronized String[] requestEmail(UUID id, String email) {
+        if (!validEmail(email)) {
+            return new String[] {null, "email-invalid"};
+        }
+        String clean = email.trim().toLowerCase(Locale.ROOT);
+        Account other = byEmail(clean);
+        if (other != null && !other.id.equals(id)) {
+            return new String[] {null, "email-taken"};
+        }
+        long now = System.currentTimeMillis();
+        emailLinks.values().removeIf(l -> l.account().equals(id) || l.expires() < now);
+        String token = Secrets.token(24);
+        emailLinks.put(Secrets.sha256(token), new MailLink(id, clean, now + MAIL_LINK_MILLIS));
+        return new String[] {token, null};
+    }
+
+    /** Step 2: the link was opened. @return the account's name, or null if the link is invalid or the address taken */
+    public synchronized String confirmEmail(String token) {
+        if (token == null) {
+            return null;
+        }
+        MailLink link = emailLinks.remove(Secrets.sha256(token));
+        Account account = link == null || link.expires() < System.currentTimeMillis() ? null : accounts.get(link.account());
+        if (account == null) {
+            return null;
+        }
+        Account other = byEmail(link.email());
+        if (other != null && other != account) {
+            return null;
+        }
+        account.email = link.email();
+        saveAccounts();
+        return account.name;
+    }
+
+    public synchronized void removeEmail(UUID id) {
+        Account account = accounts.get(id);
+        if (account != null && account.email != null) {
+            account.email = null;
+            saveAccounts();
+        }
+    }
+
+    /**
+     * "Forgot password": a token for the link, if the name or address belongs to an account with a confirmed address.
+     * @return {account, token} or null (the page says the same either way)
+     */
+    public synchronized Object[] requestReset(String identifier) {
+        Account account = identifier != null && identifier.contains("@") ? byEmail(identifier) : byName(identifier);
+        if (account == null || account.email == null) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        resetLinks.values().removeIf(l -> l.account().equals(account.id) || l.expires() < now);
+        String token = Secrets.token(24);
+        resetLinks.put(Secrets.sha256(token), new MailLink(account.id, account.email, now + MAIL_LINK_MILLIS));
+        return new Object[] {account, token};
+    }
+
+    /** Whether a reset link still works (the page shows the form only then). */
+    public synchronized boolean resetValid(String token) {
+        MailLink link = token == null ? null : resetLinks.get(Secrets.sha256(token));
+        return link != null && link.expires() >= System.currentTimeMillis();
+    }
+
+    /**
+     * Sets the new password of a reset link and signs out all other browsers of the account. Slow - web thread.
+     * @return null, "reset-invalid" or "password-short"
+     */
+    public String finishReset(String token, String password) {
+        UUID id;
+        synchronized (this) {
+            MailLink link = token == null ? null : resetLinks.get(Secrets.sha256(token));
+            if (link == null || link.expires() < System.currentTimeMillis()) {
+                return "reset-invalid";
+            }
+            id = link.account();
+        }
+        String error = setPassword(id, password);
+        if (error != null) {
+            return error;
+        }
+        synchronized (this) {
+            resetLinks.remove(Secrets.sha256(token));
+            if (sessions != null) {
+                sessions.revokeAll(id);
+            }
+        }
+        return null;
     }
 
     // ---------------------------------------------------------------- passkeys
@@ -325,14 +494,11 @@ public final class WebAuth {
         }
     }
 
-    /** @return null, "not-found", or "last-passkey" (without 2FA the last passkey is the only way in) */
+    /** @return null or "not-found" (/web always works, so the last passkey may go too) */
     public synchronized String removePasskey(UUID id, String credentialId) {
         Account account = accounts.get(id);
         if (account == null || account.passkeys.stream().noneMatch(p -> p.id().equals(credentialId))) {
             return "not-found";
-        }
-        if (account.totp == null && account.passkeys.size() <= 1 && account.discordId == null) {
-            return "last-passkey";
         }
         account.passkeys.removeIf(p -> p.id().equals(credentialId));
         saveAccounts();
@@ -350,6 +516,27 @@ public final class WebAuth {
         }
     }
 
+    /**
+     * Signs in with a verified passkey (the WebAuthn check happened in {@link Passkeys}): stores the new signature
+     * counter and starts a session. A passkey with user verification counts as two factors - no 2FA code.
+     */
+    public synchronized Result passkeyLogin(UUID id, String credentialId, long signCount, String ip, String agent) {
+        Account account = accounts.get(id);
+        if (account == null) {
+            return Result.fail("invalid");
+        }
+        if (account.lockedUntil > System.currentTimeMillis()) {
+            return Result.fail("locked");
+        }
+        long now = System.currentTimeMillis();
+        account.passkeys.replaceAll(p -> p.id().equals(credentialId)
+                ? new Passkey(p.id(), p.publicKey(), signCount, p.name(), p.created(), now) : p);
+        account.failed = 0;
+        account.lastLogin = now;
+        saveAccounts();
+        return startSession(account, ip, agent);
+    }
+
     // ----------------------------------------------------------------- Discord
 
     /** The linked Discord account: [id, name], or null. */
@@ -358,7 +545,7 @@ public final class WebAuth {
         return account == null || account.discordId == null ? null : new String[] {account.discordId, account.discordName};
     }
 
-    /** Links a Discord account (one Discord account belongs to one web account). @return null or "discord-taken" */
+    /** Links a Discord account (one Discord account belongs to one account). @return null or "discord-taken" */
     public synchronized String linkDiscord(UUID id, String discordId, String discordName) {
         Account account = accounts.get(id);
         if (account == null) {
@@ -375,14 +562,11 @@ public final class WebAuth {
         return null;
     }
 
-    /** @return null or "last-method" (without 2FA and passkeys Discord is the only way in) */
+    /** @return null or "not-found" */
     public synchronized String unlinkDiscord(UUID id) {
         Account account = accounts.get(id);
         if (account == null || account.discordId == null) {
             return "not-found";
-        }
-        if (account.totp == null && account.passkeys.isEmpty()) {
-            return "last-method";
         }
         account.discordId = null;
         account.discordName = null;
@@ -406,15 +590,13 @@ public final class WebAuth {
         account.discordName = discordName;
         account.failed = 0;
         account.lastLogin = System.currentTimeMillis();
-        Result result = startSession(account, ip, agent);
         saveAccounts();
-        saveSessions();
-        return result;
+        return startSession(account, ip, agent);
     }
 
     // ---------------------------------------------------------------- 2FA on/off
 
-    /** account -> 2FA secret being set up again (until the first code confirms it) */
+    /** account -> 2FA secret being set up (until the first code confirms it) */
     private final Map<UUID, String> pendingTotp = new HashMap<>();
 
     public synchronized boolean hasTotp(UUID id) {
@@ -422,22 +604,18 @@ public final class WebAuth {
         return account != null && account.totp != null;
     }
 
-    /**
-     * Switches 2FA off - only with at least one passkey. Then the account signs in only with passkeys (password
-     * sign-in needs 2FA); the recovery codes go too. @return null or "need-passkey"
-     */
+    /** Switches 2FA off; the recovery codes go too. @return null */
     public synchronized String disableTotp(UUID id) {
         Account account = accounts.get(id);
-        if (account == null || account.passkeys.isEmpty() && account.discordId == null) {
-            return "need-passkey";
+        if (account != null) {
+            account.totp = null;
+            account.recovery = new ArrayList<>();
+            saveAccounts();
         }
-        account.totp = null;
-        account.recovery = new ArrayList<>();
-        saveAccounts();
         return null;
     }
 
-    /** Switching 2FA on again, step 1: a new secret for the app (QR). Null if 2FA is on already. */
+    /** Switching 2FA on, step 1: a new secret for the app (QR). Null if 2FA is on already. */
     public synchronized Map<String, Object> startTotp(UUID id) {
         Account account = accounts.get(id);
         if (account == null || account.totp != null) {
@@ -462,139 +640,9 @@ public final class WebAuth {
         pendingTotp.remove(id);
         account.totp = secret;
         account.lastTotpStep = step;
-        List<String> codes = new ArrayList<>();
-        account.recovery = new ArrayList<>();
-        for (int i = 0; i < RECOVERY_CODES; i++) {
-            String raw = Secrets.base32(Secrets.random(7)).substring(0, 10);
-            codes.add(raw.substring(0, 5) + "-" + raw.substring(5));
-            account.recovery.add(Secrets.sha256(raw));
-        }
+        List<String> codes = newCodes(account);
         saveAccounts();
         return codes;
-    }
-
-    /**
-     * Signs in with a verified passkey (the WebAuthn check happened in {@link Passkeys}): stores the new signature
-     * counter and starts a session. A passkey with user verification counts as two factors - no 2FA code.
-     */
-    public synchronized Result passkeyLogin(UUID id, String credentialId, long signCount, String ip, String agent) {
-        Account account = accounts.get(id);
-        if (account == null) {
-            return Result.fail("invalid");
-        }
-        if (account.lockedUntil > System.currentTimeMillis()) {
-            return Result.fail("locked");
-        }
-        long now = System.currentTimeMillis();
-        account.passkeys.replaceAll(p -> p.id().equals(credentialId)
-                ? new Passkey(p.id(), p.publicKey(), signCount, p.name(), p.created(), now) : p);
-        account.failed = 0;
-        account.lastLogin = now;
-        Result result = startSession(account, ip, agent);
-        saveAccounts();
-        saveSessions();
-        return result;
-    }
-
-    private Result startSession(Account account, String ip, String agent) {
-        String token = Secrets.token(32);
-        long now = System.currentTimeMillis();
-        Session session = new Session(Secrets.token(9), Secrets.sha256(token), account.id, now, now,
-                now + plugin.settings().web().sessionDays() * 86_400_000L, ip, agent == null ? "" : cut(agent, 200));
-        sessions.put(session.hash(), session);
-        return new Result(token, session, null, List.of());
-    }
-
-    // ---------------------------------------------------------------- sessions
-
-    /** The session of a cookie token (and marks it as seen), or null if it is unknown or expired. */
-    public synchronized Session session(String token, String ip) {
-        if (token == null || token.isEmpty()) {
-            return null;
-        }
-        String hash = Secrets.sha256(token);
-        Session session = sessions.get(hash);
-        long now = System.currentTimeMillis();
-        if (session == null) {
-            return null;
-        }
-        if (session.expires() < now || !accounts.containsKey(session.account())) {
-            sessions.remove(hash);
-            saveSessions();
-            return null;
-        }
-        Session touched = session.touched(now, ip);
-        sessions.put(hash, touched);
-        touchDirty = true;
-        if (now - lastTouchSave > TOUCH_SAVE_MILLIS) {
-            saveSessions();
-        }
-        return touched;
-    }
-
-    public synchronized void logout(String token) {
-        if (token != null && sessions.remove(Secrets.sha256(token)) != null) {
-            saveSessions();
-        }
-    }
-
-    /** Sessions of an account, newest activity first. */
-    public synchronized List<Session> sessions(UUID account) {
-        return sessions.values().stream().filter(s -> s.account().equals(account))
-                .sorted(Comparator.comparingLong(Session::lastSeen).reversed()).toList();
-    }
-
-    /** Ends one session of the account by its public id. @return whether it existed */
-    public synchronized boolean revoke(UUID account, String id) {
-        boolean removed = sessions.values().removeIf(s -> s.account().equals(account) && s.id().equals(id));
-        if (removed) {
-            saveSessions();
-        }
-        return removed;
-    }
-
-    /** Ends all sessions of the account except {@code keep} (null = all). @return how many */
-    public synchronized int revokeAll(UUID account, String keep) {
-        int before = sessions.size();
-        sessions.values().removeIf(s -> s.account().equals(account) && !s.id().equals(keep));
-        int removed = before - sessions.size();
-        if (removed > 0) {
-            saveSessions();
-        }
-        return removed;
-    }
-
-    // ---------------------------------------------------------------- accounts
-
-    public synchronized Account account(UUID id) {
-        return accounts.get(id);
-    }
-
-    public synchronized Account byName(String name) {
-        if (name == null) {
-            return null;
-        }
-        return accounts.values().stream().filter(a -> a.name.equalsIgnoreCase(name.trim())).findFirst().orElse(null);
-    }
-
-    public synchronized Collection<Account> accounts() {
-        return List.copyOf(accounts.values());
-    }
-
-    public synchronized int sessionCount() {
-        return sessions.size();
-    }
-
-    /** Deletes an account with all its sessions. @return whether it existed */
-    public synchronized boolean remove(UUID id) {
-        boolean existed = accounts.remove(id) != null;
-        sessions.values().removeIf(s -> s.account().equals(id));
-        setups.values().removeIf(s -> s.player().equals(id));
-        if (existed) {
-            saveAccounts();
-            saveSessions();
-        }
-        return existed;
     }
 
     /**
@@ -626,6 +674,12 @@ public final class WebAuth {
             return null;
         }
         account.lastTotpStep = step;
+        List<String> codes = newCodes(account);
+        saveAccounts();
+        return codes;
+    }
+
+    private static List<String> newCodes(Account account) {
         List<String> codes = new ArrayList<>();
         account.recovery = new ArrayList<>();
         for (int i = 0; i < RECOVERY_CODES; i++) {
@@ -633,7 +687,6 @@ public final class WebAuth {
             codes.add(raw.substring(0, 5) + "-" + raw.substring(5));
             account.recovery.add(Secrets.sha256(raw));
         }
-        saveAccounts();
         return codes;
     }
 
@@ -642,11 +695,54 @@ public final class WebAuth {
         return url.isEmpty() ? "MRadmin" : "MRadmin (" + url.replaceFirst("^https?://", "") + ")";
     }
 
+    // ---------------------------------------------------------------- sessions (kept in PlayerSessions)
+
+    private Result startSession(Account account, String ip, String agent) {
+        if (sessions == null) {
+            return Result.fail("invalid");
+        }
+        PlayerSessions.Result opened = sessions.open(account.id, account.name, ip, agent);
+        return new Result(opened.token(), opened.session(), opened.error(), List.of());
+    }
+
+    /** The session of a cookie token (its use noted), or null. */
+    public PlayerSessions.Session session(String token, String ip) {
+        return sessions == null ? null : sessions.session(token, ip);
+    }
+
+    public void logout(String token) {
+        if (sessions != null) {
+            sessions.logout(token);
+        }
+    }
+
+    /** Signed-in browsers of an account, newest activity first. */
+    public List<PlayerSessions.Session> sessions(UUID account) {
+        return sessions == null ? List.of() : sessions.devices(account);
+    }
+
+    /** Ends one session of the account by its public id. @return whether it existed */
+    public boolean revoke(UUID account, String id) {
+        return sessions != null && sessions.revoke(account, id);
+    }
+
+    /** Ends all sessions of the account except {@code keep} (null = all). @return how many */
+    public int revokeAll(UUID account, String keep) {
+        return sessions == null ? 0 : sessions.revokeAllExcept(account, keep);
+    }
+
+    public int sessionCount() {
+        return sessions == null ? 0 : sessions.count();
+    }
+
+    /** Nothing to write here any more (sessions: PlayerSessions#flush). */
+    public void flush() {
+    }
+
     // ------------------------------------------------------------- persistence
 
     public synchronized void load() {
         accounts.clear();
-        sessions.clear();
         YamlConfiguration a = storage().loadYaml(ACCOUNTS, plugin.getLogger());
         ConfigurationSection section = a.getConfigurationSection("accounts");
         if (section != null) {
@@ -665,6 +761,7 @@ public final class WebAuth {
                     account.userHandle = s.getString("user-handle");
                     account.discordId = s.getString("discord-id");
                     account.discordName = s.getString("discord-name");
+                    account.email = s.getString("email");
                     ConfigurationSection keys = s.getConfigurationSection("passkeys");
                     if (keys != null) {
                         for (String k : keys.getKeys(false)) {
@@ -680,29 +777,44 @@ public final class WebAuth {
                 }
             }
         }
-        YamlConfiguration y = storage().loadYaml(SESSIONS, plugin.getLogger());
+    }
+
+    /**
+     * Once after the update: team sessions of the old team interface go into the one session list, so nobody is
+     * signed out. Afterwards the old list is empty.
+     */
+    public void takeOverOldSessions() {
+        if (sessions == null) {
+            return;
+        }
+        YamlConfiguration y = storage().loadYaml(OLD_SESSIONS, plugin.getLogger());
         ConfigurationSection list = y.getConfigurationSection("sessions");
-        long now = System.currentTimeMillis();
-        if (list != null) {
-            for (String hash : list.getKeys(false)) {
-                ConfigurationSection s = list.getConfigurationSection(hash);
-                try {
-                    Session session = new Session(s.getString("id"), hash, UUID.fromString(s.getString("account")),
-                            s.getLong("created"), s.getLong("last-seen"), s.getLong("expires"), s.getString("ip", ""),
-                            s.getString("agent", ""));
-                    if (session.expires() > now && accounts.containsKey(session.account())) {
-                        sessions.put(hash, session);
-                    }
-                } catch (RuntimeException ignored) {
-                    // broken entry - that browser simply signs in again
+        if (list == null || list.getKeys(false).isEmpty()) {
+            return;
+        }
+        int taken = 0;
+        for (String hash : list.getKeys(false)) {
+            ConfigurationSection s = list.getConfigurationSection(hash);
+            try {
+                UUID id = UUID.fromString(s.getString("account"));
+                Account account = account(id);
+                if (account != null && sessions.adopt(hash, s.getString("id"), id, account.name, s.getLong("created"),
+                        s.getLong("last-seen"), s.getString("ip", ""), s.getString("agent", ""))) {
+                    taken++;
                 }
+            } catch (RuntimeException ignored) {
+                // broken entry - that browser simply signs in again
             }
         }
+        YamlConfiguration empty = new YamlConfiguration();
+        empty.options().setHeader(List.of("MRadmin - no longer used (sessions are in player-sessions since 1.5)."));
+        storage().saveYaml(OLD_SESSIONS, empty);
+        plugin.getLogger().info("Took over " + taken + " signed-in browsers of the old team interface.");
     }
 
     private void saveAccounts() {
         YamlConfiguration y = new YamlConfiguration();
-        y.options().setHeader(List.of("MRadmin - web accounts (managed by the plugin, do not edit)."));
+        y.options().setHeader(List.of("MRadmin - accounts of the web interface (managed by the plugin, do not edit)."));
         for (Account a : accounts.values()) {
             String p = "accounts." + a.id + ".";
             y.set(p + "name", a.name);
@@ -717,6 +829,7 @@ public final class WebAuth {
             y.set(p + "user-handle", a.userHandle);
             y.set(p + "discord-id", a.discordId);
             y.set(p + "discord-name", a.discordName);
+            y.set(p + "email", a.email);
             for (int i = 0; i < a.passkeys.size(); i++) {
                 Passkey k = a.passkeys.get(i);
                 String q = p + "passkeys." + i + ".";
@@ -729,34 +842,5 @@ public final class WebAuth {
             }
         }
         storage().saveYaml(ACCOUNTS, y);
-    }
-
-    private void saveSessions() {
-        YamlConfiguration y = new YamlConfiguration();
-        y.options().setHeader(List.of("MRadmin - signed-in browsers (managed by the plugin, do not edit)."));
-        for (Session s : sessions.values()) {
-            String p = "sessions." + s.hash() + ".";
-            y.set(p + "id", s.id());
-            y.set(p + "account", s.account().toString());
-            y.set(p + "created", s.created());
-            y.set(p + "last-seen", s.lastSeen());
-            y.set(p + "expires", s.expires());
-            y.set(p + "ip", s.ip());
-            y.set(p + "agent", s.agent());
-        }
-        storage().saveYaml(SESSIONS, y);
-        lastTouchSave = System.currentTimeMillis();
-        touchDirty = false;
-    }
-
-    /** On shutdown: the last "seen" times. */
-    public synchronized void flush() {
-        if (touchDirty) {
-            saveSessions();
-        }
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
     }
 }

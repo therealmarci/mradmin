@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 20
+lang-version: 21
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -44,19 +44,17 @@ health-recovered: "<prefix><green>✅ Server läuft wieder flüssig <gray>(<tps>
 # --- Weboberfläche (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>Weboberfläche: Konto einrichten, angemeldete Geräte"
 web-usage: |-
-  <gray>/mradmin web setup <dark_gray>- <gray>Einrichtungslink für dich (auch zum Zurücksetzen von Passwort und 2FA)
   <gray>/mradmin web sessions [spieler] <dark_gray>- <gray>angemeldete Geräte
   <gray>/mradmin web logout [spieler] <dark_gray>- <gray>alle Geräte abmelden
-  <gray>/mradmin web invite <spieler> <dark_gray>- <gray>Einrichtungslink für jemand anderen (Admins, Konsole)
-  <gray>/mradmin web remove <spieler> <dark_gray>- <gray>Web-Konto löschen (Admins)
-web-status: "<prefix><hover:show_text:'<gray><address><newline>Konten: <accounts> · Geräte: <sessions>'><gray>Weboberfläche: <state></hover>"
+  <gray>/mradmin web reset <spieler> <dark_gray>- <gray>eigene Anmeldungen entfernen, z.B. verlorenes Handy (Admins, Konsole)
+  <gray>/mradmin web remove <spieler> <dark_gray>- <gray>Konto löschen (Admins)
+web-status: "<prefix><hover:show_text:'<gray><address><newline>Konten mit eigener Anmeldung: <accounts> · Geräte: <sessions>'><gray>Weboberfläche: <state></hover>"
+web-setup-moved: "<prefix><hover:show_text:'<gray>Melde dich mit /web an und richte unter Anmeldungen ein Passwort, einen Passkey oder Discord ein.'><yellow>Einrichtungslinks gibt es nicht mehr - alles läuft über /web.</hover>"
+web-reset-done: "<prefix><hover:show_text:'<gray>Passwort, 2FA, Passkeys, Discord und E-Mail entfernt, alle Geräte abgemeldet. Rein geht es wieder mit /web.'><green>Anmeldungen von <white><player></white> zurückgesetzt.</hover>"
+web-reset-none: "<prefix><red><white><player></white> hat kein Konto in der Weboberfläche."
 web-state-on: "<green>läuft"
 web-state-off: "<red>aus</red> <gray>(web.enabled in der Config)"
 web-off: "<prefix><hover:show_text:'<gray>web.enabled: true setzen, dann /mradmin reload'><red>Die Weboberfläche ist aus.</hover>"
-web-setup-console: "<prefix><gray>Für die Konsole: /mradmin web invite <spieler>"
-web-setup-link: "<prefix><green>Dein Einrichtungslink:</green> <link> <hover:show_text:'<gray>10 Minuten gültig, nur einmal nutzbar.'><red>Nicht weitergeben!</hover>"
-web-setup-link-other: "<prefix><green>Link für <white><player></white>:</green> <link> <hover:show_text:'<gray>10 Minuten gültig, nur einmal nutzbar.'><red>Nur an <player>!</hover>"
-web-link-label: "<aqua><u>[Einrichtung öffnen]</u></aqua>"
 # Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Deine Seite: <link> <gray>· Code: <code> <hover:show_text:'<gray>Gilt <seconds> Sekunden und nur einmal.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -77,8 +75,6 @@ alert-title: "<red><b>ACHTUNG"
 alert-subtitle: "<white>Kritische Warnung"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url ist nicht gesetzt.'><yellow>Link geht nur auf diesem Rechner.</hover>"
-web-target-no-permission: "<prefix><hover:show_text:'<gray>Ohne die Permission klappt die Anmeldung nicht.'><yellow><player> fehlt mradmin.web.</hover>"
 web-sessions-header: "<prefix><gray>Angemeldete Geräte von <white><player></white>:"
 web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, zuletzt <seen>)"
 web-sessions-none: "<prefix><gray><player> ist auf keinem Gerät angemeldet."
@@ -821,6 +817,24 @@ mail-test-failed: "<prefix><red>Testmail fehlgeschlagen: <white><error>"
 # Mails an Antragsteller (reiner Text, kein MiniMessage). Platzhalter: <name> <id> <subject> <answer> <link> <server> <time>
 mail-server-name: "Minecraft-Server"
 mail-no-text: "(ohne weitere Nachricht)"
+mail-email-confirm-subject: "E-Mail-Adresse bestätigen - <server>"
+mail-email-confirm-body: |-
+  Hallo <name>,
+
+  du möchtest diese Adresse für deine Anmeldung bei <server> verwenden. Bestätige sie mit diesem Link (gültig <minutes> Minuten):
+
+  <link>
+
+  Warst du das nicht? Dann ignoriere diese Mail einfach - ohne Klick passiert nichts.
+mail-reset-subject: "Neues Passwort - <server>"
+mail-reset-body: |-
+  Hallo <name>,
+
+  jemand hat ein neues Passwort für deine Anmeldung bei <server> angefordert. Lege es mit diesem Link fest (gültig <minutes> Minuten):
+
+  <link>
+
+  Warst du das nicht? Dann ignoriere diese Mail - dein Passwort bleibt, wie es ist.
 mail-test-subject: "MRadmin: Testmail"
 mail-test-body: |-
   Hallo,

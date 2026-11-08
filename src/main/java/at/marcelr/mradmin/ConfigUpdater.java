@@ -52,8 +52,10 @@ public final class ConfigUpdater {
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
  * 51: versions.emergency-delays; server.countdown 5m -> 15m and restart-delays 5m/1m/now -> 15m/30m/60m (old defaults).
+ * 52: one sign-in for everyone: web.session-days is gone (player-web.session-days / idle-days for all browsers),
+ * web.login.require-2fa (team needs 2FA, default off); new comments of web.login.
      */
-    public static final int CURRENT_VERSION = 51;
+    public static final int CURRENT_VERSION = 52;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

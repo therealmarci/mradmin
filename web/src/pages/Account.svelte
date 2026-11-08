@@ -3,10 +3,8 @@
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime, ago, head } from '../lib/format.js';
-  import PasskeysCard from '../components/PasskeysCard.svelte';
-  import TwoFactorCard from '../components/TwoFactorCard.svelte';
+  import LoginsCard from '../components/LoginsCard.svelte';
   import NotificationsCard from '../components/NotificationsCard.svelte';
-  import DiscordCard from '../components/DiscordCard.svelte';
   import Toast from '../components/Toast.svelte';
 
   let { me } = $props();
@@ -124,9 +122,7 @@
 
   <div class="content">
     {#if tab === 'security'}
-      <PasskeysCard {me} />
-      <DiscordCard {me} />
-      <TwoFactorCard {me} />
+      <LoginsCard team require2fa={me.require2fa} />
       {#if me.totp}
         <section class="card tile">
           <div class="row">

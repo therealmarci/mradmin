@@ -5,9 +5,9 @@
   import { t } from './lib/i18n.js';
   import { connect, disconnect, live } from './lib/live.svelte.js';
   import TopBar from './components/TopBar.svelte';
-  import Login from './pages/Login.svelte';
-  import Landing from './pages/Landing.svelte';
-  import Setup from './pages/Setup.svelte';
+  import SignIn from './components/SignIn.svelte';
+  import LoginsCard from './components/LoginsCard.svelte';
+  import MailLink from './pages/MailLink.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
   import Tickets from './pages/Tickets.svelte';
@@ -42,7 +42,7 @@
     try {
       me = await api('GET', '/me');
       connect();
-      if (route.path === '/login') go('/', true);
+      if (route.path === '/login' || route.path === '/setup') go('/', true);
     } catch {
       me = null;
     }
@@ -53,7 +53,13 @@
     disconnect();
   });
 
-  // The team sign-in is enough for the own player page. If the server refuses, the page there asks for a code.
+  // After signing in: players without the team go to their player area; the team stays here.
+  async function signedIn() {
+    await loadMe();
+    if (me && !me.team) window.location.href = '/me';
+  }
+
+  // Since 1.5 the same sign-in - the player page only checks its own permission.
   async function toSelfPage() {
     try {
       await api('POST', '/me/player-page');
@@ -77,7 +83,7 @@
   const selfPage = $derived(route.path === '/me' || route.path.startsWith('/me/'));
   const requestToken = $derived(route.path.match(/^\/anfrage\/([A-Za-z0-9_-]{16,64})$/)?.[1] ?? null);
   const publicPage = $derived(
-    ['/setup', '/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung'].includes(route.path) || requestToken !== null || selfPage,
+    ['/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung', '/email', '/reset'].includes(route.path) || requestToken !== null || selfPage,
   );
 
   // Ask who is signed in as soon as a page needs it.
@@ -146,14 +152,32 @@
   <Footer />
 {:else if route.path === '/discord'}
   <Discord onSignedIn={loadMe} />
-{:else if route.path === '/setup'}
-  <Setup onDone={() => { loadMe(); go('/', true); }} />
+{:else if route.path === '/email' || route.path === '/reset'}
+  <MailLink kind={route.path === '/email' ? 'email' : 'reset'} />
 {:else if me === undefined}
   <div class="center muted">{t('common.loading')}</div>
-{:else if me === null && route.path === '/'}
-  <Landing />
 {:else if me === null}
-  <Login onSignedIn={loadMe} />
+  <SignIn onSignedIn={signedIn} />
+{:else if !me.team}
+  <!-- Signed in, but not in the team: the player area is the place. -->
+  <div class="center gate">
+    <p>{t('signin.noTeam')}</p>
+    <div class="gate-acts">
+      <a class="button" href="/me">{t('signin.toPlayerArea')}</a>
+      <button class="secondary" onclick={logout}>{t('nav.logout')}</button>
+    </div>
+  </div>
+{:else if !me.teamReady}
+  <!-- Team, but no own sign-in yet (or 2FA required): set it up right here. -->
+  <main class="gate-setup">
+    <h1>{t('signin.teamSetupTitle')}</h1>
+    <p class="muted">{t(me.require2fa ? 'signin.teamSetupText2fa' : 'signin.teamSetupText')}</p>
+    <LoginsCard team require2fa={me.require2fa} onchange={(d) => { if (d.ownLogin) loadMe(); }} />
+    <div class="gate-acts">
+      {#if me.may.selfPage}<a class="button secondary" href="/me">{t('signin.toPlayerArea')}</a>{/if}
+      <button class="secondary" onclick={logout}>{t('nav.logout')}</button>
+    </div>
+  </main>
 {:else}
   <TopBar items={nav} current={section} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} live={live.connected}
     liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
@@ -226,5 +250,56 @@
     main {
       padding: 28px 24px 40px;
     }
+  }
+
+  /* Signed in without the team, or team without an own sign-in */
+  .gate {
+    align-content: center;
+    gap: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .gate p {
+    margin: 0;
+  }
+
+  .gate-setup {
+    max-width: 680px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .gate-setup h1,
+  .gate-setup p {
+    margin: 0;
+  }
+
+  .gate-acts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .gate-setup .gate-acts {
+    justify-content: flex-start;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .button.secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
   }
 </style>

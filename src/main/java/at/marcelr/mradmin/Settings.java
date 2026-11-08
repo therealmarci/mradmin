@@ -90,7 +90,7 @@ public record Settings(
      * {@code pushContact} is the contact sent to the push services (mailto:... or https:..., empty = from publicUrl).
      */
     public record WebSettings(boolean enabled, String bind, int port, String publicUrl, Set<String> trustedProxies,
-                              int sessionDays, boolean passkeys, boolean password,
+                              boolean require2fa, boolean passkeys, boolean password,
                               java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
                               String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp,
                               String pushContact, boolean itemIcons) {
@@ -489,7 +489,7 @@ public record Settings(
                 Math.clamp(c.getInt("web.port", 8125), 1, 65535),
                 url,
                 Set.copyOf(c.getStringList("web.trusted-proxies")),
-                Math.clamp(c.getInt("web.session-days", 30), 1, 365),
+                c.getBoolean("web.login.require-2fa", false),
                 c.getBoolean("web.login.passkeys", true),
                 c.getBoolean("web.login.password", true),
                 java.util.Map.copyOf(roles),

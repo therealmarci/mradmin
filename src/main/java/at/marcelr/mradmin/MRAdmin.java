@@ -55,9 +55,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(20, Map.ofEntries(
+    private final Messages messages = new Messages(21, Map.ofEntries(
             // 20: restarts and stops name their reason.
             Map.entry(20, Set.of("discord.server-restart", "discord.server-stop", "server-usage")),
+            // 21: one sign-in for everyone - no setup links, /mradmin web reset.
+            Map.entry(21, Set.of("web-usage", "web-status")),
             // 19: the map is shown by MRadmin (player page), squaremap only renders.
             Map.entry(19, Set.of("help-map", "help-map-admin", "map-link", "map-unavailable", "map-status-on", "map-status-off")),
             // 18: only a short warning fills the screen, the text comes in the chat.
@@ -89,8 +91,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             Map.entry(15, Set.of("discord-announce.kuma-status-link")),
             Map.entry(16, Set.of(
                     "reload-invalid", "storage-pending", "health-alert", "health-recovered", "web-status", "web-off",
-                    "web-setup-link", "web-setup-link-other", "web-self-link", "web-self-no-url", "web-self-devices",
-                    "web-no-public-url", "web-target-no-permission", "announce-invalid-part", "mode-on", "mode-off",
+                    "web-self-link", "web-self-no-url", "web-self-devices",
+                    "announce-invalid-part", "mode-on", "mode-off",
                     "mode-off-no-world", "mode-resumed", "mode-save-failed", "mode-load-failed", "freeze-frozen",
                     "gui-hub-announce-lore", "gui-switch-admin-on-lore", "gui-switch-admin-off-lore",
                     "gui-switch-staffchat-on-lore", "gui-switch-staffchat-off-lore", "gui-status-activity-none-lore",
@@ -160,6 +162,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.ItemRoutes.register(web);
         at.marcelr.mradmin.web.self.SelfRoutes.register(web);
         web.playerSessions().load();
+        webAuth.takeOverOldSessions();
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();

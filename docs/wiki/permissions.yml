@@ -68,11 +68,11 @@ mradmin.player.freeze:
 mradmin.player.kick:
   de: "Spieler vom Server kicken"
 mradmin.web:
-  de: "Weboberfläche benutzen (eigenes Konto über `/mradmin web setup`); im Web gelten dieselben Permissions wie im Spiel"
+  de: "Verwaltung der Weboberfläche benutzen (Anmeldung mit `/web` plus eigene Anmeldung: Passwort, Passkey oder Discord); im Web gelten dieselben Permissions wie im Spiel"
 mradmin.web.audit:
   de: "Protokoll aller Aktionen in der Weboberfläche ansehen"
 mradmin.web.manage:
-  de: "Web-Konten anderer verwalten (`/mradmin web invite|logout|remove`)"
+  de: "Web-Konten anderer verwalten (`/mradmin web sessions|logout|reset|remove`)"
 mradmin.web.console.view:
   de: "Konsolenausgabe auf der Seite Protokoll der Weboberfläche mitlesen (keine Befehle)"
 mradmin.web.console.execute:
