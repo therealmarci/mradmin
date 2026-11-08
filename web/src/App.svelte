@@ -14,6 +14,7 @@
   import LoginsCard from './components/LoginsCard.svelte';
   import Footer from './components/Footer.svelte';
   import MailLink from './pages/MailLink.svelte';
+  import Landing from './pages/Landing.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
   import Tickets from './pages/Tickets.svelte';
@@ -87,6 +88,7 @@
   async function signedIn() {
     me = undefined;
     await loadMe();
+    if (route.path === '/login') go('/', true);
   }
 
   async function logout() {
@@ -108,6 +110,10 @@
 
   $effect(() => {
     if (me === undefined && !publicPage) untrack(loadMe);
+  });
+  // Signed in already: the sign-in address leads to the start.
+  $effect(() => {
+    if (me && route.path === '/login') untrack(() => go('/', true));
   });
 
   // ------------------------------------------------------------------ where we are
@@ -235,6 +241,9 @@
   <MailLink kind={route.path === '/email' ? 'email' : 'reset'} />
 {:else if me === undefined || (me && player === undefined)}
   <div class="center muted">{t('common.loading')}</div>
+{:else if me === null && route.path === '/'}
+  <!-- The public start page (switched off: the sign-in right away) -->
+  <Landing onsignin={() => go('/login')} onSignedIn={signedIn} />
 {:else if me === null}
   <SignIn onSignedIn={signedIn} />
 {:else}

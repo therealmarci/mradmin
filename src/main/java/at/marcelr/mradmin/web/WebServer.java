@@ -461,6 +461,15 @@ public final class WebServer {
             }
             return;
         }
+        if (file.startsWith("branding/landing/")) {
+            var image = plugin.branding().landingImage(file.substring(17));
+            if (image == null) {
+                throw new Http.WebException(404, "not-found");
+            }
+            // The id is new for every upload - the picture never changes.
+            http.send(200, image.type(), image.data(), "public, max-age=31536000, immutable");
+            return;
+        }
         if (file.equals("manifest.webmanifest")) {
             http.send(200, "application/manifest+json", plugin.branding().manifest().getBytes(StandardCharsets.UTF_8), "no-cache");
             return;

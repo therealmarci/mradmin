@@ -64,6 +64,19 @@ The web interface carries the name and colours of your server - players never se
 - Saved in `config.yml` (section `branding`, also editable in the file), the pictures under `plugins/MRadmin/branding/`.
 - **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
 
+### Start page (Server → Appearance → Start page)
+Visitors who are not signed in see a **public start page** under `/` - with a **Sign in** button (leads to `/login`). A new server gets a ready template:
+
+| Block | Content |
+|---|---|
+| **Head** | logo, name, tagline, server address to copy, players online, sign in |
+| **News** | the newest posts (1-6) from Community → Posts |
+| **About the server**, **Rules** | texts with simple formatting (**bold**, *italic*, lists, links) |
+| **Buttons** | own links - without own ones the links from "General" |
+| **Sign in** | call to action with a button |
+
+Every block can be switched on and off, moved, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty heading = default heading in the visitor's language. On the right a live preview; "Restore template" resets everything (only when saving). Switched off completely, visitors see the sign-in under `/` right away. Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
+
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.
 - Filter by type (ban, mute, warning, kick) and search for player or reason; a click on the player opens their page.

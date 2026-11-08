@@ -22,6 +22,10 @@ import java.util.Map;
  *  POST   /api/branding        {name, tagline, accent, footer, links: [{label, url}]}   mradmin.appearance
  *  POST   /api/branding/{kind} raw picture (logo | icon), PNG / WebP / SVG, at most 512 KB   mradmin.appearance
  *  DELETE /api/branding/{kind}                                                             mradmin.appearance
+ *  GET    /api/landing?lang=de                            open: the start page (switched-on blocks, news, online)
+ *  GET    /api/landing/edit                               all blocks for the editor            mradmin.appearance
+ *  POST   /api/landing          {enabled, blocks}         save the start page                  mradmin.appearance
+ *  POST   /api/landing/image    raw picture -> {id}       picture for a block                  mradmin.appearance
  * </pre>
  * Texts and colour are written into config.yml (section branding, comments stay) like the config editor does, then
  * MRadmin reloads. The pictures themselves are served by WebServer (/branding/logo, /branding/icon).
@@ -42,6 +46,10 @@ public final class BrandingRoutes {
         server.route("POST", "/api/branding", r::save);
         server.route("POST", "/api/branding/{kind}", r::upload);
         server.route("DELETE", "/api/branding/{kind}", r::removeImage);
+        server.open("GET", "/api/landing", r::landing);
+        server.route("GET", "/api/landing/edit", r::landingEdit);
+        server.route("POST", "/api/landing", r::landingSave);
+        server.route("POST", "/api/landing/image", r::landingImage);
     }
 
     private Branding branding() {
@@ -147,6 +155,92 @@ public final class BrandingRoutes {
         branding().remove(kind);
         audit(http, "branding-" + kind, "removed");
         http.json(200, Map.of());
+    }
+
+    // ------------------------------------------------------------------ start page
+
+    /** The public start page: switched-on blocks, the newest posts (for news blocks), players online. */
+    private void landing(Http http) throws Exception {
+        var landing = plugin.landing();
+        String lang = "en".equals(http.query().get("lang")) ? "en" : "de";
+        com.google.gson.JsonArray shown = new com.google.gson.JsonArray();
+        int news = 0;
+        boolean online = false;
+        for (JsonElement e : landing.blocks()) {
+            JsonObject b = e.getAsJsonObject();
+            if (!b.get("enabled").getAsBoolean()) {
+                continue;
+            }
+            shown.add(b);
+            String type = b.get("type").getAsString();
+            JsonObject d = b.getAsJsonObject("data");
+            if (type.equals("news")) {
+                news = Math.max(news, d.get("count").getAsInt());
+            } else if (type.equals("hero") && d.get("online").getAsBoolean()) {
+                online = true;
+            }
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("enabled", landing.enabled());
+        result.add("blocks", landing.enabled() ? shown : new com.google.gson.JsonArray());
+        com.google.gson.JsonArray posts = new com.google.gson.JsonArray();
+        if (news > 0 && landing.enabled()) {
+            for (var post : server.news().visible()) {
+                if (post.alert() || posts.size() >= news) {
+                    continue;
+                }
+                JsonObject p = new JsonObject();
+                p.addProperty("kind", post.kind());
+                p.addProperty("title", post.heading(lang));
+                p.addProperty("text", post.preview(lang, 220));
+                p.addProperty("created", post.created());
+                posts.add(p);
+            }
+        }
+        result.add("news", posts);
+        if (online && landing.enabled()) {
+            int[] players = server.sync(() -> new int[] {(int) org.bukkit.Bukkit.getOnlinePlayers().stream()
+                    .filter(p -> !at.marcelr.mradmin.player.Npcs.is(p)).count(), org.bukkit.Bukkit.getMaxPlayers()});
+            JsonObject o = new JsonObject();
+            o.addProperty("count", players[0]);
+            o.addProperty("max", players[1]);
+            result.add("online", o);
+        }
+        http.json(200, result);
+    }
+
+    private void landingEdit(Http http) throws Exception {
+        require(http);
+        JsonObject result = new JsonObject();
+        result.addProperty("enabled", plugin.landing().enabled());
+        result.add("blocks", plugin.landing().blocks());
+        result.add("template", at.marcelr.mradmin.branding.Landing.template());
+        http.json(200, result);
+    }
+
+    private void landingSave(Http http) throws Exception {
+        require(http);
+        JsonObject body = http.body();
+        if (!body.has("blocks") || !body.get("blocks").isJsonArray()) {
+            throw new Http.WebException(400, "landing-invalid");
+        }
+        boolean on = !body.has("enabled") || body.get("enabled").getAsBoolean();
+        String error = plugin.landing().save(on, body.getAsJsonArray("blocks"));
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+        audit(http, "landing", (on ? "on, " : "off, ") + body.getAsJsonArray("blocks").size() + " blocks");
+        http.json(200, Map.of());
+    }
+
+    private void landingImage(Http http) throws Exception {
+        require(http);
+        String[] saved = branding().saveLanding(http.raw(Branding.MAX_IMAGE));
+        if (saved[1] != null) {
+            throw new Http.WebException(400, saved[1]);
+        }
+        audit(http, "landing-image", saved[0]);
+        http.json(200, Map.of("id", saved[0]));
     }
 
     private static String str(JsonObject o, String key, int max) {

@@ -124,6 +124,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private Storage storage;
     private WebServer web;
     private final at.marcelr.mradmin.branding.Branding branding = new at.marcelr.mradmin.branding.Branding(this);
+    private final at.marcelr.mradmin.branding.Landing landing = new at.marcelr.mradmin.branding.Landing(this);
     private HealthMonitor health;
     private StaffChat staffChat;
     private MenuListener menuListener;
@@ -167,6 +168,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         web.requests().mailer().useHtml(branding::mail);
         web.playerSessions().load();
         webAuth.takeOverOldSessions();
+        landing.load();
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
@@ -480,6 +482,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     /** The look of the web interface (name, logo, colour) - also for mails, 2FA and passkeys. */
     public at.marcelr.mradmin.branding.Branding branding() {
         return branding;
+    }
+
+    /** The public start page in front of the sign-in. */
+    public at.marcelr.mradmin.branding.Landing landing() {
+        return landing;
     }
 
     public WebServer web() {

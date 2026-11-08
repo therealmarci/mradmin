@@ -129,6 +129,50 @@ public final class Branding {
         }
     }
 
+    // ------------------------------------------------------------------ pictures of the start page
+
+    private Path landingDir() {
+        return dir().resolve("landing");
+    }
+
+    /** Saves a picture for the start page under a new random id. @return {id, null} or {null, error key} */
+    public String[] saveLanding(byte[] data) throws IOException {
+        if (data == null || data.length == 0 || data.length > MAX_IMAGE) {
+            return new String[] {null, "image-too-large"};
+        }
+        String ext = sniff(data);
+        if (ext == null) {
+            return new String[] {null, "image-type"};
+        }
+        if (ext.equals("svg") && SVG_DANGER.matcher(new String(data, StandardCharsets.UTF_8)).find()) {
+            return new String[] {null, "image-unsafe"};
+        }
+        Files.createDirectories(landingDir());
+        byte[] random = new byte[8];
+        new java.security.SecureRandom().nextBytes(random);
+        String id = java.util.HexFormat.of().formatHex(random);
+        Files.write(landingDir().resolve(id + "." + ext), data);
+        return new String[] {id, null};
+    }
+
+    /** A picture of the start page by its id, or null. */
+    public Image landingImage(String id) {
+        if (id == null || !id.matches("[a-f0-9]{8,40}")) {
+            return null;
+        }
+        for (String ext : EXTENSIONS) {
+            Path file = landingDir().resolve(id + "." + ext);
+            if (Files.isRegularFile(file)) {
+                try {
+                    return new Image(Files.readAllBytes(file), type(ext), Files.getLastModifiedTime(file).toMillis());
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     private static String sniff(byte[] d) {
         if (d.length > 8 && (d[0] & 0xff) == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G') {
             return "png";

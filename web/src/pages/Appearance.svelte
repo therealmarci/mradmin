@@ -6,6 +6,10 @@
   import { t, errorText } from '../lib/i18n.js';
   import { brand, load as loadBrand } from '../lib/branding.svelte.js';
   import Toast from '../components/Toast.svelte';
+  import LandingEditor from '../components/LandingEditor.svelte';
+
+  // general = name, colour, pictures, footer; landing = the start page (blocks)
+  let part = $state('general');
 
   let form = $state(null);
   let error = $state('');
@@ -96,6 +100,14 @@
 </script>
 
 <div class="page">
+  <div class="parts" role="tablist">
+    <button role="tab" class:on={part === 'general'} aria-selected={part === 'general'} onclick={() => (part = 'general')}>{t('appearance.partGeneral')}</button>
+    <button role="tab" class:on={part === 'landing'} aria-selected={part === 'landing'} onclick={() => (part = 'landing')}>{t('appearance.partLanding')}</button>
+  </div>
+
+  {#if part === 'landing'}
+    <LandingEditor />
+  {:else}
   <Toast text={message} />
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -218,9 +230,41 @@
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
   {/if}
+  {/if}
 </div>
 
 <style>
+  .page {
+    display: grid;
+    gap: 14px;
+  }
+
+  .parts {
+    display: inline-flex;
+    justify-self: start;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .parts button {
+    justify-content: flex-start;
+    padding: 6px 14px;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+  }
+
+  .parts button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
