@@ -17,10 +17,9 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | Verwaltung | Reiter |
 |---|---|
 | **Übersicht** (`/admin`) | Dashboard |
-| **Community** (`/admin/community/…`) | Spieler · Tickets |
+| **Community** (`/admin/community/…`) | Spieler · Tickets · Beiträge · Ankündigungen |
 | **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
-| **Kommunikation** (`/admin/communication/…`) | Beiträge · Ankündigungen · Wartung |
-| **Server** (`/admin/server/…`) | Steuerung · Leistung · Plugins · Protokoll · Konsole · Einstellungen |
+| **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole (MRadmins Konfiguration: Plugins → MRadmin) |
 
 Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
 

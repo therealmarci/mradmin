@@ -17,10 +17,9 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | Administration | Tabs |
 |---|---|
 | **Overview** (`/admin`) | dashboard |
-| **Community** (`/admin/community/…`) | players · tickets |
+| **Community** (`/admin/community/…`) | players · tickets · posts · announcements |
 | **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
-| **Communication** (`/admin/communication/…`) | posts · announcements · maintenance |
-| **Server** (`/admin/server/…`) | control · performance · plugins · log · console · settings |
+| **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console (MRadmin's config: plugins → MRadmin) |
 
 Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
 

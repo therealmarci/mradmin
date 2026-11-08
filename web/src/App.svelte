@@ -166,6 +166,8 @@
   const communityTabs = $derived([
     ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players' }] : []),
     ...(may.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/admin/community/tickets' }] : []),
+    ...(may.news ? [{ id: 'news', label: t('news.area.posts'), path: '/admin/community/news' }] : []),
+    ...(may.announce ? [{ id: 'announce', label: t('news.area.announce'), path: '/admin/community/announce' }] : []),
   ]);
   const featureTabs = $derived([
     ...(may.mrchunks ? [{ id: 'mrchunks', label: t('nav.chunks'), path: '/admin/features/mrchunks' }] : []),
@@ -173,24 +175,18 @@
     ...(may.mrsleep ? [{ id: 'mrsleep', label: t('nav.sleep'), path: '/admin/features/mrsleep' }] : []),
     ...(may.mrwaypoints || may.mapAdmin ? [{ id: 'map', label: t('nav.waypoints'), path: '/admin/features/map' }] : []),
   ]);
-  const communicationTabs = $derived([
-    ...(may.news ? [{ id: 'news', label: t('news.area.posts'), path: '/admin/communication/news' }] : []),
-    ...(may.announce ? [{ id: 'announce', label: t('news.area.announce'), path: '/admin/communication/announce' }] : []),
-    ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/communication/maintenance' }] : []),
-  ]);
   const serverAdminTabs = $derived([
     ...(may.versions ? [{ id: 'control', label: t('server.tab.control'), path: '/admin/server' }] : []),
     ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/performance' }] : []),
+    ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/maintenance' }] : []),
     ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins' }] : []),
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console' }] : []),
-    ...(may.config ? [{ id: 'settings', label: t('server.tab.settings'), path: '/admin/server/settings' }] : []),
   ]);
   const adminNav = $derived(me ? [
     { path: '/admin', area: 'overview', label: t('nav.home'), icon: 'home' },
     ...(communityTabs.length ? [{ path: communityTabs[0].path, area: 'community', label: t('nav.community'), icon: 'users' }] : []),
     ...(featureTabs.length ? [{ path: featureTabs[0].path, area: 'features', label: t('nav.features'), icon: 'grid' }] : []),
-    ...(communicationTabs.length ? [{ path: communicationTabs[0].path, area: 'communication', label: t('nav.communication'), icon: 'news' }] : []),
     ...(serverAdminTabs.length ? [{ path: serverAdminTabs[0].path, area: 'server', label: t('nav.server'), icon: 'server' }] : []),
   ] : []);
 
@@ -200,7 +196,6 @@
     let to = null;
     if (admin && area === 'community' && !sub.length) to = first(communityTabs);
     else if (admin && area === 'features' && !sub.length) to = first(featureTabs);
-    else if (admin && area === 'communication' && !sub.length) to = first(communicationTabs);
     else if (!admin && area === 'game' && sub.length < 2) to = first(gameTabs);
     else if (!admin && area === 'server' && !sub.length) to = first(serverTabs);
     else if (!admin && area === 'help' && !sub.length) to = '/help/tickets';
@@ -214,7 +209,7 @@
     onswitch: (m) => go(m === 'admin' ? '/admin' : '/'),
   } : null);
 
-  // admin/server: [] = control, [performance], [plugins], [plugins, name, config?], [logs], [console], [settings]
+  // admin/server: [] = control, [performance], [maintenance], [plugins], [plugins, name, config?], [logs], [console]
   const serverTab = $derived(sub[0] ?? 'control');
 </script>
 
@@ -275,6 +270,8 @@
             {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
           {:else if sub[0] === 'players' && may.players}
             <Players />
+          {:else if (sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce)}
+            <News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />
           {/if}
         {:else if area === 'features'}
           <AreaTabs tabs={featureTabs} current={sub[0]} />
@@ -295,21 +292,14 @@
           {:else if sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
             <Waypoints {me} />
           {/if}
-        {:else if area === 'communication'}
-          <AreaTabs tabs={communicationTabs} current={sub[0]} />
-          {#if sub[0] === 'maintenance' && may.maintenance}
-            <Maintenance {me} />
-          {:else if (sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce)}
-            <News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />
-          {/if}
         {:else if area === 'server'}
           <AreaTabs tabs={serverAdminTabs} current={serverTab} />
           {#if serverTab === 'performance' && may.health}
             <Health />
+          {:else if serverTab === 'maintenance' && may.maintenance}
+            <Maintenance {me} />
           {:else if serverTab === 'plugins' && sub[1] && may.versions}
             {#key sub[1]}<PluginView name={sub[1]} tab={sub[2] ?? null} />{/key}
-          {:else if serverTab === 'settings' && may.config}
-            <PluginView name="MRadmin" tab="config" />
           {:else if serverTab === 'control'}
             <Server {me} tab="overview" bare />
           {:else if ['plugins', 'logs', 'console'].includes(serverTab)}
