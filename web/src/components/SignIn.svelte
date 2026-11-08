@@ -12,7 +12,8 @@
   import { brand, picture } from '../lib/branding.svelte.js';
 
   // notice: why the player area refused (banned, no permission ...) - shown above the form
-  let { onSignedIn, notice = '' } = $props();
+  // modal: only the box (inside the sign-in window over the page), onclose: the window's close button
+  let { onSignedIn, notice = '', modal = false, onclose = null } = $props();
 
   // code | password | forgot
   let mode = $state('code');
@@ -137,10 +138,11 @@
   const own = $derived(options.password || (passkeys.supported && options.passkeys) || options.discord);
 </script>
 
-<div class="page">
-  <div class="top"><LangFlags /></div>
+<div class="page" class:modal>
+  {#if !modal}<div class="top"><LangFlags /></div>{/if}
 
   <main class="card box">
+    {#if onclose}<button class="close" onclick={onclose} aria-label={t('common.close')}>✕</button>{/if}
     <div class="brand">
       <img src={picture('logo')} alt="" height="44" />
       <div>
@@ -233,7 +235,7 @@
       </form>
     {/if}
   </main>
-  <Footer />
+  {#if !modal}<Footer />{/if}
 </div>
 
 <style>
@@ -245,6 +247,28 @@
     background:
       radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
       var(--bg);
+  }
+
+  .page.modal {
+    min-height: 0;
+    display: block;
+    padding: 0;
+    background: none;
+  }
+
+  .page.modal .box {
+    margin: 0;
+    position: relative;
+  }
+
+  .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
   }
 
   .top {

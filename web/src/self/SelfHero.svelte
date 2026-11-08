@@ -9,12 +9,15 @@
   import { go } from '../lib/router.svelte.js';
   import Carousel from '../components/Carousel.svelte';
 
+  // guest: the start page for visitors - only general slides (GET /api/start/news)
+  let { guest = false } = $props();
+
   let data = $state(null);
   let now = $state(Date.now());
 
   async function load() {
     try {
-      data = await api('GET', '/self/news?lang=' + lang);
+      data = await api('GET', (guest ? '/start/news' : '/self/news') + '?lang=' + lang);
     } catch {
       data = null;
     }

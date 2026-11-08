@@ -15,7 +15,9 @@
    * modes: null or {current: 'player' | 'admin', player, admin (labels), onswitch(mode)} - the switch between the
    * player area and the administration (team only); on the phone it is in the menu.
    */
-  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null } = $props();
+  // user null = visitor: instead of the name menu a sign-in button (onlogin)
+  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null, onlogin = null,
+    loginLabel = '' } = $props();
 
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -61,6 +63,9 @@
       </div>
     {/if}
     <LangFlags />
+    {#if !user}
+      <button class="login" onclick={onlogin}>{loginLabel}</button>
+    {:else}
     <div class="account">
       <button class="who" aria-haspopup="menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
         <span class="face">
@@ -87,6 +92,7 @@
         </div>
       {/if}
     </div>
+    {/if}
   </div>
 </header>
 
@@ -151,6 +157,11 @@
   .link.active {
     color: var(--text);
     background: var(--surface-2);
+  }
+
+  .login {
+    padding: 7px 16px;
+    font-weight: 600;
   }
 
   .brand {

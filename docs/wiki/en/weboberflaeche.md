@@ -7,7 +7,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 
 | Player area | Content |
 |---|---|
-| **Home** (`/`) | welcome, notices, tiles |
+| **Home** (`/`) | the same for everyone: hero (personal when signed in) and the blocks of the start page |
 | **My game** (`/game/…`) | one tab per plugin (chunk loaders, duels, waypoints …) |
 | **Map** (`/map`) | the map full screen |
 | **Server** (`/server/news`, `/server/stats`) | news & changelogs, statistics & rankings |
@@ -65,7 +65,7 @@ The web interface carries the name and colours of your server - players never se
 - **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
 
 ### Start page (Server → Appearance → Start page)
-Visitors who are not signed in see a **public start page** under `/` - with a **Sign in** button (leads to `/login`). A new server gets a ready template:
+The **start page** (`/`) looks the same for everyone - signed in or not. On top the **hero**: signed in with a greeting and the own notices (maintenance, restart, warnings of the plugins, ticket answers, posts), for visitors only the general ones (maintenance, restart, warnings, posts). Below the blocks of the editor. **Sign in** is at the top right of the bar and opens a window over the page (directly: `/login`). A new server gets a ready template:
 
 | Block | Content |
 |---|---|
@@ -75,7 +75,7 @@ Visitors who are not signed in see a **public start page** under `/` - with a **
 | **Buttons** | own links - without own ones the links from "General" |
 | **Sign in** | call to action with a button |
 
-Every block can be switched on and off, moved, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty heading = default heading in the visitor's language. On the right a live preview; "Restore template" resets everything (only when saving). Switched off completely, visitors see the sign-in under `/` right away. Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
+Every block can be switched on and off, moved, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty heading = default heading in the visitor's language. On the right a live preview; "Restore template" resets everything (only when saving). Switched off completely, the start page shows only the hero. Calls to sign in are shown only to visitors. Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
 
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.

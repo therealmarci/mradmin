@@ -10,7 +10,8 @@
   import LangFlags from '../components/LangFlags.svelte';
   import SignIn from '../components/SignIn.svelte';
 
-  let { preview = null, onsignin = () => {}, onSignedIn = () => {} } = $props();
+  // embedded: part of the start page (no own bar and footer); signedIn: no sign-in buttons and calls to sign in
+  let { preview = null, onsignin = () => {}, onSignedIn = () => {}, embedded = false, signedIn = false } = $props();
 
   let data = $state(null);
   let copied = $state(false);
@@ -47,11 +48,13 @@
   const date = (ms) => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 </script>
 
-{#if !preview && data && !data.enabled}
+{#if embedded && !preview && data && !data.enabled}
+  <!-- switched off: the start page shows only the hero -->
+{:else if !preview && data && !data.enabled}
   <SignIn {onSignedIn} />
 {:else if preview || data}
-  <div class="landing" class:in-preview={!!preview}>
-    {#if !preview}
+  <div class="landing" class:in-preview={!!preview} class:embedded>
+    {#if !preview && !embedded}
       <div class="top">
         <span class="mark"><img src={picture('icon')} alt="" width="26" height="26" />{brand.name}</span>
         <span class="right"><LangFlags /><button onclick={signIn}>{t('landing.signIn')}</button></span>
@@ -75,7 +78,7 @@
               <span class="online"><span class="dot"></span>{t('landing.online', { n: data.online.count, max: data.online.max })}</span>
             {/if}
           </div>
-          <button class="cta" onclick={signIn}>{t('landing.signIn')}</button>
+          {#if !signedIn}<button class="cta" onclick={signIn}>{t('landing.signIn')}</button>{/if}
         </section>
       {:else if b.type === 'news'}
         {#if data?.news?.length}
@@ -134,7 +137,7 @@
             {/each}
           </div>
         </section>
-      {:else if b.type === 'signin'}
+      {:else if b.type === 'signin' && !signedIn}
         <section class="block">
           <div class="card join">
             <div>
@@ -147,7 +150,7 @@
       {/if}
     {/each}
 
-    {#if !preview}<Footer />{/if}
+    {#if !preview && !embedded}<Footer />{/if}
   </div>
 {/if}
 
@@ -161,6 +164,17 @@
     background:
       radial-gradient(70% 40% at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
       var(--bg);
+  }
+
+  .landing.embedded {
+    min-height: 0;
+    padding: 0;
+    gap: 26px;
+    background: none;
+  }
+
+  .landing.embedded .hero {
+    padding-top: 10px;
   }
 
   .landing.in-preview {

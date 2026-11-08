@@ -14,7 +14,6 @@
   import LoginsCard from './components/LoginsCard.svelte';
   import Footer from './components/Footer.svelte';
   import MailLink from './pages/MailLink.svelte';
-  import Landing from './pages/Landing.svelte';
   import Home from './pages/Home.svelte';
   import Account from './pages/Account.svelte';
   import Tickets from './pages/Tickets.svelte';
@@ -41,7 +40,7 @@
   import Contact from './pages/Contact.svelte';
   import Unban from './pages/Unban.svelte';
   import RequestStatus from './pages/RequestStatus.svelte';
-  import SelfHome from './self/SelfHome.svelte';
+  import StartPage from './pages/StartPage.svelte';
   import SelfArea from './self/SelfArea.svelte';
   import SelfTickets from './self/SelfTickets.svelte';
   import SelfTicket from './self/SelfTicket.svelte';
@@ -88,7 +87,17 @@
   async function signedIn() {
     me = undefined;
     await loadMe();
+    loginOpen = false;
     if (route.path === '/login') go('/', true);
+  }
+
+  // The sign-in window over the page (button at the top right). Pages that need a sign-in open it by themselves;
+  // closing it there leads to the start page.
+  let loginOpen = $state(false);
+  const needLogin = $derived(me === null && route.path !== '/');
+  function closeLogin() {
+    loginOpen = false;
+    if (needLogin) go('/', true);
   }
 
   async function logout() {
@@ -146,19 +155,19 @@
     } catch {
       // private mode
     }
-    // Back where the team was - or straight to the administration if there is no player area.
-    if (me.team && p === '/' && (mode === 'admin' || !player)) untrack(() => go('/admin', true));
+    // Back where the team was.
+    if (me.team && p === '/' && mode === 'admin') untrack(() => go('/admin', true));
   });
 
   // ------------------------------------------------------------------ player area
 
-  const playerNav = $derived(player ? [
+  const playerNav = $derived(!player ? [{ path: '/', area: 'start', label: t('self.nav.home'), icon: 'home' }] : [
     { path: '/', area: 'start', label: t('self.nav.home'), icon: 'home' },
     ...(player.areas?.length ? [{ path: `/game/${player.areas[0].module}/${player.areas[0].id}`, area: 'game', label: t('nav.game'), icon: 'grid' }] : []),
     ...(player.map ? [{ path: '/map', area: 'map', label: t('self.nav.map'), icon: 'pin' }] : []),
     ...(player.news || player.stats ? [{ path: player.news ? '/server/news' : '/server/stats', area: 'server', label: t('nav.serverArea'), icon: 'news' }] : []),
     ...(player.tickets ? [{ path: '/help/tickets', area: 'help', label: t('nav.help'), icon: 'ticket' }] : []),
-  ] : []);
+  ]);
 
   const gameTabs = $derived((player?.areas ?? []).map((a) => ({
     id: `${a.module}/${a.id}`, label: a.title, path: `/game/${a.module}/${a.id}`, icon: MODULE_ICONS[a.module] ?? a.icon,
@@ -214,7 +223,7 @@
 
   const nav = $derived(admin ? adminNav : playerNav);
   const current = $derived(nav.find((i) => i.area === area)?.path ?? null);
-  const modes = $derived(me?.team && player ? {
+  const modes = $derived(me?.team ? {
     current: admin ? 'admin' : 'player', player: t('nav.player'), admin: t('nav.admin'),
     onswitch: (m) => go(m === 'admin' ? '/admin' : '/'),
   } : null);
@@ -241,11 +250,22 @@
   <MailLink kind={route.path === '/email' ? 'email' : 'reset'} />
 {:else if me === undefined || (me && player === undefined)}
   <div class="center muted">{t('common.loading')}</div>
-{:else if me === null && route.path === '/'}
-  <!-- The public start page (switched off: the sign-in right away) -->
-  <Landing onsignin={() => go('/login')} onSignedIn={signedIn} />
 {:else if me === null}
-  <SignIn onSignedIn={signedIn} />
+  <!-- Visitors: the same start page, a sign-in button at the top right -->
+  <TopBar items={playerNav} current="/" onnav={(path) => go(path)} user={null} moreLabel={t('nav.more')} menu={[]}
+    onlogin={() => (loginOpen = true)} loginLabel={t('landing.signIn')} />
+  <main>
+    <StartPage onsignin={() => (loginOpen = true)} />
+    <Footer />
+  </main>
+  {#if loginOpen || needLogin}
+    <div class="overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && closeLogin()}
+      onkeydown={(e) => e.key === 'Escape' && closeLogin()}>
+      <div class="dialog" role="dialog" aria-modal="true" aria-label={t('signin.title')}>
+        <SignIn modal onclose={closeLogin} onSignedIn={signedIn} />
+      </div>
+    </div>
+  {/if}
 {:else}
   <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
     live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
@@ -325,7 +345,7 @@
         {:else}
           <Home {me} />
         {/if}
-      {:else if !player}
+      {:else if !player && area !== 'start'}
         <!-- No player area (switched off, no permission, banned) -->
         <div class="gate">
           <p>{playerError || t('signin.noPlayerArea')}</p>
@@ -350,7 +370,7 @@
           <SelfTickets />
         {/if}
       {:else}
-        <SelfHome {player} />
+        <StartPage {player} />
       {/if}
       <Footer />
     </main>
@@ -387,6 +407,23 @@
 
   .gate p {
     margin: 0;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(0 0 0 / 55%);
+    backdrop-filter: blur(3px);
+  }
+
+  .dialog {
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
   }
 
   .gate-setup {

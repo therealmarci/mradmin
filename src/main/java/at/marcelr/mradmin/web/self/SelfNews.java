@@ -30,6 +30,8 @@ import java.util.UUID;
  * and the posts of the team (news, changelogs) in the viewer's language - the most urgent first.
  * <pre>
  *  GET /api/self/news?lang=de         the slideshow: {seconds, slides: [...]}
+ *  GET /api/start/news?lang=de        open: the slideshow for visitors - only general things (warnings,
+ *                                     maintenance, restart, posts), nothing of a player
  *  GET /api/self/news?lang=de&amp;all=1   page "News": {alerts, news, changelog}
  * </pre>
  */
@@ -49,6 +51,7 @@ public final class SelfNews {
 
     void register() {
         server.self("GET", "/api/self/news", this::news);
+        server.open("GET", "/api/start/news", this::publicNews);
     }
 
     boolean available() {
@@ -63,7 +66,78 @@ public final class SelfNews {
         Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
         List<News.Post> posts = server.news().visible();
-        // Warnings: written in MRadmin, or pinned on an Uptime Kuma status page.
+        List<Map<String, Object>> alerts = alerts(lang);
+        Map<String, Object> result = new LinkedHashMap<>();
+        if ("1".equals(http.query().get("all"))) {
+            // The page "News": warnings on top, news and changelogs separately.
+            result.put("alerts", alerts);
+            result.put("news", posts.stream().filter(p -> "news".equals(p.kind())).map(p -> post(p, lang)).toList());
+            result.put("changelog", posts.stream().filter(p -> "changelog".equals(p.kind()))
+                    .sorted(java.util.Comparator.comparingLong(News.Post::created).reversed()).map(p -> post(p, lang)).toList());
+            http.json(200, result);
+            return;
+        }
+        // The slideshow: the most urgent first.
+        List<Map<String, Object>> slides = new ArrayList<>(alerts);
+        slides.addAll(general());
+        if (settings.newsPluginNotices()) {
+            slides.addAll(cachedNotices(http, lang));
+        }
+        if (settings.newsTickets() && tickets.available(http.player().player())) {
+            slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
+        }
+        addPosts(slides, posts, lang, result);
+        http.json(200, result);
+    }
+
+    /** The slideshow for visitors (start page, not signed in): warnings, maintenance, restart, posts. */
+    private void publicNews(Http http) throws Exception {
+        if (!available() || !plugin.settings().playerWeb().enabled()) {
+            throw new Http.WebException(404, "not-found");
+        }
+        String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
+        List<Map<String, Object>> slides = new ArrayList<>(alerts(lang));
+        slides.addAll(general());
+        Map<String, Object> result = new LinkedHashMap<>();
+        addPosts(slides, server.news().visible(), lang, result);
+        http.json(200, result);
+    }
+
+    /** Maintenance and the restart countdown (if switched on in player-web.news). */
+    private List<Map<String, Object>> general() throws Exception {
+        Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
+        List<Map<String, Object>> slides = new ArrayList<>();
+        if (settings.newsMaintenance() && plugin.feature(Feature.MAINTENANCE)) {
+            Map<String, Object> maintenance = server.sync(this::maintenance);
+            if (maintenance != null) {
+                slides.add(maintenance);
+            }
+        }
+        if (settings.newsRestart()) {
+            long restartAt = server.sync(() -> plugin.restarts().endsAt());
+            if (restartAt > 0) {
+                slides.add(Map.of("type", "restart", "time", restartAt));
+            }
+        }
+        return slides;
+    }
+
+    /** The newest posts (not warnings) as slides, plus seconds per slide and whether there are more. */
+    private void addPosts(List<Map<String, Object>> slides, List<News.Post> posts, String lang, Map<String, Object> result) {
+        Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
+        List<News.Post> shown = posts.stream().filter(p -> !p.alert()).toList();
+        for (News.Post p : shown.subList(0, Math.min(shown.size(), settings.newsSlides()))) {
+            Map<String, Object> m = post(p, lang);
+            m.put("text", p.preview(lang, 400));
+            slides.add(m);
+        }
+        result.put("seconds", settings.newsSeconds());
+        result.put("more", shown.size() > settings.newsSlides());
+        result.put("slides", slides);
+    }
+
+    /** Warnings: written in MRadmin, or pinned on an Uptime Kuma status page. */
+    private List<Map<String, Object>> alerts(String lang) {
         List<Map<String, Object>> alerts = new ArrayList<>();
         for (News.Post p : server.news().activeAlerts()) {
             alerts.add(post(p, lang));
@@ -80,46 +154,7 @@ public final class SelfNews {
             m.put("link", plugin.settings().kuma().url() + "/status/" + i.slug());
             alerts.add(m);
         }
-        Map<String, Object> result = new LinkedHashMap<>();
-        if ("1".equals(http.query().get("all"))) {
-            // The page "News": warnings on top, news and changelogs separately.
-            result.put("alerts", alerts);
-            result.put("news", posts.stream().filter(p -> "news".equals(p.kind())).map(p -> post(p, lang)).toList());
-            result.put("changelog", posts.stream().filter(p -> "changelog".equals(p.kind()))
-                    .sorted(java.util.Comparator.comparingLong(News.Post::created).reversed()).map(p -> post(p, lang)).toList());
-            http.json(200, result);
-            return;
-        }
-        // The slideshow: the most urgent first.
-        List<Map<String, Object>> slides = new ArrayList<>(alerts);
-        if (settings.newsMaintenance() && plugin.feature(Feature.MAINTENANCE)) {
-            Map<String, Object> maintenance = server.sync(this::maintenance);
-            if (maintenance != null) {
-                slides.add(maintenance);
-            }
-        }
-        if (settings.newsRestart()) {
-            long restartAt = server.sync(() -> plugin.restarts().endsAt());
-            if (restartAt > 0) {
-                slides.add(Map.of("type", "restart", "time", restartAt));
-            }
-        }
-        if (settings.newsPluginNotices()) {
-            slides.addAll(cachedNotices(http, lang));
-        }
-        if (settings.newsTickets() && tickets.available(http.player().player())) {
-            slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
-        }
-        List<News.Post> shown = posts.stream().filter(p -> !p.alert()).toList();
-        for (News.Post p : shown.subList(0, Math.min(shown.size(), settings.newsSlides()))) {
-            Map<String, Object> m = post(p, lang);
-            m.put("text", p.preview(lang, 400));
-            slides.add(m);
-        }
-        result.put("seconds", settings.newsSeconds());
-        result.put("more", shown.size() > settings.newsSlides());
-        result.put("slides", slides);
-        http.json(200, result);
+        return alerts;
     }
 
     /** A post in the viewer's language; a changelog with its entries. */

@@ -7,7 +7,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 
 | Spielerbereich | Inhalt |
 |---|---|
-| **Start** (`/`) | Begrüßung, Hinweise, Kacheln |
+| **Start** (`/`) | für alle gleich: Hero-Kachel (angemeldet persönlich) und die Abschnitte der Startseite |
 | **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Server** (`/server/news`, `/server/stats`) | Neuigkeiten & Changelogs, Statistik & Ranglisten |
@@ -65,7 +65,7 @@ Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler
 - **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
 
 ### Startseite (Server → Aussehen → Startseite)
-Wer nicht angemeldet ist, sieht unter `/` eine **öffentliche Startseite** - mit dem Knopf **Anmelden** (führt zu `/login`). Ein neuer Server bekommt eine fertige Vorlage:
+Die **Startseite** (`/`) sieht für alle gleich aus - angemeldet oder nicht. Oben die **Hero-Kachel**: angemeldet mit Begrüßung und den eigenen Hinweisen (Wartung, Neustart, Warnungen der Plugins, Ticket-Antworten, Beiträge), für Gäste nur das Allgemeine (Wartung, Neustart, Warnungen, Beiträge). Darunter die Abschnitte aus dem Baukasten. **Anmelden** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Ein neuer Server bekommt eine fertige Vorlage:
 
 | Abschnitt | Inhalt |
 |---|---|
@@ -75,7 +75,7 @@ Wer nicht angemeldet ist, sieht unter `/` eine **öffentliche Startseite** - mit
 | **Knöpfe** | eigene Links - ohne eigene die Links aus „Allgemein“ |
 | **Anmelden** | Aufforderung mit Knopf |
 
-Jeder Abschnitt lässt sich ein- und ausschalten, verschieben, füllen und entfernen; dazu eigene Abschnitte (**Text**, **Bild** - PNG, WebP, SVG bis 512 KB -, **Knöpfe**, **Spalten** mit bis zu 3 Texten), höchstens 30. Leere Überschrift = Standard-Überschrift in der Sprache des Besuchers. Rechts eine Live-Vorschau; „Vorlage wiederherstellen“ setzt alles zurück (erst beim Speichern). Ganz ausgeschaltet sehen Besucher unter `/` direkt die Anmeldung. Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`.
+Jeder Abschnitt lässt sich ein- und ausschalten, verschieben, füllen und entfernen; dazu eigene Abschnitte (**Text**, **Bild** - PNG, WebP, SVG bis 512 KB -, **Knöpfe**, **Spalten** mit bis zu 3 Texten), höchstens 30. Leere Überschrift = Standard-Überschrift in der Sprache des Besuchers. Rechts eine Live-Vorschau; „Vorlage wiederherstellen“ setzt alles zurück (erst beim Speichern). Ganz ausgeschaltet zeigt die Startseite nur die Hero-Kachel. Aufforderungen zum Anmelden sieht nur, wer nicht angemeldet ist. Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.
