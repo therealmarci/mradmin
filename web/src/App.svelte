@@ -29,6 +29,7 @@
   import PvpKits from './pages/PvpKits.svelte';
   import PvpKit from './pages/PvpKit.svelte';
   import Players from './pages/Players.svelte';
+  import Punishments from './pages/Punishments.svelte';
   import Maintenance from './pages/Maintenance.svelte';
   import News from './pages/News.svelte';
   import PluginView from './pages/PluginView.svelte';
@@ -166,6 +167,7 @@
   const communityTabs = $derived([
     ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players' }] : []),
     ...(may.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/admin/community/tickets' }] : []),
+    ...(may.punishments ? [{ id: 'punishments', label: t('punish.title'), path: '/admin/community/punishments' }] : []),
     ...(may.news ? [{ id: 'news', label: t('news.area.posts'), path: '/admin/community/news' }] : []),
     ...(may.announce ? [{ id: 'announce', label: t('news.area.announce'), path: '/admin/community/announce' }] : []),
   ]);
@@ -270,6 +272,8 @@
             {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
           {:else if sub[0] === 'players' && may.players}
             <Players />
+          {:else if sub[0] === 'punishments' && may.punishments}
+            <Punishments />
           {:else if (sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce)}
             <News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />
           {/if}

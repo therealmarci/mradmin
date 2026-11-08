@@ -17,7 +17,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | Administration | Tabs |
 |---|---|
 | **Overview** (`/admin`) | dashboard |
-| **Community** (`/admin/community/…`) | players · tickets · posts · announcements |
+| **Community** (`/admin/community/…`) | players · tickets · punishments · posts · announcements |
 | **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
 | **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console (MRadmin's config: plugins → MRadmin) |
 
@@ -54,6 +54,12 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 - The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
 - Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
 - **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
+
+## Punishments (Community, with LibertyBans)
+- All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.
+- Filter by type (ban, mute, warning, kick) and search for player or reason; a click on the player opens their page.
+- **Lift** right in the list, with the same permissions as in game (`libertybans.<type>.undo.target.uuid`).
+- Permissions like in LibertyBans: `libertybans.commands` plus `libertybans.list.banlist` (bans), `libertybans.list.mutelist` (mutes) or `libertybans.list.history` (warnings and "All"); plus `mradmin.player.view`. Without LibertyBans there is no such tab.
 
 ## Overview (dashboard)
 - At the top the **situation**: if something gets out of hand, every message is listed here with an icon and a word, the most urgent first: low TPS, high tick time, full memory, little disk space, high CPU load, high ping, unanswered tickets and tickets assigned to you, locked, conspicuous or paused chunk loaders, /nosleep blocks, maintenance. If everything runs smoothly, the most important current values are shown there. Updates every 2 seconds.

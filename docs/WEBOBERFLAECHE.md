@@ -17,7 +17,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | Verwaltung | Reiter |
 |---|---|
 | **Übersicht** (`/admin`) | Dashboard |
-| **Community** (`/admin/community/…`) | Spieler · Tickets · Beiträge · Ankündigungen |
+| **Community** (`/admin/community/…`) | Spieler · Tickets · Strafen · Beiträge · Ankündigungen |
 | **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
 | **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole (MRadmins Konfiguration: Plugins → MRadmin) |
 
@@ -54,6 +54,12 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 - Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über `web.roles` und `web.players`. Wer `mradmin.web` verliert, sieht die Verwaltung sofort nicht mehr (bleibt aber als Spieler angemeldet).
 - Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen auch im Discord-Log (`web-login`).
 - **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks (`/mradmin web setup`, `invite`) gibt es nicht mehr.
+
+## Strafen (Community, mit LibertyBans)
+- Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.
+- Filter nach Art (Bann, Mute, Verwarnung, Kick) und Suche nach Spieler oder Grund; ein Klick auf den Spieler öffnet seine Seite.
+- **Aufheben** direkt in der Liste, mit denselben Rechten wie im Spiel (`libertybans.<art>.undo.target.uuid`).
+- Rechte wie bei LibertyBans: `libertybans.commands` plus `libertybans.list.banlist` (Banns), `libertybans.list.mutelist` (Mutes) bzw. `libertybans.list.history` (Verwarnungen und „Alle“); dazu `mradmin.player.view`. Ohne LibertyBans gibt es den Reiter nicht.
 
 ## Übersicht (Dashboard)
 - Oben die **Lage**: Läuft etwas aus dem Ruder, steht hier jede Meldung mit Symbol und Wort, die dringendsten

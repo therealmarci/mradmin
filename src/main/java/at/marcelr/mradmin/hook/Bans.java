@@ -34,6 +34,16 @@ public interface Bans {
     record Entry(long id, String type, String reason, UUID operator, String scope, long start, long end, boolean active) {
     }
 
+    /** A punishment with the player it is about (overview of all punishments). */
+    record Listed(UUID victim, Entry entry) {
+    }
+
+    /**
+     * Punishments of all players, newest first, at most {@code limit}: {@code activeOnly} = only those in force
+     * (bans, mutes, warns), otherwise also expired, lifted ones and kicks. Punishments of IP addresses are left out.
+     */
+    List<Listed> recent(boolean activeOnly, int limit) throws Exception;
+
     /** All punishments of the player (newest first, at most {@code limit}). */
     List<Entry> history(UUID player, int limit) throws Exception;
 

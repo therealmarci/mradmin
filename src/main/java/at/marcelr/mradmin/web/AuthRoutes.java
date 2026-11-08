@@ -445,6 +445,11 @@ public final class AuthRoutes {
             }
         });
         may.put("players", perms.has(account.id(), Perms.PLAYER_VIEW));
+        // Overview of all punishments (LibertyBans): like its /banlist, /mutelist and history.
+        may.put("punishments", at.marcelr.mradmin.hook.Bans.get(plugin) != null && perms.has(account.id(), Perms.PLAYER_VIEW)
+                && perms.has(account.id(), "libertybans.commands")
+                && (perms.has(account.id(), "libertybans.list.banlist") || perms.has(account.id(), "libertybans.list.mutelist")
+                || perms.has(account.id(), "libertybans.list.history")));
         boolean console = ConsoleRoutes.enabled(plugin) && perms.has(account.id(), Perms.WEB_CONSOLE_VIEW);
         may.put("console", console);
         may.put("consoleExecute", console && perms.has(account.id(), Perms.WEB_CONSOLE_EXECUTE));
