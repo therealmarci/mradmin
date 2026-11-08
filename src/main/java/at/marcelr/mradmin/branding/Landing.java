@@ -7,46 +7,41 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
- * The start page (since 1.5, the same for everyone): a header (background picture, server address, players online) and
- * a list of blocks in two columns (main and side) the team arranges under Server -> Appearance. A new server gets a
- * ready template (news, about, rules, links, sign-in); every block can be switched off, moved to the other column,
- * filled - and own ones added (text, picture, buttons, columns). Kept as JSON in the storage
- * ("landing"); everything is checked here, the page only gets what passed. Empty titles mean "the default title in
- * the visitor's language" (the page fills it in). Thread-safe.
+ * The start page (since 1.5, the same for everyone): widgets in a 12-column grid that the team arranges right on the
+ * page (edit mode for mradmin.appearance) - move, resize, insert, set up, remove. Each widget has a type, a width
+ * (1-12 columns), a height (1-8 rows), who sees it (everyone, only visitors, only signed-in players) and its own
+ * settings. A new server gets a template. Kept as JSON in the storage ("landing"); everything is checked here, the
+ * page only gets what passed. Older layouts of 1.5 (header + blocks) are turned into widgets once. Thread-safe.
  */
 public final class Landing {
 
-    public static final Set<String> TYPES = Set.of("news", "text", "image", "buttons", "columns", "signin");
-    /** The header: background picture (id of a start page picture, "" = gradient in the accent colour), address, online. */
-    public record Header(String image, String address, boolean online) {
-    }
-    private static final int MAX_BLOCKS = 30;
+    /** type -> whether it is personal (then only signed-in players see it). */
+    public static final Map<String, Boolean> TYPES = Map.ofEntries(
+            Map.entry("banner", false), Map.entry("hints", false), Map.entry("address", false), Map.entry("online", false),
+            Map.entry("greeting", true), Map.entry("tiles", true), Map.entry("stats", true),
+            Map.entry("news", false), Map.entry("text", false), Map.entry("image", false), Map.entry("links", false),
+            Map.entry("discord", false), Map.entry("login", false));
+    public static final Set<String> AUDIENCES = Set.of("all", "guests", "members");
+    private static final int MAX_WIDGETS = 40;
     private static final String STORE = "landing";
 
     private final MRAdmin plugin;
-    private boolean enabled = true;
-    private JsonArray blocks = template();
-    private Header header = new Header("", "", true);
+    private JsonArray widgets = template();
 
     public Landing(MRAdmin plugin) {
         this.plugin = plugin;
     }
 
-    public synchronized boolean enabled() {
-        return enabled;
-    }
-
-    public synchronized Header header() {
-        return header;
-    }
-
-    /** All blocks (also switched-off ones) - a copy. */
-    public synchronized JsonArray blocks() {
-        return blocks.deepCopy();
+    /** All widgets - a copy. */
+    public synchronized JsonArray widgets() {
+        return widgets.deepCopy();
     }
 
     /** Loads the saved page (main thread, while enabling), otherwise the template. */
@@ -58,134 +53,209 @@ public final class Landing {
             }
             YamlConfiguration y = new YamlConfiguration();
             y.loadFromString(text);
-            enabled = y.getBoolean("enabled", true);
-            header = new Header(clean(y.getString("header.image", "")), y.getString("header.address", ""),
-                    y.getBoolean("header.online", true));
-            String json = y.getString("blocks", "");
+            String json = y.getString("widgets", "");
             if (!json.isBlank()) {
-                JsonArray raw = JsonParser.parseString(json).getAsJsonArray();
-                // First layout of 1.5: the head was a block - its address and "online" go into the header.
-                for (JsonElement e : raw) {
-                    JsonObject b = e.getAsJsonObject();
-                    if ("hero".equals(b.get("type").getAsString()) && !y.contains("header.address")) {
-                        JsonObject d = b.getAsJsonObject("data");
-                        header = new Header("", str(d, "address", 100), bool(d, "online", true));
-                    }
-                }
-                blocks = check(raw);
+                widgets = check(JsonParser.parseString(json).getAsJsonArray());
+                return;
+            }
+            // Older layout of 1.5: header + blocks in two columns - turned into widgets once.
+            String blocks = y.getString("blocks", "");
+            if (!blocks.isBlank()) {
+                widgets = check(fromBlocks(y, JsonParser.parseString(blocks).getAsJsonArray()));
+                plugin.getLogger().info("Start page: turned the earlier layout into widgets.");
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Could not read the start page (landing), using the template: " + e.getMessage());
         }
     }
 
-    /**
-     * Saves a new page after checking every block. @return null or an error key
-     */
-    public synchronized String save(boolean on, Header head, JsonArray raw) {
+    /** Saves new widgets after checking each. @return null or an error key */
+    public synchronized String save(JsonArray raw) {
         JsonArray checked;
         try {
             checked = check(raw);
         } catch (IllegalArgumentException e) {
             return e.getMessage();
         }
-        enabled = on;
-        blocks = checked;
-        header = new Header(clean(head.image()), cut(head.address(), 100), head.online());
+        widgets = checked;
         YamlConfiguration y = new YamlConfiguration();
-        y.set("enabled", enabled);
-        y.set("header.image", header.image());
-        y.set("header.address", header.address());
-        y.set("header.online", header.online());
-        y.set("blocks", blocks.toString());
+        y.set("widgets", widgets.toString());
         plugin.storage().saveState(STORE, y.saveToString());
         return null;
     }
 
-    /** The template of a new server. */
+    // ------------------------------------------------------------------ template
+
+    /** The start page of a new server. */
     public static JsonArray template() {
         JsonArray a = new JsonArray();
-        a.add(block("news", "main", o -> {
-            o.addProperty("title", "");
-            o.addProperty("count", 4);
+        a.add(widget("banner", 12, 3, "all", d -> {
+            d.addProperty("image", "");
+            d.addProperty("address", "");
+            d.addProperty("online", true);
         }));
-        a.add(block("text", "main", o -> {
-            o.addProperty("title", "");
-            o.addProperty("text", "");
-            o.addProperty("role", "about");
+        a.add(widget("hints", 12, 2, "all", d -> { }));
+        a.add(widget("tiles", 12, 3, "members", d -> { }));
+        a.add(widget("news", 8, 4, "all", d -> {
+            d.addProperty("title", "");
+            d.addProperty("count", 4);
         }));
-        a.add(block("signin", "side", o -> {
-            o.addProperty("title", "");
-            o.addProperty("text", "");
+        a.add(widget("login", 4, 2, "guests", d -> {
+            d.addProperty("title", "");
+            d.addProperty("text", "");
         }));
-        a.add(block("buttons", "side", o -> {
-            o.addProperty("title", "");
-            o.add("items", new JsonArray());
-        }));
-        a.add(block("text", "side", o -> {
-            o.addProperty("title", "");
-            o.addProperty("text", "");
-            o.addProperty("role", "rules");
+        a.add(widget("stats", 4, 3, "members", d -> { }));
+        a.add(widget("links", 4, 2, "all", d -> {
+            d.addProperty("title", "");
+            d.add("items", new JsonArray());
         }));
         return a;
     }
 
-    private static JsonObject block(String type, String column, java.util.function.Consumer<JsonObject> data) {
-        JsonObject b = new JsonObject();
-        b.addProperty("id", Long.toHexString(Double.doubleToLongBits(Math.random())).substring(0, 10));
-        b.addProperty("type", type);
-        b.addProperty("enabled", true);
-        b.addProperty("column", column);
+    private static JsonObject widget(String type, int w, int h, String audience, Consumer<JsonObject> data) {
+        JsonObject o = new JsonObject();
+        o.addProperty("id", newId());
+        o.addProperty("type", type);
+        o.addProperty("w", w);
+        o.addProperty("h", h);
+        o.addProperty("audience", audience);
         JsonObject d = new JsonObject();
         data.accept(d);
-        b.add("data", d);
-        return b;
+        o.add("data", d);
+        return o;
+    }
+
+    private static String newId() {
+        return Long.toHexString(Double.doubleToLongBits(Math.random())).substring(0, 10);
+    }
+
+    /** The earlier layout: header -> banner, then hints and tiles, then the blocks (main 8 wide, side 4 wide). */
+    private static JsonArray fromBlocks(YamlConfiguration y, JsonArray blocks) {
+        JsonArray a = new JsonArray();
+        String address = y.getString("header.address", "");
+        boolean online = y.getBoolean("header.online", true);
+        for (JsonElement e : blocks) {
+            JsonObject b = e.getAsJsonObject();
+            if ("hero".equals(b.get("type").getAsString()) && address.isEmpty()) {
+                JsonObject d = b.getAsJsonObject("data");
+                address = d.has("address") ? d.get("address").getAsString() : "";
+                online = !d.has("online") || d.get("online").getAsBoolean();
+            }
+        }
+        String image = y.getString("header.image", "");
+        String addr = address;
+        boolean on = online;
+        a.add(widget("banner", 12, 3, "all", d -> {
+            d.addProperty("image", image);
+            d.addProperty("address", addr);
+            d.addProperty("online", on);
+        }));
+        a.add(widget("hints", 12, 2, "all", d -> { }));
+        a.add(widget("tiles", 12, 3, "members", d -> { }));
+        for (JsonElement e : blocks) {
+            JsonObject b = e.getAsJsonObject();
+            if (b.has("enabled") && !b.get("enabled").getAsBoolean()) {
+                continue;
+            }
+            String type = b.get("type").getAsString();
+            JsonObject d = b.has("data") ? b.getAsJsonObject("data") : new JsonObject();
+            int w = b.has("column") && "side".equals(b.get("column").getAsString()) ? 4 : 8;
+            switch (type) {
+                case "news" -> a.add(widget("news", w, 4, "all", n -> n.add("count", d.get("count"))));
+                case "text" -> a.add(widget("text", w, 3, "all", n -> {
+                    n.add("title", d.get("title"));
+                    n.add("text", d.get("text"));
+                }));
+                case "image" -> a.add(widget("image", w, 3, "all", n -> {
+                    n.add("image", d.get("image"));
+                    n.add("alt", d.get("alt"));
+                }));
+                case "buttons" -> a.add(widget("links", w, 2, "all", n -> {
+                    n.add("title", d.get("title"));
+                    n.add("items", d.get("items"));
+                }));
+                case "columns" -> {
+                    if (d.has("items") && d.get("items").isJsonArray()) {
+                        for (JsonElement c : d.getAsJsonArray("items")) {
+                            JsonObject col = c.getAsJsonObject();
+                            a.add(widget("text", 4, 3, "all", n -> {
+                                n.add("title", col.get("title"));
+                                n.add("text", col.get("text"));
+                            }));
+                        }
+                    }
+                }
+                case "signin" -> a.add(widget("login", w, 2, "guests", n -> {
+                    n.add("title", d.get("title"));
+                    n.add("text", d.get("text"));
+                }));
+                default -> {
+                    // the old head block lives on in the banner
+                }
+            }
+        }
+        return a;
     }
 
     // ------------------------------------------------------------------ checking
 
-    /** Only known blocks with known fields, lengths and addresses within limits. */
+    /** Only known widgets with known fields, sizes, lengths and addresses within limits. */
     static JsonArray check(JsonArray raw) {
-        if (raw.size() > MAX_BLOCKS) {
+        if (raw.size() > MAX_WIDGETS) {
             throw new IllegalArgumentException("landing-too-many");
         }
         JsonArray out = new JsonArray();
-        java.util.Set<String> ids = new java.util.HashSet<>();
+        Set<String> ids = new HashSet<>();
         for (JsonElement e : raw) {
             if (!e.isJsonObject()) {
                 throw new IllegalArgumentException("landing-invalid");
             }
             JsonObject in = e.getAsJsonObject();
             String type = str(in, "type", 20);
-            if (type.equals("hero")) {
-                continue;
-            }
-            if (!TYPES.contains(type)) {
+            if (!TYPES.containsKey(type)) {
                 throw new IllegalArgumentException("landing-invalid");
             }
             String id = str(in, "id", 20).replaceAll("[^a-zA-Z0-9_-]", "");
             if (id.isEmpty() || !ids.add(id)) {
-                id = Long.toHexString(Double.doubleToLongBits(Math.random())).substring(0, 10);
+                id = newId();
                 ids.add(id);
+            }
+            String audience = str(in, "audience", 8);
+            if (TYPES.get(type)) {
+                audience = "members";
+            } else if (!AUDIENCES.contains(audience)) {
+                audience = "all";
             }
             JsonObject data = in.has("data") && in.get("data").isJsonObject() ? in.getAsJsonObject("data") : new JsonObject();
             JsonObject d = new JsonObject();
-            d.addProperty("title", str(data, "title", 80));
             switch (type) {
-                case "news" -> d.addProperty("count", Math.clamp(num(data, "count", 3), 1, 6));
+                case "banner" -> {
+                    d.addProperty("image", str(data, "image", 40).replaceAll("[^a-f0-9]", ""));
+                    d.addProperty("address", str(data, "address", 100));
+                    d.addProperty("online", bool(data, "online", true));
+                }
+                case "address" -> {
+                    d.addProperty("title", str(data, "title", 80));
+                    d.addProperty("address", str(data, "address", 100));
+                }
+                case "online", "greeting", "tiles", "stats", "hints" -> d.addProperty("title", str(data, "title", 80));
+                case "news" -> {
+                    d.addProperty("title", str(data, "title", 80));
+                    d.addProperty("count", Math.clamp(num(data, "count", 4), 1, 8));
+                }
                 case "text" -> {
+                    d.addProperty("title", str(data, "title", 80));
                     d.addProperty("text", str(data, "text", 4000));
-                    String role = str(data, "role", 10);
-                    d.addProperty("role", List.of("about", "rules").contains(role) ? role : "");
                 }
                 case "image" -> {
                     d.addProperty("image", str(data, "image", 40).replaceAll("[^a-f0-9]", ""));
                     d.addProperty("alt", str(data, "alt", 120));
-                    d.addProperty("wide", bool(data, "wide", false));
+                    d.addProperty("fit", "contain".equals(str(data, "fit", 8)) ? "contain" : "cover");
                 }
-                case "buttons" -> {
+                case "links" -> {
+                    d.addProperty("title", str(data, "title", 80));
                     JsonArray items = new JsonArray();
-                    for (JsonObject item : objects(data, "items", 6)) {
+                    for (JsonObject item : objects(data, "items", 8)) {
                         String label = str(item, "label", 40);
                         String url = str(item, "url", 300);
                         if (label.isEmpty() && url.isEmpty()) {
@@ -201,41 +271,30 @@ public final class Landing {
                     }
                     d.add("items", items);
                 }
-                case "columns" -> {
-                    JsonArray items = new JsonArray();
-                    for (JsonObject item : objects(data, "items", 3)) {
-                        JsonObject o = new JsonObject();
-                        o.addProperty("title", str(item, "title", 80));
-                        o.addProperty("text", str(item, "text", 1500));
-                        items.add(o);
+                case "discord" -> {
+                    String url = str(data, "url", 300);
+                    if (!url.isEmpty() && !url.matches("https?://\\S+")) {
+                        throw new IllegalArgumentException("branding-link-invalid");
                     }
-                    d.add("items", items);
+                    d.addProperty("url", url);
+                    d.addProperty("text", str(data, "text", 300));
                 }
-                case "signin" -> d.addProperty("text", str(data, "text", 300));
+                case "login" -> {
+                    d.addProperty("title", str(data, "title", 80));
+                    d.addProperty("text", str(data, "text", 300));
+                }
                 default -> throw new IllegalArgumentException("landing-invalid");
             }
-            JsonObject b = new JsonObject();
-            b.addProperty("id", id);
-            b.addProperty("type", type);
-            b.addProperty("enabled", bool(in, "enabled", true));
-            String column = str(in, "column", 4);
-            boolean sideByDefault = type.equals("buttons") || type.equals("signin")
-                    || (type.equals("text") && "rules".equals(d.get("role").getAsString()));
-            b.addProperty("column", column.equals("main") || column.equals("side") ? column : sideByDefault ? "side" : "main");
-            b.add("data", d);
-            out.add(b);
+            JsonObject o = new JsonObject();
+            o.addProperty("id", id);
+            o.addProperty("type", type);
+            o.addProperty("w", Math.clamp(num(in, "w", 6), 1, 12));
+            o.addProperty("h", Math.clamp(num(in, "h", 2), 1, 8));
+            o.addProperty("audience", audience);
+            o.add("data", d);
+            out.add(o);
         }
         return out;
-    }
-
-    /** A picture id (hex) or "". */
-    private static String clean(String id) {
-        return id == null ? "" : id.replaceAll("[^a-f0-9]", "");
-    }
-
-    private static String cut(String text, int max) {
-        String t = text == null ? "" : text.strip();
-        return t.length() <= max ? t : t.substring(0, max);
     }
 
     private static String str(JsonObject o, String key, int max) {

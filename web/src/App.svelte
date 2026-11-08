@@ -370,7 +370,7 @@
           <SelfTickets />
         {/if}
       {:else}
-        <StartPage {player} />
+        <StartPage {player} canEdit={!!me.may.appearance} />
       {/if}
       <Footer />
     </main>

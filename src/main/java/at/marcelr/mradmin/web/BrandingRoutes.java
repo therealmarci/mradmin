@@ -22,10 +22,10 @@ import java.util.Map;
  *  POST   /api/branding        {name, tagline, accent, footer, links: [{label, url}]}   mradmin.appearance
  *  POST   /api/branding/{kind} raw picture (logo | icon), PNG / WebP / SVG, at most 512 KB   mradmin.appearance
  *  DELETE /api/branding/{kind}                                                             mradmin.appearance
- *  GET    /api/landing?lang=de                            open: the start page (switched-on blocks, news, online)
- *  GET    /api/landing/edit                               all blocks for the editor            mradmin.appearance
- *  POST   /api/landing          {enabled, header, blocks} save the start page                  mradmin.appearance
- *  POST   /api/landing/image    raw picture -> {id}       picture for a block                  mradmin.appearance
+ *  GET    /api/landing?lang=de                            open: the widgets of the start page, news, online
+ *  GET    /api/landing/edit                               widgets + template for the edit mode mradmin.appearance
+ *  POST   /api/landing          {widgets}                 save the start page                  mradmin.appearance
+ *  POST   /api/landing/image    raw picture -> {id}       picture for a widget                 mradmin.appearance
  * </pre>
  * Texts and colour are written into config.yml (section branding, comments stay) like the config editor does, then
  * MRadmin reloads. The pictures themselves are served by WebServer (/branding/logo, /branding/icon).
@@ -159,43 +159,38 @@ public final class BrandingRoutes {
 
     // ------------------------------------------------------------------ start page
 
-    /** The public start page: switched-on blocks, the newest posts (for news blocks), players online. */
+    /**
+     * The start page: all widgets (the page shows each to its audience), the newest posts for news widgets and the
+     * players online for banner / online widgets.
+     */
     private void landing(Http http) throws Exception {
-        var landing = plugin.landing();
         String lang = "en".equals(http.query().get("lang")) ? "en" : "de";
-        com.google.gson.JsonArray shown = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray widgets = plugin.landing().widgets();
         int news = 0;
-        var header = landing.header();
-        boolean online = header.online();
-        for (JsonElement e : landing.blocks()) {
-            JsonObject b = e.getAsJsonObject();
-            if (!b.get("enabled").getAsBoolean()) {
-                continue;
-            }
-            shown.add(b);
-            String type = b.get("type").getAsString();
-            JsonObject d = b.getAsJsonObject("data");
+        boolean online = false;
+        for (JsonElement e : widgets) {
+            JsonObject w = e.getAsJsonObject();
+            String type = w.get("type").getAsString();
+            JsonObject d = w.getAsJsonObject("data");
             if (type.equals("news")) {
                 news = Math.max(news, d.get("count").getAsInt());
+            } else if (type.equals("online") || (type.equals("banner") && d.get("online").getAsBoolean())) {
+                online = true;
             }
         }
         JsonObject result = new JsonObject();
-        result.addProperty("enabled", landing.enabled());
-        result.add("blocks", landing.enabled() ? shown : new com.google.gson.JsonArray());
-        result.add("header", headerJson(header));
+        result.add("widgets", widgets);
         com.google.gson.JsonArray posts = new com.google.gson.JsonArray();
-        if (news > 0 && landing.enabled()) {
-            for (var post : server.news().visible()) {
-                if (post.alert() || posts.size() >= news) {
-                    continue;
-                }
-                JsonObject p = new JsonObject();
-                p.addProperty("kind", post.kind());
-                p.addProperty("title", post.heading(lang));
-                p.addProperty("text", post.preview(lang, 220));
-                p.addProperty("created", post.created());
-                posts.add(p);
+        for (var post : news > 0 ? server.news().visible() : java.util.List.<at.marcelr.mradmin.news.News.Post>of()) {
+            if (post.alert() || posts.size() >= news) {
+                continue;
             }
+            JsonObject o = new JsonObject();
+            o.addProperty("kind", post.kind());
+            o.addProperty("title", post.heading(lang));
+            o.addProperty("text", post.preview(lang, 220));
+            o.addProperty("created", post.created());
+            posts.add(o);
         }
         result.add("news", posts);
         if (online) {
@@ -209,20 +204,10 @@ public final class BrandingRoutes {
         http.json(200, result);
     }
 
-    private static JsonObject headerJson(at.marcelr.mradmin.branding.Landing.Header h) {
-        JsonObject o = new JsonObject();
-        o.addProperty("image", h.image());
-        o.addProperty("address", h.address());
-        o.addProperty("online", h.online());
-        return o;
-    }
-
     private void landingEdit(Http http) throws Exception {
         require(http);
         JsonObject result = new JsonObject();
-        result.addProperty("enabled", plugin.landing().enabled());
-        result.add("blocks", plugin.landing().blocks());
-        result.add("header", headerJson(plugin.landing().header()));
+        result.add("widgets", plugin.landing().widgets());
         result.add("template", at.marcelr.mradmin.branding.Landing.template());
         http.json(200, result);
     }
@@ -230,18 +215,14 @@ public final class BrandingRoutes {
     private void landingSave(Http http) throws Exception {
         require(http);
         JsonObject body = http.body();
-        if (!body.has("blocks") || !body.get("blocks").isJsonArray()) {
+        if (!body.has("widgets") || !body.get("widgets").isJsonArray()) {
             throw new Http.WebException(400, "landing-invalid");
         }
-        boolean on = !body.has("enabled") || body.get("enabled").getAsBoolean();
-        JsonObject h = body.has("header") && body.get("header").isJsonObject() ? body.getAsJsonObject("header") : new JsonObject();
-        var head = new at.marcelr.mradmin.branding.Landing.Header(str(h, "image", 40), str(h, "address", 100),
-                !h.has("online") || h.get("online").getAsBoolean());
-        String error = plugin.landing().save(on, head, body.getAsJsonArray("blocks"));
+        String error = plugin.landing().save(body.getAsJsonArray("widgets"));
         if (error != null) {
             throw new Http.WebException(400, error);
         }
-        audit(http, "landing", (on ? "on, " : "off, ") + body.getAsJsonArray("blocks").size() + " blocks");
+        audit(http, "landing", body.getAsJsonArray("widgets").size() + " widgets");
         http.json(200, Map.of());
     }
 

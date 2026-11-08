@@ -6,10 +6,8 @@
   import { t, errorText } from '../lib/i18n.js';
   import { brand, load as loadBrand } from '../lib/branding.svelte.js';
   import Toast from '../components/Toast.svelte';
-  import LandingEditor from '../components/LandingEditor.svelte';
+  import { go } from '../lib/router.svelte.js';
 
-  // general = name, colour, pictures, footer; landing = the start page (blocks)
-  let part = $state('general');
 
   let form = $state(null);
   let error = $state('');
@@ -100,14 +98,10 @@
 </script>
 
 <div class="page">
-  <div class="parts" role="tablist">
-    <button role="tab" class:on={part === 'general'} aria-selected={part === 'general'} onclick={() => (part = 'general')}>{t('appearance.partGeneral')}</button>
-    <button role="tab" class:on={part === 'landing'} aria-selected={part === 'landing'} onclick={() => (part = 'landing')}>{t('appearance.partLanding')}</button>
-  </div>
+  <!-- The start page itself is edited right on it (button "Edit" there). -->
+  <p class="muted small start-hint">{t('appearance.startHint')} <a href="/" onclick={(e) => { e.preventDefault(); go('/'); }}>{t('appearance.toStart')} →</a></p>
 
-  {#if part === 'landing'}
-    <LandingEditor />
-  {:else}
+  {#if true}
   <Toast text={message} />
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -237,6 +231,10 @@
   .page {
     display: grid;
     gap: 14px;
+  }
+
+  .start-hint {
+    margin: 0;
   }
 
   .parts {

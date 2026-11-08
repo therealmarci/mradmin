@@ -64,13 +64,22 @@ The web interface carries the name and colours of your server - players never se
 - Saved in `config.yml` (section `branding`, also editable in the file), the pictures under `plugins/MRadmin/branding/`.
 - **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
 
-### Start page (Server → Appearance → Start page)
-The **start page** (`/`) looks the same for everyone - signed in or not - in the style of a server portal:
-- **Header** (one banner): logo, name and tagline (from "General"), plus a **background picture** (otherwise a gradient in the accent colour), the **server address** to copy and **players online** - set at the top of the editor. Signed-in players see "Hello <name>" there, visitors a **Sign in** button.
-- **Notices** below (slideshow): signed in the own ones (maintenance, restart, warnings of the plugins, ticket answers, posts), for visitors only the general ones. Signed-in players then see their **tiles** (one area per plugin with its key figures, "My statistics").
-- **Blocks in two columns:** main column (e.g. news, about the server) and a narrow side column (e.g. join in, links, rules) - on the phone one below the other. Template: news, about the server, join in, links, rules.
+### Start page (widgets)
+The **start page** (`/`) is the same for everyone and is made of **widgets** in a grid with 12 columns. Each widget has a width (1-12 columns), a height (1-8 rows) and who sees it: **everyone**, **visitors only** or **signed-in only**. On tablets small widgets get half the width and bigger ones the full width, on phones all are one below the other.
 
-In the editor every block can be switched on and off, moved (▲▼), put into the other column with a click, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty blocks (no text, no posts) stay hidden, "Join in" is shown only to visitors. On the right a live preview; "Restore template" resets the blocks (only when saving). **Sign in** is at the top right of the bar and opens a window over the page (directly: `/login`). Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
+**Edit** right on the start page (`mradmin.appearance`, **Edit** button at the top):
+- **Move:** drag the ⠿ grip and drop it on another widget (left half = before, right half = after).
+- **Size:** drag the handle at the bottom right or enter width/height in the settings.
+- **Insert:** **+ Insert widget** (goes after the selected one), **settings** ⚙, **remove** ✕.
+- **Save** or **Discard**; **Load template** replaces everything with the template (only when saving).
+
+| Group | Widgets |
+|---|---|
+| Server & status | **Banner** (logo, name, tagline, background picture, address, players online - signed in with "Hello <name>", for visitors with Log in), **Notices** (maintenance, restart, warnings, posts - personal when signed in), **Server address**, **Players online** |
+| Personal (signed-in only) | **Greeting**, **My areas** (one tile per area of the plugins), **My statistics** |
+| Content | **News**, **Text** (with formatting), **Picture** (PNG, WebP, SVG up to 512 KB), **Links**, **Discord** (invite), **Log-in call** |
+
+Widgets without content (empty text, no picture, no links) stay hidden outside the edit mode. **Log in** is at the top right of the bar and opens a window over the page (directly: `/login`). The earlier start page is taken over into widgets by itself on the update. Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`. Name, logo, colour and footer are set under Server → Appearance.
 
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.

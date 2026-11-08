@@ -64,13 +64,22 @@ Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler
 - Gespeichert wird in der `config.yml` (Abschnitt `branding`, auch per Datei änderbar), die Bilder unter `plugins/MRadmin/branding/`.
 - **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
 
-### Startseite (Server → Aussehen → Startseite)
-Die **Startseite** (`/`) sieht für alle gleich aus - angemeldet oder nicht - im Stil eines Server-Portals:
-- **Kopf** (ein Banner): Logo, Name und Spruch (aus „Allgemein“), dazu **Hintergrundbild** (sonst ein Verlauf in der Akzentfarbe), **Server-Adresse** zum Kopieren und **Spieler online** - eingestellt oben im Editor. Angemeldete sehen dort „Hallo <Name>“, Gäste einen Knopf **Anmelden**.
-- **Hinweise** darunter (Karussell): angemeldet die eigenen (Wartung, Neustart, Warnungen der Plugins, Ticket-Antworten, Beiträge), für Gäste nur das Allgemeine. Angemeldete sehen danach ihre **Kacheln** (ein Bereich pro Plugin mit den wichtigsten Zahlen, „Meine Statistik“).
-- **Abschnitte in zwei Spalten:** Hauptspalte (z.B. Neuigkeiten, Über den Server) und schmale Seitenspalte (z.B. Mitmachen, Links, Regeln) - auf dem Handy untereinander. Vorlage: Neuigkeiten, Über den Server, Mitmachen, Links, Regeln.
+### Startseite (Widgets)
+Die **Startseite** (`/`) ist für alle gleich und besteht aus **Widgets** in einem Raster mit 12 Spalten. Jedes Widget hat eine Breite (1-12 Spalten), eine Höhe (1-8 Reihen) und eine Sichtbarkeit: für **alle**, **nur Gäste** oder **nur Angemeldete**. Auf dem Tablet werden kleine Widgets halb breit und größere voll breit, auf dem Handy liegen alle untereinander.
 
-Im Editor lässt sich jeder Abschnitt ein- und ausschalten, verschieben (▲▼), per Klick in die andere Spalte setzen, füllen und entfernen; dazu eigene Abschnitte (**Text**, **Bild** - PNG, WebP, SVG bis 512 KB -, **Knöpfe**, **Spalten** mit bis zu 3 Texten), höchstens 30. Leere Abschnitte (kein Text, keine Beiträge) bleiben unsichtbar, „Mitmachen“ sieht nur, wer nicht angemeldet ist. Rechts eine Live-Vorschau; „Vorlage wiederherstellen“ setzt die Abschnitte zurück (erst beim Speichern). **Anmelden** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`.
+**Bearbeiten** direkt auf der Startseite (`mradmin.appearance`, Knopf **Bearbeiten** oben):
+- **Verschieben:** am Griff ⠿ ziehen und auf ein anderes Widget fallen lassen (linke Hälfte = davor, rechte = danach).
+- **Größe:** am Griff unten rechts ziehen oder Breite/Höhe in den Einstellungen eingeben.
+- **Einfügen:** **+ Widget einfügen** (kommt nach dem gewählten Widget), **Einstellungen** ⚙, **Entfernen** ✕.
+- **Speichern** oder **Verwerfen**; **Vorlage laden** ersetzt alles durch die Vorlage (erst beim Speichern).
+
+| Gruppe | Widgets |
+|---|---|
+| Server & Status | **Banner** (Logo, Name, Spruch, Hintergrundbild, Adresse, Spieler online - angemeldet mit „Hallo <Name>“, für Gäste mit Log In), **Hinweise** (Wartung, Neustart, Warnungen, Beiträge - angemeldet persönlich), **Server-Adresse**, **Spieler online** |
+| Persönlich (nur angemeldet) | **Begrüßung**, **Meine Bereiche** (eine Kachel pro Bereich der Plugins), **Meine Statistik** |
+| Inhalte | **Neuigkeiten**, **Text** (mit Formatierung), **Bild** (PNG, WebP, SVG bis 512 KB), **Links**, **Discord** (Einladung), **Log-In-Aufforderung** |
+
+Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch in Widgets übernommen. Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Server → Aussehen ein.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.
