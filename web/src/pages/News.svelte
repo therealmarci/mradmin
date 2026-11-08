@@ -13,7 +13,8 @@
   import Toast from '../components/Toast.svelte';
   import AnnouncePanel from '../components/AnnouncePanel.svelte';
 
-  let { me } = $props();
+  // section: posts | announce from the tabs of the area Communication (then without the own switch)
+  let { me, section = null } = $props();
 
   const KINDS = ['news', 'changelog', 'alert'];
 
@@ -23,6 +24,9 @@
   let busy = $state(false);
   let filter = $state('all');
   let area = $state(me.may.news ? 'posts' : 'announce');
+  $effect(() => {
+    if (section) area = section;
+  });
 
   const empty = (kind = 'news') => ({
     id: 0, kind, pinned: false, expires: '', discord: false, version: '',
@@ -167,7 +171,7 @@
     {/if}
   </header>
 
-  {#if me.may.news && me.may.announce}
+  {#if me.may.news && me.may.announce && !section}
     <div class="seg areas" role="tablist">
       <button role="tab" aria-selected={area === 'posts'} class:active={area === 'posts'} onclick={() => (area = 'posts')}>{t('news.area.posts')}</button>
       <button role="tab" aria-selected={area === 'announce'} class:active={area === 'announce'} onclick={() => (area = 'announce')}>{t('news.area.announce')}</button>

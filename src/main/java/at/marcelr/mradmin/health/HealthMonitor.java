@@ -284,7 +284,7 @@ public final class HealthMonitor {
                         tag("minutes", s.alertMinutes()));
                 plugin.discord().log("health-alert", "tps", value, "minutes", s.alertMinutes(),
                         "mspt", String.format(Locale.ROOT, "%.1f", Bukkit.getAverageTickTime()));
-                plugin.push("lag", "lag", "/health", null, "tps", value, "minutes", s.alertMinutes());
+                plugin.push("lag", "lag", "/admin/server/performance", null, "tps", value, "minutes", s.alertMinutes());
             }
         } else if (tps >= s.alertTps() + 1) {
             if (alerted) {

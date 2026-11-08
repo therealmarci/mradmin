@@ -236,7 +236,7 @@ public final class TicketManager {
         Ticket open = bySource(source, report.key());
         String subject = TicketText.limit(report.subject(), 100);
         if (report.push() != null) {
-            plugin.push(report.push(), "report", "/tickets/" + (open != null ? open.id() : nextId), null,
+            plugin.push(report.push(), "report", "/admin/community/tickets/" + (open != null ? open.id() : nextId), null,
                     "subject", subject, "player", report.playerName(), "plugin", source);
         }
         if (open != null) {
@@ -827,7 +827,7 @@ public final class TicketManager {
         }
         // Push to the team's devices - not for lock tickets, those come as "chunk loader locked".
         if (ticket.source() == null) {
-            plugin.push("ticket-new", ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/tickets/" + ticket.id(),
+            plugin.push("ticket-new", ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/admin/community/tickets/" + ticket.id(),
                     id -> !ticket.isCreator(id),
                     "id", ticket.id(), "player", ticket.creatorName(), "summary", messages().server(() -> summary(ticket)));
         }
@@ -838,7 +838,7 @@ public final class TicketManager {
      * (who wants it) "any ticket message". The author never gets their own message.
      */
     private void pushMessage(Ticket ticket, String author, String text, UUID except) {
-        String url = "/tickets/" + ticket.id();
+        String url = "/admin/community/tickets/" + ticket.id();
         Object[] values = {"id", ticket.id(), "player", author, "text", TicketText.preview(text, 200)};
         UUID claimer = ticket.claimedBy();
         if (claimer != null) {

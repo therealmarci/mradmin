@@ -9,8 +9,9 @@
 
   let { me } = $props();
 
-  const TABS = ['security', 'notifications', 'devices'];
-  let tab = $state(sessionStorage.getItem('mradmin.account.tab') ?? 'security');
+  // Push notifications are for the team (new tickets, alerts) - players see sign-ins and devices.
+  const TABS = me.team ? ['security', 'notifications', 'devices'] : ['security', 'devices'];
+  let tab = $state(TABS.includes(sessionStorage.getItem('mradmin.account.tab')) ? sessionStorage.getItem('mradmin.account.tab') : 'security');
 
   let sessions = $state(null);
   let error = $state('');
@@ -122,7 +123,7 @@
 
   <div class="content">
     {#if tab === 'security'}
-      <LoginsCard team require2fa={me.require2fa} />
+      <LoginsCard team={me.team} require2fa={me.require2fa} />
       {#if me.totp}
         <section class="card tile">
           <div class="row">

@@ -290,7 +290,7 @@ public final class PushService {
     /**
      * Sends a notification of this kind to every member who may get it and wants it (on all their devices).
      * @param who      extra filter on the receivers (null = everyone allowed), e.g. only the one who claimed a ticket
-     * @param url      page to open on a click, e.g. "/tickets/12"
+     * @param url      page to open on a click, e.g. "/admin/community/tickets/12"
      */
     public void notify(String kind, String title, String body, String url, Predicate<UUID> who) {
         if (push == null || !plugin.settings().web().enabled()) {

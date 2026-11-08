@@ -2,6 +2,28 @@
 
 MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail. Was Spieler auf ihrer eigenen Seite sehen, steht unter [Spielerseite](wiki/spielerseite.md), Updates und Neustart unter [Plugins & Updates](wiki/plugins.md).
 
+## Aufbau
+Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit **Spieler | Verwaltung** (auf dem Handy im Menü unter dem Namen). Jeder Bereich hat oben Reiter.
+
+| Spielerbereich | Inhalt |
+|---|---|
+| **Start** (`/`) | Begrüßung, Hinweise, Kacheln |
+| **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
+| **Karte** (`/map`) | die Karte im Vollbild |
+| **Server** (`/server/news`, `/server/stats`) | Neuigkeiten & Changelogs, Statistik & Ranglisten |
+| **Hilfe** (`/help/tickets`) | Tickets |
+| **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
+
+| Verwaltung | Reiter |
+|---|---|
+| **Übersicht** (`/admin`) | Dashboard |
+| **Community** (`/admin/community/…`) | Spieler · Tickets |
+| **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
+| **Kommunikation** (`/admin/communication/…`) | Beiträge · Ankündigungen · Wartung |
+| **Server** (`/admin/server/…`) | Steuerung · Leistung · Plugins · Protokoll · Konsole · Einstellungen |
+
+Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
+
 ## Einrichten
 1. In der Config `web.enabled: true` und `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`), dann `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
 2. **Reverse Proxy** einrichten: Domain mit HTTPS → `http://127.0.0.1:8125`. Der eingebaute Webserver lauscht nur lokal und hat selbst kein HTTPS.

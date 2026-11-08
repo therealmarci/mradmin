@@ -10,9 +10,11 @@
    * items: [{path, label, icon}] - icon is a key of ICONS or an emoji; current: path of the highlighted place;
    * onnav(path); user: {uuid, name}; menu: [{label, icon, active?, danger?, onclick}];
    * moreLabel: text of the menu button for the rest on the phone;
-   * live: null (no dot) or true/false (connection of the team panel).
+   * live: null (no dot) or true/false (connection of the team panel);
+   * modes: null or {current: 'player' | 'admin', player, admin (labels), onswitch(mode)} - the switch between the
+   * player area and the administration (team only); on the phone it is in the menu.
    */
-  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '' } = $props();
+  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null } = $props();
 
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -47,6 +49,14 @@
     {/each}
   </nav>
   <div class="right">
+    {#if modes}
+      <div class="modes" role="radiogroup">
+        {#each ['player', 'admin'] as m (m)}
+          <button role="radio" aria-checked={modes.current === m} class:on={modes.current === m}
+            onclick={() => modes.current !== m && modes.onswitch(m)}>{modes[m]}</button>
+        {/each}
+      </div>
+    {/if}
     <LangFlags />
     <div class="account">
       <button class="who" aria-haspopup="menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
@@ -59,6 +69,12 @@
       </button>
       {#if menuOpen}
         <div class="menu" role="menu">
+          {#if modes}
+            {@const other = modes.current === 'admin' ? 'player' : 'admin'}
+            <button role="menuitem" class="mode-entry" onclick={() => { menuOpen = false; modes.onswitch(other); }}>
+              <span aria-hidden="true">⇄</span> {modes[other]}
+            </button>
+          {/if}
           {#each menu as entry}
             <button role="menuitem" class:active={entry.active} class:out={entry.danger}
               onclick={() => { menuOpen = false; entry.onclick(); }}>
@@ -132,6 +148,34 @@
   .link.active {
     color: var(--text);
     background: var(--surface-2);
+  }
+
+  .modes {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .modes button {
+    justify-content: flex-start;
+    padding: 5px 12px;
+    font-size: 0.84rem;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+  }
+
+  .modes button.on {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .mode-entry {
+    display: none !important;
   }
 
   .right {
@@ -250,6 +294,14 @@
 
   /* Phone: flags and name on top, the places in a bar at the bottom (the rest behind the menu button). */
   @media (max-width: 759px) {
+    .modes {
+      display: none;
+    }
+
+    .mode-entry {
+      display: flex !important;
+    }
+
     .desktop {
       display: none;
     }

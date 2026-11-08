@@ -70,7 +70,7 @@ public final class NewsDelivery implements Listener {
     /** The whole post on the player page, or null without web.public-url. */
     public String link(News.Post post) {
         String url = plugin.settings().web().publicUrl();
-        return url.isEmpty() ? null : url + "/me/news#post-" + post.id();
+        return url.isEmpty() ? null : url + "/server/news#post-" + post.id();
     }
 
     // ---------------------------------------------------------------- publishing
@@ -299,7 +299,7 @@ public final class NewsDelivery implements Listener {
 
     private String pageLink() {
         String url = plugin.settings().web().publicUrl();
-        return url.isEmpty() ? null : url + "/me/news";
+        return url.isEmpty() ? null : url + "/server/news";
     }
 
     /** "[Read]" opening the link, or nothing without a link. */

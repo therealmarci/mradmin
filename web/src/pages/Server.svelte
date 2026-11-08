@@ -15,7 +15,8 @@
   import Logs from './Logs.svelte';
   import Console from './Console.svelte';
 
-  let { me, tab = null } = $props();
+  // bare: inside the area Server of the administration - its tabs are there, here only the content
+  let { me, tab = null, bare = false } = $props();
 
   const tabs = $derived([
     ...(me.may.versions ? ['overview', 'plugins'] : []),
@@ -126,6 +127,7 @@
 </script>
 
 <div class="page">
+  {#if !bare}
   <header class="head">
     <span class="icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -137,7 +139,9 @@
     </div>
   </header>
 
-  {#if tabs.length > 1}
+  {/if}
+
+  {#if tabs.length > 1 && !bare}
     <div class="switch" role="tablist">
       {#each tabs as id (id)}
         <button role="tab" aria-selected={current === id} class:active={current === id} onclick={() => open(id)}>

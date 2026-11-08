@@ -70,7 +70,7 @@ public final class SelfWebCommand implements TabExecutor {
                 default -> {
                     // Always the same address (bookmark); the page asks for the code, a click in the chat copies it.
                     String code = web.playerSessions().code(player.getUniqueId(), player.getName());
-                    var link = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(url + (plugin.settings().playerWeb().enabled() ? "/me" : "/")));
+                    var link = messages.get("web-self-link-label").clickEvent(ClickEvent.openUrl(url + "/"));
                     var copy = messages.get("web-self-code", tag("code", code))
                             .clickEvent(ClickEvent.copyToClipboard(code))
                             .hoverEvent(messages.get("web-self-code-hover"));

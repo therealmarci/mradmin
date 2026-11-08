@@ -187,7 +187,7 @@ public final class SelfNews {
                         m.put("title", area.title());
                         m.put("icon", area.icon());
                         m.put("text", text.text());
-                        m.put("page", "/me/" + entry.getKey() + "/" + area.id());
+                        m.put("page", "/game/" + entry.getKey() + "/" + area.id());
                         ("bad".equals(text.tone()) ? bad : warn).add(m);
                     }
                 }

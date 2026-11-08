@@ -2,6 +2,28 @@
 
 Use MRadmin from your phone, tablet or PC: answer tickets, manage players, schedule maintenance, keep an eye on the server status - with the same permissions as in game. This page describes the web interface in detail. What players see on their own page is described under [Player page](spielerseite.md), updates and restarts under [Plugins & updates](plugins.md).
 
+## Layout
+Since 1.5 there is **one** web interface for players and team. Team members switch at the top right with **Player | Administration** (on the phone in the menu under the name). Every area has tabs at the top.
+
+| Player area | Content |
+|---|---|
+| **Home** (`/`) | welcome, notices, tiles |
+| **My game** (`/game/…`) | one tab per plugin (chunk loaders, duels, waypoints …) |
+| **Map** (`/map`) | the map full screen |
+| **Server** (`/server/news`, `/server/stats`) | news & changelogs, statistics & rankings |
+| **Help** (`/help/tickets`) | tickets |
+| **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
+
+| Administration | Tabs |
+|---|---|
+| **Overview** (`/admin`) | dashboard |
+| **Community** (`/admin/community/…`) | players · tickets |
+| **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
+| **Communication** (`/admin/communication/…`) | posts · announcements · maintenance |
+| **Server** (`/admin/server/…`) | control · performance · plugins · log · console · settings |
+
+Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
+
 ## Setup
 1. In the config set `web.enabled: true` and `web.public-url` to your address (e.g. `https://admin.yourserver.com`), then `/mradmin reload`. For many tickets `storage.type: sqlite` is recommended.
 2. Set up a **reverse proxy**: domain with HTTPS → `http://127.0.0.1:8125`. The built-in web server only listens locally and has no HTTPS of its own.
