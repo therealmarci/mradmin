@@ -24,7 +24,7 @@ import java.util.Map;
  *  DELETE /api/branding/{kind}                                                             mradmin.appearance
  *  GET    /api/landing?lang=de                            open: the start page (switched-on blocks, news, online)
  *  GET    /api/landing/edit                               all blocks for the editor            mradmin.appearance
- *  POST   /api/landing          {enabled, blocks}         save the start page                  mradmin.appearance
+ *  POST   /api/landing          {enabled, header, blocks} save the start page                  mradmin.appearance
  *  POST   /api/landing/image    raw picture -> {id}       picture for a block                  mradmin.appearance
  * </pre>
  * Texts and colour are written into config.yml (section branding, comments stay) like the config editor does, then
@@ -165,7 +165,8 @@ public final class BrandingRoutes {
         String lang = "en".equals(http.query().get("lang")) ? "en" : "de";
         com.google.gson.JsonArray shown = new com.google.gson.JsonArray();
         int news = 0;
-        boolean online = false;
+        var header = landing.header();
+        boolean online = header.online();
         for (JsonElement e : landing.blocks()) {
             JsonObject b = e.getAsJsonObject();
             if (!b.get("enabled").getAsBoolean()) {
@@ -176,13 +177,12 @@ public final class BrandingRoutes {
             JsonObject d = b.getAsJsonObject("data");
             if (type.equals("news")) {
                 news = Math.max(news, d.get("count").getAsInt());
-            } else if (type.equals("hero") && d.get("online").getAsBoolean()) {
-                online = true;
             }
         }
         JsonObject result = new JsonObject();
         result.addProperty("enabled", landing.enabled());
         result.add("blocks", landing.enabled() ? shown : new com.google.gson.JsonArray());
+        result.add("header", headerJson(header));
         com.google.gson.JsonArray posts = new com.google.gson.JsonArray();
         if (news > 0 && landing.enabled()) {
             for (var post : server.news().visible()) {
@@ -198,7 +198,7 @@ public final class BrandingRoutes {
             }
         }
         result.add("news", posts);
-        if (online && landing.enabled()) {
+        if (online) {
             int[] players = server.sync(() -> new int[] {(int) org.bukkit.Bukkit.getOnlinePlayers().stream()
                     .filter(p -> !at.marcelr.mradmin.player.Npcs.is(p)).count(), org.bukkit.Bukkit.getMaxPlayers()});
             JsonObject o = new JsonObject();
@@ -209,11 +209,20 @@ public final class BrandingRoutes {
         http.json(200, result);
     }
 
+    private static JsonObject headerJson(at.marcelr.mradmin.branding.Landing.Header h) {
+        JsonObject o = new JsonObject();
+        o.addProperty("image", h.image());
+        o.addProperty("address", h.address());
+        o.addProperty("online", h.online());
+        return o;
+    }
+
     private void landingEdit(Http http) throws Exception {
         require(http);
         JsonObject result = new JsonObject();
         result.addProperty("enabled", plugin.landing().enabled());
         result.add("blocks", plugin.landing().blocks());
+        result.add("header", headerJson(plugin.landing().header()));
         result.add("template", at.marcelr.mradmin.branding.Landing.template());
         http.json(200, result);
     }
@@ -225,7 +234,10 @@ public final class BrandingRoutes {
             throw new Http.WebException(400, "landing-invalid");
         }
         boolean on = !body.has("enabled") || body.get("enabled").getAsBoolean();
-        String error = plugin.landing().save(on, body.getAsJsonArray("blocks"));
+        JsonObject h = body.has("header") && body.get("header").isJsonObject() ? body.getAsJsonObject("header") : new JsonObject();
+        var head = new at.marcelr.mradmin.branding.Landing.Header(str(h, "image", 40), str(h, "address", 100),
+                !h.has("online") || h.get("online").getAsBoolean());
+        String error = plugin.landing().save(on, head, body.getAsJsonArray("blocks"));
         if (error != null) {
             throw new Http.WebException(400, error);
         }

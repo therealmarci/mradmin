@@ -65,17 +65,12 @@ Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler
 - **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
 
 ### Startseite (Server → Aussehen → Startseite)
-Die **Startseite** (`/`) sieht für alle gleich aus - angemeldet oder nicht. Oben die **Hero-Kachel**: angemeldet mit Begrüßung und den eigenen Hinweisen (Wartung, Neustart, Warnungen der Plugins, Ticket-Antworten, Beiträge), für Gäste nur das Allgemeine (Wartung, Neustart, Warnungen, Beiträge). Darunter die Abschnitte aus dem Baukasten. **Anmelden** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Ein neuer Server bekommt eine fertige Vorlage:
+Die **Startseite** (`/`) sieht für alle gleich aus - angemeldet oder nicht - im Stil eines Server-Portals:
+- **Kopf** (ein Banner): Logo, Name und Spruch (aus „Allgemein“), dazu **Hintergrundbild** (sonst ein Verlauf in der Akzentfarbe), **Server-Adresse** zum Kopieren und **Spieler online** - eingestellt oben im Editor. Angemeldete sehen dort „Hallo <Name>“, Gäste einen Knopf **Anmelden**.
+- **Hinweise** darunter (Karussell): angemeldet die eigenen (Wartung, Neustart, Warnungen der Plugins, Ticket-Antworten, Beiträge), für Gäste nur das Allgemeine.
+- **Abschnitte in zwei Spalten:** Hauptspalte (z.B. Neuigkeiten, Über den Server) und schmale Seitenspalte (z.B. Mitmachen, Links, Regeln) - auf dem Handy untereinander. Vorlage: Neuigkeiten, Über den Server, Mitmachen, Links, Regeln.
 
-| Abschnitt | Inhalt |
-|---|---|
-| **Kopf** | Logo, Name, Spruch, Server-Adresse zum Kopieren, Spieler online, Anmelden |
-| **Neuigkeiten** | die neuesten Beiträge (1-6) aus Community → Beiträge |
-| **Über den Server**, **Regeln** | Texte mit einfacher Formatierung (**fett**, *kursiv*, Listen, Links) |
-| **Knöpfe** | eigene Links - ohne eigene die Links aus „Allgemein“ |
-| **Anmelden** | Aufforderung mit Knopf |
-
-Jeder Abschnitt lässt sich ein- und ausschalten, verschieben, füllen und entfernen; dazu eigene Abschnitte (**Text**, **Bild** - PNG, WebP, SVG bis 512 KB -, **Knöpfe**, **Spalten** mit bis zu 3 Texten), höchstens 30. Leere Überschrift = Standard-Überschrift in der Sprache des Besuchers. Rechts eine Live-Vorschau; „Vorlage wiederherstellen“ setzt alles zurück (erst beim Speichern). Ganz ausgeschaltet zeigt die Startseite nur die Hero-Kachel. Aufforderungen zum Anmelden sieht nur, wer nicht angemeldet ist. Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`.
+Im Editor lässt sich jeder Abschnitt ein- und ausschalten, verschieben (▲▼), per Klick in die andere Spalte setzen, füllen und entfernen; dazu eigene Abschnitte (**Text**, **Bild** - PNG, WebP, SVG bis 512 KB -, **Knöpfe**, **Spalten** mit bis zu 3 Texten), höchstens 30. Leere Abschnitte (kein Text, keine Beiträge) bleiben unsichtbar, „Mitmachen“ sieht nur, wer nicht angemeldet ist. Rechts eine Live-Vorschau; „Vorlage wiederherstellen“ setzt die Abschnitte zurück (erst beim Speichern). **Anmelden** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.

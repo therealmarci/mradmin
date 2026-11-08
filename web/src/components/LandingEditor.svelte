@@ -8,6 +8,7 @@
   import Toast from './Toast.svelte';
 
   let enabled = $state(true);
+  let header = $state({ image: '', address: '', online: true });
   let blocks = $state(null);
   let saved = $state('');
   let template = [];
@@ -17,27 +18,27 @@
   let message = $state('');
   let adding = $state(false);
 
-  const TYPES = ['hero', 'news', 'text', 'image', 'buttons', 'columns', 'signin'];
+  const TYPES = ['news', 'text', 'image', 'buttons', 'columns', 'signin'];
 
   async function load() {
     try {
       const data = await api('GET', '/landing/edit');
       enabled = data.enabled;
+      header = data.header;
       blocks = data.blocks;
       template = data.template;
-      saved = JSON.stringify({ enabled, blocks });
+      saved = JSON.stringify({ enabled, header, blocks });
     } catch (e) {
       error = errorText(e);
     }
   }
   load();
 
-  const changed = $derived(blocks !== null && JSON.stringify({ enabled, blocks }) !== saved);
+  const changed = $derived(blocks !== null && JSON.stringify({ enabled, header, blocks }) !== saved);
 
   const newId = () => Math.random().toString(16).slice(2, 12);
   function empty(type) {
     const data = {
-      hero: { title: '', text: '', address: '', online: true },
       news: { title: '', count: 3 },
       text: { title: '', text: '', role: '' },
       image: { title: '', image: '', alt: '', wide: false },
@@ -45,7 +46,7 @@
       columns: { title: '', items: [{ title: '', text: '' }, { title: '', text: '' }] },
       signin: { title: '', text: '' },
     }[type];
-    return { id: newId(), type, enabled: true, data };
+    return { id: newId(), type, enabled: true, column: type === 'buttons' || type === 'signin' ? 'side' : 'main', data };
   }
 
   function add(type) {
@@ -78,7 +79,7 @@
     error = '';
     message = '';
     try {
-      await api('POST', '/landing', { enabled, blocks });
+      await api('POST', '/landing', { enabled, header, blocks });
       await load();
       message = t('landingEdit.saved');
     } catch (e) {
@@ -88,6 +89,7 @@
     }
   }
 
+  // block: a picture block, or null = the background of the header
   async function uploadImage(block, input) {
     const file = input.files?.[0];
     input.value = '';
@@ -101,7 +103,8 @@
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw Object.assign(new Error(body.error), { key: body.error, status: response.status });
-      block.data.image = body.id;
+      if (block) block.data.image = body.id;
+      else header.image = body.id;
     } catch (e) {
       error = errorText(e);
     } finally {
@@ -128,6 +131,21 @@
       </div>
       <p class="muted small">{t(enabled ? 'landingEdit.intro' : 'landingEdit.off')}</p>
 
+      <div class="header-box">
+        <strong>{t('landingEdit.header')}</strong>
+        <span class="muted small">{t('landingEdit.headerHint')}</span>
+        <div class="img-row">
+          {#if header.image}<img src={'/branding/landing/' + header.image} alt="" />{/if}
+          <label class="upload">
+            {t(header.image ? 'landingEdit.replaceImage' : 'landingEdit.background')}
+            <input type="file" accept="image/png,image/webp,image/svg+xml" onchange={(e) => uploadImage(null, e.currentTarget)} />
+          </label>
+          {#if header.image}<button class="link" onclick={() => (header.image = '')}>{t('appearance.remove')}</button>{/if}
+        </div>
+        <label class="field">{t('landingEdit.address')}<input bind:value={header.address} maxlength="100" placeholder="play.example.com" /></label>
+        <label class="check"><input type="checkbox" bind:checked={header.online} /> {t('landingEdit.showOnline')}</label>
+      </div>
+
       <div class="blocks">
         {#each blocks as b, i (b.id)}
           <div class="block" class:off={!b.enabled} class:open={open === b.id}>
@@ -137,6 +155,9 @@
                 <button class="icon" disabled={i === blocks.length - 1} onclick={() => move(i, 1)} aria-label={t('landingEdit.down')}>▼</button>
               </div>
               <button class="name" onclick={() => (open = open === b.id ? null : b.id)}>{label(b)}</button>
+              <button class="col-switch" title={t('landingEdit.columnHint')} onclick={() => (b.column = b.column === 'side' ? 'main' : 'side')}>
+                {t('landingEdit.column.' + (b.column === 'side' ? 'side' : 'main'))}
+              </button>
               <label class="mini"><input type="checkbox" bind:checked={b.enabled} /> {t('landingEdit.show')}</label>
               <button class="icon danger" onclick={() => remove(i)} aria-label={t('landingEdit.remove')}>✕</button>
             </div>
@@ -146,11 +167,7 @@
                 {#if b.type !== 'image'}
                   <label>{t('landingEdit.blockTitle')}<input bind:value={b.data.title} maxlength="80" placeholder={t('landingEdit.defaultTitle')} /></label>
                 {/if}
-                {#if b.type === 'hero'}
-                  <label>{t('landingEdit.heroText')}<input bind:value={b.data.text} maxlength="300" placeholder={t('landingEdit.heroTextHint')} /></label>
-                  <label>{t('landingEdit.address')}<input bind:value={b.data.address} maxlength="100" placeholder="play.example.com" /></label>
-                  <label class="check"><input type="checkbox" bind:checked={b.data.online} /> {t('landingEdit.showOnline')}</label>
-                {:else if b.type === 'news'}
+                {#if b.type === 'news'}
                   <label>{t('landingEdit.count')}<input type="number" min="1" max="6" bind:value={b.data.count} /></label>
                 {:else if b.type === 'text'}
                   <label>{t('landingEdit.text')}<textarea rows="6" bind:value={b.data.text} maxlength="4000"></textarea></label>
@@ -222,7 +239,7 @@
       <span class="muted small">{t('landingEdit.preview')}</span>
       <div class="frame">
         {#if enabled}
-          <Landing preview={blocks} />
+          <Landing preview={{ header, blocks }} />
         {:else}
           <p class="muted small off-note">{t('landingEdit.off')}</p>
         {/if}
@@ -281,6 +298,33 @@
     margin: 0;
   }
 
+  .header-box {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .header-box .field {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  .col-switch {
+    justify-content: flex-start;
+    padding: 3px 9px;
+    font-size: 0.78rem;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
   .blocks {
     display: grid;
     gap: 6px;
@@ -302,7 +346,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 8px;
     padding: 6px 8px;

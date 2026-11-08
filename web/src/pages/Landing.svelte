@@ -1,17 +1,16 @@
 <script>
-  // The public start page in front of the sign-in (since 1.5): the blocks the team arranged under Server -> Appearance
-  // (GET /api/landing, BrandingRoutes.java). Switched off: the sign-in page right away. preview: the editor passes its
-  // draft (blocks) - then nothing is loaded except news and players online, and buttons do nothing.
+  // The start page in the "server portal" layout (since 1.5, the same for everyone): one header with a background
+  // picture (or a gradient in the accent colour), logo, name, tagline, server address and players online - signed in
+  // also "Hello <name>"; below it what the caller puts in between (the hint slideshow); then the blocks in two columns
+  // (main: news, texts, pictures; side: rules, links, sign-in). Data: GET /api/landing (BrandingRoutes.java).
+  // preview: the editor passes {header, blocks} - then only news and players online are loaded and buttons do nothing.
   import { api } from '../lib/api.js';
   import { t, lang } from '../lib/i18n.js';
   import { markdown } from '../lib/markdown.js';
+  import { head } from '../lib/format.js';
   import { brand, picture } from '../lib/branding.svelte.js';
-  import Footer from '../components/Footer.svelte';
-  import LangFlags from '../components/LangFlags.svelte';
-  import SignIn from '../components/SignIn.svelte';
 
-  // embedded: part of the start page (no own bar and footer); signedIn: no sign-in buttons and calls to sign in
-  let { preview = null, onsignin = () => {}, onSignedIn = () => {}, embedded = false, signedIn = false } = $props();
+  let { preview = null, player = null, onsignin = () => {}, between } = $props();
 
   let data = $state(null);
   let copied = $state(false);
@@ -20,18 +19,31 @@
     try {
       data = await api('GET', '/landing?lang=' + lang);
     } catch {
-      data = { enabled: false, blocks: [], news: [] };
+      data = { enabled: false, blocks: [], news: [], header: { image: '', address: '', online: false } };
     }
   }
   load();
 
-  const blocks = $derived(preview ? preview.filter((b) => b.enabled) : (data?.blocks ?? []));
+  const header = $derived(preview ? preview.header : (data?.header ?? { image: '', address: '', online: false }));
+  const blocks = $derived((preview ? preview.blocks : data?.enabled ? data.blocks : []).filter((b) => b.enabled && visible(b)));
+  const main = $derived(blocks.filter((b) => b.column !== 'side'));
+  const side = $derived(blocks.filter((b) => b.column === 'side'));
+  const signedIn = $derived(!!player);
   const signIn = () => !preview && onsignin();
 
+  // Blocks without anything to show stay away (empty texts, no posts, no picture).
+  function visible(b) {
+    if (b.type === 'signin') return !signedIn;
+    if (b.type === 'text') return !!b.data.text || !!preview;
+    if (b.type === 'news') return !!data?.news?.length || !!preview;
+    if (b.type === 'image') return !!b.data.image;
+    if (b.type === 'buttons') return b.data.items.length > 0 || brand.links.length > 0;
+    return true;
+  }
+
   const defaultTitle = (b) => ({
-    news: t('landing.news'), signin: t('landing.signinTitle'),
+    news: t('landing.news'), signin: t('landing.signinTitle'), buttons: t('landing.links'),
     text: b.data.role === 'about' ? t('landing.about') : b.data.role === 'rules' ? t('landing.rules') : '',
-    buttons: '', hero: brand.name,
   })[b.type] ?? '';
   const title = (b) => b.data.title || defaultTitle(b);
 
@@ -45,355 +57,387 @@
     }
   }
 
-  const date = (ms) => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = (ms) => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short' });
 </script>
 
-{#if embedded && !preview && data && !data.enabled}
-  <!-- switched off: the start page shows only the hero -->
-{:else if !preview && data && !data.enabled}
-  <SignIn {onSignedIn} />
-{:else if preview || data}
-  <div class="landing" class:in-preview={!!preview} class:embedded>
-    {#if !preview && !embedded}
-      <div class="top">
-        <span class="mark"><img src={picture('icon')} alt="" width="26" height="26" />{brand.name}</span>
-        <span class="right"><LangFlags /><button onclick={signIn}>{t('landing.signIn')}</button></span>
-      </div>
-    {/if}
-
-    {#each blocks as b (b.id)}
-      {#if b.type === 'hero'}
-        <section class="hero">
-          <img class="logo" src={picture('logo')} alt="" />
-          <h1>{title(b)}</h1>
-          {#if b.data.text || brand.tagline}<p class="lead">{b.data.text || brand.tagline}</p>{/if}
-          <div class="hero-row">
-            {#if b.data.address}
-              <button class="address" onclick={() => copy(b.data.address)} title={t('landing.copy')}>
-                <span class="mono">{b.data.address}</span>
-                <span class="hint">{copied ? t('landing.copied') : t('landing.copy')}</span>
-              </button>
-            {/if}
-            {#if b.data.online && data?.online}
-              <span class="online"><span class="dot"></span>{t('landing.online', { n: data.online.count, max: data.online.max })}</span>
-            {/if}
-          </div>
-          {#if !signedIn}<button class="cta" onclick={signIn}>{t('landing.signIn')}</button>{/if}
-        </section>
-      {:else if b.type === 'news'}
-        {#if data?.news?.length}
-          <section class="block">
-            <h2>{title(b)}</h2>
-            <div class="news">
-              {#each data.news.slice(0, b.data.count) as post (post.created + post.title)}
-                <article class="card post">
-                  <span class="muted small">{date(post.created)}</span>
-                  <strong>{post.title}</strong>
-                  <p class="small">{post.text}</p>
-                </article>
-              {/each}
-            </div>
-          </section>
-        {/if}
-      {:else if b.type === 'text'}
-        {#if b.data.text || preview}
-          <section class="block text">
-            {#if title(b)}<h2>{title(b)}</h2>{/if}
-            {#if b.data.text}
-              <div class="md">{@html markdown(b.data.text)}</div>
-            {:else}
-              <p class="muted small">{t('landing.emptyText')}</p>
-            {/if}
-          </section>
-        {/if}
-      {:else if b.type === 'image'}
-        {#if b.data.image}
-          <section class="block image" class:wide={b.data.wide}>
-            {#if b.data.title}<h2>{b.data.title}</h2>{/if}
-            <img src={'/branding/landing/' + b.data.image} alt={b.data.alt} />
-          </section>
-        {/if}
-      {:else if b.type === 'buttons'}
-        {@const items = b.data.items.length ? b.data.items : brand.links}
-        {#if items.length}
-          <section class="block buttons">
-            {#if b.data.title}<h2>{b.data.title}</h2>{/if}
-            <div class="row">
-              {#each items as item (item.url)}
-                <a class="button" href={item.url} target="_blank" rel="noopener noreferrer">{item.label}</a>
-              {/each}
-            </div>
-          </section>
-        {/if}
-      {:else if b.type === 'columns'}
-        <section class="block">
-          {#if b.data.title}<h2>{b.data.title}</h2>{/if}
-          <div class="columns" style="--n: {Math.max(1, b.data.items.length)}">
-            {#each b.data.items as col, i (i)}
-              <div class="card col">
-                {#if col.title}<h3>{col.title}</h3>{/if}
-                <div class="md">{@html markdown(col.text)}</div>
+{#snippet block(b)}
+  {#if b.type === 'news'}
+    <section class="card box">
+      <h2>{title(b)}</h2>
+      {#if data?.news?.length}
+        <div class="feed">
+          {#each data.news.slice(0, b.data.count) as post (post.created + post.title)}
+            <article class="post">
+              <span class="date">{date(post.created)}</span>
+              <div>
+                <strong>{post.title}</strong>
+                <p>{post.text}</p>
               </div>
-            {/each}
-          </div>
-        </section>
-      {:else if b.type === 'signin' && !signedIn}
-        <section class="block">
-          <div class="card join">
-            <div>
-              <h2>{title(b)}</h2>
-              <p class="muted">{b.data.text || t('landing.signinText')}</p>
-            </div>
-            <button onclick={signIn}>{t('landing.signIn')}</button>
-          </div>
-        </section>
+            </article>
+          {/each}
+        </div>
+      {:else}
+        <p class="muted small">{t('landing.noNews')}</p>
       {/if}
-    {/each}
+    </section>
+  {:else if b.type === 'text'}
+    <section class="card box">
+      {#if title(b)}<h2>{title(b)}</h2>{/if}
+      {#if b.data.text}
+        <div class="md">{@html markdown(b.data.text)}</div>
+      {:else}
+        <p class="muted small">{t('landing.emptyText')}</p>
+      {/if}
+    </section>
+  {:else if b.type === 'image'}
+    <figure class="card picture" class:wide={b.data.wide}>
+      <img src={'/branding/landing/' + b.data.image} alt={b.data.alt} />
+      {#if b.data.title}<figcaption>{b.data.title}</figcaption>{/if}
+    </figure>
+  {:else if b.type === 'buttons'}
+    {@const items = b.data.items.length ? b.data.items : brand.links}
+    <section class="card box">
+      <h2>{title(b)}</h2>
+      <div class="links">
+        {#each items as item (item.url)}
+          <a href={item.url} target="_blank" rel="noopener noreferrer">{item.label}<span aria-hidden="true">↗</span></a>
+        {/each}
+      </div>
+    </section>
+  {:else if b.type === 'columns'}
+    <section class="box plain">
+      {#if b.data.title}<h2>{b.data.title}</h2>{/if}
+      <div class="columns" style="--n: {Math.max(1, b.data.items.length)}">
+        {#each b.data.items as col, i (i)}
+          <div class="card col">
+            {#if col.title}<h3>{col.title}</h3>{/if}
+            <div class="md">{@html markdown(col.text)}</div>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {:else if b.type === 'signin'}
+    <section class="card box join">
+      <h2>{title(b)}</h2>
+      <p>{b.data.text || t('landing.signinText')}</p>
+      <button onclick={signIn}>{t('landing.signIn')}</button>
+    </section>
+  {/if}
+{/snippet}
 
-    {#if !preview && !embedded}<Footer />{/if}
-  </div>
-{/if}
+<div class="portal" class:in-preview={!!preview}>
+  <!-- The header: one place for name, address and status -->
+  <header class="banner" style={header.image ? `--bg: url('/branding/landing/${header.image}')` : ''} class:picture={!!header.image}>
+    <div class="banner-inner">
+      <img class="logo" src={picture('logo')} alt="" />
+      <div class="who">
+        {#if player}
+          <span class="hello"><img src={head(player.uuid, 32)} alt="" width="22" height="22" />{t('self.hello', { name: player.name })}</span>
+        {/if}
+        <h1>{brand.name}</h1>
+        {#if brand.tagline}<p class="tagline">{brand.tagline}</p>{/if}
+        <div class="facts">
+          {#if header.address}
+            <button class="address" onclick={() => copy(header.address)} title={t('landing.copy')}>
+              <span class="mono">{header.address}</span>
+              <span class="hint">{copied ? t('landing.copied') : t('landing.copy')}</span>
+            </button>
+          {/if}
+          {#if header.online && data?.online}
+            <span class="online"><span class="dot"></span>{t('landing.online', { n: data.online.count, max: data.online.max })}</span>
+          {/if}
+          {#if !signedIn}<button class="join-btn" onclick={signIn}>{t('landing.signIn')}</button>{/if}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {#if between}{@render between()}{/if}
+
+  {#if main.length || side.length}
+    <div class="grid" class:single={!side.length || !main.length}>
+      {#if main.length}
+        <div class="main">{#each main as b (b.id)}{@render block(b)}{/each}</div>
+      {/if}
+      {#if side.length}
+        <aside class="side">{#each side as b (b.id)}{@render block(b)}{/each}</aside>
+      {/if}
+    </div>
+  {/if}
+</div>
 
 <style>
-  .landing {
-    min-height: 100vh;
+  .portal {
     display: grid;
-    align-content: start;
-    gap: 34px;
-    padding: 0 16px 24px;
-    background:
-      radial-gradient(70% 40% at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
-      var(--bg);
+    gap: 16px;
   }
 
-  .landing.embedded {
-    min-height: 0;
-    padding: 0;
-    gap: 26px;
-    background: none;
-  }
-
-  .landing.embedded .hero {
-    padding-top: 10px;
-  }
-
-  .landing.in-preview {
-    min-height: 0;
-    padding: 0 12px 12px;
-    gap: 22px;
+  .portal.in-preview {
     font-size: 0.9em;
+    padding: 10px;
   }
 
-  .top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    max-width: 1000px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 14px 0;
+  /* Header: background picture (darkened for readable text) or a gradient in the accent colour */
+  .banner {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 60%),
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, var(--surface)), var(--surface));
+    color: var(--text);
   }
 
-  .mark {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
+  .banner.picture {
+    background: linear-gradient(90deg, rgb(0 0 0 / 72%), rgb(0 0 0 / 35%)), var(--bg) center / cover no-repeat;
+    color: #fff;
   }
 
-  .mark img {
-    border-radius: 6px;
-    object-fit: contain;
-  }
-
-  .right {
+  .banner-inner {
     display: flex;
     align-items: center;
-    gap: 12px;
-  }
-
-  .hero {
-    display: grid;
-    justify-items: center;
-    gap: 14px;
-    text-align: center;
-    padding: 30px 0 10px;
+    gap: 22px;
+    padding: 30px 30px;
+    min-height: 170px;
   }
 
   .logo {
-    max-height: 96px;
-    max-width: 260px;
+    width: 96px;
+    height: 96px;
+    flex: none;
     object-fit: contain;
+    filter: drop-shadow(0 4px 14px rgb(0 0 0 / 30%));
+  }
+
+  .who {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .hello {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+
+  .hello img {
+    border-radius: 5px;
+    image-rendering: pixelated;
   }
 
   h1 {
     margin: 0;
-    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    line-height: 1.1;
   }
 
-  .lead {
+  .tagline {
     margin: 0;
-    max-width: 620px;
-    color: var(--muted);
-    font-size: 1.1rem;
+    opacity: 0.85;
+    font-size: 1.02rem;
   }
 
-  .hero-row {
+  .facts {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-  }
-
-  .address {
-    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 14px;
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    gap: 8px;
+    margin-top: 6px;
   }
 
-  .address .hint {
-    font-size: 0.8rem;
-    color: var(--accent);
-  }
-
+  .address,
   .online {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 9px 14px;
+    gap: 10px;
+    padding: 7px 12px;
     border-radius: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: rgb(0 0 0 / 22%);
+    color: inherit;
+    border: 1px solid rgb(255 255 255 / 14%);
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+  }
+
+  .address .hint {
+    font-size: 0.78rem;
+    opacity: 0.8;
   }
 
   .dot {
-    width: 9px;
-    height: 9px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--good);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 30%, transparent);
   }
 
-  .cta {
-    padding: 11px 26px;
-    font-size: 1rem;
+  .join-btn {
+    padding: 8px 18px;
   }
 
-  .block {
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto;
+  /* Two columns: main and a narrow side */
+  .grid {
     display: grid;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .grid.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main,
+  .side {
+    display: grid;
+    gap: 16px;
+  }
+
+  .box {
+    display: grid;
+    gap: 10px;
+    padding: 18px 20px;
+  }
+
+  .box.plain {
+    padding: 0;
   }
 
   h2 {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: 1.08rem;
   }
 
   h3 {
     margin: 0 0 6px;
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
 
-  .news {
+  .feed {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
   }
 
   .post {
     display: grid;
-    gap: 4px;
-    align-content: start;
-    padding: 14px 16px;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .post:first-child {
+    border-top: 0;
+    padding-top: 2px;
+  }
+
+  .date {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+    padding-top: 2px;
   }
 
   .post p {
-    margin: 2px 0 0;
+    margin: 3px 0 0;
     color: var(--muted);
+    font-size: 0.9rem;
   }
 
   .md :global(p) {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
   }
 
   .md :global(ul),
   .md :global(ol) {
-    margin: 0 0 10px;
-    padding-left: 22px;
+    margin: 0 0 8px;
+    padding-left: 20px;
   }
 
-  .image img {
+  .picture {
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .picture img {
+    display: block;
     width: 100%;
-    max-width: 640px;
-    border-radius: 12px;
-    justify-self: center;
   }
 
-  .image.wide img {
-    max-width: none;
+  figcaption {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    color: var(--muted);
   }
 
-  .buttons .row {
+  .links {
+    display: grid;
+    gap: 6px;
+  }
+
+  .links a {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .button {
-    display: inline-flex;
-    padding: 9px 18px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
     border-radius: 10px;
-    background: var(--surface);
-    color: var(--text);
+    background: var(--surface-2);
     border: 1px solid var(--border);
+    color: var(--text);
     text-decoration: none;
     font-weight: 600;
   }
 
-  .button:hover {
+  .links a:hover {
     border-color: var(--accent);
   }
 
   .columns {
     display: grid;
     grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-    gap: 12px;
+    gap: 16px;
   }
 
   .col {
-    padding: 16px;
+    padding: 16px 18px;
   }
 
   .join {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    padding: 20px 22px;
-    border-left: 5px solid var(--accent);
-  }
-
-  .join h2 {
-    font-size: 1.15rem;
+    border-top: 4px solid var(--accent);
   }
 
   .join p {
-    margin: 4px 0 0;
+    margin: 0;
+    color: var(--muted);
   }
 
-  @media (max-width: 700px) {
+  .join button {
+    justify-self: start;
+  }
+
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     .columns {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .banner-inner {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 22px;
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
     }
   }
 </style>

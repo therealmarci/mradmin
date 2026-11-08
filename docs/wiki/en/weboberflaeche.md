@@ -65,17 +65,12 @@ The web interface carries the name and colours of your server - players never se
 - **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
 
 ### Start page (Server → Appearance → Start page)
-The **start page** (`/`) looks the same for everyone - signed in or not. On top the **hero**: signed in with a greeting and the own notices (maintenance, restart, warnings of the plugins, ticket answers, posts), for visitors only the general ones (maintenance, restart, warnings, posts). Below the blocks of the editor. **Sign in** is at the top right of the bar and opens a window over the page (directly: `/login`). A new server gets a ready template:
+The **start page** (`/`) looks the same for everyone - signed in or not - in the style of a server portal:
+- **Header** (one banner): logo, name and tagline (from "General"), plus a **background picture** (otherwise a gradient in the accent colour), the **server address** to copy and **players online** - set at the top of the editor. Signed-in players see "Hello <name>" there, visitors a **Sign in** button.
+- **Notices** below (slideshow): signed in the own ones (maintenance, restart, warnings of the plugins, ticket answers, posts), for visitors only the general ones.
+- **Blocks in two columns:** main column (e.g. news, about the server) and a narrow side column (e.g. join in, links, rules) - on the phone one below the other. Template: news, about the server, join in, links, rules.
 
-| Block | Content |
-|---|---|
-| **Head** | logo, name, tagline, server address to copy, players online, sign in |
-| **News** | the newest posts (1-6) from Community → Posts |
-| **About the server**, **Rules** | texts with simple formatting (**bold**, *italic*, lists, links) |
-| **Buttons** | own links - without own ones the links from "General" |
-| **Sign in** | call to action with a button |
-
-Every block can be switched on and off, moved, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty heading = default heading in the visitor's language. On the right a live preview; "Restore template" resets everything (only when saving). Switched off completely, the start page shows only the hero. Calls to sign in are shown only to visitors. Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
+In the editor every block can be switched on and off, moved (▲▼), put into the other column with a click, filled and removed; plus own blocks (**text**, **picture** - PNG, WebP, SVG up to 512 KB -, **buttons**, **columns** with up to 3 texts), at most 30. Empty blocks (no text, no posts) stay hidden, "Join in" is shown only to visitors. On the right a live preview; "Restore template" resets the blocks (only when saving). **Sign in** is at the top right of the bar and opens a window over the page (directly: `/login`). Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`.
 
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.
