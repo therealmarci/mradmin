@@ -5,6 +5,7 @@
   import { head } from '../lib/format.js';
   import LangFlags from './LangFlags.svelte';
   import { ICONS } from '../lib/icons.js';
+  import { brand, picture } from '../lib/branding.svelte.js';
 
   /**
    * items: [{path, label, icon}] - icon is a key of ICONS or an emoji; current: path of the highlighted place;
@@ -42,6 +43,8 @@
 {/snippet}
 
 <header class="top mr-topbar">
+  <!-- The server: logo and name (Server -> Appearance) -->
+  <span class="brand"><img src={picture('icon')} alt="" width="24" height="24" /><span class="brand-name">{brand.name}</span></span>
   <nav class="desktop">
     {#each items as item (item.path)}
       <button class="link" class:active={current === item.path} aria-current={current === item.path ? 'page' : undefined}
@@ -148,6 +151,27 @@
   .link.active {
     color: var(--text);
     background: var(--surface-2);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    margin-right: 6px;
+    font-weight: 700;
+  }
+
+  .brand img {
+    border-radius: 6px;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .modes {
@@ -293,9 +317,19 @@
   }
 
   /* Phone: flags and name on top, the places in a bar at the bottom (the rest behind the menu button). */
+  @media (max-width: 1100px) {
+    .brand-name {
+      display: none;
+    }
+  }
+
   @media (max-width: 759px) {
     .modes {
       display: none;
+    }
+
+    .brand-name {
+      display: inline;
     }
 
     .mode-entry {

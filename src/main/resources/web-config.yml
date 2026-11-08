@@ -979,6 +979,40 @@ sections:
         name: {de: IP-Adressen ausblenden, en: Hide IP addresses}
         help: {de: "IP-Adressen in der Ausgabe ausblenden (z.B. beim Join).", en: "Hide IP addresses in the output (e.g. on join)."}
 
+  - id: branding
+    name: {de: Aussehen, en: Appearance}
+    group: {de: "Weboberfläche & Karte", en: "Web interface & map"}
+    help: {de: "Name, Farbe und Fußzeile der Weboberfläche - mit Vorschau und Logo-Upload unter Server → Aussehen.", en: "Name, colour and footer of the web interface - with preview and logo upload under Server → Appearance."}
+    fields:
+      - key: branding.name
+        type: string
+        name: {de: Name des Servers, en: Name of the server}
+        help: {de: "Statt „MRadmin“ in Browser-Tab, Anmeldung, Leiste, Mails, 2FA-App und bei Passkeys. Leer = Text mail-server-name.", en: "Instead of \"MRadmin\" in the browser tab, sign-in, bar, mails, 2FA app and passkeys. Empty = text mail-server-name."}
+      - key: branding.tagline
+        type: string
+        name: {de: Spruch, en: Tagline}
+        help: {de: Kurze Zeile unter dem Namen auf der Anmeldeseite., en: Short line under the name on the sign-in page.}
+      - key: branding.accent
+        type: color
+        name: {de: Akzentfarbe, en: Accent colour}
+        help: {de: "Knöpfe und Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst.", en: "Buttons and highlights; the text colour on it is chosen by the page."}
+      - key: branding.footer-text
+        type: string
+        name: {de: Text in der Fußzeile, en: Footer text}
+        help: {de: Auf der Seite und in den Mails. Leer = keiner., en: On the page and in the mails. Empty = none.}
+      - key: branding.links
+        type: table
+        name: {de: Links in der Fußzeile, en: Footer links}
+        help: {de: "Bis zu 4 Links, z.B. Discord, Website, Regeln. Ohne Name oder Adresse wird ein Link nicht gezeigt.", en: "Up to 4 links, e.g. Discord, website, rules. Without a label or address a link is not shown."}
+        columns:
+          - {key: label, type: string, name: {de: Name, en: Label}, default: ""}
+          - {key: url, type: string, name: {de: Adresse, en: Address}, default: ""}
+        rows:
+          link-1: {de: Link 1, en: Link 1}
+          link-2: {de: Link 2, en: Link 2}
+          link-3: {de: Link 3, en: Link 3}
+          link-4: {de: Link 4, en: Link 4}
+
   - id: player-web
     name: {de: Spielerseite, en: Player page}
     group: {de: "Weboberfläche & Karte", en: "Web interface & map"}

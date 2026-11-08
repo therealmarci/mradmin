@@ -54,8 +54,9 @@ public final class ConfigUpdater {
  * 51: versions.emergency-delays; server.countdown 5m -> 15m and restart-delays 5m/1m/now -> 15m/30m/60m (old defaults).
  * 52: one sign-in for everyone: web.session-days is gone (player-web.session-days / idle-days for all browsers),
  * web.login.require-2fa (team needs 2FA, default off); new comments of web.login.
+ * 53: branding (name, tagline, accent, footer-text, links) - the look of the web interface.
      */
-    public static final int CURRENT_VERSION = 52;
+    public static final int CURRENT_VERSION = 53;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

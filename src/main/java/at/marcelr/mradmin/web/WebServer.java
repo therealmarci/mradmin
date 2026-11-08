@@ -446,6 +446,25 @@ public final class WebServer {
         if (file.contains("..") || file.contains("\\")) {
             throw new Http.WebException(404, "not-found");
         }
+        // The look of the server: own logo and icon, the app manifest with name and colour.
+        if (file.equals("branding/logo") || file.equals("branding/icon")) {
+            var image = plugin.branding().image(file.substring(9));
+            if (image == null && file.equals("branding/icon")) {
+                image = plugin.branding().image("logo");
+            }
+            if (image == null) {
+                byte[] fallback = resource("web/icon.svg");
+                http.send(200, "image/svg+xml", fallback == null ? new byte[0] : fallback, "no-cache");
+            } else {
+                // ?v=<time saved> in the address - it can be cached for long.
+                http.send(200, image.type(), image.data(), "public, max-age=604800");
+            }
+            return;
+        }
+        if (file.equals("manifest.webmanifest")) {
+            http.send(200, "application/manifest+json", plugin.branding().manifest().getBytes(StandardCharsets.UTF_8), "no-cache");
+            return;
+        }
         byte[] data = resource("web/" + file);
         if (data == null && !file.contains(".")) {
             file = "index.html";
@@ -459,6 +478,10 @@ public final class WebServer {
                 return;
             }
             throw new Http.WebException(404, "not-found");
+        }
+        if (file.equals("index.html")) {
+            // Name, icon and accent colour of the server - in the page before the first paint.
+            data = plugin.branding().index(new String(data, StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
         }
         // Files under assets/ have a hash in their name - they can be cached for good.
         String cache = file.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-cache";

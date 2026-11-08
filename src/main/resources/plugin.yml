@@ -108,6 +108,7 @@ permissions:
       mradmin.admin.update: true
       mradmin.versions.install: true
       mradmin.config: true
+      mradmin.appearance: true
       mradmin.server.restart: true
       mradmin.server.setup: true
       mradmin.web.console.execute: true
@@ -254,6 +255,9 @@ permissions:
     default: op
   mradmin.config:
     description: "Web interface: view and change the config.yml of MRadmin and the other MRtechnology plugins in the browser (saved and reloaded right away)."
+    default: op
+  mradmin.appearance:
+    description: "Web interface: change the look - name, logo, browser icon, accent colour and footer (Server -> Appearance)."
     default: op
   mradmin.versions.install:
     description: "Web interface: check for updates now, download updates and install missing MRtechnology plugins (loaded on the next start)."

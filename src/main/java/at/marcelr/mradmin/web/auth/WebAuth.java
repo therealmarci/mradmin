@@ -692,7 +692,8 @@ public final class WebAuth {
 
     private String issuer() {
         String url = plugin.settings().web().publicUrl();
-        return url.isEmpty() ? "MRadmin" : "MRadmin (" + url.replaceFirst("^https?://", "") + ")";
+        String name = plugin.branding().name();
+        return url.isEmpty() ? name : name + " (" + url.replaceFirst("^https?://", "") + ")";
     }
 
     // ---------------------------------------------------------------- sessions (kept in PlayerSessions)

@@ -177,6 +177,17 @@ public final class Http {
         return null;
     }
 
+    /** The raw body (uploads), at most {@code max} bytes - more is refused with 413. */
+    public byte[] raw(int max) throws IOException {
+        try (InputStream in = exchange.getRequestBody()) {
+            byte[] data = in.readNBytes(max + 1);
+            if (data.length > max) {
+                throw new WebException(413, "too-large");
+            }
+            return data;
+        }
+    }
+
     /** The JSON body (empty object if there is none or it is not JSON). */
     public JsonObject body() throws IOException {
         if (body == null) {

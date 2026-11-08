@@ -69,6 +69,8 @@ public final class Perms {
     public static final String MAP = "mradmin.map";
     public static final String MAP_ADMIN = "mradmin.map.admin";
     public static final String CONFIG = "mradmin.config";
+    /** Look of the web interface: name, logo, colour, footer (Server -> Appearance). */
+    public static final String APPEARANCE = "mradmin.appearance";
 
     private Perms() {
     }

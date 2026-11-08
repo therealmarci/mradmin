@@ -817,6 +817,9 @@ mail-test-failed: "<prefix><red>Test mail failed: <white><error>"
 # Mails to requesters (plain text, no MiniMessage). Placeholders: <name> <id> <subject> <answer> <link> <server> <time>
 mail-server-name: "Minecraft server"
 mail-no-text: "(no further message)"
+mail-button: "Open link"
+mail-imprint: "Imprint"
+mail-privacy: "Privacy"
 mail-email-confirm-subject: "Confirm your e-mail address - <server>"
 mail-email-confirm-body: |-
   Hello <name>,

@@ -35,8 +35,25 @@ public record Settings(
         MailSettings mail,
         RequestSettings requests,
         VersionsSettings versions,
-        PlayerWebSettings playerWeb
+        PlayerWebSettings playerWeb,
+        BrandingSettings branding
 ) {
+
+    /**
+     * The look of the web interface for players (section branding, edited in the web under Server -> Appearance).
+     *
+     * @param name       name of the server instead of "MRadmin" (empty = the text mail-server-name of the language file)
+     * @param tagline    short line under the name (sign-in page)
+     * @param accent     accent colour #rrggbb
+     * @param footerText text in the footer of the page and the mails
+     * @param links      up to 4 links in the footer (only with label and http(s) address)
+     */
+    public record BrandingSettings(String name, String tagline, String accent, String footerText, List<Link> links) {
+
+        /** A link in the footer. */
+        public record Link(String label, String url) {
+        }
+    }
 
     /**
      * The version page of the web interface: MRtechnology plugins, their updates and the restart button.
@@ -329,7 +346,34 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c),
+                branding(c, log));
+    }
+
+    private static BrandingSettings branding(FileConfiguration c, Logger log) {
+        String accent = c.getString("branding.accent", "#2f6fed").trim();
+        if (!accent.matches("#[0-9a-fA-F]{6}")) {
+            log.warning("branding.accent '" + accent + "' is not a colour like #2f6fed, using #2f6fed.");
+            accent = "#2f6fed";
+        }
+        List<BrandingSettings.Link> links = new ArrayList<>();
+        var section = c.getConfigurationSection("branding.links");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String label = section.getString(key + ".label", "").trim();
+                String url = section.getString(key + ".url", "").trim();
+                if (!label.isEmpty() && url.matches("https?://\\S+") && links.size() < 4) {
+                    links.add(new BrandingSettings.Link(cut(label, 40), cut(url, 300)));
+                }
+            }
+        }
+        return new BrandingSettings(cut(c.getString("branding.name", "").trim(), 40),
+                cut(c.getString("branding.tagline", "").trim(), 120), accent.toLowerCase(Locale.ROOT),
+                cut(c.getString("branding.footer-text", "").trim(), 300), List.copyOf(links));
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
     }
 
     /**

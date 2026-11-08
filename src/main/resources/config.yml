@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 52
+config-version: 53
 
 
 # ------------------------------------------------------------------------------
@@ -566,6 +566,25 @@ web:
       max-open-contact: 50
       # Difficulty of the calculation (0 = off, 16 = about one second on a phone, every +1 doubles the time).
       proof-of-work: 16
+
+# Look of the web interface for players: the name of your server instead of "MRadmin" (browser tab, sign-in, bar,
+# mails, 2FA app, passkeys), accent colour and footer. Easiest in the web under Server -> Appearance (with a preview);
+# logo and browser icon are uploaded there (files in plugins/MRadmin/branding/). Permission: mradmin.appearance
+branding:
+  # Name of your server. Empty = the text mail-server-name of the language file.
+  name: ""
+  # Short line under the name on the sign-in page (empty = none).
+  tagline: ""
+  # Accent colour of buttons and highlights, e.g. "#2f6fed". The text colour on it is chosen by itself.
+  accent: "#2f6fed"
+  # Text in the footer of the page and of the mails (empty = none).
+  footer-text: ""
+  # Up to 4 links in the footer (label + http(s) address), e.g. Discord, website, rules. Empty = not shown.
+  links:
+    link-1: {label: "", url: ""}
+    link-2: {label: "", url: ""}
+    link-3: {label: "", url: ""}
+    link-4: {label: "", url: ""}
 
 # Player area of the web interface: every player gets their own page - their chunk loaders, duel statistics, tickets,
 # rankings ... (whatever the installed MRtechnology plugins offer). The address is always <web.public-url>/me (can be

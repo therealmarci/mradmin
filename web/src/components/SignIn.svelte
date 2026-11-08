@@ -9,6 +9,7 @@
   import LangFlags from './LangFlags.svelte';
   import * as passkeys from '../lib/passkeys.js';
   import * as discord from '../lib/discord.js';
+  import { brand, picture } from '../lib/branding.svelte.js';
 
   // notice: why the player area refused (banned, no permission ...) - shown above the form
   let { onSignedIn, notice = '' } = $props();
@@ -141,12 +142,13 @@
 
   <main class="card box">
     <div class="brand">
-      <img src="/icon.svg" alt="" width="44" height="44" />
+      <img src={picture('logo')} alt="" height="44" />
       <div>
-        <h1>{t('signin.title')}</h1>
-        <p class="muted small">{t('signin.subtitle')}</p>
+        <h1>{brand.name}</h1>
+        <p class="muted small">{brand.tagline || t('signin.subtitle')}</p>
       </div>
     </div>
+    <h2 class="what">{t('signin.title')}</h2>
 
     {#if notice}<div class="error" role="alert">{notice}</div>{/if}
     {#if error}<div class="error" role="alert">{error}</div>{/if}
@@ -268,9 +270,19 @@
     align-items: center;
   }
 
+  .brand img {
+    max-width: 120px;
+    object-fit: contain;
+  }
+
   .brand h1 {
     margin: 0;
     font-size: 1.4rem;
+  }
+
+  .what {
+    margin: 0;
+    font-size: 1rem;
   }
 
   .brand p {

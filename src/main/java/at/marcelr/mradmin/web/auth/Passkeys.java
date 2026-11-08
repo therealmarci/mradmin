@@ -219,7 +219,7 @@ public final class Passkeys {
         String key = id + "|" + origin;
         if (!key.equals(partyKey) || party == null) {
             party = RelyingParty.builder()
-                    .identity(RelyingPartyIdentity.builder().id(id).name("MRadmin").build())
+                    .identity(RelyingPartyIdentity.builder().id(id).name(plugin.branding().name()).build())
                     .credentialRepository(new Repository())
                     .origins(Set.of(origin))
                     .build();

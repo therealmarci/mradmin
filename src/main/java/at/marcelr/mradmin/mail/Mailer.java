@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
- * Sends plain text mails over SMTP - only what MRadmin needs (answers to unban and contact requests), without a mail
+ * Sends mails over SMTP - plain text plus an HTML version (see {@link #useHtml}) - only what MRadmin needs (answers to unban and contact requests), without a mail
  * library: SSL/TLS from the start (port 465), STARTTLS (587) or plain (only for local relays), AUTH PLAIN or LOGIN.
  * Always on a virtual thread, never on the server thread.
  */
@@ -34,6 +34,13 @@ public final class Mailer {
 
     private final Supplier<Settings.MailSettings> settings;
     private final Logger log;
+    /** (subject, text) -> HTML version of the mail, or null for plain text only. */
+    private volatile java.util.function.BinaryOperator<String> html;
+
+    /** Every mail also gets an HTML version made from its text (MRadmin: the branding template). */
+    public void useHtml(java.util.function.BinaryOperator<String> html) {
+        this.html = html;
+    }
 
     public Mailer(Supplier<Settings.MailSettings> settings, Logger log) {
         this.settings = settings;
@@ -113,7 +120,7 @@ public final class Mailer {
             c.command("MAIL FROM:<" + s.from() + ">", 250);
             c.command("RCPT TO:<" + to + ">", 250, 251);
             c.command("DATA", 354);
-            c.writeRaw(message(s, to, subject, body));
+            c.writeRaw(message(s, to, subject, body, htmlOf(subject, body)));
             c.command(".", 250);
             c.command("QUIT", 221);
         } finally {
@@ -126,8 +133,25 @@ public final class Mailer {
         return at > 0 ? s.from().substring(at + 1) : "localhost";
     }
 
-    /** Headers + base64 body (UTF-8, any line length); dot-stuffing is not needed for base64. */
-    private static String message(Settings.MailSettings s, String to, String subject, String body) {
+    /** The HTML version, or null (none set, or making it failed - then the text alone goes out). */
+    private String htmlOf(String subject, String body) {
+        var renderer = html;
+        if (renderer == null) {
+            return null;
+        }
+        try {
+            return renderer.apply(subject, body);
+        } catch (RuntimeException e) {
+            log.warning("Could not make the HTML version of a mail: " + e);
+            return null;
+        }
+    }
+
+    /**
+     * Headers + base64 body (UTF-8, any line length); dot-stuffing is not needed for base64. With HTML: multipart/
+     * alternative - text first, HTML second (mail programs show the last one they can).
+     */
+    private static String message(Settings.MailSettings s, String to, String subject, String body, String html) {
         String domain = helloName(s);
         StringBuilder m = new StringBuilder();
         String from = s.fromName().isEmpty() ? s.from() : encode(s.fromName()) + " <" + s.from() + ">";
@@ -141,12 +165,28 @@ public final class Mailer {
         m.append("Message-ID: <").append(UUID.randomUUID()).append("@").append(domain).append(">\r\n");
         m.append("Auto-Submitted: auto-generated\r\n");
         m.append("MIME-Version: 1.0\r\n");
-        m.append("Content-Type: text/plain; charset=UTF-8\r\n");
-        m.append("Content-Transfer-Encoding: base64\r\n\r\n");
-        String encoded = Base64.getMimeEncoder(76, "\r\n".getBytes(StandardCharsets.US_ASCII))
-                .encodeToString(body.replace("\r\n", "\n").replace("\n", "\r\n").getBytes(StandardCharsets.UTF_8));
-        m.append(encoded).append("\r\n");
+        String text = body.replace("\r\n", "\n").replace("\n", "\r\n");
+        if (html == null) {
+            m.append("Content-Type: text/plain; charset=UTF-8\r\n");
+            m.append("Content-Transfer-Encoding: base64\r\n\r\n");
+            m.append(base64(text)).append("\r\n");
+            return m.toString();
+        }
+        String boundary = "mr-" + UUID.randomUUID();
+        m.append("Content-Type: multipart/alternative; boundary=\"").append(boundary).append("\"\r\n\r\n");
+        m.append("--").append(boundary).append("\r\n");
+        m.append("Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n");
+        m.append(base64(text)).append("\r\n");
+        m.append("--").append(boundary).append("\r\n");
+        m.append("Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n");
+        m.append(base64(html)).append("\r\n");
+        m.append("--").append(boundary).append("--\r\n");
         return m.toString();
+    }
+
+    private static String base64(String text) {
+        return Base64.getMimeEncoder(76, "\r\n".getBytes(StandardCharsets.US_ASCII))
+                .encodeToString(text.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

@@ -34,6 +34,7 @@
   import News from './pages/News.svelte';
   import PluginView from './pages/PluginView.svelte';
   import Server from './pages/Server.svelte';
+  import Appearance from './pages/Appearance.svelte';
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
@@ -184,6 +185,7 @@
     ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins' }] : []),
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console' }] : []),
+    ...(may.appearance ? [{ id: 'appearance', label: t('server.tab.appearance'), path: '/admin/server/appearance' }] : []),
   ]);
   const adminNav = $derived(me ? [
     { path: '/admin', area: 'overview', label: t('nav.home'), icon: 'home' },
@@ -302,6 +304,8 @@
             <Health />
           {:else if serverTab === 'maintenance' && may.maintenance}
             <Maintenance {me} />
+          {:else if serverTab === 'appearance' && may.appearance}
+            <Appearance />
           {:else if serverTab === 'plugins' && sub[1] && may.versions}
             {#key sub[1]}<PluginView name={sub[1]} tab={sub[2] ?? null} />{/key}
           {:else if serverTab === 'control'}

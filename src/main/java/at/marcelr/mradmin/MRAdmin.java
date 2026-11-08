@@ -123,6 +123,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private at.marcelr.mradmin.map.MapService map;
     private Storage storage;
     private WebServer web;
+    private final at.marcelr.mradmin.branding.Branding branding = new at.marcelr.mradmin.branding.Branding(this);
     private HealthMonitor health;
     private StaffChat staffChat;
     private MenuListener menuListener;
@@ -161,6 +162,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PublicRoutes.register(web);
         at.marcelr.mradmin.web.ItemRoutes.register(web);
         at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        at.marcelr.mradmin.web.BrandingRoutes.register(web);
+        // Every mail also as HTML in the look of the server.
+        web.requests().mailer().useHtml(branding::mail);
         web.playerSessions().load();
         webAuth.takeOverOldSessions();
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
@@ -471,6 +475,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         // Push notifications go to devices, not to players in the game - server language.
         web.push().notify(kind, messages().server(() -> messages().plain("push-" + text + "-title", placeholders)),
                 messages().server(() -> messages().plain("push-" + text + "-body", placeholders)), url, who);
+    }
+
+    /** The look of the web interface (name, logo, colour) - also for mails, 2FA and passkeys. */
+    public at.marcelr.mradmin.branding.Branding branding() {
+        return branding;
     }
 
     public WebServer web() {

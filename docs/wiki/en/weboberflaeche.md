@@ -19,7 +19,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Overview** (`/admin`) | dashboard |
 | **Community** (`/admin/community/…`) | players · tickets · punishments · posts · announcements |
 | **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
-| **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console (MRadmin's config: plugins → MRadmin) |
+| **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console · appearance (MRadmin's config: plugins → MRadmin) |
 
 Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
 
@@ -54,6 +54,15 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 - The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
 - Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
 - **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
+
+## Appearance (Server, `mradmin.appearance`)
+The web interface carries the name and colours of your server - players never see "MRadmin".
+- **Name** and **tagline** (sign-in page), **accent colour** (buttons, highlights; the text colour on it is chosen by the page), **text and up to 4 links** in the footer (e.g. Discord, website, rules).
+- **Logo** (sign-in page, mails) and **browser icon** (tab, bar, "add to home screen"): PNG, WebP or SVG, at most 512 KB. Without an own icon the logo is used. SVGs with scripts or embedded content are refused.
+- On the right a **preview** of the sign-in and start page, light and dark. After saving everything applies to everyone right away.
+- The name shows in the browser tab, on the sign-in page, in the bar, in mails, in the 2FA app and for passkeys.
+- Saved in `config.yml` (section `branding`, also editable in the file), the pictures under `plugins/MRadmin/branding/`.
+- **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
 
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.

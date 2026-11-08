@@ -101,3 +101,5 @@ mradmin.map.admin:
   de: "`/mradmin map [setup]` - Zustand der Karte und von squaremap, squaremap neu einrichten; im Adminportal die Schalter Karte und Spieler auf der Karte"
 mradmin.server.setup:
   de: "`/mradmin starter setup` - Start-Dateien (`mrserver.sh`, `mrserver.cmd`) in den Server-Ordner schreiben"
+mradmin.appearance:
+  de: "Weboberfläche: Aussehen ändern - Name, Logo, Browser-Symbol, Akzentfarbe und Fußzeile (Server → Aussehen)"

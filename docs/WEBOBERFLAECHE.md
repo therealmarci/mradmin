@@ -19,7 +19,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Übersicht** (`/admin`) | Dashboard |
 | **Community** (`/admin/community/…`) | Spieler · Tickets · Strafen · Beiträge · Ankündigungen |
 | **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
-| **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole (MRadmins Konfiguration: Plugins → MRadmin) |
+| **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole · Aussehen (MRadmins Konfiguration: Plugins → MRadmin) |
 
 Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
 
@@ -54,6 +54,15 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 - Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über `web.roles` und `web.players`. Wer `mradmin.web` verliert, sieht die Verwaltung sofort nicht mehr (bleibt aber als Spieler angemeldet).
 - Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen auch im Discord-Log (`web-login`).
 - **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks (`/mradmin web setup`, `invite`) gibt es nicht mehr.
+
+## Aussehen (Server, `mradmin.appearance`)
+Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler taucht „MRadmin“ nirgends auf.
+- **Name** und **Spruch** (Anmeldeseite), **Akzentfarbe** (Knöpfe, Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst), **Text und bis zu 4 Links** in der Fußzeile (z.B. Discord, Website, Regeln).
+- **Logo** (Anmeldeseite, Mails) und **Browser-Symbol** (Tab, Leiste, „Zum Startbildschirm hinzufügen“): PNG, WebP oder SVG, höchstens 512 KB. Ohne eigenes Symbol gilt das Logo. SVGs mit Skripten oder eingebetteten Inhalten werden abgelehnt.
+- Rechts eine **Vorschau** der Anmelde- und Startseite, hell und dunkel. Nach dem Speichern gilt alles sofort für alle.
+- Der Name erscheint im Browser-Tab, auf der Anmeldeseite, in der Leiste, in den Mails, in der 2FA-App und bei Passkeys.
+- Gespeichert wird in der `config.yml` (Abschnitt `branding`, auch per Datei änderbar), die Bilder unter `plugins/MRadmin/branding/`.
+- **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.

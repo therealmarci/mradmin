@@ -817,6 +817,9 @@ mail-test-failed: "<prefix><red>Testmail fehlgeschlagen: <white><error>"
 # Mails an Antragsteller (reiner Text, kein MiniMessage). Platzhalter: <name> <id> <subject> <answer> <link> <server> <time>
 mail-server-name: "Minecraft-Server"
 mail-no-text: "(ohne weitere Nachricht)"
+mail-button: "Link öffnen"
+mail-imprint: "Impressum"
+mail-privacy: "Datenschutz"
 mail-email-confirm-subject: "E-Mail-Adresse bestätigen - <server>"
 mail-email-confirm-body: |-
   Hallo <name>,
