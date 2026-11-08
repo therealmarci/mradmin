@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [BET-1.5.0-bu001] - 2026-11-08
+
 ### Neu
 - **Kanäle Stable, Beta und Dev pro Plugin:** Auf **Server → Plugins** hat jedes Plugin einen Kanal - Stable (nur stabile Versionen), Beta (auch Betas) oder Dev (jeder Entwicklungsstand, nur für Testserver). Ohne eigene Wahl gilt der neue Standard-Kanal **`versions.channel`** (`stable`/`beta`, ersetzt `versions.include-prereleases` - war es an, steht der Kanal nach dem Update auf `beta`; `config-version` 50). Stable ist ausgegraut, solange es noch keine stabile Version gibt (0.x-Plugins), Beta ist immer wählbar (bekommt auch Stables), Zurück auf Stable stuft nie zurück. **Dev** erscheint nur mit gültigem Freigabetoken **`versions.dev-token`** (vom Entwickler; ein falscher Token wird erkannt und gemeldet): MRadmin lädt dann die verschlüsselten Dev-Builds, entschlüsselt sie, prüft die Prüfsumme und legt sie wie ein Update ab; Plugins mit Dev-Build sind mit „Dev <Commit>“ markiert. Dev-Builds lädt `versions.auto-download` nur bei `all` von selbst.
 - **Installer mit Beta-Frage:** Die Erstinstallation von der Website fragt, ob du Beta-Versionen willst. Bei Ja kommt die neueste MRadmin-Beta (falls sie neuer als die stabile Version ist) und `versions.channel` steht von Anfang an auf `beta`. Für Testserver gibt es Dev-Builds, nur mit Freigabetoken (`--dev` bzw. `MR_DEV_TOKEN`): MRadmin kommt dann als Dev-Build und folgt dem Kanal Dev, der Token steht danach in `versions.dev-token`. Von Hand: `mrserver setup --channel stable|beta|dev` (nur auf einem neuen Server; Dev mit dem Token in der Umgebungsvariable `MRSERVER_DEV_TOKEN`).
