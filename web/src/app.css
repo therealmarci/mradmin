@@ -59,6 +59,12 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Keep the room of the scrollbar always: otherwise short pages (no scrollbar) sit a few pixels further right than
+   long ones, and switching tabs makes the content jump. */
+html {
+  scrollbar-gutter: stable;
+}
+
 h1,
 h2,
 h3 {
