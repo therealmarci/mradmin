@@ -36,7 +36,7 @@
       || (e.reason ?? '').toLowerCase().includes(search.trim().toLowerCase()))));
   const counts = $derived(Object.fromEntries(TYPES.map((k) => [k, (data?.entries ?? []).filter((e) => e.type === k && e.active).length])));
 
-  function state(e) {
+  function stateOf(e) {
     if (e.active) return 'active';
     if (e.type === 'kick') return null;
     return e.end > 0 && e.end <= Date.now() ? 'expired' : 'lifted';
@@ -106,7 +106,7 @@
     {#if shown.length}
       <div class="list">
         {#each shown as e (e.id)}
-          {@const st = state(e)}
+          {@const st = stateOf(e)}
           <div class="row card t-{e.type}" class:off={!e.active}>
             <button class="who" onclick={() => go(`/admin/community/players/${e.uuid}`)}>
               <img src={head(e.uuid)} alt="" width="32" height="32" />
