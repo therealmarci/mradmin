@@ -9,6 +9,17 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Geplante Neustarts 24 h aussetzen:** Auf **Server → Übersicht** setzt „Automatische Neustarts 24 h aussetzen“ alle geplanten Neustarts (`server.restart-times`) für einen Tag aus, ein laufender geplanter Countdown wird dabei abgebrochen; „Wieder einschalten“ hebt es vorher auf. Ein laufender geplanter Neustart lässt sich auch einzeln überspringen. Bleibt über Neustarts erhalten, steht im Protokoll und im Team-Discord (neue Ereignisse `server-schedule-paused` / `server-schedule-resumed`). Recht: `mradmin.server.restart`.
+- **Notfall-Neustart:** Normale Neustarts und Stopps im Browser haben jetzt 15, 30 und 60 Minuten Vorlauf (`versions.restart-delays`). Kürzere Zeiten stehen im aufklappbaren roten Bereich **Notfall** (`versions.emergency-delays`, Standard 5 min, 1 min, sofort) und gehen nur mit Grund. `config-version` 51.
+- **Neustarts für andere Plugins (Modul-API 14):** `MRadminService#nextRestart()` liefert den nächsten Neustart oder Stopp (Zeitpunkt, Neustart/Stopp, ob der Countdown schon läuft, ob geplant, Grund) - damit kann z.B. MRpvp kurz vor einem Neustart keine neuen Duelle mehr starten.
+
+### Behoben & geändert
+- **Countdown 15 Minuten:** Geplante Neustarts und `mrserver restart|stop` ohne Zeit werden jetzt 15 Minuten vorher angekündigt (`server.countdown`, vorher 5 Minuten - nur der alte Standard wird ersetzt).
+- **Krumme Countdown-Zeiten:** Geplante Neustarts kündigten sich mit Zeiten wie „5m 9s“ an, weil MRadmin nur alle 10 Sekunden nachsah und bis zu 15 Sekunden zu früh startete. Jetzt wird jede Sekunde geprüft und der Countdown beginnt genau mit dem eingestellten Wert.
+- **Ankündigungen in Duellen:** Spieler, die gerade in einer Runde eines anderen Plugins sind (z.B. ein MRpvp-Duell), bekommen Ankündigungen nicht mehr als Titel über den ganzen Bildschirm, sondern als Zeile über der Hotbar und im Chat, ohne Ton.
+- **Server-Übersicht aufgeräumt:** Die Server-Kachel zeigt nur noch vier Werte nebeneinander - läuft seit, Paper-Version, Starter, nächster Neustart - mit Farbpunkt; Einzelheiten (letzte Prüfung, Paper-Update-Modus, Hinweise zum Starter) beim Drüberfahren.
+
 ## [BET-1.5.0-bu001] - 2026-11-08
 
 ### Neu

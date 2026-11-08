@@ -66,7 +66,7 @@ public record ServerSettings(String memoryMin, String memoryMax, String javaFlag
                 times.add(time);
             }
         }
-        long countdown = DurationUtil.parse(c.getString("server.countdown", "5m"));
+        long countdown = DurationUtil.parse(c.getString("server.countdown", "15m"));
         if (countdown < 0 || countdown > 3_600_000L) {
             log.warning("server.countdown must be a duration up to 1h (e.g. 5m), using 5m.");
             countdown = 300_000L;

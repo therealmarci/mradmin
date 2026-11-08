@@ -43,10 +43,12 @@ public record Settings(
      *
      * @param restartMethod "none" (no restart button - a server cannot start itself again), "stop" (a start script,
      *                      watchdog or panel brings the server back) or "script" (restart-script from spigot.yml)
-     * @param restartDelays countdown choices in ms (0 = now)
+     * @param restartDelays   countdown choices in ms of a normal restart (0 = now)
+     * @param emergencyDelays short countdown choices for an emergency (web: red area, reason required)
      */
     public record VersionsSettings(boolean enabled, int checkHours, at.marcelr.mradmin.versions.ReleasePicker.Auto autoDownload,
-                                   String channel, String devToken, String restartMethod, List<Long> restartDelays) {
+                                   String channel, String devToken, String restartMethod, List<Long> restartDelays,
+                                   List<Long> emergencyDelays) {
 
         /** Whether the default channel offers betas. */
         public boolean includePrereleases() {
@@ -393,22 +395,26 @@ public record Settings(
             log.warning("versions.restart-method '" + method + "' is unknown (none, stop, script), using none.");
             method = "none";
         }
+        List<Long> delays = delays(c, "versions.restart-delays", List.of(900_000L, 1_800_000L, 3_600_000L), log);
+        List<Long> emergency = delays(c, "versions.emergency-delays", List.of(300_000L, 60_000L, 0L), log);
+        return new VersionsSettings(c.getBoolean("versions.enabled", true),
+                Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
+                channel, c.getString("versions.dev-token", "").trim(), method, delays, emergency);
+    }
+
+    /** Countdown choices of the restart button in ms (0 = now), up to 1h; empty or all invalid = the defaults. */
+    private static List<Long> delays(FileConfiguration c, String key, List<Long> defaults, Logger log) {
         List<Long> delays = new ArrayList<>();
-        for (String raw : c.getStringList("versions.restart-delays")) {
+        for (String raw : c.getStringList(key)) {
             String value = raw.trim().toLowerCase(Locale.ROOT);
             long ms = value.equals("now") || value.equals("0") ? 0 : DurationUtil.parse(value);
             if (ms < 0 || ms > 3_600_000L) {
-                log.warning("versions.restart-delays: '" + raw + "' is not a duration up to 1h (e.g. 5m, now), skipped.");
+                log.warning(key + ": '" + raw + "' is not a duration up to 1h (e.g. 5m, now), skipped.");
                 continue;
             }
             delays.add(ms);
         }
-        if (delays.isEmpty()) {
-            delays = List.of(300_000L, 60_000L, 0L);
-        }
-        return new VersionsSettings(c.getBoolean("versions.enabled", true),
-                Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
-                channel, c.getString("versions.dev-token", "").trim(), method, List.copyOf(delays));
+        return delays.isEmpty() ? defaults : List.copyOf(delays);
     }
 
     private static MailSettings mail(FileConfiguration c, Logger log) {

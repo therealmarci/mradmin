@@ -35,9 +35,10 @@ public interface MRadminService {
      * selections and symbols there - {@link SelfMapLayer#group}, {@link SelfMapLayer.Action#choice},
      * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
      * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
-     * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}).
+     * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}; 14: restarts - {@link #nextRestart()},
+     * {@link RestartInfo}).
      */
-    int API_VERSION = 13;
+    int API_VERSION = 14;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -150,5 +151,16 @@ public interface MRadminService {
      * @param color colour of the event (0xRRGGBB), e.g. the Discord colour
      */
     default void log(String moduleId, String event, String text, int color) {
+    }
+
+    // ------------------------------------------------------------------ restarts (since API 14)
+
+    /**
+     * The next restart or stop: a running countdown, else the next planned restart; null if none is known (or MRadmin
+     * is older than API 14). Cheap - may be called every tick. Plugins use it to wind down in time, e.g. no new duels
+     * shortly before a restart.
+     */
+    default @Nullable RestartInfo nextRestart() {
+        return null;
     }
 }

@@ -183,23 +183,35 @@ public final class Announcer {
             }
             reached++;
             String lang = messages.languageOf(player);
+            boolean busy = busy(player);
             messages.run(player, () -> {
                 Component title = templatePart(t, "title", lang, resolvers);
                 Component subtitle = templatePart(t, "subtitle", lang, resolvers);
+                Component chat = templatePart(t, "chat", lang, resolvers);
+                Component actionbar = templatePart(t, "actionbar", lang, resolvers);
+                if (busy) {
+                    // In a round of another plugin (e.g. a duel): no title across the screen, only a line.
+                    Component line = actionbar != null ? actionbar : subtitle != null ? subtitle : title;
+                    if (line != null) {
+                        player.sendActionBar(line);
+                    }
+                    if (chat != null) {
+                        player.sendMessage(chat);
+                    }
+                    return;
+                }
                 if (title != null || subtitle != null) {
                     player.showTitle(Title.title(title == null ? Component.empty() : title,
                             subtitle == null ? Component.empty() : subtitle, times));
                 }
-                Component chat = templatePart(t, "chat", lang, resolvers);
                 if (chat != null) {
                     player.sendMessage(chat);
                 }
-                Component actionbar = templatePart(t, "actionbar", lang, resolvers);
                 if (actionbar != null) {
                     player.sendActionBar(actionbar);
                 }
             });
-            if (sound != null) {
+            if (sound != null && !busy) {
                 player.playSound(sound, Sound.Emitter.self());
             }
         }
@@ -233,6 +245,11 @@ public final class Announcer {
         }
         Key key = Settings.sound(t.sound(), "sound", plugin.getLogger());
         return key == null ? null : Sound.sound(key, Sound.Source.MASTER, t.volume(), t.pitch());
+    }
+
+    /** Whether a player is in a round of another plugin (module API {@code busy}, e.g. an MRpvp duel). */
+    private boolean busy(Player player) {
+        return plugin.modules() != null && plugin.modules().busy(player) != null;
     }
 
     /** Where a player stands for the audience of a template: 0 player, 1 bot, 2 support, 3 staff, 4 admin. */
@@ -282,14 +299,24 @@ public final class Announcer {
                 Duration.ofMillis(s.fadeIn() * 50L), Duration.ofMillis(s.stay() * 50L), Duration.ofMillis(s.fadeOut() * 50L));
         Sound sound = s.sound() == null ? null : Sound.sound(s.sound(), Sound.Source.MASTER, s.volume(), s.pitch());
         for (Player player : Bukkit.getOnlinePlayers()) {
+            boolean busy = busy(player);
             plugin.messages().run(player, () -> {
                 Shown shown = build.get();
+                boolean hasChat = shown.chat() != null && !shown.chat().equals(Component.empty());
+                if (busy) {
+                    // In a round of another plugin (e.g. a duel): no title across the screen, only a line + the chat.
+                    player.sendActionBar(shown.subtitle().equals(Component.empty()) ? shown.title() : shown.subtitle());
+                    if (hasChat) {
+                        player.sendMessage(shown.chat());
+                    }
+                    return;
+                }
                 player.showTitle(Title.title(shown.title(), shown.subtitle(), times));
-                if (s.chat() && shown.chat() != null && !shown.chat().equals(Component.empty())) {
+                if (s.chat() && hasChat) {
                     player.sendMessage(shown.chat());
                 }
             });
-            if (sound != null) {
+            if (sound != null && !busy) {
                 player.playSound(sound, Sound.Emitter.self());
             }
         }

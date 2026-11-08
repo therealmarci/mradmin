@@ -10,7 +10,8 @@ Der Starter ist **freiwillig**. Ohne ihn läuft MRadmin wie bisher.
 ## Was er kann
 - **Neustart und Stopp mit Countdown** aus dem Browser (Seite **Server**, Reiter Übersicht), im Spiel (`/mradmin restart`, `/mradmin stop`) oder auf dem Rechner (`mrserver restart`, `mrserver stop`). Angekündigt wird im Spiel wie bei `/mradmin announce restart` (Vorlagen `restart` und `stop` in der Sprachdatei), im Community-Discord nur mit `server.discord-announce: true`.
 - **Mit Grund:** Jeder Neustart und Stopp steht mit Grund in der Konsole, im [Protokoll](weboberflaeche.md) und im Team-Discord. Eigenen Grund einfach hinten anhängen (`/mradmin restart 5m Hardware-Tausch`, `mrserver stop 10m Umzug`) bzw. im Browser ins Feld **Grund** schreiben. Ohne eigenen Grund nennt MRadmin ihn selbst: „Geplanter Neustart (05:00)“, wartende Updates (z.B. „Updates: MRchunks 1.2.2, Paper 244“) oder „kein Grund angegeben“.
-- **Tägliche Neustarts** zu festen Uhrzeiten (`server.restart-times`), der Countdown beginnt vorher.
+- **Tägliche Neustarts** zu festen Uhrzeiten (`server.restart-times`). Der Countdown beginnt genau `server.countdown` vorher (Standard 15 Minuten). Auf der Seite **Server** kannst du sie **24 Stunden aussetzen** (z.B. während eines Events) oder einen laufenden geplanten Neustart **überspringen**.
+- **Genug Vorlauf für die Spieler:** Im Browser stehen für Neustart und Stopp 15, 30 und 60 Minuten zur Wahl (`versions.restart-delays`). Kürzere Zeiten gibt es nur im aufklappbaren roten Bereich **Notfall** (`versions.emergency-delays`) und nur mit Grund. Spieler, die gerade ein Duell spielen, bekommen den Countdown als Zeile über der Hotbar statt als Titel über den ganzen Bildschirm.
 - **Abstürze:** Fällt der Server aus, startet der Starter ihn nach 10 Sekunden wieder. Nach `server.crashes.max` Abstürzen in `server.crashes.window-minutes` Minuten (Standard 3 in 15) gibt er auf - dann stimmt etwas Grundsätzliches nicht und der Server bleibt aus, bis du nachsiehst.
 - **Hänger:** Tickt der Server `server.hang-seconds` Sekunden lang nicht (Standard 180), beendet der Starter ihn und startet ihn neu.
 - **Paper-Updates** (`server.paper-update: auto`): vor jedem Start der neueste **stabile** Build deiner Minecraft-Version aus dem offiziellen PaperMC-Download, nur mit passender Prüfsumme. **Eine neue Minecraft-Version (z.B. 26.3 → 26.4) spielt er nie ein.** Startet ein neuer Build nicht, nimmt der Starter von selbst wieder den alten und überspringt den fehlerhaften. Ob Paper aktuell ist, prüft MRadmin alle 15 Minuten (auch ohne Starter) und zeigt es auf der Seite **Server**.
@@ -76,7 +77,7 @@ Im Serverordner `./mrserver.sh <befehl>` (Linux) bzw. `mrserver <befehl>` (Windo
 | `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …] [--channel stable\|beta\|dev]` | Ordner einrichten, fehlendes Paper herunterladen; Arbeitsspeicher, Weboberfläche und Kanal übernimmt MRadmin beim ersten Start in die `config.yml`. `--channel` gilt nur für einen neuen Server (Dev braucht den Token in `MRSERVER_DEV_TOKEN`) |
 | `install` · `uninstall` | Autostart an · aus (ein laufender Server läuft weiter) |
 | `start` · `run` | im Hintergrund starten · im aktuellen Terminal starten |
-| `stop [zeit\|now]` · `restart [zeit\|now]` | mit Countdown stoppen bzw. neu starten (ohne Zeit: `server.countdown`, Standard 5 Minuten) |
+| `stop [zeit\|now]` · `restart [zeit\|now]` | mit Countdown stoppen bzw. neu starten (ohne Zeit: `server.countdown`, Standard 15 Minuten) |
 | `cancel` | Countdown abbrechen |
 | `status` | läuft der Server? Paper-Build, Modus |
 | `console <befehl>` | Befehl an die Server-Konsole schicken |
@@ -93,7 +94,7 @@ Zeiten wie `30s`, `5m`, `1h`, eine Zahl (Sekunden) oder `now`. Antwortet MRadmin
 | `server.java-flags` | leer | zusätzliche Java-Optionen zum Abstimmen (z.B. Aikar-Flags) |
 | `server.paper-update` | `auto` | `auto` = bei jedem Start, `notify` = nur anzeigen, `off` |
 | `server.restart-times` | `[]` | tägliche Neustarts, z.B. `["05:00"]` (Zeitzone `general.timezone`) |
-| `server.countdown` | `5m` | Countdown der geplanten Neustarts und von `mrserver stop/restart` ohne Zeit |
+| `server.countdown` | `15m` | Countdown der geplanten Neustarts und von `mrserver stop/restart` ohne Zeit |
 | `server.plain-stop` | `stop` | was ein einfaches `/stop` macht: `stop` = Server bleibt aus, `restart` = er kommt wieder |
 | `server.discord-announce` | `false` | Countdown von Neustart/Stopp auch im Community-Discord (das Team-Log bekommt ihn immer) |
 | `server.crashes.max` · `window-minutes` | `3` · `15` | wann der Starter aufgibt |

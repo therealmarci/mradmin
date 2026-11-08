@@ -89,10 +89,26 @@
   const r = $derived(data?.restart);
   const left = $derived(r && r.endsAt > 0 ? Math.max(0, r.endsAt - now) : 0);
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
-  const restart = (d) => act('/restart', { delay: String(d), kind: 'restart', reason: reason.trim() }, t('versions.restartStarted'),
-    t('versions.restartConfirm', { time: delayText(d) }));
-  const stop = (d) => act('/restart', { delay: String(d), kind: 'stop', reason: reason.trim() }, t('server.stopStarted'),
-    t(r.starter.active ? 'server.stopConfirm' : 'server.stopConfirmNoStarter', { time: delayText(d) }));
+  // emergency = the short choices (reason required, the server checks it too)
+  const restart = (d, emergency = false) => act('/restart', { delay: String(d), kind: 'restart', reason: reason.trim() },
+    t('versions.restartStarted'), t(emergency ? 'server.emergencyConfirm' : 'versions.restartConfirm', { time: delayText(d) }));
+  const stop = (d, emergency = false) => act('/restart', { delay: String(d), kind: 'stop', reason: reason.trim() }, t('server.stopStarted'),
+    t(emergency ? 'server.emergencyStopConfirm' : r.starter.active ? 'server.stopConfirm' : 'server.stopConfirmNoStarter', { time: delayText(d) }));
+  const when = (ms) => new Date(ms).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+  // The values of the server card: one word each, the rest in the tooltip.
+  const pausedUntil = $derived(r?.schedule?.pausedUntil > now ? r.schedule.pausedUntil : 0);
+  const paperTone = $derived(!r ? 'off' : r.paper.latest ? 'warn' : r.paper.newest >= 0 ? '' : 'off');
+  const paperTip = $derived(!r ? '' : [
+    r.paper.latest ? t('server.paperLatest', { build: r.paper.latest })
+      : r.paper.newest >= 0 ? t('server.paperCurrent') : t(r.paper.failed ? 'server.paperFailed' : 'server.paperChecking'),
+    r.paper.latest ? (r.starter.active ? t('server.paperMode.' + r.paper.update) : t('server.paperManual')) : '',
+    r.paper.checkedAt > 0 ? t('server.paperChecked', { time: ago(r.paper.checkedAt) }) : '',
+  ].filter(Boolean).join(' · '));
+  const starterTone = $derived(!r ? 'off' : r.starter.active ? '' : r.starter.ready ? 'warn' : 'off');
+  const starterText = $derived(!r ? '' : t(r.starter.active ? 'server.starterOn' : r.starter.ready ? 'server.starterReady' : 'server.starterOff'));
+  const starterTip = $derived(!r ? '' : r.starter.active ? (r.starter.mode ?? '')
+    : t(r.starter.ready ? 'config.status.starter-ready' : 'server.starterHint'));
 
   const installed = $derived(data ? data.plugins.filter((p) => p.installed) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
@@ -132,57 +148,46 @@
     {#if r}
       <!-- The server: state on the left, restart / stop on the right (or the running countdown) -->
       <section class="card server" class:counting={r.endsAt > 0}>
-        <div class="facts">
-          <div class="state">
-            <span class="dot" class:bad={r.endsAt > 0}></span>
-            <strong>{t('server.running')}</strong>
-            <span class="muted">{t('server.since', { time: uptime })}</span>
+        <!-- Four values in a row; details only in the tooltip -->
+        <div class="stats">
+          <div class="stat" title={t('server.since', { time: uptime })}>
+            <span class="s-label">{t('server.uptime')}</span>
+            <span class="s-value"><span class="dot" class:bad={r.endsAt > 0}></span>{uptime}</span>
           </div>
-          <dl>
-            <dt>{t('server.starter')}</dt>
-            <dd>
-              {#if r.starter.active}
-                <span class="chip good">{t('server.starterOn')}</span>
-                {#if r.starter.mode}<span class="muted">{r.starter.mode}</span>{/if}
-              {:else}
-                <span class="chip" class:warn={r.starter.ready}>{t(r.starter.ready ? 'server.starterReady' : 'server.starterOff')}</span>
-              {/if}
-            </dd>
-            <dt>{t('server.paper')}</dt>
-            <dd>
-              <span>{r.paper.minecraft} · {t('server.paperBuild', { build: r.paper.build })}</span>
-              {#if r.paper.latest}
-                <span class="chip warn">{t('server.paperLatest', { build: r.paper.latest })}</span>
-              {:else if r.paper.newest >= 0}
-                <span class="chip good">{t('server.paperCurrent')}</span>
-              {:else if r.paper.failed}
-                <span class="muted small">{t('server.paperFailed')}</span>
-              {:else}
-                <span class="muted small">{t('server.paperChecking')}</span>
-              {/if}
-              {#if r.paper.checkedAt > 0}
-                <span class="sub muted small">
-                  {t('server.paperChecked', { time: ago(r.paper.checkedAt) })}{#if r.paper.latest}{' · '}{r.starter.active
-                    ? t('server.paperMode.' + r.paper.update) : t('server.paperManual')}{/if}
-                </span>
-              {/if}
-            </dd>
-            <dt>{t('server.next')}</dt>
-            <dd>{nextText || t('server.nextNone')}</dd>
-          </dl>
-          {#if !r.starter.active}<p class="muted small hint">{t(r.starter.ready ? 'config.status.starter-ready' : 'server.starterHint')}</p>{/if}
+          <div class="stat" title={paperTip}>
+            <span class="s-label">{t('server.paper')}</span>
+            <span class="s-value"><span class="dot {paperTone}"></span>{r.paper.minecraft} · #{r.paper.build}</span>
+            {#if r.paper.latest}<span class="s-sub warn">{t('server.paperLatestShort', { build: r.paper.latest })}</span>{/if}
+          </div>
+          <div class="stat" title={starterTip}>
+            <span class="s-label">{t('server.starter')}</span>
+            <span class="s-value"><span class="dot {starterTone}"></span>{starterText}</span>
+          </div>
+          <div class="stat" title={pausedUntil ? t('server.pausedBy', { name: r.schedule.pausedBy, time: when(pausedUntil) }) : ''}>
+            <span class="s-label">{t('server.next')}</span>
+            {#if pausedUntil}
+              <span class="s-value"><span class="dot warn"></span>{t('server.nextPaused')}</span>
+              <span class="s-sub">{t('server.pausedUntil', { time: when(pausedUntil) })}</span>
+            {:else}
+              <span class="s-value"><span class="dot" class:info={!!nextText} class:off={!nextText}></span>{nextText || t('server.nextNone')}</span>
+            {/if}
+          </div>
         </div>
 
         <div class="control">
           {#if r.endsAt > 0}
-            <span class="status">{t('server.countdown.' + r.kind)}</span>
-            <span class="clock mono">{left > 0 ? clock(left) : t('versions.restartNow')}</span>
-            <span class="muted small">{t('versions.restartBy', { name: r.by })}</span>
-            {#if r.reason}<span class="reason small">{t('server.reasonShown', { reason: r.reason })}</span>{/if}
+            <div class="countdown">
+              <span class="status">{t('server.countdown.' + r.kind)}</span>
+              <span class="clock mono">{left > 0 ? clock(left) : t('versions.restartNow')}</span>
+              <span class="muted small">{r.planned ? t('server.byPlan') : t('versions.restartBy', { name: r.by })}</span>
+              {#if r.reason}<span class="reason small">{t('server.reasonShown', { reason: r.reason })}</span>{/if}
+            </div>
             {#if data.may.stop}
-              <button class="ghost" disabled={busy} onclick={() => act('/restart/cancel', {}, t('server.cancelled'))}>
-                {t('versions.restartCancel')}
-              </button>
+              <div class="actions">
+                <button class="ghost" disabled={busy} onclick={() => act('/restart/cancel', {}, t('server.cancelled'))}>
+                  {t(r.planned ? 'server.skipPlanned' : 'versions.restartCancel')}
+                </button>
+              </div>
             {/if}
           {:else if data.may.stop}
             <label class="row">
@@ -206,7 +211,46 @@
                 {/each}
               </div>
             </div>
+            {#if r.emergencyDelays.length}
+              <details class="emergency">
+                <summary>{t('server.emergency')}</summary>
+                <p class="small">{t(reason.trim() ? 'server.emergencyHint' : 'server.emergencyNeedsReason')}</p>
+                <div class="row">
+                  <span class="label">{t('server.restart')}</span>
+                  <div class="choices">
+                    {#each r.emergencyDelays as d (d)}
+                      <button class="danger" disabled={busy || !data.may.restart || !reason.trim()}
+                        onclick={() => restart(d, true)}>{delayText(d)}</button>
+                    {/each}
+                  </div>
+                </div>
+                <div class="row">
+                  <span class="label">{t('server.stop')}</span>
+                  <div class="choices">
+                    {#each r.emergencyDelays as d (d)}
+                      <button class="danger" disabled={busy || !reason.trim()} onclick={() => stop(d, true)}>{delayText(d)}</button>
+                    {/each}
+                  </div>
+                </div>
+              </details>
+            {/if}
             {#if !data.may.restart}<p class="muted small">{t('server.restartOff')}</p>{/if}
+          {/if}
+
+          {#if data.may.stop && r.schedule.times > 0}
+            <div class="schedule">
+              {#if pausedUntil}
+                <span class="small">{t('server.paused', { time: when(pausedUntil) })}</span>
+                <button class="ghost" disabled={busy} onclick={() => act('/restart/schedule', { pause: 'false' }, t('server.resumeDone'))}>
+                  {t('server.resume')}
+                </button>
+              {:else}
+                <button class="ghost" disabled={busy}
+                  onclick={() => act('/restart/schedule', { pause: 'true' }, t('server.pauseDone'), t('server.pauseConfirm'))}>
+                  {t('server.pause')}
+                </button>
+              {/if}
+            </div>
           {/if}
         </div>
       </section>
@@ -342,8 +386,8 @@
   /* The server card */
   .server {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 20px 32px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
     padding: 20px 24px;
     border-left: 5px solid var(--good);
   }
@@ -352,85 +396,131 @@
     border-left-color: var(--bad);
   }
 
-  .state {
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  .s-label {
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .s-value {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 1.1rem;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1.02rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .s-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .s-sub.warn {
+    color: var(--warn);
   }
 
   .dot {
-    width: 11px;
-    height: 11px;
+    width: 9px;
+    height: 9px;
+    flex: none;
     border-radius: 50%;
     background: var(--good);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent);
   }
 
   .dot.bad {
     background: var(--bad);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 22%, transparent);
   }
 
-  dl {
+  .dot.warn {
+    background: var(--warn);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent);
+  }
+
+  .dot.info {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .dot.off {
+    background: var(--muted);
+    box-shadow: none;
+  }
+
+  .countdown {
     display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 8px 16px;
-    margin: 14px 0 0;
+    gap: 6px;
   }
 
-  dt {
-    color: var(--muted);
-    font-size: 0.88rem;
-  }
-
-  dd {
+  .actions,
+  .schedule {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 10px;
+    gap: 8px 12px;
+  }
+
+  .schedule {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .emergency {
+    border: 1px solid color-mix(in srgb, var(--bad) 40%, var(--border));
+    border-radius: 12px;
+    padding: 8px 12px;
+    background: color-mix(in srgb, var(--bad) 6%, transparent);
+  }
+
+  .emergency summary {
+    cursor: pointer;
+    color: var(--bad);
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+
+  .emergency[open] {
+    display: grid;
+    gap: 10px;
+  }
+
+  .emergency p {
     margin: 0;
+    color: var(--bad);
   }
 
-  .chip {
-    display: inline-flex;
-    padding: 1px 9px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-  }
-
-  .chip.good {
-    color: var(--good);
-    border-color: color-mix(in srgb, var(--good) 40%, transparent);
-    background: color-mix(in srgb, var(--good) 12%, transparent);
-  }
-
-  .chip.warn {
-    color: var(--warn);
-    border-color: color-mix(in srgb, var(--warn) 40%, transparent);
-    background: color-mix(in srgb, var(--warn) 12%, transparent);
-  }
-
-  .sub {
-    flex-basis: 100%;
-  }
-
-  .chip.info {
-    color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-
-  .hint {
-    margin: 12px 0 0;
+  .choices .danger {
+    justify-content: flex-start;
+    background: var(--bad);
+    color: #fff;
+    border: 0;
   }
 
   .control {
     display: grid;
     align-content: center;
     gap: 12px;
+    max-width: 760px;
   }
 
   .row {
@@ -616,6 +706,10 @@
   }
 
   @media (max-width: 760px) {
+    .stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .server,
     .tiles {
       grid-template-columns: minmax(0, 1fr);

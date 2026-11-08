@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 50
+config-version: 51
 
 
 # ------------------------------------------------------------------------------
@@ -373,8 +373,11 @@ versions:
   # Only switch it on if you know the server comes back - otherwise the button just stops it.
   # Not needed with the starter (section server below): then the button always works.
   restart-method: none
-  # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
-  restart-delays: ["5m", "1m", "now"]
+  # Countdown choices of the restart button, announced like /mradmin announce restart. Players should normally get
+  # at least 15 minutes warning.
+  restart-delays: ["15m", "30m", "60m"]
+  # Short choices for an emergency (red area on the web page, a reason is required; "now" = without countdown).
+  emergency-delays: ["5m", "1m", "now"]
 
 # Starter and planned restarts. The starter (mrserver.sh / mrserver.cmd in the server folder) starts the server,
 # brings it back after restarts, crashes and hangs and keeps Paper up to date - controlled from here and the web
@@ -397,7 +400,7 @@ server:
   # The countdown starts before, so the server goes down at the time.
   restart-times: []
   # Countdown of planned restarts and of "mrserver stop" / "mrserver restart" without a time (up to 1h).
-  countdown: "5m"
+  countdown: "15m"
   # What /stop (console or game) does under the starter: "stop" = the server stays down, "restart" = it comes back.
   plain-stop: "stop"
   # Countdowns of restarts and stops also in the community Discord (discord-announce). The team log (discord)
@@ -826,6 +829,12 @@ discord:
       enabled: true
       color: "#E67E22"
     server-restart-cancelled:
+      enabled: true
+      color: "#95A5A6"
+    server-schedule-paused:
+      enabled: true
+      color: "#95A5A6"
+    server-schedule-resumed:
       enabled: true
       color: "#95A5A6"
     server-stop:

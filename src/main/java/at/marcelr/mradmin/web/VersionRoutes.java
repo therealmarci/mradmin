@@ -21,6 +21,7 @@ import java.util.Map;
  *  POST /api/versions/{name}/channel {channel: default|stable|beta|dev}                     mradmin.versions.install
  *  POST /api/restart       {delay, kind, reason} restart (kind=stop: stop) after delay ms mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
+ *  POST /api/restart/schedule {pause}   pause planned restarts for 24 h / switch them on   mradmin.server.restart
  * </pre>
  * Downloads and restarts go into the web log.
  */
@@ -43,6 +44,7 @@ public final class VersionRoutes {
         server.route("POST", "/api/versions/{name}/channel", r::channel);
         server.route("POST", "/api/restart", r::restart);
         server.route("POST", "/api/restart/cancel", r::cancel);
+        server.route("POST", "/api/restart/schedule", r::schedule);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -125,6 +127,9 @@ public final class VersionRoutes {
         restart.put("reason", server.sync(() -> plugin.restarts().reason()));
         restart.put("method", plugin.settings().versions().restartMethod());
         restart.put("delays", plugin.settings().versions().restartDelays());
+        restart.put("emergencyDelays", plugin.settings().versions().emergencyDelays());
+        // The running countdown is the one of a planned restart (cancelling it skips only this one).
+        restart.put("planned", "schedule".equals(plugin.restarts().by()) && plugin.restarts().endsAt() > 0);
         // The server tab: countdown kind, starter, Paper build, next planned restart, since when the server runs.
         restart.put("kind", plugin.restarts().restarting() ? "restart" : "stop");
         restart.put("enabled", plugin.restarts().enabled());
@@ -148,6 +153,11 @@ public final class VersionRoutes {
         restart.put("paper", paper);
         var next = starter.nextPlanned();
         restart.put("nextPlanned", next == null ? 0 : next.toInstant().toEpochMilli());
+        Map<String, Object> schedule = new LinkedHashMap<>();
+        schedule.put("times", starter.settings() == null ? 0 : starter.settings().restartTimes().size());
+        schedule.put("pausedUntil", server.sync(starter::pausedUntil));
+        schedule.put("pausedBy", server.sync(starter::pausedBy));
+        restart.put("schedule", schedule);
         restart.put("startedAt", java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("plugins", plugins);
@@ -258,16 +268,21 @@ public final class VersionRoutes {
         } catch (NumberFormatException ex) {
             throw new Http.WebException(400, "invalid-duration");
         }
-        // Only the configured choices - nobody restarts in three days by accident.
-        if (!plugin.settings().versions().restartDelays().contains(delay)) {
+        // Only the configured choices - nobody restarts in three days by accident. The short emergency choices only
+        // with a reason (players should normally get at least 15 minutes warning).
+        String reason = http.string("reason");
+        boolean emergency = !plugin.settings().versions().restartDelays().contains(delay);
+        if (emergency && !plugin.settings().versions().emergencyDelays().contains(delay)) {
             throw new Http.WebException(400, "invalid-duration");
         }
+        if (emergency && (reason == null || reason.isBlank())) {
+            throw new Http.WebException(400, "restart-reason-required");
+        }
         String by = http.account().name() + " (web)";
-        String reason = http.string("reason");
         if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
         }
-        audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s");
+        audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s" + (emergency ? " (emergency)" : ""));
         http.json(200, Map.of());
     }
 
@@ -278,6 +293,18 @@ public final class VersionRoutes {
             throw new Http.WebException(409, "restart-none");
         }
         audit(http, "server-restart-cancelled", "");
+        http.json(200, Map.of());
+    }
+
+    private void schedule(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        boolean pause = Boolean.parseBoolean(String.valueOf(http.string("pause")));
+        String by = http.account().name() + " (web)";
+        server.sync(() -> {
+            plugin.starter().pauseSchedule(pause, by);
+            return null;
+        });
+        audit(http, pause ? "server-schedule-paused" : "server-schedule-resumed", "");
         http.json(200, Map.of());
     }
 

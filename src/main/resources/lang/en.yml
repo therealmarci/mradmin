@@ -699,6 +699,8 @@ discord:
   plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
   server-restart: "🔄 **{admin}** restarts the server (countdown: {time}, reason: {reason})."
   server-restart-cancelled: "❎ **{admin}** cancelled the restart."
+  server-schedule-paused: "⏸️ **{admin}** paused the planned restarts for 24 hours."
+  server-schedule-resumed: "▶️ **{admin}** switched the planned restarts on again."
   server-stop: "🛑 **{admin}** stops the server (countdown: {time}, reason: {reason})."
   server-stop-cancelled: "❎ **{admin}** cancelled the server stop."
   server-crash: "💥 The server crashed at {time} ({reason}) - the starter started it again."

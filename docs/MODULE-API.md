@@ -339,6 +339,23 @@ Discord-Teil `plugin.mradmin().log(...)`.
 sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-mradmin-webhook`, eigene
 `webhook-url` leer): `log(...)` fürs Protokoll, `adminLog(...)` statt des eigenen Webhooks.
 
+## Neustarts (`nextRestart`, ab API 14)
+
+`MRadminService#nextRestart()` liefert den nächsten Neustart oder Stopp als `RestartInfo`, sonst `null`:
+
+- `at` - Zeitpunkt (Epoch-ms), `millisLeft()` - Restzeit
+- `restart` - `true` = der Server kommt wieder, `false` = Stopp
+- `countdown` - `true` = der Countdown läuft schon (Spieler werden gewarnt); `false` = nur geplant
+  (`server.restart-times`), kann noch ausgesetzt werden
+- `planned` - `true` = geplanter Neustart, `false` = von jemandem gestartet (Web, Befehl, `mrserver`)
+- `reason` - Grund in der Server-Sprache (kann leer sein)
+
+Ein laufender Countdown geht vor dem nächsten geplanten Neustart. Geplante Neustarts zählen nur, wenn etwas den
+Server zurückbringt (Starter oder `versions.restart-method`) und sie nicht gerade ausgesetzt sind. Billig, darf
+jeden Tick aufgerufen werden (Server-Thread). MRpvp nutzt es, um kurz vor einem Neustart keine Duelle mehr zu
+starten. Ankündigungen von MRadmin erreichen Spieler, für die ein Modul `busy` meldet, ohne Titel (nur Actionbar
+und Chat).
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -350,7 +367,7 @@ sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

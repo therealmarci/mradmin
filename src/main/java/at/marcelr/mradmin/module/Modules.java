@@ -6,6 +6,7 @@ import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.api.AdminModule;
 import at.marcelr.mradmin.api.HealthEntry;
 import at.marcelr.mradmin.api.MRadminService;
+import at.marcelr.mradmin.api.RestartInfo;
 import at.marcelr.mradmin.api.WebItems;
 import at.marcelr.mradmin.api.Report;
 import at.marcelr.mradmin.api.WebModule;
@@ -135,6 +136,23 @@ public final class Modules implements MRadminService {
     @Override
     public void log(String moduleId, String event, String text, int color) {
         plugin.eventLog().add(moduleId, event, text, color);
+    }
+
+    @Override
+    public @Nullable RestartInfo nextRestart() {
+        var restarts = plugin.restarts();
+        if (restarts == null) {
+            return null;
+        }
+        if (restarts.endsAt() > 0) {
+            String reason = restarts.reason();
+            return new RestartInfo(restarts.endsAt(), restarts.restarting(), true,
+                    "schedule".equals(restarts.by()), reason == null ? "" : reason);
+        }
+        // Planned restarts only count if something brings the server back (otherwise MRadmin skips them).
+        var next = plugin.starter() == null || !restarts.enabled() ? null : plugin.starter().nextPlanned();
+        return next == null ? null
+                : new RestartInfo(next.toInstant().toEpochMilli(), true, false, true, "");
     }
 
     @Override

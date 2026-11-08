@@ -35,6 +35,8 @@ public final class StarterLink {
     private ServerSettings settings;
     private final Set<String> planned = new HashSet<>();
     private boolean warnedNoRestart;
+    private long pausedUntil;
+    private String pausedBy = "";
     private volatile long lastTick;
     private volatile String wish;
     private BukkitTask tickTask;
@@ -72,7 +74,8 @@ public final class StarterLink {
         settings = ServerSettings.load(plugin.getConfig(), plugin.getLogger());
         warnedNoRestart = false;
         stopTasks();
-        scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 200L, 200L);
+        loadPause();
+        scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 100L, 20L);
         // Paper: first check after 10 seconds, then every 15 minutes (shown on the server overview).
         paperTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::checkPaper, 200L, 15 * 60 * 20L);
         if (!active()) {
@@ -218,6 +221,52 @@ public final class StarterLink {
 
     // ------------------------------------------------------------------ planned restarts
 
+    /** How long "pause planned restarts" lasts. */
+    public static final long PAUSE_MILLIS = 24 * 3_600_000L;
+
+    /** Until when planned restarts are paused (epoch ms), 0 = not paused. */
+    public long pausedUntil() {
+        return pausedUntil > System.currentTimeMillis() ? pausedUntil : 0;
+    }
+
+    public String pausedBy() {
+        return pausedUntil() > 0 ? pausedBy : null;
+    }
+
+    /**
+     * Pauses planned restarts for {@link #PAUSE_MILLIS} (a running planned countdown is cancelled) or switches them
+     * on again. Kept over restarts (storage "restart-pause"). Main thread.
+     */
+    public void pauseSchedule(boolean pause, String by) {
+        pausedUntil = pause ? System.currentTimeMillis() + PAUSE_MILLIS : 0;
+        pausedBy = pause ? by : "";
+        if (pause && plugin.restarts().running() && "schedule".equals(plugin.restarts().by())) {
+            plugin.restarts().cancel(by);
+        }
+        plugin.getLogger().info(by + (pause ? " paused planned restarts for 24 hours." : " switched planned restarts on again."));
+        plugin.discord().log(pause ? "server-schedule-paused" : "server-schedule-resumed", "admin", by);
+        org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+        y.set("until", pausedUntil);
+        y.set("by", pausedBy);
+        String text = y.saveToString();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.storage().saveState("restart-pause", text));
+    }
+
+    private void loadPause() {
+        try {
+            String text = plugin.storage().loadState("restart-pause");
+            if (text != null && !text.isBlank()) {
+                org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+                y.loadFromString(text);
+                pausedUntil = y.getLong("until");
+                pausedBy = y.getString("by", "");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Could not read the pause of planned restarts (restart-pause): " + e.getMessage());
+        }
+    }
+
+    /** Every second: starts the countdown so that it begins exactly countdown before the planned time. */
     private void checkSchedule() {
         if (settings.restartTimes().isEmpty() || plugin.restarts().running()) {
             return;
@@ -236,11 +285,18 @@ public final class StarterLink {
                 ZonedDateTime at = day.atTime(time).atZone(now.getZone());
                 long until = at.toInstant().toEpochMilli() - now.toInstant().toEpochMilli();
                 String key = at.toString();
-                if (until > 0 && until <= settings.countdown() + 15_000L && planned.add(key)) {
+                if (until > 0 && until <= settings.countdown() + 1_000L && planned.add(key)) {
+                    if (at.toInstant().toEpochMilli() < pausedUntil()) {
+                        plugin.getLogger().info("Planned restart at " + time + " skipped - planned restarts are paused.");
+                        return;
+                    }
                     plugin.getLogger().info("Planned restart at " + time + ".");
                     String why = plugin.messages().server(() -> plugin.messages().plain("restart-reason-schedule"))
                             .replace("{time}", time.toString());
-                    plugin.restarts().start(until, "schedule", true, why);
+                    // Checked every second: a countdown that begins on time is announced with the round value (15m,
+                    // not 14m 59s). Later (server started within the countdown) it gets the time that is left.
+                    long delay = Math.abs(until - settings.countdown()) <= 1_000L ? settings.countdown() : until;
+                    plugin.restarts().start(delay, "schedule", true, why);
                     return;
                 }
             }
@@ -250,16 +306,17 @@ public final class StarterLink {
         }
     }
 
-    /** The next planned restart, or null. */
+    /** The next planned restart (after a pause), or null. */
     public ZonedDateTime nextPlanned() {
         if (settings == null || settings.restartTimes().isEmpty()) {
             return null;
         }
         ZonedDateTime now = ZonedDateTime.now(plugin.settings().zone());
+        long paused = pausedUntil();
         ZonedDateTime best = null;
         for (LocalTime time : settings.restartTimes()) {
             ZonedDateTime at = now.toLocalDate().atTime(time).atZone(now.getZone());
-            if (!at.isAfter(now)) {
+            while (!at.isAfter(now) || at.toInstant().toEpochMilli() < paused) {
                 at = at.plusDays(1);
             }
             if (best == null || at.isBefore(best)) {

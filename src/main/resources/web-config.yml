@@ -306,7 +306,12 @@ sections:
         type: strings
         when: versions.enabled
         name: {de: Countdown zur Auswahl, en: Countdown choices}
-        help: {de: "Z.B. 5m, 1m - „now“ = sofort.", en: "E.g. 5m, 1m - \"now\" = right away."}
+        help: {de: "Normale Neustarts, z.B. 15m, 30m, 60m (Spieler sollen mind. 15 min vorher gewarnt werden).", en: "Normal restarts, e.g. 15m, 30m, 60m (players should get at least 15 minutes warning)."}
+      - key: versions.emergency-delays
+        type: strings
+        when: versions.enabled
+        name: {de: Notfall-Countdown, en: Emergency countdown}
+        help: {de: "Kurze Zeiten im roten Notfall-Bereich (nur mit Grund) - z.B. 5m, 1m, now.", en: "Short times in the red emergency area (only with a reason) - e.g. 5m, 1m, now."}
 
   - id: health
     name: {de: Serverzustand, en: Server health}
@@ -1479,6 +1484,8 @@ sections:
           plugin-update-downloaded: {de: Update heruntergeladen, en: Update downloaded}
           server-restart: {de: Neustart geplant, en: Restart planned}
           server-restart-cancelled: {de: Neustart abgebrochen, en: Restart cancelled}
+          server-schedule-paused: {de: Automatische Neustarts ausgesetzt, en: Planned restarts paused}
+          server-schedule-resumed: {de: Automatische Neustarts wieder an, en: Planned restarts on again}
           server-stop: {de: Stopp geplant, en: Stop planned}
           server-stop-cancelled: {de: Stopp abgebrochen, en: Stop cancelled}
           server-crash: {de: Server abgestürzt (Starter), en: Server crashed (starter)}

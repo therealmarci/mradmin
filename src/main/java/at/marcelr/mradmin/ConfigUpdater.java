@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -50,8 +51,9 @@ public final class ConfigUpdater {
  * check-hours); the settings of squaremap's own page (address, reverse-proxy, chunk-grid, layers ...) are gone.
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
+ * 51: versions.emergency-delays; server.countdown 5m -> 15m and restart-delays 5m/1m/now -> 15m/30m/60m (old defaults).
      */
-    public static final int CURRENT_VERSION = 50;
+    public static final int CURRENT_VERSION = 51;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -200,6 +202,17 @@ public final class ConfigUpdater {
             // v50: versions.include-prereleases became versions.channel (stable / beta, per plugin also dev).
             if (version < 50 && existing.getBoolean("versions.include-prereleases", false)) {
                 template.set("versions.channel", "beta");
+            }
+            // v51: players get at least 15 minutes warning - only the old defaults are replaced.
+            if (version < 51) {
+                if ("5m".equalsIgnoreCase(existing.getString("server.countdown", "").trim())) {
+                    template.set("server.countdown", "15m");
+                }
+                List<String> delays = existing.getStringList("versions.restart-delays").stream()
+                        .map(d -> d.trim().toLowerCase(java.util.Locale.ROOT)).toList();
+                if (delays.equals(List.of("5m", "1m", "now"))) {
+                    template.set("versions.restart-delays", List.of("15m", "30m", "60m"));
+                }
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

@@ -699,6 +699,8 @@ discord:
   plugin-update-downloaded: "⬇️ **{plugin} {version}** heruntergeladen (installiert: {installed}) - wird beim nächsten Neustart aktiv. Von: {admin}"
   server-restart: "🔄 **{admin}** startet den Server neu (Countdown: {time}, Grund: {reason})."
   server-restart-cancelled: "❎ **{admin}** hat den Neustart abgebrochen."
+  server-schedule-paused: "⏸️ **{admin}** hat die automatischen Neustarts für 24 Stunden ausgesetzt."
+  server-schedule-resumed: "▶️ **{admin}** hat die automatischen Neustarts wieder eingeschaltet."
   server-stop: "🛑 **{admin}** fährt den Server herunter (Countdown: {time}, Grund: {reason})."
   server-stop-cancelled: "❎ **{admin}** hat den Server-Stopp abgebrochen."
   server-crash: "💥 Der Server ist um {time} abgestürzt ({reason}) - der Starter hat ihn neu gestartet."
