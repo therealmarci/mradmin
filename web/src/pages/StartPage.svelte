@@ -1,6 +1,6 @@
 <script>
-  // The start page (since 1.5): widgets in a 12-column grid, the same for everyone - each widget shown to its audience
-  // (everyone, only visitors, only signed-in players). With mradmin.appearance the page has an edit mode right here:
+  // The start pages (since 1.5): one for visitors, one for signed-in players - each made of widgets in a 12-column
+  // grid. With mradmin.appearance the page has an edit mode right here (switch between the two pages):
   // drag to move, the corner handle to resize, + to insert from the catalog, the cog to set up, x to remove; save or
   // discard. Data: GET /api/landing, edit: GET/POST /api/landing/edit and /api/landing (BrandingRoutes.java).
   import { api } from '../lib/api.js';
@@ -14,7 +14,9 @@
 
   let data = $state(null);
   let editing = $state(false);
-  let draft = $state([]);
+  let draft = $state({ guests: [], members: [] });
+  // which page the edit mode works on
+  let editPage = $state('members');
   let selected = $state(null);
   let catalog = $state(false);
   let busy = $state(false);
@@ -28,7 +30,7 @@
     try {
       data = await api('GET', '/landing?lang=' + lang);
     } catch {
-      data = { widgets: [], news: [] };
+      data = { guests: [], members: [], news: [] };
     }
   }
   load();
@@ -43,14 +45,16 @@
   const SIZES = { banner: [12, 3], hints: [12, 2], address: [4, 2], online: [4, 2], greeting: [6, 2], tiles: [12, 3],
     stats: [4, 3], news: [8, 4], text: [6, 3], image: [6, 3], links: [4, 2], discord: [6, 2], login: [4, 2] };
   const PERSONAL = ['greeting', 'tiles', 'stats'];
+  const page = $derived(player ? 'members' : 'guests');
   const DATA = {
     banner: () => ({ image: '', address: '', online: true }), address: () => ({ title: '', address: '' }),
     news: () => ({ title: '', count: 4 }), text: () => ({ title: '', text: '' }), image: () => ({ image: '', alt: '', fit: 'cover' }),
     links: () => ({ title: '', items: [] }), discord: () => ({ url: '', text: '' }), login: () => ({ title: '', text: '' }),
   };
 
-  const widgets = $derived(editing ? draft : (data?.widgets ?? []));
-  const sees = (w) => w.audience === 'all' || (w.audience === 'guests' ? !player : !!player);
+  const widgets = $derived(editing ? draft[editPage] : (data?.[page] ?? []));
+  // While editing the visitors' page it is shown as a visitor sees it.
+  const viewer = $derived(editing && editPage === 'guests' ? null : player);
   // Outside the edit mode widgets without content stay away (no text, no picture, no links ...).
   function filled(w) {
     const d = w.data;
@@ -59,17 +63,20 @@
     if (w.type === "address") return !!d.address;
     if (w.type === "discord") return !!d.url;
     if (w.type === "links") return d.items.length > 0 || brand.links.length > 0;
-    if (w.type === "tiles") return !!player?.areas?.length;
-    if (w.type === "stats") return !!player?.personal?.length;
+    if (w.type === "tiles") return !!viewer?.areas?.length;
+    if (w.type === "stats") return !!viewer?.personal?.length;
     return true;
   }
-  const shown = $derived(editing ? widgets : widgets.filter((w) => sees(w) && filled(w)));
-  const ctx = $derived({ player, news: data?.news ?? [], online: data?.online, editing, onsignin });
-  const current = $derived(draft.find((w) => w.id === selected) ?? null);
-  const changed = $derived(editing && JSON.stringify(draft) !== JSON.stringify(data?.widgets ?? []));
+  const shown = $derived(editing ? widgets : widgets.filter(filled));
+  const ctx = $derived({ player: viewer, news: data?.news ?? [], online: data?.online, editing, onsignin });
+  const current = $derived(draft[editPage].find((w) => w.id === selected) ?? null);
+  const changed = $derived(editing && JSON.stringify(draft) !== JSON.stringify({ guests: data?.guests ?? [], members: data?.members ?? [] }));
+  // Personal widgets only on the players' page, the call to log in only on the visitors' page.
+  const allowed = (type) => (editPage === 'guests' ? !PERSONAL.includes(type) : type !== 'login');
 
   function startEdit() {
-    draft = structuredClone($state.snapshot(data.widgets));
+    draft = structuredClone({ guests: $state.snapshot(data.guests), members: $state.snapshot(data.members) });
+    editPage = page;
     editing = true;
     selected = null;
   }
@@ -85,7 +92,7 @@
     busy = true;
     error = '';
     try {
-      await api('POST', '/landing', { widgets: draft });
+      await api('POST', '/landing', draft);
       await load();
       editing = false;
       selected = null;
@@ -99,16 +106,16 @@
 
   function insert(type) {
     const [w, h] = SIZES[type];
-    const widget = { id: Math.random().toString(16).slice(2, 12), type, w, h,
-      audience: PERSONAL.includes(type) ? 'members' : type === 'login' ? 'guests' : 'all', data: DATA[type]?.() ?? { title: '' } };
-    const at = selected ? draft.findIndex((x) => x.id === selected) + 1 : draft.length;
-    draft = [...draft.slice(0, at), widget, ...draft.slice(at)];
+    const widget = { id: Math.random().toString(16).slice(2, 12), type, w, h, data: DATA[type]?.() ?? { title: '' } };
+    const list = draft[editPage];
+    const at = selected ? list.findIndex((x) => x.id === selected) + 1 : list.length;
+    draft[editPage] = [...list.slice(0, at), widget, ...list.slice(at)];
     selected = widget.id;
     catalog = false;
   }
 
   function remove(id) {
-    draft = draft.filter((w) => w.id !== id);
+    draft[editPage] = draft[editPage].filter((w) => w.id !== id);
     if (selected === id) selected = null;
   }
 
@@ -130,10 +137,10 @@
     if (!dragId || dragId === id) return reset();
     const rect = e.currentTarget.getBoundingClientRect();
     const after = e.clientX > rect.left + rect.width / 2;
-    const moving = draft.find((w) => w.id === dragId);
-    const rest = draft.filter((w) => w.id !== dragId);
+    const moving = draft[editPage].find((w) => w.id === dragId);
+    const rest = draft[editPage].filter((w) => w.id !== dragId);
     const at = rest.findIndex((w) => w.id === id) + (after ? 1 : 0);
-    draft = [...rest.slice(0, at), moving, ...rest.slice(at)];
+    draft[editPage] = [...rest.slice(0, at), moving, ...rest.slice(at)];
     reset();
   }
 
@@ -150,7 +157,7 @@
     const box = item.getBoundingClientRect();
     const grid = gridEl.getBoundingClientRect();
     const column = (grid.width - GAP * 11) / 12;
-    const target = draft.find((w) => w.id === widget.id);
+    const target = draft[editPage].find((w) => w.id === widget.id);
     const move = (ev) => {
       target.w = Math.max(1, Math.min(12, Math.round((ev.clientX - box.left + GAP) / (column + GAP))));
       target.h = Math.max(1, Math.min(8, Math.round((ev.clientY - box.top + GAP) / (ROW + GAP))));
@@ -203,8 +210,14 @@
   <div class="edit-bar" class:on={editing}>
     {#if editing}
       <span class="edit-title">✎ {t('widget.editing')}</span>
+      <div class="pages" role="radiogroup">
+        {#each ['guests', 'members'] as pg (pg)}
+          <button role="radio" aria-checked={editPage === pg} class:on={editPage === pg}
+            onclick={() => { editPage = pg; selected = null; }}>{t('widget.page.' + pg)}</button>
+        {/each}
+      </div>
       <button class="secondary" onclick={() => (catalog = true)}>+ {t('widget.insert')}</button>
-      <button class="ghost" onclick={() => { if (window.confirm(t('widget.templateConfirm'))) api('GET', '/landing/edit').then((r) => (draft = r.template)); }}>
+      <button class="ghost" onclick={() => { if (window.confirm(t('widget.templateConfirm'))) api('GET', '/landing/edit').then((r) => (draft[editPage] = r.template[editPage])); }}>
         {t('widget.template')}
       </button>
       <span class="grow"></span>
@@ -220,13 +233,13 @@
   <div class="grid" class:editing bind:this={gridEl} style="--row: {ROW}px; --gap: {GAP}px">
     {#each shown as w (w.id)}
       <div class="item size-{size(w)}" style="--w: {w.w}; --h: {w.h}"
-        class:selected={editing && selected === w.id} class:over={overId === w.id} class:dim={editing && !sees(w)}
+        class:selected={editing && selected === w.id} class:over={overId === w.id}
         role="group" ondragover={(e) => dragOver(e, w.id)} ondrop={(e) => drop(e, w.id)} ondragleave={() => overId === w.id && (overId = null)}>
         <Widget widget={w} {ctx} />
         {#if editing}
           <div class="tools">
             <span class="grip" draggable="true" ondragstart={(e) => dragStart(e, w.id)} ondragend={reset} title={t('widget.move')}>⠿</span>
-            <span class="kind">{t('widget.type.' + w.type)}{#if w.audience !== 'all'} · {t('widget.audience.' + w.audience)}{/if}</span>
+            <span class="kind">{t('widget.type.' + w.type)}</span>
             <button onclick={() => (selected = selected === w.id ? null : w.id)} title={t('widget.settings')}>⚙</button>
             <button onclick={() => remove(w.id)} title={t('widget.remove')}>✕</button>
           </div>
@@ -253,15 +266,6 @@
       <label>{t('widget.width')}<input type="number" min="1" max="12" bind:value={current.w} /></label>
       <label>{t('widget.height')}<input type="number" min="1" max="8" bind:value={current.h} /></label>
     </div>
-    {#if !PERSONAL.includes(current.type)}
-      <label>{t('widget.audienceLabel')}
-        <select bind:value={current.audience}>
-          {#each ['all', 'guests', 'members'] as a (a)}<option value={a}>{t('widget.audience.' + a)}</option>{/each}
-        </select>
-      </label>
-    {:else}
-      <p class="muted small">{t('widget.personalHint')}</p>
-    {/if}
 
     {#if 'title' in current.data && current.type !== 'banner'}
       <label>{t('widget.title')}<input bind:value={current.data.title} maxlength="80" placeholder={t('landingEdit.defaultTitle')} /></label>
@@ -326,9 +330,9 @@
         <button class="x" onclick={() => (catalog = false)} aria-label={t('common.close')}>✕</button>
       </div>
       {#each GROUPS as [group, types] (group)}
-        <span class="group">{t('widget.group.' + group)}</span>
+        {#if types.some(allowed)}<span class="group">{t('widget.group.' + group)}</span>{/if}
         <div class="choices">
-          {#each types as type (type)}
+          {#each types.filter(allowed) as type (type)}
             <button class="choice" onclick={() => insert(type)}>
               <strong>{t('widget.type.' + type)}</strong>
               <span>{t('widget.desc.' + type)}</span>
@@ -365,6 +369,29 @@
   .edit-title {
     font-weight: 700;
     color: var(--accent);
+  }
+
+  .pages {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .edit-bar .pages button {
+    padding: 5px 12px;
+    font-size: 0.86rem;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+  }
+
+  .edit-bar .pages button.on {
+    background: var(--accent);
+    color: var(--accent-text);
   }
 
   .grow {
@@ -410,10 +437,6 @@
 
   .editing .item.over {
     outline: 3px solid var(--good);
-  }
-
-  .item.dim {
-    opacity: 0.55;
   }
 
   .tools {

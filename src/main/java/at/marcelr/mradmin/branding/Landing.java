@@ -14,10 +14,11 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * The start page (since 1.5, the same for everyone): widgets in a 12-column grid that the team arranges right on the
- * page (edit mode for mradmin.appearance) - move, resize, insert, set up, remove. Each widget has a type, a width
- * (1-12 columns), a height (1-8 rows), who sees it (everyone, only visitors, only signed-in players) and its own
- * settings. A new server gets a template. Kept as JSON in the storage ("landing"); everything is checked here, the
+ * The start pages (since 1.5): one for visitors and one for signed-in players, each made of widgets in a 12-column
+ * grid that the team arranges right on the page (edit mode for mradmin.appearance) - move, resize, insert, set up,
+ * remove. Each widget has a type, a width (1-12 columns), a height (1-8 rows) and its own settings. Personal widgets
+ * only exist on the page of signed-in players, the call to log in only on the visitors' one. A new server gets
+ * templates. Kept as JSON in the storage ("landing"); everything is checked here, the
  * page only gets what passed. Older layouts of 1.5 (header + blocks) are turned into widgets once. Thread-safe.
  */
 public final class Landing {
@@ -28,20 +29,22 @@ public final class Landing {
             Map.entry("greeting", true), Map.entry("tiles", true), Map.entry("stats", true),
             Map.entry("news", false), Map.entry("text", false), Map.entry("image", false), Map.entry("links", false),
             Map.entry("discord", false), Map.entry("login", false));
-    public static final Set<String> AUDIENCES = Set.of("all", "guests", "members");
+    /** The two pages. */
+    public static final Set<String> PAGES = Set.of("guests", "members");
     private static final int MAX_WIDGETS = 40;
     private static final String STORE = "landing";
 
     private final MRAdmin plugin;
-    private JsonArray widgets = template();
+    private JsonArray guests = template("guests");
+    private JsonArray members = template("members");
 
     public Landing(MRAdmin plugin) {
         this.plugin = plugin;
     }
 
-    /** All widgets - a copy. */
-    public synchronized JsonArray widgets() {
-        return widgets.deepCopy();
+    /** The widgets of a page (guests / members) - a copy. */
+    public synchronized JsonArray widgets(String page) {
+        return ("guests".equals(page) ? guests : members).deepCopy();
     }
 
     /** Loads the saved page (main thread, while enabling), otherwise the template. */
@@ -53,15 +56,24 @@ public final class Landing {
             }
             YamlConfiguration y = new YamlConfiguration();
             y.loadFromString(text);
+            String g = y.getString("guests", "");
+            String m = y.getString("members", "");
+            if (!g.isBlank() || !m.isBlank()) {
+                guests = g.isBlank() ? template("guests") : check(JsonParser.parseString(g).getAsJsonArray(), "guests");
+                members = m.isBlank() ? template("members") : check(JsonParser.parseString(m).getAsJsonArray(), "members");
+                return;
+            }
+            // One page of widgets with "audience" (earlier 1.5): split into the two pages once.
             String json = y.getString("widgets", "");
             if (!json.isBlank()) {
-                widgets = check(JsonParser.parseString(json).getAsJsonArray());
+                split(JsonParser.parseString(json).getAsJsonArray());
+                plugin.getLogger().info("Start page: split into a page for visitors and one for signed-in players.");
                 return;
             }
             // Older layout of 1.5: header + blocks in two columns - turned into widgets once.
             String blocks = y.getString("blocks", "");
             if (!blocks.isBlank()) {
-                widgets = check(fromBlocks(y, JsonParser.parseString(blocks).getAsJsonArray()));
+                split(fromBlocks(y, JsonParser.parseString(blocks).getAsJsonArray()));
                 plugin.getLogger().info("Start page: turned the earlier layout into widgets.");
             }
         } catch (Exception e) {
@@ -69,25 +81,54 @@ public final class Landing {
         }
     }
 
-    /** Saves new widgets after checking each. @return null or an error key */
-    public synchronized String save(JsonArray raw) {
-        JsonArray checked;
+    /** Widgets that had an audience: everyone + visitors -> visitors' page, everyone + signed-in -> players' page. */
+    private void split(JsonArray all) {
+        JsonArray g = new JsonArray();
+        JsonArray m = new JsonArray();
+        for (JsonElement e : all) {
+            JsonObject w = e.getAsJsonObject();
+            String audience = w.has("audience") ? w.get("audience").getAsString() : "all";
+            if (!"members".equals(audience)) {
+                JsonObject copy = w.deepCopy();
+                copy.addProperty("id", newId());
+                g.add(copy);
+            }
+            if (!"guests".equals(audience)) {
+                m.add(w.deepCopy());
+            }
+        }
+        guests = check(g, "guests");
+        members = check(m, "members");
+        persist();
+    }
+
+    /** Saves both pages after checking each widget. @return null or an error key */
+    public synchronized String save(JsonArray rawGuests, JsonArray rawMembers) {
+        JsonArray g;
+        JsonArray m;
         try {
-            checked = check(raw);
+            g = check(rawGuests, "guests");
+            m = check(rawMembers, "members");
         } catch (IllegalArgumentException e) {
             return e.getMessage();
         }
-        widgets = checked;
-        YamlConfiguration y = new YamlConfiguration();
-        y.set("widgets", widgets.toString());
-        plugin.storage().saveState(STORE, y.saveToString());
+        guests = g;
+        members = m;
+        persist();
         return null;
+    }
+
+    private void persist() {
+        YamlConfiguration y = new YamlConfiguration();
+        y.set("guests", guests.toString());
+        y.set("members", members.toString());
+        plugin.storage().saveState(STORE, y.saveToString());
     }
 
     // ------------------------------------------------------------------ template
 
-    /** The start page of a new server. */
-    public static JsonArray template() {
+    /** The start pages of a new server. */
+    public static JsonArray template(String page) {
         JsonArray a = new JsonArray();
         a.add(widget("banner", 12, 3, "all", d -> {
             d.addProperty("image", "");
@@ -95,16 +136,23 @@ public final class Landing {
             d.addProperty("online", true);
         }));
         a.add(widget("hints", 12, 2, "all", d -> { }));
-        a.add(widget("tiles", 12, 3, "members", d -> { }));
-        a.add(widget("news", 8, 4, "all", d -> {
-            d.addProperty("title", "");
-            d.addProperty("count", 4);
-        }));
-        a.add(widget("login", 4, 2, "guests", d -> {
-            d.addProperty("title", "");
-            d.addProperty("text", "");
-        }));
-        a.add(widget("stats", 4, 3, "members", d -> { }));
+        if ("members".equals(page)) {
+            a.add(widget("tiles", 12, 3, "all", d -> { }));
+            a.add(widget("news", 8, 4, "all", d -> {
+                d.addProperty("title", "");
+                d.addProperty("count", 4);
+            }));
+            a.add(widget("stats", 4, 3, "all", d -> { }));
+        } else {
+            a.add(widget("news", 8, 4, "all", d -> {
+                d.addProperty("title", "");
+                d.addProperty("count", 4);
+            }));
+            a.add(widget("login", 4, 2, "all", d -> {
+                d.addProperty("title", "");
+                d.addProperty("text", "");
+            }));
+        }
         a.add(widget("links", 4, 2, "all", d -> {
             d.addProperty("title", "");
             d.add("items", new JsonArray());
@@ -112,6 +160,7 @@ public final class Landing {
         return a;
     }
 
+    /** A widget; audience only for the split of older layouts. */
     private static JsonObject widget(String type, int w, int h, String audience, Consumer<JsonObject> data) {
         JsonObject o = new JsonObject();
         o.addProperty("id", newId());
@@ -199,8 +248,12 @@ public final class Landing {
 
     // ------------------------------------------------------------------ checking
 
-    /** Only known widgets with known fields, sizes, lengths and addresses within limits. */
-    static JsonArray check(JsonArray raw) {
+    /**
+     * Only known widgets with known fields, sizes, lengths and addresses within limits; personal widgets only on the
+     * players' page, the call to log in only on the visitors' page (others are left out).
+     */
+    static JsonArray check(JsonArray raw, String page) {
+        boolean visitors = "guests".equals(page);
         if (raw.size() > MAX_WIDGETS) {
             throw new IllegalArgumentException("landing-too-many");
         }
@@ -215,16 +268,13 @@ public final class Landing {
             if (!TYPES.containsKey(type)) {
                 throw new IllegalArgumentException("landing-invalid");
             }
+            if ((visitors && TYPES.get(type)) || (!visitors && type.equals("login"))) {
+                continue;
+            }
             String id = str(in, "id", 20).replaceAll("[^a-zA-Z0-9_-]", "");
             if (id.isEmpty() || !ids.add(id)) {
                 id = newId();
                 ids.add(id);
-            }
-            String audience = str(in, "audience", 8);
-            if (TYPES.get(type)) {
-                audience = "members";
-            } else if (!AUDIENCES.contains(audience)) {
-                audience = "all";
             }
             JsonObject data = in.has("data") && in.get("data").isJsonObject() ? in.getAsJsonObject("data") : new JsonObject();
             JsonObject d = new JsonObject();
@@ -290,7 +340,6 @@ public final class Landing {
             o.addProperty("type", type);
             o.addProperty("w", Math.clamp(num(in, "w", 6), 1, 12));
             o.addProperty("h", Math.clamp(num(in, "h", 2), 1, 8));
-            o.addProperty("audience", audience);
             o.add("data", d);
             out.add(o);
         }

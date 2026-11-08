@@ -7,7 +7,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 
 | Spielerbereich | Inhalt |
 |---|---|
-| **Start** (`/`) | für alle gleich: Hero-Kachel (angemeldet persönlich) und die Abschnitte der Startseite |
+| **Start** (`/`) | Startseite aus Widgets - eine eigene für Gäste und eine für angemeldete Spieler |
 | **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Server** (`/server/news`, `/server/stats`) | Neuigkeiten & Changelogs, Statistik & Ranglisten |
@@ -65,13 +65,13 @@ Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler
 - **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
 
 ### Startseite (Widgets)
-Die **Startseite** (`/`) ist für alle gleich und besteht aus **Widgets** in einem Raster mit 12 Spalten. Jedes Widget hat eine Breite (1-12 Spalten), eine Höhe (1-8 Reihen) und eine Sichtbarkeit: für **alle**, **nur Gäste** oder **nur Angemeldete**. Auf dem Tablet werden kleine Widgets halb breit und größere voll breit, auf dem Handy liegen alle untereinander.
+Es gibt **zwei Startseiten** (`/`): eine für **Gäste** (nicht angemeldet) und eine für **angemeldete Spieler**. Beide bestehen aus **Widgets** in einem Raster mit 12 Spalten; jedes Widget hat eine Breite (1-12 Spalten) und eine Höhe (1-8 Reihen). Persönliche Widgets gibt es nur auf der Seite der Angemeldeten, die Log-In-Aufforderung nur auf der Seite der Gäste. Auf dem Tablet werden kleine Widgets halb breit und größere voll breit, auf dem Handy liegen alle untereinander.
 
-**Bearbeiten** direkt auf der Startseite (`mradmin.appearance`, Knopf **Bearbeiten** oben):
+**Bearbeiten** direkt auf der Startseite (`mradmin.appearance`, Knopf **Bearbeiten** oben; oben umschalten zwischen **Gäste** und **Angemeldete**, gespeichert werden beide zusammen):
 - **Verschieben:** am Griff ⠿ ziehen und auf ein anderes Widget fallen lassen (linke Hälfte = davor, rechte = danach).
 - **Größe:** am Griff unten rechts ziehen oder Breite/Höhe in den Einstellungen eingeben.
 - **Einfügen:** **+ Widget einfügen** (kommt nach dem gewählten Widget), **Einstellungen** ⚙, **Entfernen** ✕.
-- **Speichern** oder **Verwerfen**; **Vorlage laden** ersetzt alles durch die Vorlage (erst beim Speichern).
+- **Speichern** oder **Verwerfen**; **Vorlage laden** ersetzt die gerade gewählte Seite durch die Vorlage (erst beim Speichern).
 
 | Gruppe | Widgets |
 |---|---|
@@ -79,7 +79,7 @@ Die **Startseite** (`/`) ist für alle gleich und besteht aus **Widgets** in ein
 | Persönlich (nur angemeldet) | **Begrüßung**, **Meine Bereiche** (eine Kachel pro Bereich der Plugins), **Meine Statistik** |
 | Inhalte | **Neuigkeiten**, **Text** (mit Formatierung), **Bild** (PNG, WebP, SVG bis 512 KB), **Links**, **Discord** (Einladung), **Log-In-Aufforderung** |
 
-Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch in Widgets übernommen. Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Server → Aussehen ein.
+Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch auf beide Seiten aufgeteilt (für alle → beide, nur Gäste → Gäste, nur Angemeldete → Angemeldete). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Server → Aussehen ein.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.

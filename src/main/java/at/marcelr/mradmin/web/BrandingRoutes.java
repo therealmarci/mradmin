@@ -24,7 +24,7 @@ import java.util.Map;
  *  DELETE /api/branding/{kind}                                                             mradmin.appearance
  *  GET    /api/landing?lang=de                            open: the widgets of the start page, news, online
  *  GET    /api/landing/edit                               widgets + template for the edit mode mradmin.appearance
- *  POST   /api/landing          {widgets}                 save the start page                  mradmin.appearance
+ *  POST   /api/landing          {guests, members}         save both start pages                mradmin.appearance
  *  POST   /api/landing/image    raw picture -> {id}       picture for a widget                 mradmin.appearance
  * </pre>
  * Texts and colour are written into config.yml (section branding, comments stay) like the config editor does, then
@@ -165,7 +165,11 @@ public final class BrandingRoutes {
      */
     private void landing(Http http) throws Exception {
         String lang = "en".equals(http.query().get("lang")) ? "en" : "de";
-        com.google.gson.JsonArray widgets = plugin.landing().widgets();
+        com.google.gson.JsonArray guests = plugin.landing().widgets("guests");
+        com.google.gson.JsonArray members = plugin.landing().widgets("members");
+        com.google.gson.JsonArray widgets = new com.google.gson.JsonArray();
+        widgets.addAll(guests);
+        widgets.addAll(members);
         int news = 0;
         boolean online = false;
         for (JsonElement e : widgets) {
@@ -179,7 +183,8 @@ public final class BrandingRoutes {
             }
         }
         JsonObject result = new JsonObject();
-        result.add("widgets", widgets);
+        result.add("guests", guests);
+        result.add("members", members);
         com.google.gson.JsonArray posts = new com.google.gson.JsonArray();
         for (var post : news > 0 ? server.news().visible() : java.util.List.<at.marcelr.mradmin.news.News.Post>of()) {
             if (post.alert() || posts.size() >= news) {
@@ -207,22 +212,26 @@ public final class BrandingRoutes {
     private void landingEdit(Http http) throws Exception {
         require(http);
         JsonObject result = new JsonObject();
-        result.add("widgets", plugin.landing().widgets());
-        result.add("template", at.marcelr.mradmin.branding.Landing.template());
+        result.add("guests", plugin.landing().widgets("guests"));
+        result.add("members", plugin.landing().widgets("members"));
+        JsonObject templates = new JsonObject();
+        templates.add("guests", at.marcelr.mradmin.branding.Landing.template("guests"));
+        templates.add("members", at.marcelr.mradmin.branding.Landing.template("members"));
+        result.add("template", templates);
         http.json(200, result);
     }
 
     private void landingSave(Http http) throws Exception {
         require(http);
         JsonObject body = http.body();
-        if (!body.has("widgets") || !body.get("widgets").isJsonArray()) {
+        if (!body.has("guests") || !body.get("guests").isJsonArray() || !body.has("members") || !body.get("members").isJsonArray()) {
             throw new Http.WebException(400, "landing-invalid");
         }
-        String error = plugin.landing().save(body.getAsJsonArray("widgets"));
+        String error = plugin.landing().save(body.getAsJsonArray("guests"), body.getAsJsonArray("members"));
         if (error != null) {
             throw new Http.WebException(400, error);
         }
-        audit(http, "landing", body.getAsJsonArray("widgets").size() + " widgets");
+        audit(http, "landing", body.getAsJsonArray("guests").size() + " + " + body.getAsJsonArray("members").size() + " widgets");
         http.json(200, Map.of());
     }
 
