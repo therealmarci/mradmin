@@ -25,6 +25,7 @@ const texts = {
   de: {
     'nav.home': 'Übersicht',
     'nav.player': 'Spieler',
+    'nav.login': 'Log In',
     'nav.admin': 'Verwaltung',
     'nav.community': 'Community',
     'nav.features': 'Funktionen',
@@ -2369,6 +2370,7 @@ const texts = {
   en: {
     'nav.home': 'Overview',
     'nav.player': 'Player',
+    'nav.login': 'Log in',
     'nav.admin': 'Administration',
     'nav.community': 'Community',
     'nav.features': 'Features',

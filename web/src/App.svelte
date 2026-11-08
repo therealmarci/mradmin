@@ -253,7 +253,7 @@
 {:else if me === null}
   <!-- Visitors: the same start page, a sign-in button at the top right -->
   <TopBar items={playerNav} current="/" onnav={(path) => go(path)} user={null} moreLabel={t('nav.more')} menu={[]}
-    onlogin={() => (loginOpen = true)} loginLabel={t('landing.signIn')} />
+    onlogin={() => (loginOpen = true)} loginLabel={t('nav.login')} />
   <main>
     <StartPage onsignin={() => (loginOpen = true)} />
     <Footer />
