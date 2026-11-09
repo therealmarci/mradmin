@@ -16,8 +16,9 @@
    * player area and the administration (team only); on the phone it is in the menu.
    */
   // user null = visitor: instead of the name menu a sign-in button (onlogin)
+  // inbox: null (no letter) or {count, active, label} - the letter opens /inbox, the number = what is new
   let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null, onlogin = null,
-    loginLabel = '' } = $props();
+    loginLabel = '', inbox = null } = $props();
 
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -61,6 +62,14 @@
             onclick={() => modes.current !== m && modes.onswitch(m)}>{modes[m]}</button>
         {/each}
       </div>
+    {/if}
+    {#if inbox}
+      <button class="inbox" class:active={inbox.active} class:has={inbox.count > 0} onclick={() => go('/inbox')}
+        aria-label={inbox.count ? `${inbox.label} (${inbox.count})` : inbox.label} title={inbox.label}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true"><path d={ICONS.mail} /></svg>
+        {#if inbox.count > 0}<span class="badge">{inbox.count > 99 ? '99+' : inbox.count}</span>{/if}
+      </button>
     {/if}
     <LangFlags />
     {#if !user}
@@ -126,6 +135,47 @@
 </nav>
 
 <style>
+  /* The letter of the inbox, with the number of new things */
+  .inbox {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .inbox:hover,
+  .inbox.active {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+
+  .inbox.has {
+    color: var(--accent);
+  }
+
+  .badge {
+    position: absolute;
+    top: 1px;
+    right: 0;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 17px;
+    color: #fff;
+    background: var(--bad);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+
   .top {
     position: sticky;
     top: 0;

@@ -65,17 +65,17 @@
 
   function show(which) {
     area = which;
-    history.replaceState(null, '', which === 'changelog' ? '/me/news#changelog' : '/me/news');
+    history.replaceState(null, '', which === 'changelog' ? '/inbox/news#changelog' : '/inbox/news');
   }
 
   function read(post) {
     reading = post;
-    history.replaceState(null, '', '/me/news#post-' + post.id);
+    history.replaceState(null, '', '/inbox/news#post-' + post.id);
   }
 
   function close() {
     reading = null;
-    history.replaceState(null, '', '/me/news');
+    history.replaceState(null, '', '/inbox/news');
   }
 
   const featured = $derived(data?.news[0] ?? null);

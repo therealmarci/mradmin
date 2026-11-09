@@ -101,7 +101,7 @@
   {:else}<div class="box">{@render placeholder(t(ctx.player ? 'self.noAreas' : 'widget.membersOnly'))}</div>{/if}
 {:else if widget.type === 'stats'}
   {#if personal}
-    <SelfTile area={personal} onclick={ctx.player?.stats && !ctx.editing ? () => go('/server/stats') : null} />
+    <SelfTile area={personal} onclick={ctx.player?.stats && !ctx.editing ? () => go('/stats') : null} />
   {:else}<div class="box">{@render placeholder(t('widget.membersOnly'))}</div>{/if}
 {:else if widget.type === 'news'}
   <div class="box">

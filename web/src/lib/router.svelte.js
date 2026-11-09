@@ -1,7 +1,7 @@
 // Tiny router: the path decides the page, links change it without reloading. A "#anchor" or "?query" in the path stays
 // in the address (the page can use it), route.path is without them.
 //
-// Since 1.5 there is one interface: the player area without a prefix (/, /game/…, /map, /server/…, /help/…, /account)
+// Since 1.5 there is one interface: the player area without a prefix (/, /game/…, /map, /stats, /inbox/…, /account)
 // and the administration under /admin/…. Old addresses (bookmarks, links in Discord and mails, links inside older
 // pages) are translated here by canonical() - also go('/tickets/12') from a page lands on /admin/community/tickets/12.
 
@@ -10,9 +10,13 @@ const PLAYER = [
   [/^\/me\/login$/, () => '/'],
   [/^\/me\/devices$/, () => '/account'],
   [/^\/me\/map$/, () => '/map'],
-  [/^\/me\/news$/, () => '/server/news'],
-  [/^\/me\/stats$/, () => '/server/stats'],
-  [/^\/me\/tickets(\/\d+)?$/, (m) => '/help/tickets' + (m[1] ?? '')],
+  [/^\/me\/news$/, () => '/inbox/news'],
+  [/^\/me\/stats$/, () => '/stats'],
+  [/^\/me\/tickets(\/\d+)?$/, (m) => '/inbox/tickets' + (m[1] ?? '')],
+  // first layout of 1.5: news and statistics under Server, tickets under Help
+  [/^\/server\/news$/, () => '/inbox/news'],
+  [/^\/server\/stats$/, () => '/stats'],
+  [/^\/help(?:\/tickets(\/\d+)?)?$/, (m) => '/inbox/tickets' + (m[1] ?? '')],
   [/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/, (m) => `/game/${m[1]}/${m[2]}`],
 ];
 

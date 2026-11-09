@@ -47,6 +47,8 @@
   import SelfStats from './self/SelfStats.svelte';
   import SelfNews from './self/SelfNews.svelte';
   import SelfMap from './self/SelfMap.svelte';
+  import Inbox from './self/Inbox.svelte';
+  import { poll } from './lib/poll.js';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -165,17 +167,31 @@
     { path: '/', area: 'start', label: t('self.nav.home'), icon: 'home' },
     ...(player.areas?.length ? [{ path: `/game/${player.areas[0].module}/${player.areas[0].id}`, area: 'game', label: t('nav.game'), icon: 'grid' }] : []),
     ...(player.map ? [{ path: '/map', area: 'map', label: t('self.nav.map'), icon: 'pin' }] : []),
-    ...(player.news || player.stats ? [{ path: player.news ? '/server/news' : '/server/stats', area: 'server', label: t('nav.serverArea'), icon: 'news' }] : []),
-    ...(player.tickets ? [{ path: '/help/tickets', area: 'help', label: t('nav.help'), icon: 'ticket' }] : []),
+    ...(player.stats ? [{ path: '/stats', area: 'stats', label: t('self.nav.stats'), icon: 'chart' }] : []),
+  ]);
+
+  // The inbox (letter at the top right): news, changelogs and own tickets; the counter = what is new since the last visit.
+  const hasInbox = $derived(!!(player && (player.news || player.tickets)));
+  let inboxCount = $state(0);
+  async function loadInbox() {
+    try {
+      inboxCount = (await api('GET', '/self/inbox')).total;
+    } catch {
+      // keeps the last number (e.g. briefly offline)
+    }
+  }
+  $effect(() => {
+    if (hasInbox) return poll(loadInbox, 60000);
+  });
+  const inboxTabs = $derived([
+    { id: '', label: t('inbox.tab.all'), path: '/inbox' },
+    ...(player?.news ? [{ id: 'news', label: t('self.nav.news'), path: '/inbox/news' }] : []),
+    ...(player?.tickets ? [{ id: 'tickets', label: t('self.nav.tickets'), path: '/inbox/tickets' }] : []),
   ]);
 
   const gameTabs = $derived((player?.areas ?? []).map((a) => ({
     id: `${a.module}/${a.id}`, label: a.title, path: `/game/${a.module}/${a.id}`, icon: MODULE_ICONS[a.module] ?? a.icon,
   })));
-  const serverTabs = $derived([
-    ...(player?.news ? [{ id: 'news', label: t('self.nav.news'), path: '/server/news' }] : []),
-    ...(player?.stats ? [{ id: 'stats', label: t('self.nav.stats'), path: '/server/stats' }] : []),
-  ]);
 
   // ------------------------------------------------------------------ administration
 
@@ -216,8 +232,6 @@
     if (admin && area === 'community' && !sub.length) to = first(communityTabs);
     else if (admin && area === 'features' && !sub.length) to = first(featureTabs);
     else if (!admin && area === 'game' && sub.length < 2) to = first(gameTabs);
-    else if (!admin && area === 'server' && !sub.length) to = first(serverTabs);
-    else if (!admin && area === 'help' && !sub.length) to = '/help/tickets';
     if (to && to !== p) untrack(() => go(to, true));
   });
 
@@ -268,6 +282,7 @@
   {/if}
 {:else}
   <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
+    inbox={hasInbox ? { count: inboxCount, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
     live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
       { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
       { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },
@@ -356,18 +371,18 @@
         {#if sub.length >= 2}
           {#key p}<SelfArea module={sub[0]} id={sub[1]} onChanged={loadPlayer} />{/key}
         {/if}
-      {:else if area === 'server'}
-        <AreaTabs tabs={serverTabs} current={sub[0]} />
+      {:else if area === 'stats' && player.stats}
+        <SelfStats />
+      {:else if area === 'inbox' && hasInbox}
+        <AreaTabs tabs={inboxTabs} current={sub[0] ?? ''} />
         {#if sub[0] === 'news' && player.news}
           <SelfNews />
-        {:else if sub[0] === 'stats' && player.stats}
-          <SelfStats />
-        {/if}
-      {:else if area === 'help'}
-        {#if sub[0] === 'tickets' && sub[1] && player.tickets}
-          {#key sub[1]}<SelfTicket id={sub[1]} />{/key}
-        {:else if player.tickets}
+        {:else if sub[0] === 'tickets' && sub[1] && player.tickets}
+          {#key sub[1]}<SelfTicket id={sub[1]} onread={loadInbox} />{/key}
+        {:else if sub[0] === 'tickets' && player.tickets}
           <SelfTickets />
+        {:else}
+          <Inbox {player} onseen={loadInbox} />
         {/if}
       {:else}
         <StartPage {player} canEdit={!!me.may.appearance} />

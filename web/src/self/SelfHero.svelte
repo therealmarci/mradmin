@@ -86,16 +86,16 @@
       {#if s.type === 'incident'}
         <a class="more" tabindex={active ? 0 : -1} href={s.link} target="_blank" rel="noopener noreferrer">{t('self.hero.toStatus')} ↗</a>
       {:else}
-        <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/news')}>{t('self.hero.readMore')} →</button>
+        <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox/news')}>{t('self.hero.readMore')} →</button>
       {/if}
     {:else if s.type === 'ticket'}
       <h2>{s.title}</h2>
       <p>{t(s.open ? 'self.hero.ticketAnswer' : 'self.hero.ticketClosed', { time: dateTime(s.time) })}</p>
-      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/tickets/' + s.id)}>{t('self.hero.toTicket')} →</button>
+      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox/tickets/' + s.id)}>{t('self.hero.toTicket')} →</button>
     {:else}
       <h2>{s.title}</h2>
       <p class="text">{s.text}</p>
-      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/news#post-' + s.id)}>{t('self.hero.readMore')} →</button>
+      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox/news#post-' + s.id)}>{t('self.hero.readMore')} →</button>
     {/if}
   {/snippet}
 </Carousel>

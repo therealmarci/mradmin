@@ -8,7 +8,8 @@
   import { go } from '../lib/router.svelte.js';
   import { dateTime } from '../lib/format.js';
 
-  let { id } = $props();
+  // onread: opening marks the ticket read - the inbox counter in the bar may load again
+  let { id, onread = null } = $props();
 
   let ticket = $state(null);
   let error = $state('');
@@ -16,10 +17,15 @@
   let busy = $state(false);
   let list = $state();
   let seen = 0;
+  let notified = false;
 
   async function load() {
     try {
       ticket = await api('GET', '/self/tickets/' + id);
+      if (!notified) {
+        notified = true;
+        onread?.();
+      }
       // New messages: scroll down to them.
       if (ticket.messages.length !== seen) {
         seen = ticket.messages.length;
@@ -78,7 +84,7 @@
 </script>
 
 <div class="page">
-  <button class="back" onclick={() => go('/me/tickets')}>← {t('self.tickets.title')}</button>
+  <button class="back" onclick={() => go('/inbox/tickets')}>← {t('self.tickets.title')}</button>
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if ticket}
