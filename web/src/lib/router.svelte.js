@@ -10,13 +10,14 @@ const PLAYER = [
   [/^\/me\/login$/, () => '/'],
   [/^\/me\/devices$/, () => '/account'],
   [/^\/me\/map$/, () => '/map'],
-  [/^\/me\/news$/, () => '/inbox/news'],
+  [/^\/me\/news$/, () => '/inbox'],
   [/^\/me\/stats$/, () => '/stats'],
-  [/^\/me\/tickets(\/\d+)?$/, (m) => '/inbox/tickets' + (m[1] ?? '')],
-  // first layout of 1.5: news and statistics under Server, tickets under Help
-  [/^\/server\/news$/, () => '/inbox/news'],
+  [/^\/me\/tickets(?:\/(\d+))?$/, (m) => '/inbox' + (m[1] ? '#ticket-' + m[1] : '')],
+  // earlier layouts of 1.5: news and statistics under Server, tickets under Help, inbox with tabs
+  [/^\/(?:server|inbox)\/news$/, () => '/inbox'],
   [/^\/server\/stats$/, () => '/stats'],
-  [/^\/help(?:\/tickets(\/\d+)?)?$/, (m) => '/inbox/tickets' + (m[1] ?? '')],
+  [/^\/(?:help|inbox)(?:\/tickets(?:\/(\d+))?)$/, (m) => '/inbox' + (m[1] ? '#ticket-' + m[1] : '')],
+  [/^\/help$/, () => '/inbox'],
   [/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/, (m) => `/game/${m[1]}/${m[2]}`],
 ];
 

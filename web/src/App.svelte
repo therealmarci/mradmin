@@ -42,10 +42,7 @@
   import RequestStatus from './pages/RequestStatus.svelte';
   import StartPage from './pages/StartPage.svelte';
   import SelfArea from './self/SelfArea.svelte';
-  import SelfTickets from './self/SelfTickets.svelte';
-  import SelfTicket from './self/SelfTicket.svelte';
   import SelfStats from './self/SelfStats.svelte';
-  import SelfNews from './self/SelfNews.svelte';
   import SelfMap from './self/SelfMap.svelte';
   import Inbox from './self/Inbox.svelte';
   import { poll } from './lib/poll.js';
@@ -183,11 +180,7 @@
   $effect(() => {
     if (hasInbox) return poll(loadInbox, 60000);
   });
-  const inboxTabs = $derived([
-    { id: '', label: t('inbox.tab.all'), path: '/inbox' },
-    ...(player?.news ? [{ id: 'news', label: t('self.nav.news'), path: '/inbox/news' }] : []),
-    ...(player?.tickets ? [{ id: 'tickets', label: t('self.nav.tickets'), path: '/inbox/tickets' }] : []),
-  ]);
+
 
   const gameTabs = $derived((player?.areas ?? []).map((a) => ({
     id: `${a.module}/${a.id}`, label: a.title, path: `/game/${a.module}/${a.id}`, icon: MODULE_ICONS[a.module] ?? a.icon,
@@ -374,16 +367,7 @@
       {:else if area === 'stats' && player.stats}
         <SelfStats />
       {:else if area === 'inbox' && hasInbox}
-        <AreaTabs tabs={inboxTabs} current={sub[0] ?? ''} />
-        {#if sub[0] === 'news' && player.news}
-          <SelfNews />
-        {:else if sub[0] === 'tickets' && sub[1] && player.tickets}
-          {#key sub[1]}<SelfTicket id={sub[1]} onread={loadInbox} />{/key}
-        {:else if sub[0] === 'tickets' && player.tickets}
-          <SelfTickets />
-        {:else}
-          <Inbox {player} onseen={loadInbox} />
-        {/if}
+        <Inbox {player} onseen={loadInbox} />
       {:else}
         <StartPage {player} canEdit={!!me.may.appearance} />
       {/if}
