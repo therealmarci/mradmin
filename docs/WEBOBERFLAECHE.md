@@ -11,7 +11,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Statistik** (`/stats`) | eigene Werte und Server-Ranglisten |
-| **Posteingang** (`/inbox`, Brief oben rechts) | alles auf einer Seite: oben Warnungen, darunter die Kacheln **Neuigkeiten**, **Meine Tickets** und **Changelogs**, Neues markiert. Ein Klick öffnet den Eintrag in einer Leiste über der Seite (Beitrag lesen, Changelog, Ticket-Chat mit Antwortfeld, neues Ticket). Die Zahl am Brief zeigt, was seit dem letzten Besuch neu ist (neue Beiträge, Antworten des Teams) |
+| **Posteingang** (`/inbox`, Brief oben rechts) | alles auf einer Seite: aufgebaut wie die Bereiche der Plugins: Kopf mit der Zahl neuer Einträge, darunter Kacheln für Warnungen, **Meine Tickets**, **Neuigkeiten** und **Changelogs** mit Karten in Statusfarbe (neu blau, offenes Ticket grün, gelesen/geschlossen grau). Ein Klick öffnet die Karte über der Seite (Beitrag lesen, Changelog, Ticket-Chat mit Antwortfeld, neues Ticket). Die Zahl am Brief zeigt, was seit dem letzten Besuch neu ist (neue Beiträge, Antworten des Teams) |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
 | Verwaltung | Reiter |
