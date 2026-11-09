@@ -106,11 +106,13 @@
 
   // The values of the server card: one word each, the rest in the tooltip.
   const pausedUntil = $derived(r?.schedule?.pausedUntil > now ? r.schedule.pausedUntil : 0);
-  const paperTone = $derived(!r ? 'off' : r.paper.latest ? 'warn' : r.paper.newest >= 0 ? '' : 'off');
+  const paperStaged = $derived(r && r.paper.staged >= 0 ? r.paper.staged : 0);
+  const paperTone = $derived(!r ? 'off' : paperStaged ? 'info' : r.paper.latest ? 'warn' : r.paper.newest >= 0 ? '' : 'off');
   const paperTip = $derived(!r ? '' : [
-    r.paper.latest ? t('server.paperLatest', { build: r.paper.latest })
+    paperStaged ? t('server.paperStaged', { build: paperStaged })
+      : r.paper.latest ? t('server.paperLatest', { build: r.paper.latest })
       : r.paper.newest >= 0 ? t('server.paperCurrent') : t(r.paper.failed ? 'server.paperFailed' : 'server.paperChecking'),
-    r.paper.latest ? (r.starter.active ? t('server.paperMode.' + r.paper.update) : t('server.paperManual')) : '',
+    r.paper.latest && !paperStaged ? (r.starter.active ? t('server.paperMode.' + r.paper.update) : t('server.paperManual')) : '',
     r.paper.checkedAt > 0 ? t('server.paperChecked', { time: ago(r.paper.checkedAt) }) : '',
   ].filter(Boolean).join(' · '));
   const starterTone = $derived(!r ? 'off' : r.starter.active ? '' : r.starter.ready ? 'warn' : 'off');
@@ -168,7 +170,8 @@
           <div class="stat" title={paperTip}>
             <span class="s-label">{t('server.paper')}</span>
             <span class="s-value"><span class="dot {paperTone}"></span>{r.paper.minecraft} · #{r.paper.build}</span>
-            {#if r.paper.latest}<span class="s-sub warn">{t('server.paperLatestShort', { build: r.paper.latest })}</span>{/if}
+            {#if paperStaged}<span class="s-sub info">{t('server.paperStagedShort', { build: paperStaged })}</span>
+            {:else if r.paper.latest}<span class="s-sub warn">{t('server.paperLatestShort', { build: r.paper.latest })}</span>{/if}
           </div>
           <div class="stat" title={starterTip}>
             <span class="s-label">{t('server.starter')}</span>
@@ -212,10 +215,6 @@
                   <button class="secondary" disabled={busy || !data.may.restart} title={data.may.restart ? '' : t('server.restartOff')}
                     onclick={() => restart(d)}>{delayText(d)}</button>
                 {/each}
-                {#if r.emergencyDelays.length}
-                  <button class="danger" disabled={busy} title={t('server.emergencyTip')}
-                    onclick={() => emergency.open()}>{t('server.emergencyButton')}</button>
-                {/if}
               </div>
             </div>
             <div class="row">
@@ -226,6 +225,16 @@
                 {/each}
               </div>
             </div>
+            <!-- Own row: the emergency window can restart or stop, so it belongs to neither row above -->
+            {#if r.emergencyDelays.length}
+              <div class="row">
+                <span class="label">{t('server.emergencyRow')}</span>
+                <div class="choices">
+                  <button class="danger" disabled={busy} title={t('server.emergencyTip')}
+                    onclick={() => emergency.open()}>{t('server.emergencyButton')}</button>
+                </div>
+              </div>
+            {/if}
             {#if !data.may.restart}<p class="muted small">{t('server.restartOff')}</p>{/if}
           {/if}
 
@@ -429,6 +438,10 @@
   .s-sub {
     font-size: 0.78rem;
     color: var(--muted);
+  }
+
+  .s-sub.info {
+    color: var(--info, var(--accent));
   }
 
   .s-sub.warn {

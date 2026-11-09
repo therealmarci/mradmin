@@ -89,6 +89,8 @@
   const others = $derived(data ? data.plugins.filter((p) => !p.installed).sort(byName) : []);
   const waiting = $derived(data ? data.plugins.filter((p) => p.staged || (p.pending && !p.notLoaded)) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
+  // Badge next to the latest version of the channel: the installed one is it, or it is newer (not yet downloaded).
+  const latestBadge = (p) => (!p.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : pluginState(p).tone === 'good' ? 'current' : null);
   const left = $derived(data && data.restart.endsAt > 0 ? Math.max(0, data.restart.endsAt - now) : 0);
 </script>
 
@@ -116,10 +118,11 @@
 {/snippet}
 
 <!-- A version in parts: channel tag + number, below build / commit / age -->
-{#snippet version(channel, number, notes)}
+{#snippet version(channel, number, notes, badge = null)}
   <span class="inst">
     <span class="tag {channel}">{t('plugins.channel.' + channel)}</span>
     <span class="mono strong">{number}</span>
+    {#if badge}<span class="badge {badge}">{t('plugins.badge.' + badge)}</span>{/if}
   </span>
   <span class="small muted">{notes.filter(Boolean).join(' · ')}</span>
 {/snippet}
@@ -165,18 +168,19 @@
     <div class="cell">
       <span class="label">{t('plugins.col.available')}</span>
       {#if p.channel === 'dev' && p.dev}
-        {@render version('dev', p.dev.commit, [t('plugins.devState'), ago(p.dev.date)])}
+        {@render version('dev', p.dev.commit, [t('plugins.devState'), ago(p.dev.date)], latestBadge(p))}
       {:else if p.channel !== 'dev' && p.latest}
         {@const v = versionParts(p.latest.version)}
         {@render version(p.latest.prerelease ? 'beta' : v.channel, v.number, [v.build != null ? buildText(v.build) : t('plugins.oldScheme'),
-          p.latest.published ? ago(p.latest.published) : null])}
+          p.latest.published ? ago(p.latest.published) : null], latestBadge(p))}
       {:else}
         <span class="muted">–</span>
       {/if}
     </div>
 
     <div class="cell action">
-      <span class="state"><span class="dot"></span>{st.text}</span>
+      <!-- "up to date" already shows as the badge next to the latest version -->
+      {#if st.tone !== 'good' || !p.installed}<span class="state"><span class="dot"></span>{st.text}</span>{/if}
       {#if p.installed && p.update && p.checksum && data.may.install}
         <button class="act" disabled={busy || p.downloading} onclick={() => update(p)}>⬇ {t('plugins.update')}</button>
       {:else if p.installable && data.may.install}
@@ -673,6 +677,28 @@
   .tag.dev {
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 14%, transparent);
+  }
+
+  /* Badge next to the latest version: outlined, so it does not look like a channel tag */
+  .badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0 7px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    line-height: 1.5;
+  }
+
+  .badge.current {
+    color: var(--good);
+  }
+
+  .badge.current::before {
+    content: '✓ ';
+  }
+
+  .badge.newer {
+    color: var(--warn);
   }
 
   .inst {

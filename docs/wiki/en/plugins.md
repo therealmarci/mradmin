@@ -1,6 +1,6 @@
 # Plugins & updates
 
-In the web interface under **Server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, available version and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+In the web interface under **Server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, **latest version in the channel** (badge **Up to date** when it is installed, **New** when not) and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
 
 ## Channels: stable, beta, dev
 Every plugin follows a **channel** - switch it in the column **Channel** (`mradmin.versions.install`):

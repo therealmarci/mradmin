@@ -150,6 +150,19 @@ public final class Paper {
         Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
     }
 
+    /** SHA-256 of a file as lower-case hex. */
+    public static String sha256Of(Path file) throws IOException {
+        MessageDigest digest = sha256();
+        try (InputStream in = Files.newInputStream(file)) {
+            byte[] buffer = new byte[64 * 1024];
+            int n;
+            while ((n = in.read(buffer)) > 0) {
+                digest.update(buffer, 0, n);
+            }
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
     static MessageDigest sha256() {
         try {
             return MessageDigest.getInstance("SHA-256");

@@ -46,6 +46,8 @@ public final class StarterLink {
     private volatile long paperChecked;
     private volatile boolean paperFailed;
     private int paperAnnounced = -1;
+    /** Build lying in paper-pending.jar (downloaded ahead, checksum checked), -1 = none. */
+    private volatile int paperStaged = -1;
     private BukkitTask paperTask;
 
     public StarterLink(MRAdmin plugin) {
@@ -429,6 +431,13 @@ public final class StarterLink {
                         + Paper.buildOf(Bukkit.getVersion()) + ")" + (auto
                         ? " - the starter installs it on the next restart." : " - install it by hand or use the starter."));
             }
+            try {
+                stagePaper(update);
+            } catch (IOException e) {
+                // The starter downloads it itself on the restart then - only the early download failed.
+                paperStaged = -1;
+                plugin.getLogger().warning("Could not download Paper build " + update.id() + " ahead: " + e.getMessage());
+            }
         } catch (IOException | RuntimeException e) {
             paperFailed = true;
             plugin.getLogger().fine("Paper update check failed: " + e.getMessage());
@@ -436,6 +445,61 @@ public final class StarterLink {
             Thread.currentThread().interrupt();
         } finally {
             paperChecked = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * With the starter and server.paper-update: auto, the new build is downloaded now (checksum checked) and lies in
+     * paper-pending.jar - the starter only has to put it in place on the next restart. An older file goes away.
+     */
+    private void stagePaper(Paper.Build update) throws IOException, InterruptedException {
+        if (!active()) {
+            return;
+        }
+        Path jar = files.paperPending();
+        Path info = files.paperPendingInfo();
+        Properties have = StarterFiles.read(info);
+        int haveBuild = at.marcelr.mradmin.starter.Supervisor.integer(have, "build", -1);
+        boolean auto = settings.paperUpdate().equals("auto");
+        if (update == null || !auto) {
+            // Nothing (more) to install, or updates are not automatic (any more): no leftover file.
+            if (haveBuild >= 0 || Files.exists(jar)) {
+                Files.deleteIfExists(jar);
+                Files.deleteIfExists(info);
+            }
+            paperStaged = -1;
+            return;
+        }
+        if (haveBuild == update.id() && Files.isRegularFile(jar)) {
+            paperStaged = haveBuild;
+            return;
+        }
+        plugin.getLogger().info("Downloading Paper build " + update.id() + " for the next restart ...");
+        Files.deleteIfExists(info);
+        new Paper(at.marcelr.mradmin.starter.Main.userAgent()).download(update, jar);
+        Properties p = new Properties();
+        p.setProperty("build", String.valueOf(update.id()));
+        p.setProperty("minecraft", update.minecraft());
+        p.setProperty("sha256", update.sha256());
+        StarterFiles.write(info, p, "Paper build downloaded by MRadmin - installed by the starter on the next restart");
+        paperStaged = update.id();
+        plugin.getLogger().info("Paper build " + update.id() + " is downloaded - it is installed on the next restart.");
+    }
+
+    /** Paper build downloaded ahead and installed on the next restart, -1 = none. */
+    public int paperStaged() {
+        return paperStaged;
+    }
+
+    /**
+     * Once in a planned restart, 5 minutes before the end: asks Paper and GitHub again, so a build or plugin release
+     * from the last hours still comes along (downloads as versions.auto-download / server.paper-update allow).
+     */
+    public void recheckBeforeRestart() {
+        plugin.getLogger().info("Planned restart in 5 minutes - checking Paper and plugins for updates once more.");
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::checkPaper);
+        if (plugin.versions() != null) {
+            plugin.versions().check(null);
         }
     }
 

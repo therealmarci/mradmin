@@ -54,6 +54,8 @@
   const st = $derived(p ? pluginState(p) : null);
   // What the channel offers: release version, or "Dev abc1234" on the dev channel.
   const offered = $derived(!p ? '' : p.channel === 'dev' ? (p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–') : p.latest ? p.latest.version : '–');
+  const published = $derived(!p ? null : p.channel === 'dev' ? p.dev?.date : p.latest?.published);
+  const badge = $derived(!p?.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : st?.tone === 'good' ? 'current' : null);
   const showConfig = $derived(tab === 'config' && !!p?.config);
 </script>
 
@@ -95,9 +97,10 @@
         <div class="facts">
           <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}{#if p.devBuild} <em class="pre">{t('plugins.devBuild', { commit: p.devBuild })}</em>{/if}</div>
           <div><span>{t('plugins.col.channel')}</span>{t('plugins.channel.' + p.channel)}{#if !p.ownChannel} <span class="muted">({t('plugins.channel.default')})</span>{/if}</div>
-          {#if p.channel === 'dev'}<div><span>{t('plugins.col.available')}</span>{offered}{#if p.dev} <span class="muted">({t('plugins.devFrom', { time: dateTime(p.dev.date), base: p.dev.base })})</span>{/if}</div>{/if}
-          <div><span>{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}{#if p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}</div>
-          <div><span>{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
+          <!-- one line for what the chosen channel offers: release, or the dev build on the dev channel -->
+          <div><span>{t('plugins.col.available')}</span>{offered}{#if p.channel !== 'dev' && p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}
+            {#if badge}<em class="badge {badge}">{t('plugins.badge.' + badge)}</em>{/if}</div>
+          <div><span>{t('versions.published')}</span>{published ? dateTime(published) : '–'}{#if p.channel === 'dev' && p.dev} <span class="muted">· {t('plugins.devBase', { base: p.dev.base })}</span>{/if}</div>
           <div><span>Minecraft</span>{p.minecraft}</div>
           {#if p.mod}<div><span>{t('versions.mod')}</span>{p.mod.version}</div>{/if}
           {#if p.squaremap && (p.squaremap.version || p.squaremap.staged)}
@@ -123,7 +126,7 @@
           </span>
         </div>
   
-        {#if p.latest?.notes}
+        {#if p.channel !== 'dev' && p.latest?.notes}
           <details open={p.update || !!p.staged}>
             <summary>{t('versions.notes', { version: p.latest.version })}</summary>
             <div class="notes">{@html markdown(p.latest.notes)}</div>
@@ -306,6 +309,28 @@
   }
 
   .blocked {
+    color: var(--warn);
+  }
+
+  .badge {
+    font-style: normal;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0 7px;
+    margin-left: 4px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+
+  .badge.current {
+    color: var(--good);
+  }
+
+  .badge.current::before {
+    content: '✓ ';
+  }
+
+  .badge.newer {
     color: var(--warn);
   }
 

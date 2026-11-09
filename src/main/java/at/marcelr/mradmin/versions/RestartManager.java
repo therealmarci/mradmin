@@ -20,6 +20,9 @@ public final class RestartManager {
     /** Seconds left at which the countdown is announced again. */
     private static final List<Long> STEPS = List.of(1800L, 900L, 600L, 300L, 120L, 60L, 30L, 10L, 5L, 4L, 3L, 2L, 1L);
 
+    /** A planned restart checks for updates once more this long before the end. */
+    private static final long RECHECK_BEFORE = 5 * 60_000L;
+
     private final MRAdmin plugin;
     private BukkitTask task;
     private long endsAt;
@@ -75,6 +78,8 @@ public final class RestartManager {
         endsAt = System.currentTimeMillis() + delayMillis;
         // The first announcement is the start itself - the next one is the next step below it (not 4m 59s after 5m).
         long[] lastStep = {(delayMillis + 999) / 1000};
+        // Planned restarts look for updates once more 5 minutes before the end (or right away if less is left).
+        boolean[] rechecked = {!(restart && "schedule".equals(by))};
         String time = delayMillis <= 0 ? "-" : Texts.duration(delayMillis);
         plugin.getLogger().info(by + (restart ? " restarts" : " stops") + " the server in " + Texts.duration(delayMillis)
                 + " (reason: " + this.reason + ").");
@@ -89,6 +94,10 @@ public final class RestartManager {
                 task.cancel();
                 goDown();
                 return;
+            }
+            if (!rechecked[0] && left <= RECHECK_BEFORE) {
+                rechecked[0] = true;
+                plugin.starter().recheckBeforeRestart();
             }
             for (long step : STEPS) {
                 if (seconds <= step && lastStep[0] > step && seconds * 1000 < delayMillis - 500) {

@@ -265,6 +265,9 @@ public final class Supervisor {
         Properties state = StarterFiles.read(files.state());
         int current = Math.max(launch.paperBuild(), integer(state, "paper-build", -1));
         int skip = integer(state, "paper-skip-build", -1);
+        if (usePending(launch, jar, current, skip)) {
+            return true;
+        }
         try {
             Paper.Build build = new Paper(Main.userAgent()).latestStable(launch.minecraft());
             if (build == null || build.id() <= current || build.id() == skip) {
@@ -286,6 +289,42 @@ public final class Supervisor {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
+        }
+    }
+
+    /**
+     * The build MRadmin downloaded ahead of time (paper-pending.jar): used if it is newer than the running one, not the
+     * build that failed before and its checksum still matches. Whatever happens, the file is gone afterwards.
+     */
+    private boolean usePending(Launch launch, Path jar, int current, int skip) {
+        Path pending = files.paperPending();
+        if (!Files.isRegularFile(pending)) {
+            return false;
+        }
+        Properties info = StarterFiles.read(files.paperPendingInfo());
+        int build = integer(info, "build", -1);
+        try {
+            if (build <= current || build == skip || !launch.minecraft().equals(info.getProperty("minecraft", ""))
+                    || !Paper.sha256Of(pending).equalsIgnoreCase(info.getProperty("sha256", ""))) {
+                return false;
+            }
+            Files.copy(jar, files.paperPrevious(), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(pending, jar, StandardCopyOption.REPLACE_EXISTING);
+            files.addEvent("paper-update", (current < 0 ? "?" : current) + " " + build);
+            putState("paper-build", String.valueOf(build));
+            putState("paper-previous-build", String.valueOf(current));
+            say("Paper updated" + (current < 0 ? "" : " from build " + current) + " to build " + build + " (downloaded ahead).");
+            return true;
+        } catch (IOException e) {
+            say("Could not use the downloaded Paper build " + build + ": " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                Files.deleteIfExists(pending);
+                Files.deleteIfExists(files.paperPendingInfo());
+            } catch (IOException ignored) {
+                // Checked again next start.
+            }
         }
     }
 
@@ -413,7 +452,7 @@ public final class Supervisor {
         StarterFiles.write(files.state(), p, "Written by the MRadmin starter - do not edit.");
     }
 
-    static int integer(Properties p, String key, int fallback) {
+    public static int integer(Properties p, String key, int fallback) {
         try {
             return Integer.parseInt(p.getProperty(key, "").trim());
         } catch (NumberFormatException e) {

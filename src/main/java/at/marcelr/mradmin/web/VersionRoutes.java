@@ -157,6 +157,8 @@ public final class VersionRoutes {
         // latest = a newer build (null if current or unknown); newest = newest stable build at all, -1 = not checked yet.
         paper.put("latest", update == null ? null : update.id());
         paper.put("newest", starter.paperLatestBuild());
+        // Downloaded ahead (with the starter, paper-update auto): put in place on the next restart, -1 = none.
+        paper.put("staged", update != null && starter.paperStaged() == update.id() ? starter.paperStaged() : -1);
         paper.put("checkedAt", starter.paperChecked());
         paper.put("failed", starter.paperFailed());
         paper.put("update", starter.settings() == null ? "auto" : starter.settings().paperUpdate());
