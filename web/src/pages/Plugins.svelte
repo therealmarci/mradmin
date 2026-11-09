@@ -91,6 +91,8 @@
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
   // Badge next to the latest version of the channel: the installed one is it, or it is newer (not yet downloaded).
   const latestBadge = (p) => (!p.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : pluginState(p).tone === 'good' ? 'current' : null);
+  // The dev build is the commit the installed JAR was built from (e.g. a beta released from the newest dev state).
+  const sameCommit = (p) => !!(p.dev?.commit && p.installedInfo?.commit && p.dev.commit.startsWith(p.installedInfo.commit));
   const left = $derived(data && data.restart.endsAt > 0 ? Math.max(0, data.restart.endsAt - now) : 0);
 </script>
 
@@ -168,7 +170,7 @@
     <div class="cell">
       <span class="label">{t('plugins.col.available')}</span>
       {#if p.channel === 'dev' && p.dev}
-        {@render version('dev', p.dev.commit, [t('plugins.devState'), ago(p.dev.date)], latestBadge(p))}
+        {@render version('dev', p.dev.commit, [sameCommit(p) ? t('plugins.sameAsInstalled') : t('plugins.devState'), ago(p.dev.date)], latestBadge(p))}
       {:else if p.channel !== 'dev' && p.latest}
         {@const v = versionParts(p.latest.version)}
         {@render version(p.latest.prerelease ? 'beta' : v.channel, v.number, [v.build != null ? buildText(v.build) : t('plugins.oldScheme'),

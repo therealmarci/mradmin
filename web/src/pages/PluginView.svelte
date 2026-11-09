@@ -99,6 +99,7 @@
           <div><span>{t('plugins.col.channel')}</span>{t('plugins.channel.' + p.channel)}{#if !p.ownChannel} <span class="muted">({t('plugins.channel.default')})</span>{/if}</div>
           <!-- one line for what the chosen channel offers: release, or the dev build on the dev channel -->
           <div><span>{t('plugins.col.available')}</span>{offered}{#if p.channel !== 'dev' && p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}
+            {#if p.channel === 'dev' && p.dev?.commit && p.installedInfo?.commit && p.dev.commit.startsWith(p.installedInfo.commit)} <span class="muted">({t('plugins.sameAsInstalled')})</span>{/if}
             {#if badge}<em class="badge {badge}">{t('plugins.badge.' + badge)}</em>{/if}</div>
           <div><span>{t('versions.published')}</span>{published ? dateTime(published) : '–'}{#if p.channel === 'dev' && p.dev} <span class="muted">· {t('plugins.devBase', { base: p.dev.base })}</span>{/if}</div>
           <div><span>Minecraft</span>{p.minecraft}</div>
