@@ -257,7 +257,8 @@
         go('/chunks');
         return;
       }
-      message = action === 'suspendLock' && extra.duration === '0' ? t('chunks.done.suspendEnd')
+      message = action === 'limits' ? t(extra.reset === 'true' ? 'chunks.done.limitsReset' : 'chunks.done.limits')
+        : action === 'suspendLock' && extra.duration === '0' ? t('chunks.done.suspendEnd')
         : t('chunks.done.' + (action === 'conspicuousToggle' ? 'toggle' : action === 'conspicuousDummy' ? 'dummy' : action));
       await load();
     } catch (e) {
@@ -266,6 +267,30 @@
       busy = false;
     }
   }
+
+  // --- own limits of this loader (mrchunks.admin.limits): one row per metric, empty field = value of the config
+  let limitsOpen = $state(false);
+  let limitDraft = $state({});
+
+  function openLimits() {
+    limitDraft = Object.fromEntries((loader.limits ?? []).map((l) => [l.key, {
+      warn: l.own ? String(l.warn) : '', lock: l.own ? String(l.lock) : '' }]));
+    limitsOpen = true;
+  }
+
+  async function saveLimits(reset = false) {
+    const extra = { reset: String(reset) };
+    if (!reset) {
+      for (const [key, v] of Object.entries(limitDraft)) {
+        extra['w_' + key] = String(v.warn ?? '').trim();
+        extra['l_' + key] = String(v.lock ?? '').trim();
+      }
+    }
+    await act('limits', extra);
+    if (!error) limitsOpen = false;
+  }
+
+  const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
   // Share of the lock limit, for the bar; the warn limit is marked on it.
   const share = (m) => (m.lock > 0 ? Math.min(100, (m.value / m.lock) * 100) : 0);
@@ -404,6 +429,10 @@
               stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
           </span>
           <h2>{t('chunks.activity')}</h2>
+          {#if loader.ownLimits}<span class="own-chip" title={t('chunks.limitsOwnHint')}>{t('chunks.limitsOwn')}</span>{/if}
+          {#if me.may.mrchunksLimits && loader.limits}
+            <button class="secondary small limits-btn" onclick={openLimits}>{t('chunks.limitsEdit')}</button>
+          {/if}
           {#if paused}
             <button class="secondary resume" onclick={togglePause} title={t('chunks.pausedHint')}>▶ {t('chunks.resume')}</button>
           {:else if liveActive}
@@ -507,6 +536,44 @@
         <TimeNavigator from={overviewFrom} to={now} viewFrom={rangeStart} viewTo={viewTo} label={t('chunks.timeline')}
           points={overview.points.map((p) => linePoint(p, m))} phases={overviewPhases} gap={overview.gap} onjump={jumpTo} />
       {/if}
+    </div>
+  </div>
+{/if}
+
+{#if limitsOpen && loader}
+  <!-- Own limits of this loader: a quiet table, empty field = value of the config -->
+  <div class="overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && (limitsOpen = false)}>
+    <div class="limits card" role="dialog" aria-modal="true" aria-label={t('chunks.limitsTitle')}>
+      <div class="l-head">
+        <div>
+          <strong>{t('chunks.limitsTitle')}</strong>
+          <p class="muted small">{t('chunks.limitsHint', { name: loader.name })}</p>
+        </div>
+        <button class="secondary close-x" onclick={() => (limitsOpen = false)} aria-label={t('common.close')}>✕</button>
+      </div>
+      <div class="l-table" role="table">
+        <div class="l-row l-th" role="row">
+          <span role="columnheader">{t('chunks.limitsMetric')}</span>
+          <span role="columnheader">{t('chunks.warnLimit')}</span>
+          <span role="columnheader">{t('chunks.lockLimit')}</span>
+        </div>
+        {#each loader.limits as l (l.key)}
+          <div class="l-row" class:own={limitDraft[l.key]?.warn || limitDraft[l.key]?.lock} role="row">
+            <span class="l-name" role="cell">{l.label}{#if l.rate}<span class="muted">&nbsp;/s</span>{/if}</span>
+            <span role="cell"><input type="number" min="0" step={l.rate ? '0.1' : '1'} inputmode="decimal"
+              placeholder={fmt(l.configWarn)} bind:value={limitDraft[l.key].warn} aria-label="{l.label}: {t('chunks.warnLimit')}" /></span>
+            <span role="cell"><input type="number" min="0" step={l.rate ? '0.1' : '1'} inputmode="decimal"
+              placeholder={fmt(l.configLock)} bind:value={limitDraft[l.key].lock} aria-label="{l.label}: {t('chunks.lockLimit')}" /></span>
+          </div>
+        {/each}
+      </div>
+      <p class="muted small">{t('chunks.limitsFoot')}</p>
+      <div class="l-actions">
+        {#if loader.ownLimits}<button class="secondary" onclick={() => saveLimits(true)} disabled={busy}>{t('chunks.limitsReset')}</button>{/if}
+        <span class="grow"></span>
+        <button class="secondary" onclick={() => (limitsOpen = false)} disabled={busy}>{t('common.cancel')}</button>
+        <button onclick={() => saveLimits(false)} disabled={busy}>{t('common.save')}</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -807,6 +874,104 @@
   .side {
     display: grid;
     gap: 16px;
+  }
+
+  .own-chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .limits-btn {
+    margin-left: auto;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(0 0 0 / 55%);
+  }
+
+  .limits {
+    width: min(520px, 100%);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .l-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .l-head p {
+    margin: 2px 0 0;
+  }
+
+  .close-x {
+    padding: 2px 10px;
+    align-self: flex-start;
+  }
+
+  .l-table {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .l-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 12px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  }
+
+  .l-th {
+    border-top: 0;
+    background: var(--surface-2);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .l-row.own .l-name {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .l-name {
+    font-size: 0.88rem;
+  }
+
+  .l-row input {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 0.86rem;
+  }
+
+  .l-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .l-actions .grow {
+    flex: 1;
   }
 
   .c-head {
