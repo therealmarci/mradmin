@@ -355,7 +355,7 @@ die Rechte hat.
   Team-Meldungen“. Tickets und Lag-Alarm behalten ihre gewohnte Nachricht (mit Knöpfen), folgen aber derselben Wahl.
   **`/mradmin mute [dauer|off]`** schaltet das im Spiel stumm (ohne Angabe umschalten) - Posteingang und Push
   laufen weiter.
-- **Konto → Benachrichtigungen**: eine Tabelle, pro Art je ein Schalter für **Posteingang**, **Push** und
+- **Konto → Benachrichtigungen**: eine Tabelle, nach Plugin gruppiert, pro Art je ein Schalter für **Posteingang**, **Push** und
   **Im Spiel**. Abstürze bleiben immer im Posteingang; Wartungen kommen im Spiel ohnehin an alle.
 - Für alle abschalten: `notifications.disabled` in der `config.yml` (im Browser: Konfiguration → Team-Meldungen).
 

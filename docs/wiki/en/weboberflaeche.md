@@ -222,7 +222,7 @@ permission for.
   the same kind in a short time as one line; in a duel only after the round. On joining "n unread team notices".
   Tickets and the lag alarm keep their usual message (with buttons) but follow the same choice.
   **`/mradmin mute [duration|off]`** mutes them in the game (without argument it switches) - inbox and push go on.
-- **Account → Notifications**: one table, per kind a switch each for **Inbox**, **Push** and **In game**. Crashes
+- **Account → Notifications**: one table, grouped by plugin, per kind a switch each for **Inbox**, **Push** and **In game**. Crashes
   always stay in the inbox; maintenance reaches everyone in the game anyway.
 - Off for everyone: `notifications.disabled` in the `config.yml` (in the browser: Configuration → Team notices).
 

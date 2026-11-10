@@ -317,6 +317,9 @@ public final class PushService {
                 if (kind.alarm()) {
                     c.put("alarm", true);
                 }
+                // For grouping by plugin in the account page.
+                var module = kind.module() == null ? null : plugin.modules().module(kind.module());
+                c.put("plugin", module == null ? plugin.getName() : module.plugin().getName());
                 result.put(kind.key(), c);
             }
         }

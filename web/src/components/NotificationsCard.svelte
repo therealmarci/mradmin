@@ -21,8 +21,6 @@
   let endpoint = $state(null);
   let permission = $state(supported ? Notification.permission : 'denied');
 
-  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', application: '📝', 'server-crash': '💥',
-    'update-available': '🆕', 'update-ready': '⬆️', lag: '🐢', maintenance: '🔧' };
   const CHANNELS = ['inbox', 'push', 'game'];
 
   async function load() {
@@ -114,6 +112,17 @@
     }
   }
 
+  // Kinds grouped by the plugin that sends them - MRadmin first, then the others by name.
+  const groups = $derived.by(() => {
+    const map = new Map();
+    for (const [kind, c] of Object.entries(data?.kinds ?? {})) {
+      const name = c.plugin ?? 'MRadmin';
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push([kind, c]);
+    }
+    return [...map].sort(([a], [b]) => (a === 'MRadmin' ? -1 : b === 'MRadmin' ? 1 : a.localeCompare(b)));
+  });
+
   const others = $derived((data?.devices ?? []).filter((d) => d.endpoint !== endpoint));
 </script>
 
@@ -138,11 +147,11 @@
       </div>
       {#if endpoint}
         <div class="buttons">
-          <button class="secondary" onclick={test} disabled={busy}>{t('push.test')}</button>
-          <button class="danger" onclick={() => disable(null)} disabled={busy}>{t('push.disable')}</button>
+          <button class="secondary small" onclick={test} disabled={busy}>{t('push.test')}</button>
+          <button class="secondary small" onclick={() => disable(null)} disabled={busy}>{t('push.disable')}</button>
         </div>
       {:else}
-        <button onclick={enable} disabled={busy || permission === 'denied'}>{t('push.enable')}</button>
+        <button class="secondary small" onclick={enable} disabled={busy || permission === 'denied'}>{t('push.enable')}</button>
       {/if}
     </div>
   {/if}
@@ -153,34 +162,34 @@
       <p class="muted small">{t('push.noKinds')}</p>
     {:else}
       <div class="kinds" role="table" aria-label={t('push.kinds')}>
-        <div class="krow khead" role="row">
-          <span role="columnheader"></span>
-          {#each CHANNELS as c}<span class="col" role="columnheader">{t('push.col.' + c)}</span>{/each}
-        </div>
-        {#each Object.entries(data.kinds) as [kind, c] (kind)}
-          {@const name = data.labels?.[kind]?.label ?? t('push.kind.' + kind)}
-          <div class="krow" role="row">
-            <span class="kname" role="cell">
-              <span class="kicon" aria-hidden="true">{data.labels?.[kind]?.icon ?? ICON[kind] ?? '•'}</span>
-              <span class="ktext">
-                <strong>{name}</strong>
-                <span class="muted small">{data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}</span>
-              </span>
-            </span>
-            {#each CHANNELS as ch}
-              <span class="col" role="cell">
-                {#if c[ch] === undefined}
-                  <span class="muted small" title={t('push.noGame')}>-</span>
-                {:else if ch === 'inbox' && c.alarm}
-                  <input type="checkbox" class="switch" checked disabled title={t('push.alwaysInbox')}
-                    aria-label={`${name}: ${t('push.col.' + ch)}`} />
-                {:else}
-                  <input type="checkbox" class="switch" checked={c[ch]} aria-label={`${name}: ${t('push.col.' + ch)}`}
-                    onchange={(e) => choose(kind, ch, e.currentTarget.checked)} />
-                {/if}
-              </span>
-            {/each}
+        {#each groups as [name, entries] (name)}
+          <div class="krow ghead" role="row">
+            <span class="gname" role="columnheader">{name}</span>
+            {#each CHANNELS as c}<span class="col" role="columnheader">{t('push.col.' + c)}</span>{/each}
           </div>
+          {#each entries as [kind, c] (kind)}
+            {@const label = data.labels?.[kind]?.label ?? t('push.kind.' + kind)}
+            {@const hint = data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}
+            <div class="krow" role="row">
+              <span class="kname" role="cell" title={hint}>
+                <span class="ktitle">{label}</span>
+                <span class="khint">{hint}</span>
+              </span>
+              {#each CHANNELS as ch}
+                <span class="col" role="cell">
+                  {#if c[ch] === undefined}
+                    <span class="none" title={t('push.noGame')}>–</span>
+                  {:else if ch === 'inbox' && c.alarm}
+                    <input type="checkbox" class="switch" checked disabled title={t('push.alwaysInbox')}
+                      aria-label={`${label}: ${t('push.col.' + ch)}`} />
+                  {:else}
+                    <input type="checkbox" class="switch" checked={c[ch]} aria-label={`${label}: ${t('push.col.' + ch)}`}
+                      onchange={(e) => choose(kind, ch, e.currentTarget.checked)} />
+                  {/if}
+                </span>
+              {/each}
+            </div>
+          {/each}
         {/each}
       </div>
       <p class="muted small">{t('push.muteHint')}</p>
@@ -248,9 +257,9 @@
     gap: 12px;
     justify-content: space-between;
     align-items: center;
-    background: var(--surface-2);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 14px;
   }
 
   .buttons {
@@ -267,11 +276,14 @@
     gap: 8px;
   }
 
-  /* One row per kind, the three channels as fixed columns so the switches stand in line. */
+  /* One quiet table: a header row per plugin, thin lines between the kinds, the three channels as fixed columns
+     so the switches stand in line. */
   .kinds {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(3, 5.2rem);
-    gap: 6px 0;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 4.8rem);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
   }
 
   .krow {
@@ -279,27 +291,47 @@
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
     align-items: center;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    border-radius: 10px;
-    padding: 10px 4px 10px 12px;
+    padding: 8px 4px 8px 14px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
 
-  .krow.khead {
-    background: none;
-    border: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    font-size: 0.78rem;
-    font-weight: 700;
+  .krow.ghead {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    background: var(--surface-2);
+    border-top-color: var(--border);
+    font-size: 0.72rem;
+    font-weight: 600;
     color: var(--muted);
   }
 
+  .krow.ghead:first-child {
+    border-top: 0;
+  }
+
+  .gname {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--text);
+  }
+
   .kname {
-    display: flex;
-    gap: 12px;
-    align-items: center;
+    display: grid;
+    gap: 1px;
     min-width: 0;
+  }
+
+  .ktitle {
+    font-size: 0.9rem;
+  }
+
+  .khint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .col {
@@ -308,43 +340,23 @@
     text-align: center;
   }
 
-  .switch:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
+  .none {
+    color: var(--muted);
+    opacity: 0.6;
   }
 
-  @media (max-width: 560px) {
-    .kinds {
-      grid-template-columns: minmax(0, 1fr) repeat(3, 3.4rem);
-    }
-
-    .kname .muted {
-      display: none;
-    }
-  }
-
-  .kicon {
-    font-size: 1.2rem;
-  }
-
-  .ktext {
-    flex: 1;
-    display: grid;
-    gap: 1px;
-    min-width: 0;
-  }
-
-  /* A switch instead of a plain checkbox. */
+  /* A small switch instead of a plain checkbox. */
   .switch {
     appearance: none;
-    width: 42px;
-    height: 24px;
+    width: 32px;
+    height: 18px;
     border-radius: 999px;
-    background: var(--border);
+    background: color-mix(in srgb, var(--muted) 35%, transparent);
     position: relative;
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
+    margin: 0;
     border: none;
     transition: background 0.15s;
   }
@@ -352,10 +364,10 @@
   .switch::after {
     content: '';
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #fff;
     transition: transform 0.15s;
@@ -366,12 +378,31 @@
   }
 
   .switch:checked::after {
-    transform: translateX(18px);
+    transform: translateX(14px);
   }
 
   .switch:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .switch:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 560px) {
+    .kinds {
+      grid-template-columns: minmax(0, 1fr) repeat(3, 3.6rem);
+    }
+
+    .krow {
+      padding-left: 10px;
+    }
+
+    .khint {
+      display: none;
+    }
   }
 
   .devices li {
