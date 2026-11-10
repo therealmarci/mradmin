@@ -58,7 +58,11 @@
         {#if d.online && ctx.online}
           <span class="pill"><span class="dot"></span>{t('landing.online', { n: ctx.online.count, max: ctx.online.max })}</span>
         {/if}
-        {#if !ctx.player}<button class="join" onclick={signIn}>{t('nav.login')}</button>{/if}
+        {#if !ctx.player}
+          <button class="join" onclick={signIn}>{t('nav.login')}</button>
+          <button class="join apply-btn" disabled={!ctx.application} title={ctx.application ? '' : t('apply.closed')}
+            onclick={() => !ctx.editing && ctx.application && (applying = true)}>{t('apply.bannerButton')}</button>
+        {/if}
       </div>
     </div>
   </div>
@@ -159,16 +163,18 @@
   <div class="box login">
     <h2>{d.title || t('apply.widgetTitle')}</h2>
     <p class="muted">{d.text || t('apply.widgetText')}</p>
-    <button onclick={() => !ctx.editing && (applying = true)}>{t('apply.widgetButton')}</button>
+    <button disabled={!ctx.application} title={ctx.application ? '' : t('apply.closed')}
+      onclick={() => !ctx.editing && ctx.application && (applying = true)}>{t('apply.widgetButton')}</button>
+    {#if !ctx.application}<span class="muted small">{t('apply.closed')}</span>{/if}
   </div>
-  {#if applying}
+{/if}
+{#if applying}
     <div class="apply-overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && (applying = false)}
       onkeydown={(e) => e.key === 'Escape' && (applying = false)}>
       <div class="apply-dialog" role="dialog" aria-modal="true" aria-label={t('apply.title')}>
         <Apply modal onclose={() => (applying = false)} />
       </div>
     </div>
-  {/if}
 {/if}
 
 <style>
@@ -318,6 +324,20 @@
 
   .join {
     padding: 8px 18px;
+  }
+
+  /* Apply: second button next to Log In, outlined; grey while applications are closed */
+  .join.apply-btn {
+    background: rgb(255 255 255 / 12%);
+    color: inherit;
+    border: 1px solid rgb(255 255 255 / 35%);
+  }
+
+  .join:disabled,
+  .login button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(1);
   }
 
   /* address / online */

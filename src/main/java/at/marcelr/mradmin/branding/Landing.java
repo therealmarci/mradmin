@@ -138,11 +138,6 @@ public final class Landing {
         a.add(widget("hints", 12, 2, "all", d -> { }));
         if ("members".equals(page)) {
             a.add(widget("tiles", 12, 3, "all", d -> { }));
-            a.add(widget("news", 8, 4, "all", d -> {
-                d.addProperty("title", "");
-                d.addProperty("count", 4);
-            }));
-            a.add(widget("stats", 4, 3, "all", d -> { }));
         } else {
             a.add(widget("news", 8, 4, "all", d -> {
                 d.addProperty("title", "");
@@ -152,11 +147,11 @@ public final class Landing {
                 d.addProperty("title", "");
                 d.addProperty("text", "");
             }));
+            a.add(widget("apply", 4, 2, "all", d -> {
+                d.addProperty("title", "");
+                d.addProperty("text", "");
+            }));
         }
-        a.add(widget("links", 4, 2, "all", d -> {
-            d.addProperty("title", "");
-            d.add("items", new JsonArray());
-        }));
         return a;
     }
 

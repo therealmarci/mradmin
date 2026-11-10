@@ -69,7 +69,7 @@
     return true;
   }
   const shown = $derived(editing ? widgets : widgets.filter(filled));
-  const ctx = $derived({ player: viewer, news: data?.news ?? [], online: data?.online, editing, onsignin });
+  const ctx = $derived({ player: viewer, news: data?.news ?? [], online: data?.online, application: !!data?.application, editing, onsignin });
   const current = $derived(draft[editPage].find((w) => w.id === selected) ?? null);
   const changed = $derived(editing && JSON.stringify(draft) !== JSON.stringify({ guests: data?.guests ?? [], members: data?.members ?? [] }));
   // Personal widgets only on the players' page, the call to log in only on the visitors' page.

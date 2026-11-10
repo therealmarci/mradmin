@@ -198,6 +198,7 @@ public final class BrandingRoutes {
             posts.add(o);
         }
         result.add("news", posts);
+        result.addProperty("application", server.applications().available());
         if (online) {
             int[] players = server.sync(() -> new int[] {(int) org.bukkit.Bukkit.getOnlinePlayers().stream()
                     .filter(p -> !at.marcelr.mradmin.player.Npcs.is(p)).count(), org.bukkit.Bukkit.getMaxPlayers()});

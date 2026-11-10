@@ -404,7 +404,7 @@ Kontakt und die Whitelist-Bewerbung.
   Bewerbung hat, wird abgewiesen. Erst nach dem **Bestätigungslink per Mail** (24 Stunden gültig) kommt die Bewerbung als
   **Ticket** zum Team. Darin: **Annehmen und whitelisten** (setzt den Spieler mit `whitelist add` auf die Whitelist)
   oder **Ablehnen** (Text im Antwortfeld = Begründung), Rückfragen über das Antwortfeld - beides mit
-  `mradmin.applications` (in `mradmin.groups.staff`). Angenommen: Mail mit der Serveradresse
+  `mradmin.applications` (in `mradmin.groups.staff`). Im Banner der Startseite steht für Gäste zusätzlich ein Knopf **Bewerben** (ausgegraut, solange Bewerbungen geschlossen sind). Angenommen: Mail mit der Serveradresse
   (`web.requests.application.server-address`) und dem Statuslink, über den sich der Bewerber gleich ein **Konto für die
   Weboberfläche** anlegt (Passwort, angemeldet mit Minecraft-Name oder E-Mail) - ohne vorher im Spiel gewesen zu sein.
 - Nach dem Absenden bekommt man einen **privaten Statuslink** (`/anfrage/...`): Stand, Verlauf, antworten,

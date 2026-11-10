@@ -93,6 +93,10 @@ public final class PublicRequests implements Listener {
         secret = Base64.getDecoder().decode(stored);
         usedBans.clear();
         y.getLongList("used-bans").forEach(usedBans::add);
+        if (settings().application() && plugin.settings().web().enabled() && !mailer.enabled()) {
+            plugin.getLogger().warning("Whitelist applications are on, but mail is not set up - the form stays closed"
+                    + " until mail works (confirmation link and answer go out by mail).");
+        }
         if (settings().unban() && settings().kickMessage() && plugin.settings().web().enabled()
                 && plugin.settings().web().publicUrl().isEmpty()) {
             plugin.getLogger().warning("Unban requests are on, but web.public-url is not set - ban messages get no"
