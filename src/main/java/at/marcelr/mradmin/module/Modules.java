@@ -139,6 +139,35 @@ public final class Modules implements MRadminService {
     }
 
     @Override
+    public void teamNotice(String moduleId, String kind, String ref, String link,
+                           java.util.function.Function<String, String[]> texts) {
+        AdminModule module = module(moduleId);
+        if (plugin.notices() == null || module == null || link == null || !link.startsWith("/")) {
+            return;
+        }
+        java.util.Map<String, String[]> all = new java.util.LinkedHashMap<>();
+        for (String lang : plugin.messages().languages()) {
+            String[] t = call(module, () -> texts.apply(lang), null);
+            if (t != null && t.length >= 2 && t[0] != null) {
+                all.put(lang, new String[]{t[0], t[1] == null ? "" : t[1]});
+            }
+        }
+        plugin.notices().send(kind, ref == null ? null : "module:" + moduleId + ":" + ref, link, null, all);
+    }
+
+    @Override
+    public void teamNoticeDone(String moduleId, String ref) {
+        if (plugin.notices() != null) {
+            plugin.notices().resolve("module:" + moduleId + ":" + ref);
+        }
+    }
+
+    @Override
+    public boolean teamNoticeInGame(java.util.UUID player, String kind) {
+        return plugin.notices() == null || plugin.notices().wantsGame(player, kind);
+    }
+
+    @Override
     public @Nullable RestartInfo nextRestart() {
         var restarts = plugin.restarts();
         if (restarts == null) {

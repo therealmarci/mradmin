@@ -356,6 +356,25 @@ jeden Tick aufgerufen werden (Server-Thread). MRpvp nutzt es, um kurz vor einem 
 starten. Ankündigungen von MRadmin erreichen Spieler, für die ein Modul `busy` meldet, ohne Titel (nur Actionbar
 und Chat).
 
+## Team-Meldungen (`teamNotice`, ab API 15)
+
+Ein Modul meldet dem Team etwas - im Posteingang der Weboberfläche, als Push und als kurze Zeile im Spiel, so wie
+jedes Teammitglied es für diese Art unter **Konto → Benachrichtigungen** gewählt hat:
+
+- `teamNotice(moduleId, kind, ref, link, texts)` - `kind` ist eine der eigenen `pushKinds()` (nur Mitglieder mit der
+  `viewPermission()` des Moduls bekommen sie), `link` ein Pfad der Weboberfläche (z.B. `/admin/features/mrchunks`),
+  `texts` liefert zu einem Sprachcode (`de`, `en` …) `{titel, text}` in dieser Sprache. `ref` (darf `null` sein) sagt,
+  worum es geht, z.B. `loader:12`.
+- `teamNoticeDone(moduleId, ref)` - der Anlass ist erledigt (z.B. der Loader läuft wieder): die Meldungen dazu werden
+  im Posteingang grau und zählen nicht mehr als neu.
+- `teamNoticeInGame(player, kind)` - für Module, die das Team im Spiel selbst benachrichtigen (z.B. mit Teleport-Knopf):
+  will dieses Mitglied die Art im Spiel und hat es nicht mit `/mradmin mute` stummgeschaltet? Mit älterem MRadmin
+  immer `true`.
+
+Mehrere gleiche Meldungen kurz hintereinander zeigt MRadmin zusammen, Spieler in einem Duell (`busy`) bekommen die Zeile
+erst danach. Ein Ticket über `report(…)` mit `Report#push()` landet ebenfalls im Posteingang (ohne eigene Zeile im
+Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -367,7 +386,7 @@ und Chat).
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

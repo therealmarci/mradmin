@@ -36,9 +36,9 @@ public interface MRadminService {
      * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
      * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
      * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}; 14: restarts - {@link #nextRestart()},
-     * {@link RestartInfo}).
+     * {@link RestartInfo}; 15: team notices - {@link #teamNotice}, {@link #teamNoticeDone}, {@link #teamNoticeInGame}).
      */
-    int API_VERSION = 14;
+    int API_VERSION = 15;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {
@@ -162,5 +162,35 @@ public interface MRadminService {
      */
     default @Nullable RestartInfo nextRestart() {
         return null;
+    }
+
+    // ------------------------------------------------------------------ team notices (since API 15)
+
+    /**
+     * A notice for the team - in the inbox of the web interface, as push and as a short line in the game, as each member
+     * chose for this kind in their account (only members who may see the module). The kind must be one of the module's
+     * {@link WebModule#pushKinds()}. Several of the same kind in a short time are shown together; players in a duel get
+     * the line after it; {@code /mradmin mute} silences the game line.
+     *
+     * @param kind  the kind, e.g. "chunks-shed"
+     * @param ref   what it is about, e.g. "loader:12" - {@link #teamNoticeDone} marks it as done later (may be null)
+     * @param link  page of the web interface to open, e.g. "/admin/features/mrchunks" (path only)
+     * @param texts the texts per language: called with "de", "en" ... and returns {title, body} in that language
+     */
+    default void teamNotice(String moduleId, String kind, @Nullable String ref, String link,
+                            java.util.function.Function<String, String[]> texts) {
+    }
+
+    /** The reason of the team notices about {@code ref} is gone (e.g. the loader is back on): they turn grey as done. */
+    default void teamNoticeDone(String moduleId, String ref) {
+    }
+
+    /**
+     * Whether this member wants notices of this kind as a message in the game now (their choice, not muted with
+     * {@code /mradmin mute}) - for modules that tell the team in the game themselves (e.g. with a teleport button).
+     * True with an older MRadmin.
+     */
+    default boolean teamNoticeInGame(java.util.UUID player, String kind) {
+        return true;
     }
 }
