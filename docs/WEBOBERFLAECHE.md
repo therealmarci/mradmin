@@ -128,7 +128,7 @@ Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Be
   (`mradmin.tickets.view`) und ein Bereich pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt
   die Kachel:
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
-  - **MRchunks:** seine Loader (mit Größe), Chunk-Budget und Dummy-Limit mit Herkunft (Standard, Permission, Admin), Budget setzen; auf der Seite eines Loaders seine Größe ändern (`mrchunks.admin.resize`) und seine Limit-Sperre für bis zu 24 Stunden aussetzen (`mrchunks.admin.suspendlock`); dort stehen auch die Diagramme der Messwerte (1m bis 12h, `mrchunks.admin.gui`) mit Live-Ansicht (`mrchunks.admin.live`)
+  - **MRchunks:** seine Loader (mit Größe), Chunk-Budget und Dummy-Limit mit Herkunft (Standard, Permission, Admin), Budget setzen; auf der Seite eines Loaders seine Größe ändern (`mrchunks.admin.resize`) und seine Limit-Sperre für bis zu 24 Stunden aussetzen (`mrchunks.admin.suspendlock`), seine Lag-Grenzen dauerhaft anpassen (`mrchunks.admin.limits`); dort stehen auch die Diagramme der Messwerte (1m bis 12h, `mrchunks.admin.gui`) mit Live-Ansicht (`mrchunks.admin.live`)
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
     (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`). Verknüpfte Accounts
     ansehen, lösen und neu verknüpfen - per Spielername als Zweit- oder Haupt-Account, ohne Zustimmung der Spieler
