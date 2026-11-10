@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [STA-1.5.1-bu001] - 2026-11-10
+
 ### Behoben & geändert
 - **Update-Prüfung ohne GitHub-Limit:** Die Prüfung auf neue Versionen liest jetzt zuerst eine Datei der MRtechnology-Website mit allen Releases (`https://mrtechnology.marcelr.at/api/releases.json`) und fragt die GitHub-API nur noch, wenn die Website nicht erreichbar ist (auch Server → Plugins und der Starter bei `--channel beta`; nur der Knopf „Jetzt prüfen“ fragt weiter direkt GitHub, damit ein frisches Release sofort erscheint). GitHub erlaubt ohne Anmeldung nur 60 Anfragen pro Stunde und IP - mehrere Server hinter einer Adresse liefen dadurch in „rate limit“.
 
