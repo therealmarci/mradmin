@@ -2,7 +2,8 @@
   // The inbox of the player area (letter at the top right): notifications, newest first with day separators - a new
   // news post, a new changelog, an answer of the team to an own ticket. Unread ones are bold with a coloured bar,
   // read ones grey. A click opens the content in a window over the page and marks it read; "mark all as read" clears
-  // the counter. The whole list of posts and tickets is in the entry News (/news, /news/changelog, /news/tickets).
+  // the counter. Each one (or all) can go into the archive (switch Inbox | Archive), from where it can come back;
+  // something new on it (e.g. a new answer) brings it back by itself. The whole list of posts and tickets is in the entry News (/news, /news/changelog, /news/tickets).
   // Addresses: /inbox#post-3, /inbox#ticket-12 open that window (links from Discord, chat and push).
   // Data: GET /api/self/inbox (SelfInbox.java), contents from /api/self/news?all=1 (SelfNews.java) and the ticket.
   import { api } from '../lib/api.js';
@@ -21,6 +22,7 @@
   let news = $state(null);
   let error = $state('');
   let open = $state(readHash());
+  let view = $state('inbox');
 
   async function load() {
     try {
@@ -78,6 +80,35 @@
     }
   }
 
+  async function archive(n, all = false) {
+    try {
+      if (all) {
+        await api('POST', '/self/inbox/archive', { all: true });
+      } else {
+        n.archived = true;
+        await api('POST', '/self/inbox/archive', { key: n.key });
+      }
+      await load();
+      onseen?.();
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  async function restore(n) {
+    try {
+      n.archived = false;
+      await api('POST', '/self/inbox/restore', { key: n.key });
+      await load();
+      onseen?.();
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+
+  const shown = $derived((inbox?.items ?? []).filter((n) => n.archived === (view === 'archive')));
+  const archivedCount = $derived((inbox?.items ?? []).filter((n) => n.archived).length);
+
   function keyOpen(event, next) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -118,10 +149,24 @@
         <span class="muted">{inbox.unread ? t('inbox.newCount', { n: inbox.unread }) : t('inbox.allRead')}</span>
       {/if}
     </div>
-    {#if inbox?.unread}
-      <button class="secondary small" onclick={readAll}>✓ {t('inbox.readAll')}</button>
-    {/if}
+    <div class="h-actions">
+      {#if view === 'inbox' && inbox?.unread}
+        <button class="secondary small" onclick={readAll}>✓ {t('inbox.readAll')}</button>
+      {/if}
+      {#if view === 'inbox' && shown.length}
+        <button class="secondary small" onclick={() => archive(null, true)}>{@render icon('archive', 14)} {t('inbox.archiveAll')}</button>
+      {/if}
+    </div>
   </header>
+
+  <div class="views" role="tablist">
+    <button role="tab" aria-selected={view === 'inbox'} class:on={view === 'inbox'} onclick={() => (view = 'inbox')}>
+      {t('inbox.title')}{#if inbox?.unread}<span class="count">{inbox.unread}</span>{/if}
+    </button>
+    <button role="tab" aria-selected={view === 'archive'} class:on={view === 'archive'} onclick={() => (view = 'archive')}>
+      {t('inbox.archive')}{#if archivedCount}<span class="count muted-count">{archivedCount}</span>{/if}
+    </button>
+  </div>
 
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -141,18 +186,18 @@
 
   {#if inbox}
     <div class="list card" role="list">
-      {#if !inbox.items.length}
+      {#if !shown.length}
         <div class="empty muted">
-          <span class="e-icon" aria-hidden="true">{@render icon('mail', 40)}</span>
-          <p>{t('inbox.nothing')}</p>
+          <span class="e-icon" aria-hidden="true">{@render icon(view === 'archive' ? 'archive' : 'mail', 40)}</span>
+          <p>{view === 'archive' ? t('inbox.archiveEmpty') : t('inbox.nothing')}</p>
         </div>
       {/if}
-      {#each inbox.items as n, i (n.key)}
-        {#if i === 0 || dayLabel(n.time) !== dayLabel(inbox.items[i - 1].time)}
+      {#each shown as n, i (n.key)}
+        {#if i === 0 || dayLabel(n.time) !== dayLabel(shown[i - 1].time)}
           <div class="day" role="presentation">{dayLabel(n.time)}</div>
         {/if}
         {@const target = { kind: n.kind === 'ticket' ? 'ticket' : 'post', id: n.id }}
-        <div class="row" class:unread={!n.read} role="listitem">
+        <div class="row" class:unread={!n.read && !n.archived} role="listitem">
           <div class="row-btn" role="button" tabindex="0" onclick={() => show(target)} onkeydown={(e) => keyOpen(e, target)}>
             <span class="r-icon" aria-hidden="true">{@render icon(ICON[n.kind])}</span>
             <div class="r-main">
@@ -163,6 +208,11 @@
             </div>
             <span class="r-time" title={dateTime(n.time)}>{timeLabel(n.time)}</span>
           </div>
+          {#if n.archived}
+            <button class="r-act" title={t('inbox.restore')} aria-label={t('inbox.restore')} onclick={() => restore(n)}>{@render icon('restore')}</button>
+          {:else}
+            <button class="r-act" title={t('inbox.archiveOne')} aria-label={t('inbox.archiveOne')} onclick={() => archive(n)}>{@render icon('archive')}</button>
+          {/if}
         </div>
       {/each}
     </div>
@@ -197,11 +247,11 @@
       {:else if post}
         <article class="read">
           <span class="muted small">
-            {#if post.pinned}📌 {t('self.hero.pinned')} · {/if}{dateTime(post.created)}
+            {dateTime(post.created)}
             {#if post.updated - post.created > 60_000} · {t('self.news.updated', { time: dateTime(post.updated) })}{/if}
           </span>
           {#if post.type === 'changelog'}
-            <h2>{#if post.version}<span class="version">{post.version}</span>{/if} {post.title && post.title !== post.version ? post.title : ''}</h2>
+            <h2>{post.version}{#if post.title && post.title !== post.version}{post.version ? ' · ' : ''}{post.title}{/if}</h2>
             {#if post.text}<p class="text">{post.text}</p>{/if}
             <ChangelogDoc entries={post.entries} />
           {:else}
@@ -327,7 +377,117 @@
 
   .row {
     --tone: var(--muted);
+    position: relative;
+    display: flex;
+    align-items: center;
     padding: 2px 8px;
+  }
+
+  .row .row-btn {
+    flex: 1;
+  }
+
+  /* Archive / restore: shows on hover (always on touch screens) */
+  .r-act {
+    position: absolute;
+    right: 18px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .row:hover .r-act,
+  .r-act:focus-visible {
+    opacity: 1;
+  }
+
+  .r-act:hover {
+    color: var(--text);
+    filter: none;
+  }
+
+  .row:hover .r-time {
+    visibility: hidden;
+  }
+
+  @media (hover: none) {
+    .r-act {
+      position: static;
+      opacity: 1;
+      margin-left: 4px;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .row:hover .r-time {
+      visibility: visible;
+    }
+  }
+
+  .h-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .h-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .views {
+    display: flex;
+    gap: 4px;
+    justify-self: start;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .views button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start;
+    padding: 5px 14px;
+    font-size: 0.86rem;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 0;
+  }
+
+  .views button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  .count {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .muted-count {
+    color: var(--muted);
+    background: color-mix(in srgb, var(--muted) 18%, transparent);
   }
 
   .row.unread {

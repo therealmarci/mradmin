@@ -1110,13 +1110,6 @@ sections:
         unit: {de: Sekunden, en: seconds}
         name: {de: Pro Folie, en: Per slide}
         help: {de: 0 = nur von Hand., en: 0 = only by hand.}
-      - key: player-web.news.slides
-        type: int
-        when: player-web.news.enabled
-        min: 1
-        max: 20
-        name: {de: Neueste Beiträge im Karussell, en: Newest posts in the slideshow}
-        help: {de: "So viele der neuesten Beiträge kommen ins Karussell (alle stehen auf der Seite Neuigkeiten).", en: "This many of the newest posts go into the slideshow (all of them are on the page News)."}
       - key: player-web.news.show-maintenance
         type: bool
         when: player-web.news.enabled

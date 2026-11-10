@@ -61,7 +61,6 @@
     <div class="kind">
       <span aria-hidden="true">{s.icon ?? (s.level === 'info' ? 'ℹ️' : icon[s.type])}</span>
       {s.type === 'notice' ? s.title : t('self.hero.kind.' + kind)}
-      {#if s.pinned}<span class="pin" title={t('self.hero.pinned')}>📌</span>{/if}
       {#if s.created}<span class="when">{dateTime(s.created)}</span>{/if}
     </div>
     {#if s.type === 'maintenance'}

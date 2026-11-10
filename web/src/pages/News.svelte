@@ -29,7 +29,7 @@
   });
 
   const empty = (kind = 'news') => ({
-    id: 0, kind, pinned: false, expires: '', discord: false, version: '',
+    id: 0, kind, starts: '', expires: '', discord: false, version: '',
     title: { de: '', en: '' }, text: { de: '', en: '' }, entries: [],
   });
   let draft = $state(empty());
@@ -46,13 +46,14 @@
   }
   load();
 
-  // <input type="date"> works with "2026-11-30"; stored is the end of that day (local time).
-  const toDay = (ms) => {
+  // <input type="datetime-local"> works with "2026-11-30T18:00" (local time); empty = right away / for good.
+  const pad = (n) => String(n).padStart(2, '0');
+  const toLocal = (ms) => {
     if (!ms) return '';
     const d = new Date(ms);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
-  const fromDay = (day) => (day ? new Date(day + 'T23:59:59').getTime() : 0);
+  const fromLocal = (value) => (value ? new Date(value).getTime() : 0);
 
   function newOf(kind) {
     draft = empty(kind);
@@ -65,9 +66,9 @@
     draft = {
       id: p.id,
       kind: p.kind,
-      pinned: p.pinned,
-      expires: toDay(p.expires),
-      discord: false,
+      starts: toLocal(p.starts),
+      expires: toLocal(p.expires),
+      discord: !p.delivered && p.wantDiscord,
       version: p.version ?? '',
       title: { de: p.title.de ?? '', en: p.title.en ?? '' },
       text: { de: p.text.de ?? '', en: p.text.en ?? '' },
@@ -97,7 +98,7 @@
     error = '';
     message = '';
     try {
-      const body = { ...draft, expires: fromDay(draft.expires), entries: draft.entries.filter((e) => e.de.trim() || e.en.trim()) };
+      const body = { ...draft, starts: fromLocal(draft.starts), expires: fromLocal(draft.expires), entries: draft.entries.filter((e) => e.de.trim() || e.en.trim()) };
       await api('POST', '/news', body);
       message = t(draft.id ? 'news.saved' : 'news.posted.' + draft.kind);
       newOf(draft.kind);
@@ -297,18 +298,22 @@
       <p class="muted tiny">{t('news.langHint')}</p>
 
       <div class="options">
-        {#if draft.kind !== 'alert'}
-          <button type="button" class="toggle" role="switch" aria-checked={draft.pinned} onclick={() => (draft.pinned = !draft.pinned)}>
-            <span class="knob" class:on={draft.pinned}></span>{t('news.pinned')}
-          </button>
-        {/if}
         <button type="button" class="toggle" role="switch" aria-checked={draft.discord} disabled={!data?.discord || draft.posted}
           onclick={() => (draft.discord = !draft.discord)}>
           <span class="knob" class:on={draft.discord || draft.posted}></span>{draft.posted ? t('news.discordPosted') : t('news.discord')}
         </button>
-        <div class="expires">
+      </div>
+      <!-- Visible from / until - empty = right away / for good -->
+      <div class="times">
+        <div class="time">
+          <label class="flabel" for="news-starts">{t('news.starts')}</label>
+          <input id="news-starts" type="datetime-local" bind:value={draft.starts} />
+          <span class="muted tiny">{draft.starts ? '' : t('news.startsEmpty')}</span>
+        </div>
+        <div class="time">
           <label class="flabel" for="news-expires">{t(draft.kind === 'alert' ? 'news.alertUntil' : 'news.expires')}</label>
-          <input id="news-expires" type="date" bind:value={draft.expires} />
+          <input id="news-expires" type="datetime-local" bind:value={draft.expires} min={draft.starts || undefined} />
+          <span class="muted tiny">{draft.expires ? '' : t(draft.kind === 'alert' ? 'news.alertUntilEmpty' : 'news.expiresEmpty')}</span>
         </div>
       </div>
       {#if data && !data.discord}<p class="muted tiny">{t('news.discordOff')}</p>{/if}
@@ -343,7 +348,7 @@
                 <div class="meta">
                   <span class="status">{t('news.kind.' + p.kind)}</span>
                   {#if p.version}<span class="chip mono">{p.version}</span>{/if}
-                  {#if p.pinned}<span class="chip">{t('news.pinnedShort')}</span>{/if}
+                  {#if p.starts > now}<span class="chip planned">{t('news.planned')}</span>{/if}
                   {#if p.discord}<span class="chip">Discord</span>{/if}
                   {#if p.kind === 'alert' && !over(p)}<span class="chip live">{t('news.active')}</span>{/if}
                   {#if p.ended}<span class="chip">{t('news.ended')}</span>{:else if over(p)}<span class="chip">{t('news.expired')}</span>{/if}
@@ -364,7 +369,7 @@
                 {/if}
                 <div class="foot">
                   <span class="muted tiny">
-                    {p.author} · {dateTime(p.created)}{#if p.expires && !over(p)} · {t('news.until', { date: dateTime(p.expires) })}{/if}
+                    {p.author} · {dateTime(p.created)}{#if p.starts > now} · {t('news.from', { date: dateTime(p.starts) })}{/if}{#if p.expires && !over(p)} · {t('news.until', { date: dateTime(p.expires) })}{/if}
                   </span>
                   <span class="buttons">
                     {#if p.kind === 'alert' && !over(p)}
@@ -880,14 +885,25 @@
     border-top: 1px solid var(--border);
   }
 
-  .expires {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .times {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+    gap: 12px 20px;
   }
 
-  .expires input {
-    width: auto;
+  .time {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+
+  .time input {
+    width: 100%;
+  }
+
+  .chip.planned {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
 
   .alert-hint {

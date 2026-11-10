@@ -63,6 +63,29 @@ public final class NewsDelivery implements Listener {
         return incidents;
     }
 
+    private org.bukkit.scheduler.BukkitTask task;
+
+    /** Every 30 seconds: posts planned for later that became visible get delivered (see {@link #tick}). */
+    public void start() {
+        stop();
+        task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::tick, 200L, 600L);
+    }
+
+    public void stop() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+    }
+
+    /** Posts whose "visible from" has come: chat previews / warning in game and Discord, as if just written. */
+    void tick() {
+        for (News.Post post : news.dueForDelivery(System.currentTimeMillis())) {
+            published(post, post.wantDiscord() && !post.discord());
+            news.markDelivered(post.id());
+        }
+    }
+
     private Settings.PlayerWebSettings settings() {
         return plugin.settings().playerWeb();
     }
@@ -75,7 +98,7 @@ public final class NewsDelivery implements Listener {
 
     // ---------------------------------------------------------------- publishing
 
-    /** A post was created (not changed): Discord if asked for, chat previews or the warning in game. */
+    /** A post became visible (written now, or its "visible from" came): Discord if asked for, chat previews or the warning in game. */
     public void published(News.Post post, boolean discord) {
         if (discord && discord(post)) {
             news.markDiscord(post.id());

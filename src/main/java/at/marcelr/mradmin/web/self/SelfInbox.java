@@ -21,11 +21,14 @@ import org.bukkit.configuration.file.YamlConfiguration;
  * changelog, an answer of the team to an own ticket. Each one is read or unread; a click opens it in a window, the
  * whole list of posts and tickets is in the entry "News" ({@link SelfNews}, {@link SelfTickets}).
  * <pre>
- *  GET  /api/self/inbox?lang=de    {items: [{key, kind, id, title, version?, open?, time, read}], unread, total}
+ *  GET  /api/self/inbox?lang=de    {items: [{key, kind, id, title, version?, open?, time, read, archived}], unread, total}
  *  POST /api/self/inbox/read       {key} one notification read, {all: true} all of them (also the ticket answers)
+ *  POST /api/self/inbox/archive    {key} one notification into the archive, {all: true} all of the inbox
+ *  POST /api/self/inbox/restore    {key} back from the archive
  * </pre>
- * Read state per player in the storage "inbox-seen": a point in time (everything up to it counts as read) and the
- * keys read one by one with the time. Ticket answers are read when the ticket was opened (ticket store).
+ * Read state per player in the storage "inbox-seen": a point in time (everything up to it counts as read), the keys
+ * read one by one and the archived keys, each with the time. Ticket answers are read when the ticket was opened
+ * (ticket store). Something new (a new answer, a changed post) brings an archived notification back into the inbox.
  */
 final class SelfInbox {
 
@@ -38,11 +41,16 @@ final class SelfInbox {
     private static final long MAX_AGE = 60 * DAY;
     private static final int MAX_POSTS = 30;
 
-    /** Read state of one player: everything up to {@code all} plus single keys (key -> read at). */
-    private record State(long all, Map<String, Long> keys) {
+    /** State of one player: read up to {@code all}, single keys read (key -> at), archived keys (key -> at). */
+    private record State(long all, Map<String, Long> keys, Map<String, Long> archived) {
         boolean read(String key, long time) {
             Long at = keys.get(key);
             return time <= all || (at != null && at >= time);
+        }
+
+        boolean archived(String key, long time) {
+            Long at = archived.get(key);
+            return at != null && at >= time;
         }
     }
 
@@ -65,6 +73,8 @@ final class SelfInbox {
     void register() {
         server.self("GET", "/api/self/inbox", this::list);
         server.self("POST", "/api/self/inbox/read", this::markRead);
+        server.self("POST", "/api/self/inbox/archive", this::archive);
+        server.self("POST", "/api/self/inbox/restore", this::restore);
     }
 
     /** Something to show in the inbox: posts or own tickets. */
@@ -76,6 +86,17 @@ final class SelfInbox {
         routes.check(http);
         UUID player = http.player().player();
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
+        List<Map<String, Object>> items = items(player, lang);
+        long unread = items.stream().filter(m -> !(Boolean) m.get("read") && !(Boolean) m.get("archived")).count();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("unread", unread);
+        result.put("total", unread);
+        http.json(200, result);
+    }
+
+    /** All notifications of a player, newest first, with read and archived. */
+    private List<Map<String, Object>> items(UUID player, String lang) throws Exception {
         State state = state(player);
         long now = System.currentTimeMillis();
         List<Map<String, Object>> items = new ArrayList<>();
@@ -124,13 +145,11 @@ final class SelfInbox {
                 return list;
             }));
         }
+        for (Map<String, Object> m : items) {
+            m.put("archived", state.archived((String) m.get("key"), (Long) m.get("time")));
+        }
         items.sort(Comparator.comparingLong((Map<String, Object> m) -> (Long) m.get("time")).reversed());
-        long unread = items.stream().filter(m -> !(Boolean) m.get("read")).count();
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("items", items);
-        result.put("unread", unread);
-        result.put("total", unread);
-        http.json(200, result);
+        return items;
     }
 
     /** The last message of the team (or a note of the system) after the player's own, null without one. */
@@ -145,7 +164,7 @@ final class SelfInbox {
     }
 
     private static long time(News.Post p) {
-        return Math.max(p.created(), p.updated());
+        return Math.max(p.published(), p.updated());
     }
 
     private void markRead(Http http) throws Exception {
@@ -154,7 +173,8 @@ final class SelfInbox {
         Map<String, Object> body = http.bodyValues();
         long now = System.currentTimeMillis();
         if (Boolean.TRUE.equals(body.get("all"))) {
-            update(player, new State(now, new HashMap<>()));
+            State old = state(player);
+            update(player, new State(now, new HashMap<>(), old.archived()));
             if (tickets.available(player)) {
                 server.sync(() -> {
                     TicketManager manager = plugin.tickets();
@@ -175,8 +195,42 @@ final class SelfInbox {
             State old = state(player);
             Map<String, Long> keys = new HashMap<>(old.keys());
             keys.put(key, now);
-            update(player, new State(old.all(), keys));
+            update(player, new State(old.all(), keys, old.archived()));
         }
+        http.json(200, Map.of("ok", true));
+    }
+
+    private void archive(Http http) throws Exception {
+        routes.check(http);
+        UUID player = http.player().player();
+        Map<String, Object> body = http.bodyValues();
+        long now = System.currentTimeMillis();
+        State old = state(player);
+        Map<String, Long> archived = new HashMap<>(old.archived());
+        if (Boolean.TRUE.equals(body.get("all"))) {
+            for (Map<String, Object> m : items(player, "en")) {
+                archived.put((String) m.get("key"), now);
+            }
+        } else {
+            String key = String.valueOf(body.getOrDefault("key", ""));
+            if (!key.matches("(post|ticket)-\\d{1,9}")) {
+                http.json(400, Map.of("error", "bad-request"));
+                return;
+            }
+            archived.put(key, now);
+        }
+        update(player, new State(old.all(), old.keys(), archived));
+        http.json(200, Map.of("ok", true));
+    }
+
+    private void restore(Http http) throws Exception {
+        routes.check(http);
+        UUID player = http.player().player();
+        String key = String.valueOf(http.bodyValues().getOrDefault("key", ""));
+        State old = state(player);
+        Map<String, Long> archived = new HashMap<>(old.archived());
+        archived.remove(key);
+        update(player, new State(old.all(), old.keys(), archived));
         http.json(200, Map.of("ok", true));
     }
 
@@ -184,7 +238,7 @@ final class SelfInbox {
         synchronized (states) {
             load();
             State s = states.get(player);
-            return s != null ? s : new State(System.currentTimeMillis() - FIRST_LOOK_MILLIS, Map.of());
+            return s != null ? s : new State(System.currentTimeMillis() - FIRST_LOOK_MILLIS, Map.of(), Map.of());
         }
     }
 
@@ -199,14 +253,21 @@ final class SelfInbox {
                     keys.put(k, at);
                 }
             });
-            states.put(player, new State(state.all(), keys));
+            Map<String, Long> archived = new HashMap<>();
+            state.archived().forEach((k, at) -> {
+                if (at >= limit) {
+                    archived.put(k, at);
+                }
+            });
+            states.put(player, new State(state.all(), keys, archived));
             YamlConfiguration y = new YamlConfiguration();
             y.options().setHeader(List.of("Which notifications each player has read in the inbox of the web interface "
-                    + "(managed by the plugin): 'all' = everything up to this time, 'read' = single ones."));
+                    + "(managed by the plugin): 'all' = read up to this time, 'read' = single ones, 'archived' = in the archive."));
             for (Map.Entry<UUID, State> e : states.entrySet()) {
                 String base = e.getKey().toString();
                 y.set(base + ".all", e.getValue().all());
                 e.getValue().keys().forEach((k, at) -> y.set(base + ".read." + k, at));
+                e.getValue().archived().forEach((k, at) -> y.set(base + ".archived." + k, at));
             }
             plugin.storage().saveYaml(FILE, y);
         }
@@ -228,10 +289,17 @@ final class SelfInbox {
                             keys.put(k, read.getLong(k));
                         }
                     }
-                    states.put(uuid, new State(y.getLong(key + ".all"), keys));
+                    Map<String, Long> archived = new HashMap<>();
+                    ConfigurationSection arch = y.getConfigurationSection(key + ".archived");
+                    if (arch != null) {
+                        for (String k : arch.getKeys(false)) {
+                            archived.put(k, arch.getLong(k));
+                        }
+                    }
+                    states.put(uuid, new State(y.getLong(key + ".all"), keys, archived));
                 } else {
                     // before: only the time of the last visit
-                    states.put(uuid, new State(y.getLong(key), new HashMap<>()));
+                    states.put(uuid, new State(y.getLong(key), new HashMap<>(), new HashMap<>()));
                 }
             } catch (IllegalArgumentException ignored) {
                 // broken entry

@@ -264,6 +264,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (newsDelivery != null) {
             newsDelivery.incidents().stop();
+            newsDelivery.stop();
         }
         if (web != null) {
             web.playerSessions().flush();
@@ -325,6 +326,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         versions.start();
         menuListener.start();
         newsDelivery.incidents().start();
+        newsDelivery.start();
         // After all plugins are enabled: their modules bring the layers of the web map.
         Bukkit.getScheduler().runTask(this, map::start);
     }

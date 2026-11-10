@@ -56,7 +56,7 @@ public final class ConfigUpdater {
  * web.login.require-2fa (team needs 2FA, default off); new comments of web.login.
  * 53: branding (name, tagline, accent, footer-text, links) - the look of the web interface.
      */
-    public static final int CURRENT_VERSION = 53;
+    public static final int CURRENT_VERSION = 54;
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();

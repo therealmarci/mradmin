@@ -83,8 +83,10 @@ public final class NewsRoutes {
             entries.add(entry);
         }
         m.put("entries", entries);
-        m.put("pinned", p.pinned());
         m.put("discord", p.discord());
+        m.put("wantDiscord", p.wantDiscord());
+        m.put("delivered", p.delivered());
+        m.put("starts", p.starts());
         m.put("created", p.created());
         m.put("updated", p.updated());
         m.put("expires", p.expires());
@@ -118,20 +120,28 @@ public final class NewsRoutes {
         if (!complete) {
             throw new Http.WebException(400, "changelog".equals(kind) ? "news-changelog-empty" : "news-empty");
         }
+        long starts = body.get("starts") instanceof Long l && l > 0 ? l : 0;
         long expires = body.get("expires") instanceof Long l && l > 0 ? l : 0;
+        if (starts > 0 && expires > 0 && expires <= starts) {
+            throw new Http.WebException(400, "news-times");
+        }
         News.Post old = id > 0 ? server.news().get(id) : null;
         if (id > 0 && old == null) {
             throw new Http.WebException(404, "not-found");
         }
-        boolean pinned = !"alert".equals(kind) && Boolean.TRUE.equals(body.get("pinned"));
-        News.Post post = server.news().save(id, kind, title, text, version, entries, pinned, expires, http.account().name());
-        boolean discord = Boolean.TRUE.equals(body.get("discord")) && !post.discord();
-        // New: to the players (chat preview, warning in game) and, if asked for, Discord. Changed: only Discord if
-        // it is asked for now and was not posted yet.
+        boolean discord = Boolean.TRUE.equals(body.get("discord"));
+        News.Post post = server.news().save(id, kind, title, text, version, entries, starts, expires,
+                http.account().name(), discord);
+        // Visible now and not delivered yet: to the players (chat preview, warning in game) and, if asked for,
+        // Discord. Planned for later: NewsDelivery.tick does it when the time comes. Delivered already: only Discord
+        // if it is asked for now and was not posted yet.
         server.sync(() -> {
-            if (old == null) {
-                plugin.newsDelivery().published(post, discord);
-            } else if (discord && plugin.newsDelivery().discord(post)) {
+            if (!post.delivered()) {
+                if (post.visible(System.currentTimeMillis())) {
+                    plugin.newsDelivery().published(post, discord && !post.discord());
+                    server.news().markDelivered(post.id());
+                }
+            } else if (discord && !post.discord() && plugin.newsDelivery().discord(post)) {
                 server.news().markDiscord(post.id());
             }
             return null;

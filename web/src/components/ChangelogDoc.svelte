@@ -1,6 +1,6 @@
 <script>
-  // One changelog written out like a document: headings (three levels) and entries with their type tag, indented below
-  // the heading they belong to (lib/changelog.js).
+  // One changelog written out as a plain list: headings (three levels) and entries as bullet points, the type as a
+  // small coloured word in front, indented below the heading they belong to (lib/changelog.js).
   import { t } from '../lib/i18n.js';
   import { lines } from '../lib/changelog.js';
 
@@ -13,6 +13,7 @@
       <div class="d-head h{l.level}" style="--indent: {l.indent}">{l.text}</div>
     {:else}
       <div class="d-line t-{l.type}" style="--indent: {l.indent}">
+        <span class="dot" aria-hidden="true">•</span>
         <span class="tag">{t('news.type.' + l.type)}</span>
         <span class="d-text">{l.text}</span>
       </div>
@@ -27,16 +28,13 @@
 
   .d-head,
   .d-line {
-    --step: 20px;
-    padding-left: calc(var(--indent) * var(--step));
-    background: repeating-linear-gradient(90deg, var(--border) 0 2px, transparent 2px var(--step)) left top /
-      calc(var(--indent) * var(--step)) 100% no-repeat;
+    padding-left: calc(var(--indent) * 18px);
   }
 
   .d-head {
-    padding-top: 12px;
-    padding-bottom: 4px;
-    font-weight: 800;
+    padding-top: 10px;
+    padding-bottom: 2px;
+    font-weight: 700;
     overflow-wrap: anywhere;
   }
 
@@ -45,18 +43,15 @@
   }
 
   .d-head.h1 {
-    font-size: 0.82rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .d-head.h2 {
     font-size: 1rem;
   }
 
+  .d-head.h2 {
+    font-size: 0.94rem;
+  }
+
   .d-head.h3 {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: var(--muted);
   }
 
@@ -64,9 +59,9 @@
     --t: var(--muted);
     display: flex;
     align-items: baseline;
-    gap: 10px;
-    padding-top: 3px;
-    padding-bottom: 3px;
+    gap: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
   }
 
   .t-new {
@@ -85,18 +80,17 @@
     --t: var(--bad);
   }
 
+  .dot {
+    flex-shrink: 0;
+    color: var(--muted);
+  }
+
   .tag {
     flex-shrink: 0;
-    min-width: 76px;
-    padding: 1px 8px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    min-width: 72px;
+    font-size: 0.82rem;
+    font-weight: 600;
     color: var(--t);
-    background: color-mix(in srgb, var(--t) 14%, transparent);
   }
 
   .d-text {
@@ -105,11 +99,6 @@
   }
 
   @media (max-width: 520px) {
-    .d-head,
-    .d-line {
-      --step: 12px;
-    }
-
     .tag {
       min-width: 0;
     }

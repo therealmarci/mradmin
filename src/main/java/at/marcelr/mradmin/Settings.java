@@ -386,7 +386,7 @@ public record Settings(
      */
     public record PlayerWebSettings(boolean enabled, int sessionDays, int idleDays, int codeSeconds, int maxDevices,
                                     boolean rankings, int rankingTop, List<String> rankingKinds,
-                                    boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
+                                    boolean news, int newsSeconds, boolean newsMaintenance,
                                     boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
                                     List<String> personalStats, boolean chatPreview, int chatPreviewMax,
                                     int chatPreviewDays, boolean alertChat, boolean alertTitle) {
@@ -404,7 +404,6 @@ public record Settings(
                 List.copyOf(c.getStringList("player-web.rankings.statistics")),
                 c.getBoolean("player-web.news.enabled", true),
                 Math.clamp(c.getInt("player-web.news.seconds", 8), 0, 120),
-                Math.clamp(c.getInt("player-web.news.slides", 5), 0, 30),
                 c.getBoolean("player-web.news.show-maintenance", true),
                 c.getBoolean("player-web.news.show-restart", true),
                 c.getBoolean("player-web.news.show-plugin-notices", true),

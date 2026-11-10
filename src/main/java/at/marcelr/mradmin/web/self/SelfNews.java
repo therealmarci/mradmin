@@ -77,15 +77,33 @@ public final class SelfNews {
             http.json(200, result);
             return;
         }
-        // The slideshow: the most urgent first.
+        // The slideshow: the most urgent first. Everything that needs the server thread in ONE hop (each hop waits
+        // for the next tick - one per plugin made the tile load noticeably later than the rest of the page).
+        UUID player = http.player().player();
+        String noticeKey = player + ":" + lang;
+        long now = System.currentTimeMillis();
+        noticeCache.values().removeIf(c -> now - c.at() >= NOTICES_MILLIS);
+        CachedNotices cached = settings.newsPluginNotices() ? noticeCache.get(noticeKey) : null;
+        Map<String, SelfViewer> viewers = new LinkedHashMap<>();
+        if (settings.newsPluginNotices() && cached == null) {
+            for (String id : plugin.modules().webModules().keySet()) {
+                viewers.put(id, routes.viewer(http, id));
+            }
+        }
+        boolean withTickets = settings.newsTickets() && tickets.available(player);
         List<Map<String, Object>> slides = new ArrayList<>(alerts);
-        slides.addAll(general());
+        List<List<Map<String, Object>>> parts = server.sync(() -> List.of(
+                general(),
+                settings.newsPluginNotices() && cached == null ? notices(viewers) : List.<Map<String, Object>>of(),
+                withTickets ? unreadTickets(player) : List.<Map<String, Object>>of()));
+        slides.addAll(parts.get(0));
         if (settings.newsPluginNotices()) {
-            slides.addAll(cachedNotices(http, lang));
+            if (cached == null) {
+                noticeCache.put(noticeKey, new CachedNotices(now, parts.get(1)));
+            }
+            slides.addAll(cached != null ? cached.notices() : parts.get(1));
         }
-        if (settings.newsTickets() && tickets.available(http.player().player())) {
-            slides.addAll(server.sync(() -> unreadTickets(http.player().player())));
-        }
+        slides.addAll(parts.get(2));
         addPosts(slides, posts, lang, result);
         http.json(200, result);
     }
@@ -97,24 +115,24 @@ public final class SelfNews {
         }
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
         List<Map<String, Object>> slides = new ArrayList<>(alerts(lang));
-        slides.addAll(general());
+        slides.addAll(server.sync(this::general));
         Map<String, Object> result = new LinkedHashMap<>();
         addPosts(slides, server.news().visible(), lang, result);
         http.json(200, result);
     }
 
-    /** Maintenance and the restart countdown (if switched on in player-web.news). */
-    private List<Map<String, Object>> general() throws Exception {
+    /** Maintenance and the restart countdown (if switched on in player-web.news). Main thread. */
+    private List<Map<String, Object>> general() {
         Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
         List<Map<String, Object>> slides = new ArrayList<>();
         if (settings.newsMaintenance() && plugin.feature(Feature.MAINTENANCE)) {
-            Map<String, Object> maintenance = server.sync(this::maintenance);
+            Map<String, Object> maintenance = maintenance();
             if (maintenance != null) {
                 slides.add(maintenance);
             }
         }
         if (settings.newsRestart()) {
-            long restartAt = server.sync(() -> plugin.restarts().endsAt());
+            long restartAt = plugin.restarts().endsAt();
             if (restartAt > 0) {
                 slides.add(Map.of("type", "restart", "time", restartAt));
             }
@@ -126,13 +144,14 @@ public final class SelfNews {
     private void addPosts(List<Map<String, Object>> slides, List<News.Post> posts, String lang, Map<String, Object> result) {
         Settings.PlayerWebSettings settings = plugin.settings().playerWeb();
         List<News.Post> shown = posts.stream().filter(p -> !p.alert()).toList();
-        for (News.Post p : shown.subList(0, Math.min(shown.size(), settings.newsSlides()))) {
-            Map<String, Object> m = post(p, lang);
-            m.put("text", p.preview(lang, 400));
+        // Only the newest post (news or changelog) - all of them are in the entry News.
+        if (!shown.isEmpty()) {
+            Map<String, Object> m = post(shown.get(0), lang);
+            m.put("text", shown.get(0).preview(lang, 400));
             slides.add(m);
         }
         result.put("seconds", settings.newsSeconds());
-        result.put("more", shown.size() > settings.newsSlides());
+        result.put("more", shown.size() > 1);
         result.put("slides", slides);
     }
 
@@ -170,8 +189,7 @@ public final class SelfNews {
             entries.add(Map.of("type", e.type(), "text", p.in(e.text(), lang)));
         }
         m.put("entries", entries);
-        m.put("pinned", p.pinned());
-        m.put("created", p.created());
+        m.put("created", p.published());
         m.put("updated", p.updated());
         m.put("expires", p.expires());
         return m;
@@ -191,28 +209,17 @@ public final class SelfNews {
         noticeCache.keySet().removeIf(k -> k.startsWith(player + ":"));
     }
 
-    private List<Map<String, Object>> cachedNotices(Http http, String lang) throws Exception {
-        String key = http.player().player() + ":" + lang;
-        long now = System.currentTimeMillis();
-        CachedNotices cached = noticeCache.get(key);
-        if (cached != null && now - cached.at() < NOTICES_MILLIS) {
-            return cached.notices();
-        }
-        noticeCache.values().removeIf(c -> now - c.at() >= NOTICES_MILLIS);
-        List<Map<String, Object>> fresh = notices(http);
-        noticeCache.put(key, new CachedNotices(now, fresh));
-        return fresh;
-    }
-
-    /** Warnings of the plugins: Text blocks with tone bad (first) or warn in the summary of their areas. */
-    private List<Map<String, Object>> notices(Http http) throws Exception {
+    /** Warnings of the plugins: Text blocks with tone bad (first) or warn in the summary of their areas. Main thread. */
+    private List<Map<String, Object>> notices(Map<String, SelfViewer> viewers) {
         List<Map<String, Object>> bad = new ArrayList<>();
         List<Map<String, Object>> warn = new ArrayList<>();
         for (var entry : plugin.modules().webModules().entrySet()) {
-            SelfViewer viewer = routes.viewer(http, entry.getKey());
+            SelfViewer viewer = viewers.get(entry.getKey());
+            if (viewer == null) {
+                continue;
+            }
             AdminModule module = plugin.modules().module(entry.getKey());
-            List<SelfArea> areas = server.sync(() -> plugin.modules().call(module,
-                    () -> entry.getValue().selfAreas(viewer), List.<SelfArea>of()));
+            List<SelfArea> areas = plugin.modules().call(module, () -> entry.getValue().selfAreas(viewer), List.<SelfArea>of());
             for (SelfArea area : areas) {
                 for (SelfBlock block : area.summary()) {
                     if (block instanceof SelfBlock.Text text && ("bad".equals(text.tone()) || "warn".equals(text.tone()))) {

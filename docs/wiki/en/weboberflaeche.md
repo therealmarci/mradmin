@@ -12,7 +12,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Map** (`/map`) | the map full screen |
 | **Statistics** (`/stats`) | own values and server rankings |
 | **News** (`/news`) | tabs **News** (`/news`), **Changelog** (`/news/changelog`) and **Tickets** (`/news/tickets`, own tickets and a new one) |
-| **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Active warnings are on top |
+| **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). Active warnings are on top |
 | **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
 
 | Administration | Tabs |
@@ -154,7 +154,7 @@ Two sections: **Posts** for the player page (`mradmin.news`) and **Announcements
 ### Posts
 Three kinds of posts for the players, texts separately in German and English (everyone sees their language, if it is missing, the other one):
 
-- **News** (announcements, events): title and text, **Pin** always puts it in front.
+- **News** (announcements, events): title and text.
 - **Changelog**: version, optionally title and introduction, plus **entries** with a kind (New, Changed, Fixed, Removed) and **headings** on three levels (1 main heading, e.g. "Plugins"; 2 sub heading, e.g. "MRpvp"; 3 a further level). Entries belong to the heading above them and are indented below it, under every level all kinds are possible - add, reorder, remove. On the player page a timeline, on Discord the sections in order.
 - **Critical warning**: title and text. When sent, all players who are online get the warning in chat and as a title on the screen (`player-web.news.alerts`); whoever joins later sees it in chat as long as it is active. It runs until "Active until" or until **End**.
 
@@ -172,7 +172,7 @@ Every player with `mradmin.web.self` gets new news and changelogs **once as a pr
 
 What is already pinned at server start is not announced to everyone again. Incidents are changed and ended in Uptime Kuma. In the Discord channel of the announcements (`discord-announce.kuma`) every incident is posted once (red pings the role), with a link "More" to the news page of the player page (not to Kuma), edited when it changes in Kuma and set to "✅ Resolved" at the end.
 
-**Visible until** hides a post after this day (it stays in the list, gray). Creating, editing, ending and deleting are recorded in the web log. It is stored in MRadmin's storage under `news` (who already got which preview: `news-seen`).
+**Visible from** and **Visible until** (date and time, empty = right away / for good) decide when players see a post. A planned post shows as "Planned" in the list; chat preview, warning in game and Discord go out only when it becomes visible. Expired posts stay grey in the list. The hero tile of the start page always shows only the newest post (news or changelog), all others are in the entry **News**. Creating, editing, ending and deleting are recorded in the web log. It is stored in MRadmin's storage under `news` (who already got which preview: `news-seen`).
 
 ### Announcements
 **Send** (`mradmin.announce`): one of your own templates (with values if it has placeholders) or an own text ("title | subtitle") on the screen, optionally also on the community Discord. Everything goes to the web log.

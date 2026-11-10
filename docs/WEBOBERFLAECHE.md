@@ -12,7 +12,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Statistik** (`/stats`) | eigene Werte und Server-Ranglisten |
 | **Neuigkeiten** (`/news`) | Reiter **Neuigkeiten** (`/news`), **Changelog** (`/news/changelog`) und **Tickets** (`/news/tickets`, eigene Tickets und neues Ticket) |
-| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Aktive Warnungen stehen oben |
+| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Aktive Warnungen stehen oben |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
 | Verwaltung | Reiter |
@@ -231,12 +231,12 @@ Zwei Bereiche: **Beiträge** für die Spielerseite (`mradmin.news`) und **Ankün
 Drei Arten von Beiträgen für die Spieler, Texte getrennt auf Deutsch und Englisch (jeder sieht seine Sprache, fehlt sie,
 die andere):
 
-- **Neuigkeit** (Ankündigungen, Events): Titel und Text, **Anheften** stellt sie immer nach vorne.
+- **Neuigkeit** (Ankündigungen, Events): Titel und Text.
 - **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) und
   **Überschriften** in drei Ebenen (1 Hauptüberschrift, z.B. „Plugins“; 2 Zwischenüberschrift, z.B. „MRpvp“; 3 eine
   weitere Gliederung). Einträge gehören zur Überschrift darüber und werden darunter eingerückt, unter jeder Ebene sind
-  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste, im Discord die
-  Abschnitte der Reihe nach.
+  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine schlichte Liste (Version mit Datum,
+  darunter Aufzählungspunkte), im Discord die Abschnitte der Reihe nach.
 - **Kritische Warnung**: Titel und Text. Beim Senden bekommen alle Spieler, die online sind, die Warnung im Chat und als
   Titel auf dem Bildschirm (`player-web.news.alerts`); wer später joint, sieht sie im Chat, solange sie aktiv ist. Sie
   läuft bis „Aktiv bis“ oder bis **Beenden**.
@@ -265,7 +265,10 @@ Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce
 (rot pingt die Rolle), mit Link „Mehr dazu“ zur Seite Neuigkeiten der Spielerseite (nicht zu Kuma), bei Änderungen in
 Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
 
-**Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
+**Sichtbar ab** und **Sichtbar bis** (Datum und Uhrzeit, leer = sofort bzw. für immer) legen fest, wann Spieler einen
+Beitrag sehen. Ein geplanter Beitrag steht in der Liste als „Geplant“; Chat-Vorschau, Warnung im Spiel und Discord gehen
+erst raus, wenn er sichtbar wird. Abgelaufene bleiben grau in der Liste. In der Hero-Kachel der Startseite steht immer
+nur der neueste Beitrag (Neuigkeit oder Changelog), alle anderen im Eintrag **Neuigkeiten**. Anlegen, Bearbeiten, Beenden
 und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon
 bekommen hat: `news-seen`).
 

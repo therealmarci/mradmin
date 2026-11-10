@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 53
+config-version: 54
 
 
 # ------------------------------------------------------------------------------
@@ -616,14 +616,12 @@ player-web:
   # Own statistics as a tile on the start page, in this order (the first one big). Same names as under
   # rankings.statistics. Empty list [] = no tile.
   personal-stats: [play-time, blocks-mined, mob-kills, deaths]
-  # Slideshow at the top of the start page: planned maintenance, a planned restart and the posts of the team - news
-  # and changelogs, written in the web interface under "News" (permission mradmin.news), in German and English.
+  # Slideshow at the top of the start page: planned maintenance, a planned restart and the newest post of the team -
+  # news or changelog, written in the web interface under "News" (permission mradmin.news), in German and English.
   news:
     enabled: true
     # Seconds per slide before the next one comes (0 = only by hand).
     seconds: 8
-    # How many of the newest posts are in the slideshow (all of them are on the page "News").
-    slides: 5
     show-maintenance: true
     show-restart: true
     # Warnings of the plugins about the player's own things, e.g. MRchunks: loaders locked for lag, close to the lag
