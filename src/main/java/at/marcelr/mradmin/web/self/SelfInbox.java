@@ -18,10 +18,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * The inbox of the player area (the letter at the top right): notifications, newest first - a new news post, a new
- * changelog, an answer of the team to an own ticket. Each one is read or unread; a click opens it in a window, the
+ * changelog, an answer of the team to an own ticket, and for the team the team notices
+ * ({@link at.marcelr.mradmin.notify.TeamNotices}: new ticket, application, crash, update ...). Each one is read or unread; a click opens it in a window, the
  * whole list of posts and tickets is in the entry "News" ({@link SelfNews}, {@link SelfTickets}).
  * <pre>
- *  GET  /api/self/inbox?lang=de    {items: [{key, kind, id, title, version?, open?, time, read, archived}], unread, total}
+ *  GET  /api/self/inbox?lang=de    {items: [{key, kind, id, title, version?, open?, time, read, archived}], unread, total,
+ *                                   alarm, team}; team notices: kind "team", notice, body, url, done, alarm
  *  POST /api/self/inbox/read       {key} one notification read, {all: true} all of them (also the ticket answers)
  *  POST /api/self/inbox/archive    {key} one notification into the archive, {all: true} all of the inbox
  *  POST /api/self/inbox/restore    {key} back from the archive
@@ -71,6 +73,9 @@ final class SelfInbox {
     }
 
     void register() {
+        if (plugin.notices() != null) {
+            plugin.notices().unreadCounter(this::unreadTeam);
+        }
         server.self("GET", "/api/self/inbox", this::list);
         server.self("POST", "/api/self/inbox/read", this::markRead);
         server.self("POST", "/api/self/inbox/archive", this::archive);
@@ -79,7 +84,8 @@ final class SelfInbox {
 
     /** Something to show in the inbox: posts or own tickets. */
     boolean available(UUID player) {
-        return news.available() || tickets.available(player);
+        return news.available() || tickets.available(player)
+                || (plugin.notices() != null && !plugin.notices().of(player).isEmpty());
     }
 
     private void list(Http http) throws Exception {
@@ -87,12 +93,34 @@ final class SelfInbox {
         UUID player = http.player().player();
         String lang = "de".equals(http.query().get("lang")) ? "de" : "en";
         List<Map<String, Object>> items = items(player, lang);
-        long unread = items.stream().filter(m -> !(Boolean) m.get("read") && !(Boolean) m.get("archived")).count();
+        long unread = items.stream().filter(SelfInbox::counts).count();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("items", items);
         result.put("unread", unread);
         result.put("total", unread);
+        // An unread crash turns the letter red; "team" shows the switch All | Team.
+        result.put("alarm", items.stream().anyMatch(m -> counts(m) && Boolean.TRUE.equals(m.get("alarm"))));
+        result.put("team", items.stream().anyMatch(m -> "team".equals(m.get("kind"))));
         http.json(200, result);
+    }
+
+    /** Unread, not archived and (team notices) not done. */
+    private static boolean counts(Map<String, Object> m) {
+        return !(Boolean) m.get("read") && !(Boolean) m.get("archived") && !Boolean.TRUE.equals(m.get("done"));
+    }
+
+    /** Team notices the member has not read (for the line after joining). Server thread. */
+    private int unreadTeam(UUID player) {
+        var notices = plugin.notices();
+        State state = state(player);
+        int count = 0;
+        for (var n : notices.of(player)) {
+            String key = "team-" + n.id();
+            if (!state.read(key, n.time()) && !state.archived(key, n.time()) && !notices.done(n)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /** All notifications of a player, newest first, with read and archived. */
@@ -145,6 +173,30 @@ final class SelfInbox {
                 return list;
             }));
         }
+        var notices = plugin.notices() == null ? List.<at.marcelr.mradmin.notify.TeamNotices.Notice>of()
+                : plugin.notices().of(player);
+        if (!notices.isEmpty()) {
+            items.addAll(server.sync(() -> {
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (var n : notices) {
+                    String key = "team-" + n.id();
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("key", key);
+                    m.put("kind", "team");
+                    m.put("notice", n.kind());
+                    m.put("id", n.id());
+                    m.put("title", n.title(lang));
+                    m.put("body", n.body(lang));
+                    m.put("url", n.url());
+                    m.put("time", n.time());
+                    m.put("read", state.read(key, n.time()));
+                    m.put("done", plugin.notices().done(n));
+                    m.put("alarm", plugin.notices().alarm(n));
+                    list.add(m);
+                }
+                return list;
+            }));
+        }
         for (Map<String, Object> m : items) {
             m.put("archived", state.archived((String) m.get("key"), (Long) m.get("time")));
         }
@@ -188,7 +240,7 @@ final class SelfInbox {
             }
         } else {
             String key = String.valueOf(body.getOrDefault("key", ""));
-            if (!key.matches("post-\\d{1,9}")) {
+            if (!key.matches("(post|team)-\\d{1,12}")) {
                 http.json(400, Map.of("error", "bad-request"));
                 return;
             }
@@ -213,7 +265,7 @@ final class SelfInbox {
             }
         } else {
             String key = String.valueOf(body.getOrDefault("key", ""));
-            if (!key.matches("(post|ticket)-\\d{1,9}")) {
+            if (!key.matches("(post|ticket|team)-\\d{1,12}")) {
                 http.json(400, Map.of("error", "bad-request"));
                 return;
             }

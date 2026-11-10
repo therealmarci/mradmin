@@ -267,6 +267,14 @@ public final class HealthMonitor {
 
     // ------------------------------------------------------------------- alert
 
+    /** The lag alarm in the game: to the team with the permission who want it and have not muted. */
+    private void gameLine(String key, net.kyori.adventure.text.minimessage.tag.resolver.TagResolver... tags) {
+        plugin.messages().each(Bukkit.getOnlinePlayers().stream()
+                .filter(p -> p.hasPermission(Perms.STATUS_HEALTH))
+                .filter(p -> plugin.notices() == null || plugin.notices().wantsGame(p.getUniqueId(), "lag")).toList(),
+                p -> plugin.messages().send(p, key, tags));
+    }
+
     private void alert(double tps, long now) {
         Settings.HealthSettings s = settings();
         if (!s.alert()) {
@@ -280,17 +288,19 @@ public final class HealthMonitor {
                 alerted = true;
                 String value = String.format(Locale.ROOT, "%.1f", tps);
                 plugin.getLogger().warning("TPS has been below " + s.alertTps() + " for " + s.alertMinutes() + " minutes (now " + value + ").");
-                plugin.messages().broadcastTo(Perms.STATUS_HEALTH, "health-alert", tag("tps", value),
-                        tag("minutes", s.alertMinutes()));
+                gameLine("health-alert", tag("tps", value), tag("minutes", s.alertMinutes()));
                 plugin.discord().log("health-alert", "tps", value, "minutes", s.alertMinutes(),
                         "mspt", String.format(Locale.ROOT, "%.1f", Bukkit.getAverageTickTime()));
-                plugin.push("lag", "lag", "/admin/server/performance", null, "tps", value, "minutes", s.alertMinutes());
+                plugin.push("lag", "lag", "lag", "/admin/server/performance", null, "tps", value, "minutes", s.alertMinutes());
             }
         } else if (tps >= s.alertTps() + 1) {
             if (alerted) {
                 String value = String.format(Locale.ROOT, "%.1f", tps);
                 plugin.getLogger().info("TPS has recovered (" + value + ").");
-                plugin.messages().broadcastTo(Perms.STATUS_HEALTH, "health-recovered", tag("tps", value));
+                gameLine("health-recovered", tag("tps", value));
+                if (plugin.notices() != null) {
+                    plugin.notices().resolve("lag");
+                }
                 plugin.discord().log("health-recovered", "tps", value);
             }
             alerted = false;

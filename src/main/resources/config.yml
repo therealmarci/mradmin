@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 55
+config-version: 56
 
 
 # ------------------------------------------------------------------------------
@@ -751,7 +751,21 @@ logging:
 
 
 # ------------------------------------------------------------------------------
-#   14) DISCORD LOGS (admin)
+#   14) TEAM NOTICES
+# ------------------------------------------------------------------------------
+# Notices for the team: new tickets, whitelist applications, crashes, updates waiting for the restart, lag, maintenance
+# and the notices of the other MRtechnology plugins (e.g. a locked chunk loader). Each member chooses per kind in the
+# web interface (account -> notifications) whether they get it in the inbox, as push and as a line in the game;
+# /mradmin mute mutes the lines in the game for a while.
+notifications:
+  # Kinds switched off for everyone (no inbox, push or game line), e.g. [update-ready, lag].
+  # MRadmin: ticket-new, ticket-mine, ticket-message, application, server-crash, update-ready, lag, maintenance.
+  # Other plugins: their own kinds, e.g. chunks-locked (MRchunks).
+  disabled: []
+
+
+# ------------------------------------------------------------------------------
+#   15) DISCORD LOGS (admin)
 # ------------------------------------------------------------------------------
 # Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
 #                   -> New Webhook -> Copy Webhook URL.
@@ -891,7 +905,7 @@ discord:
 
 
 # ------------------------------------------------------------------------------
-#   15) DISCORD ANNOUNCEMENTS (community)
+#   16) DISCORD ANNOUNCEMENTS (community)
 # ------------------------------------------------------------------------------
 # Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
 # Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
@@ -954,7 +968,7 @@ discord-announce:
 
 
 # ------------------------------------------------------------------------------
-#   16) UPDATES
+#   17) UPDATES
 # ------------------------------------------------------------------------------
 updates:
   enabled: true
@@ -968,7 +982,7 @@ updates:
 
 
 # ------------------------------------------------------------------------------
-#   17) MENUS
+#   18) MENUS
 # ------------------------------------------------------------------------------
 gui:
   # How often open menus are refreshed (in ticks, 20 = 1 second).

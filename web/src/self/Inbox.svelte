@@ -5,6 +5,9 @@
   // the counter. Each one (or all) can go into the archive (switch Inbox | Archive), from where it can come back;
   // something new on it (e.g. a new answer) brings it back by itself. The whole list of posts and tickets is in the entry News (/news, /news/changelog, /news/tickets).
   // Addresses: /inbox#post-3, /inbox#ticket-12 open that window (links from Discord, chat and push).
+  // Team members also get the team notices here (kind "team": new ticket, application, crash, update ...): a click
+  // leads straight to the page it is about; "done" ones (the reason is gone) are grey; several of the same kind in a
+  // short time are one row that opens; an unread crash is red. Switch All | Team above the list.
   // Data: GET /api/self/inbox (SelfInbox.java), contents from /api/self/news?all=1 (SelfNews.java) and the ticket.
   import { api } from '../lib/api.js';
   import { poll } from '../lib/poll.js';
@@ -23,6 +26,8 @@
   let error = $state('');
   let open = $state(readHash());
   let view = $state('inbox');
+  let scope = $state('all');
+  let expanded = $state({});
 
   async function load() {
     try {
@@ -59,8 +64,8 @@
     const item = inbox?.items.find((x) => x.key === `${target.kind}-${target.id}`);
     if (!item || item.read) return;
     item.read = true;
-    inbox.unread = Math.max(0, inbox.unread - 1);
-    if (target.kind === 'post') {
+    if (!item.done) inbox.unread = Math.max(0, inbox.unread - 1);
+    if (target.kind === 'post' || target.kind === 'team') {
       try {
         await api('POST', '/self/inbox/read', { key: item.key });
       } catch {
@@ -106,7 +111,38 @@
     }
   }
 
-  const shown = $derived((inbox?.items ?? []).filter((n) => n.archived === (view === 'archive')));
+  const shown = $derived((inbox?.items ?? []).filter((n) => n.archived === (view === 'archive')
+    && (scope === 'all' || n.kind === 'team')));
+
+  // Team notices of the same kind within 10 minutes of each other: one row that opens.
+  const GROUP_GAP = 10 * 60_000;
+  const rows = $derived.by(() => {
+    const out = [];
+    for (const n of shown) {
+      const last = out.at(-1);
+      const prev = last?.items.at(-1);
+      if (n.kind === 'team' && prev?.kind === 'team' && prev.notice === n.notice && prev.time - n.time <= GROUP_GAP
+        && dayLabel(prev.time) === dayLabel(n.time)) {
+        last.items.push(n);
+      } else {
+        out.push({ key: n.key, time: n.time, items: [n] });
+      }
+    }
+    return out;
+  });
+
+  // A team notice: read, then to the page it is about.
+  async function openTeam(n) {
+    await markRead({ kind: 'team', id: n.id });
+    if (n.url?.startsWith('/')) go(n.url);
+  }
+
+  const kindLabel = (n) => {
+    const key = 'push.kind.' + n.notice;
+    const text = t(key);
+    return text === key ? t('inbox.note.team') : text;
+  };
+  const unreadOf = (items) => items.filter((x) => !x.read && !x.done).length;
   const archivedCount = $derived((inbox?.items ?? []).filter((n) => n.archived).length);
 
   function keyOpen(event, next) {
@@ -131,7 +167,7 @@
   const timeLabel = (ms) => startOf(ms) === startOf(Date.now())
     ? new Date(ms).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     : new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
-  const ICON = { news: 'news', changelog: 'box', ticket: 'ticket' };
+  const ICON = { news: 'news', changelog: 'box', ticket: 'ticket', team: 'shield' };
 </script>
 
 <svelte:window onkeydown={(e) => open && e.key === 'Escape' && show(null)} onhashchange={() => (open = readHash())} />
@@ -139,6 +175,27 @@
 {#snippet icon(name, size = 16)}
   <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
     stroke-linejoin="round" aria-hidden="true"><path d={ICONS[name]} /></svg>
+{/snippet}
+
+{#snippet teamRow(n, inner)}
+  <div class="row team" class:inner class:unread={!n.read && !n.done && !n.archived} class:done={n.done}
+    class:alarm={!n.read && !n.done && n.alarm} role="listitem">
+    <div class="row-btn" role="button" tabindex="0" onclick={() => openTeam(n)}
+      onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openTeam(n))}>
+      <span class="r-icon" aria-hidden="true">{@render icon('shield')}</span>
+      <div class="r-main">
+        <span class="r-what">{kindLabel(n)}{#if n.done}<span class="done-tag">{t('inbox.team.done')}</span>{/if}</span>
+        <strong class="r-title">{n.title}</strong>
+        {#if n.body}<span class="r-body">{n.body}</span>{/if}
+      </div>
+      <span class="r-time" title={dateTime(n.time)}>{timeLabel(n.time)}</span>
+    </div>
+    {#if n.archived}
+      <button class="r-act" title={t('inbox.restore')} aria-label={t('inbox.restore')} onclick={() => restore(n)}>{@render icon('restore')}</button>
+    {:else}
+      <button class="r-act" title={t('inbox.archiveOne')} aria-label={t('inbox.archiveOne')} onclick={() => archive(n)}>{@render icon('archive')}</button>
+    {/if}
+  </div>
 {/snippet}
 
 <div class="page">
@@ -159,6 +216,7 @@
     </div>
   </header>
 
+  <div class="switches">
   <div class="views" role="tablist">
     <button role="tab" aria-selected={view === 'inbox'} class:on={view === 'inbox'} onclick={() => (view = 'inbox')}>
       {t('inbox.title')}{#if inbox?.unread}<span class="count">{inbox.unread}</span>{/if}
@@ -166,6 +224,15 @@
     <button role="tab" aria-selected={view === 'archive'} class:on={view === 'archive'} onclick={() => (view = 'archive')}>
       {t('inbox.archive')}{#if archivedCount}<span class="count muted-count">{archivedCount}</span>{/if}
     </button>
+  </div>
+  {#if inbox?.team}
+    <div class="views" role="tablist" aria-label={t('inbox.scope')}>
+      <button role="tab" aria-selected={scope === 'all'} class:on={scope === 'all'} onclick={() => (scope = 'all')}>{t('inbox.scope.all')}</button>
+      <button role="tab" aria-selected={scope === 'team'} class:on={scope === 'team'} onclick={() => (scope = 'team')}>
+        {@render icon('shield', 14)} {t('inbox.scope.team')}
+      </button>
+    </div>
+  {/if}
   </div>
 
   {#if error}<div class="error">{error}</div>{/if}
@@ -192,10 +259,33 @@
           <p>{view === 'archive' ? t('inbox.archiveEmpty') : t('inbox.nothing')}</p>
         </div>
       {/if}
-      {#each shown as n, i (n.key)}
-        {#if i === 0 || dayLabel(n.time) !== dayLabel(shown[i - 1].time)}
-          <div class="day" role="presentation">{dayLabel(n.time)}</div>
+      {#each rows as r, i (r.key)}
+        {@const n = r.items[0]}
+        {#if i === 0 || dayLabel(r.time) !== dayLabel(rows[i - 1].time)}
+          <div class="day" role="presentation">{dayLabel(r.time)}</div>
         {/if}
+        {#if r.items.length > 1}
+          {@const open = expanded[r.key]}
+          {@const unread = unreadOf(r.items)}
+          <div class="row team" class:unread={unread && !n.archived} class:alarm={unread && n.alarm} role="listitem">
+            <div class="row-btn" role="button" tabindex="0" aria-expanded={!!open}
+              onclick={() => (expanded[r.key] = !open)} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), (expanded[r.key] = !open))}>
+              <span class="r-icon" aria-hidden="true">{@render icon('shield')}</span>
+              <div class="r-main">
+                <span class="r-what">{kindLabel(n)}</span>
+                <strong class="r-title">{t('inbox.team.group', { n: r.items.length })}</strong>
+              </div>
+              <span class="r-time" title={dateTime(n.time)}>{open ? '▾' : '▸'} {timeLabel(n.time)}</span>
+            </div>
+          </div>
+          {#if open}
+            {#each r.items as m (m.key)}
+              {@render teamRow(m, true)}
+            {/each}
+          {/if}
+        {:else if n.kind === 'team'}
+          {@render teamRow(n, false)}
+        {:else}
         {@const target = { kind: n.kind === 'ticket' ? 'ticket' : 'post', id: n.id }}
         <div class="row" class:unread={!n.read && !n.archived} role="listitem">
           <div class="row-btn" role="button" tabindex="0" onclick={() => show(target)} onkeydown={(e) => keyOpen(e, target)}>
@@ -214,6 +304,7 @@
             <button class="r-act" title={t('inbox.archiveOne')} aria-label={t('inbox.archiveOne')} onclick={() => archive(n)}>{@render icon('archive')}</button>
           {/if}
         </div>
+        {/if}
       {/each}
     </div>
   {:else if !error}
@@ -442,6 +533,50 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+
+  .switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  /* Team notices: shield, a done one grey with a tag, an unread crash red; rows of a group indented. */
+  .row.unread.alarm {
+    --tone: var(--bad);
+  }
+
+  .row.unread.alarm .r-what,
+  .row.unread.alarm .r-time {
+    color: var(--bad);
+  }
+
+  .row.done .r-title {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  }
+
+  .row.inner {
+    padding-left: 40px;
+  }
+
+  .done-tag {
+    margin-left: 8px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--muted) 16%, transparent);
+  }
+
+  .r-body {
+    font-size: 0.82rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .views {

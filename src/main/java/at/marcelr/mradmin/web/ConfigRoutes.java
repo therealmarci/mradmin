@@ -63,6 +63,8 @@ public final class ConfigRoutes {
         result.put("version", loaded.version());
         result.put("sections", loaded.form().view(loaded.file(), loaded.defaults()));
         result.put("worlds", server.sync(() -> Bukkit.getWorlds().stream().map(World::getName).toList()));
+        // Options that belong to another plugin are only shown while it is installed.
+        result.put("plugins", java.util.Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(org.bukkit.plugin.Plugin::getName).toList());
         // Live state next to a section (only MRadmin itself: is the starter set up and in use?).
         if (plugin.getName().equals(http.param("plugin"))) {
             Map<String, Object> status = new LinkedHashMap<>();

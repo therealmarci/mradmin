@@ -12,7 +12,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Statistik** (`/stats`) | eigene Werte und Server-Ranglisten |
 | **Neuigkeiten** (`/news`) | Reiter **Neuigkeiten** (`/news`), **Changelog** (`/news/changelog`) und **Tickets** (`/news/tickets`, eigene Tickets und neues Ticket) |
-| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Aktive Warnungen stehen oben |
+| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Fürs Team kommen hier auch die **Team-Meldungen** dazu (siehe [Team-Meldungen](#team-meldungen)), Umschalter **Alles / Team**. Aktive Warnungen stehen oben |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
 | Verwaltung | Reiter |
@@ -340,12 +340,29 @@ Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` 
   (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: [Plugins & Updates](wiki/plugins.md#server-neu-starten).
 - Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
 
-## Push-Benachrichtigungen
-Unter **Konto → Benachrichtigungen**.
+## Team-Meldungen
+Alles, was das Team wissen sollte, an einem Ort: neue Tickets, Nachrichten in übernommenen bzw. allen Tickets,
+Whitelist-Bewerbungen, Abstürze und Hänger (mit Starter), Plugin- und Paper-Updates, die auf den Neustart warten,
+Lag-Alarm, Wartungen und die Meldungen der anderen Plugins (z.B. gesperrte Chunkloader). Jeder bekommt nur, wofür er
+die Rechte hat.
 
-- Meldungen direkt aufs Gerät, auch bei geschlossener Seite: neue Tickets, Nachrichten in meinen Tickets, alle
-  Ticket-Nachrichten, gesperrte Chunkloader, Lag-Alarm, Wartungen. Jeder legt selbst fest, welche er bekommt - und
-  bekommt nur, wofür er die Rechte hat.
+- **Posteingang** (Brief oben rechts): Schild-Symbol, ein Klick führt direkt zur passenden Seite (Ticket, Server,
+  Plugins …). Ist der Anlass erledigt (Ticket übernommen oder geschlossen, Update installiert …), wird die Meldung
+  grau mit „erledigt“ und zählt nicht mehr als neu. Mehrere gleiche kurz hintereinander stehen als eine Zeile
+  („3 Meldungen“, aufklappbar). Ein ungelesener Absturz färbt den Brief rot. Aufbewahrt 60 Tage, archivierbar.
+- **Im Spiel**: eine kurze Chatzeile mit den Einzelheiten im Hover und **[Öffnen]** (braucht `web.public-url`);
+  mehrere gleiche kurz hintereinander als eine Zeile; im Duell erst nach der Runde. Beim Betreten „n ungelesene
+  Team-Meldungen“. Tickets und Lag-Alarm behalten ihre gewohnte Nachricht (mit Knöpfen), folgen aber derselben Wahl.
+  **`/mradmin mute [dauer|off]`** schaltet das im Spiel stumm (ohne Angabe umschalten) - Posteingang und Push
+  laufen weiter.
+- **Konto → Benachrichtigungen**: eine Tabelle, pro Art je ein Schalter für **Posteingang**, **Push** und
+  **Im Spiel**. Abstürze bleiben immer im Posteingang; Wartungen kommen im Spiel ohnehin an alle.
+- Für alle abschalten: `notifications.disabled` in der `config.yml` (im Browser: Konfiguration → Team-Meldungen).
+
+## Push-Benachrichtigungen
+Unter **Konto → Benachrichtigungen** (Spalte Push).
+
+- Team-Meldungen direkt aufs Gerät, auch bei geschlossener Seite.
 - Pro Gerät einschaltbar (mehrere Geräte möglich, „Test senden“). Ein Gerät, das abgemeldet wird, bekommt nichts mehr.
 - Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.

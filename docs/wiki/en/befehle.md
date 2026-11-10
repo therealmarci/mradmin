@@ -16,6 +16,7 @@
 | `/mradmin mail test <address>` | Test mail via the configured SMTP server | `mradmin.web.manage` |
 | `/mradmin discord [test]` | Discord status · test message | `mradmin.admin.discord` |
 | `/mradmin storage` | Storage status (yaml, sqlite, mysql) | `mradmin.admin.storage` |
+| `/mradmin mute [duration\|off]` | Mute team notices in the game - without argument it switches, with a duration (e.g. `1h`) for that time; inbox and push go on | `mradmin.notify.mute` |
 | `/mradmin map [setup]` | Link to the map of the player page · for admins the state of squaremap, set up squaremap again | `mradmin.map` · `mradmin.map.admin` |
 | `/mradmin restart [time\|now\|cancel] [reason]` · `stop [time\|now\|cancel] [reason]` | Restart or stop the server with a countdown (optionally with a reason), cancel the countdown | `mradmin.server.restart` |
 | `/mradmin starter [setup [mode]]` | State of the [starter](starter.md), next planned restart, Paper update · set up the starter in the server folder | `mradmin.server.restart` · `mradmin.server.setup` |

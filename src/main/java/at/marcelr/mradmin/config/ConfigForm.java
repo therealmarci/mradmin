@@ -34,7 +34,8 @@ public final class ConfigForm {
         }
     }
 
-    public record Option(String value, Text name) {
+    /** A choice; {@code plugin} (may be empty): only shown while that plugin is installed. */
+    public record Option(String value, Text name, String plugin) {
     }
 
     /**
@@ -139,9 +140,9 @@ public final class ConfigForm {
                 if (o instanceof Map<?, ?> m) {
                     String value = string(m.get("value"));
                     options.add(new Option(value, new Text(string(m.containsKey("de") ? m.get("de") : value),
-                            string(m.containsKey("en") ? m.get("en") : value))));
+                            string(m.containsKey("en") ? m.get("en") : value)), string(m.get("plugin"))));
                 } else {
-                    options.add(new Option(string(o), new Text(string(o), string(o))));
+                    options.add(new Option(string(o), new Text(string(o), string(o)), ""));
                 }
             }
         }
@@ -225,7 +226,8 @@ public final class ConfigForm {
                 m.put("heading", f.heading().json());
                 m.put("advanced", f.advanced());
                 if (!f.options().isEmpty()) {
-                    m.put("options", f.options().stream().map(o -> Map.of("value", o.value(), "name", o.name().json())).toList());
+                    m.put("options", f.options().stream().map(o -> Map.of("value", o.value(), "name", o.name().json(),
+                            "plugin", o.plugin())).toList());
                 }
                 if (f.type() == Type.TABLE) {
                     m.put("columns", f.columns().stream().map(c -> {

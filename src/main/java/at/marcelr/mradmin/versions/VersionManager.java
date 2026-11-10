@@ -874,6 +874,8 @@ public final class VersionManager {
             plugin.getLogger().info((fresh ? "Installed " : "Downloaded ") + e.name + " " + release.version() + " (" + who
                     + ") - it is " + (fresh ? "loaded" : "installed") + " on the next start.");
             if (!fresh) {
+                plugin.push("update-ready", "plugin:" + e.name + ":" + release.version(), "update-ready", "/admin/server/plugins",
+                        null, "plugin", e.name, "version", release.version());
                 Bukkit.getScheduler().runTask(plugin, () -> plugin.discord().log("plugin-update-downloaded",
                         "plugin", e.name, "version", release.version(), "installed", e.installed,
                         "admin", by == null ? plugin.messages().server(() -> plugin.messages().plain("versions-auto")) : by));
@@ -963,6 +965,8 @@ public final class VersionManager {
             plugin.getLogger().info((fresh ? "Installed " : "Downloaded ") + e.name + " " + label + " (based on " + dev.base()
                     + ", " + who + ") - it is " + (fresh ? "loaded" : "installed") + " on the next start.");
             if (!fresh) {
+                plugin.push("update-ready", "plugin:" + e.name + ":" + label, "update-ready", "/admin/server/plugins",
+                        null, "plugin", e.name, "version", label);
                 Bukkit.getScheduler().runTask(plugin, () -> plugin.discord().log("plugin-update-downloaded",
                         "plugin", e.name, "version", label, "installed", e.installed,
                         "admin", by == null ? plugin.messages().server(() -> plugin.messages().plain("versions-auto")) : by));

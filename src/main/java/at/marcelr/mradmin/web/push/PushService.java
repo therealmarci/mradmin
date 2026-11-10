@@ -32,26 +32,54 @@ import java.util.stream.Collectors;
  */
 public final class PushService {
 
+    /** How a kind reaches the team in the game. */
+    public enum Game {
+        /** Not at all (it goes to every player anyway, e.g. maintenance). */
+        NONE,
+        /** With its own message of MRadmin (tickets with their buttons, the lag alarm) - which follows the choice. */
+        OWN,
+        /** As a short line of the team notices ({@link at.marcelr.mradmin.notify.TeamNotices}). */
+        LINE
+    }
+
+    /** The three ways a team notice reaches a member. */
+    public enum Channel {
+        INBOX, PUSH, GAME;
+
+        public static Channel of(String name) {
+            for (Channel c : values()) {
+                if (c.name().equalsIgnoreCase(name)) {
+                    return c;
+                }
+            }
+            return PUSH;
+        }
+    }
+
     /**
-     * A kind of notification: who may get it (permission, feature) and whether it is on until changed. Kinds of a
-     * module ({@code module} set) need its view permission - MRadmin does not name another plugin's permissions - and
-     * bring their own texts ({@code info}).
+     * A kind of notification: who may get it (permission, feature) and whether its push is on until changed. Kinds of
+     * a module ({@code module} set) need its view permission - MRadmin does not name another plugin's permissions -
+     * and bring their own texts ({@code info}). {@code alarm}: always in the inbox (only push and game can be switched
+     * off) and turns the letter red.
      */
     public record Kind(String key, String permission, Feature feature, boolean byDefault, String module,
-                       at.marcelr.mradmin.api.WebPushKind info) {
+                       at.marcelr.mradmin.api.WebPushKind info, Game game, boolean alarm) {
 
-        Kind(String key, String permission, Feature feature, boolean byDefault) {
-            this(key, permission, feature, byDefault, null, null);
+        Kind(String key, String permission, Feature feature, boolean byDefault, Game game) {
+            this(key, permission, feature, byDefault, null, null, game, false);
         }
     }
 
     /** MRadmin's own kinds; the modules' kinds come from {@link #kinds()}. */
     public static final List<Kind> KINDS = List.of(
-            new Kind("ticket-new", Perms.TICKETS_VIEW, Feature.TICKETS, true),
-            new Kind("ticket-mine", Perms.TICKETS_VIEW, Feature.TICKETS, true),
-            new Kind("ticket-message", Perms.TICKETS_VIEW, Feature.TICKETS, false),
-            new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true),
-            new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true));
+            new Kind("ticket-new", Perms.TICKETS_VIEW, Feature.TICKETS, true, Game.OWN),
+            new Kind("ticket-mine", Perms.TICKETS_VIEW, Feature.TICKETS, true, Game.OWN),
+            new Kind("ticket-message", Perms.TICKETS_VIEW, Feature.TICKETS, false, Game.OWN),
+            new Kind("application", Perms.APPLICATIONS, Feature.TICKETS, true, Game.LINE),
+            new Kind("server-crash", Perms.SERVER_RESTART, null, true, null, null, Game.LINE, true),
+            new Kind("update-ready", Perms.VERSIONS_VIEW, null, false, Game.LINE),
+            new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true, Game.OWN),
+            new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true, Game.NONE));
 
     /** A browser that receives pushes. */
     public record Subscription(String endpoint, String p256dh, String auth, String session, String device, long created) {
@@ -116,12 +144,17 @@ public final class PushService {
                         }
                     }
                     subscriptions.put(id, list);
-                    ConfigurationSection p = a.getConfigurationSection("prefs");
-                    if (p != null) {
-                        Map<String, Boolean> map = new HashMap<>();
-                        for (String k : p.getKeys(false)) {
-                            map.put(k, p.getBoolean(k));
+                    // prefs = push (as before), prefs-inbox / prefs-game = the other channels
+                    Map<String, Boolean> map = new HashMap<>();
+                    for (Channel c : Channel.values()) {
+                        ConfigurationSection p = a.getConfigurationSection(section(c));
+                        if (p != null) {
+                            for (String k : p.getKeys(false)) {
+                                map.put(prefKey(c, k), p.getBoolean(k));
+                            }
                         }
+                    }
+                    if (!map.isEmpty()) {
                         prefs.put(id, map);
                     }
                 } catch (RuntimeException ignored) {
@@ -155,6 +188,15 @@ public final class PushService {
         save(plugin.storage().loadYaml(STATE, plugin.getLogger()));
     }
 
+    private static String section(Channel c) {
+        return c == Channel.PUSH ? "prefs" : "prefs-" + c.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** Key of a choice in memory: the kind for push (as before), "inbox:kind" / "game:kind" for the others. */
+    private static String prefKey(Channel c, String kind) {
+        return c == Channel.PUSH ? kind : c.name().toLowerCase(java.util.Locale.ROOT) + ":" + kind;
+    }
+
     private void save(YamlConfiguration y) {
         y.set("accounts", null);
         for (Map.Entry<UUID, List<Subscription>> e : subscriptions.entrySet()) {
@@ -171,7 +213,11 @@ public final class PushService {
             }
         }
         for (Map.Entry<UUID, Map<String, Boolean>> e : prefs.entrySet()) {
-            e.getValue().forEach((k, v) -> y.set("accounts." + e.getKey() + ".prefs." + k, v));
+            e.getValue().forEach((k, v) -> {
+                int colon = k.indexOf(':');
+                Channel c = colon < 0 ? Channel.PUSH : Channel.of(k.substring(0, colon));
+                y.set("accounts." + e.getKey() + "." + section(c) + "." + k.substring(colon + 1), v);
+            });
         }
         y.options().setHeader(List.of("MRadmin - push notifications (managed by the plugin, do not edit)."));
         plugin.storage().saveYaml(STATE, y);
@@ -225,34 +271,79 @@ public final class PushService {
     /** MRadmin's kinds and those of the connected modules ({@link at.marcelr.mradmin.api.WebModule#pushKinds}). */
     public List<Kind> kinds() {
         List<Kind> result = new ArrayList<>(KINDS);
+        if (plugin.modules() == null) {
+            return result;
+        }
         plugin.modules().webModules().forEach((id, web) -> {
             var module = plugin.modules().module(id);
             for (var info : plugin.modules().call(module, web::pushKinds, List.<at.marcelr.mradmin.api.WebPushKind>of())) {
                 if (result.stream().noneMatch(k -> k.key().equals(info.key()))) {
-                    result.add(new Kind(info.key(), null, null, info.byDefault(), id, info));
+                    result.add(new Kind(info.key(), null, null, info.byDefault(), id, info, Game.LINE, false));
                 }
             }
         });
         return result;
     }
 
-    /** The kinds this member may get, with their choice (or the default). */
-    public Map<String, Boolean> choices(UUID account) {
-        return choices(account, kinds());
+    /** The kind with this key, or null. */
+    public Kind kind(String key) {
+        return kinds().stream().filter(k -> k.key().equals(key)).findFirst().orElse(null);
     }
 
-    private Map<String, Boolean> choices(UUID account, List<Kind> kinds) {
+    /** Switched off for everyone in config.yml (notifications.disabled): no inbox, push or game line. */
+    public boolean off(String kind) {
+        return plugin.getConfig().getStringList("notifications.disabled").contains(kind);
+    }
+
+    /**
+     * The kinds this member may get, each with the choice per channel (or the default): push, inbox and - unless the
+     * kind never reaches the game - game; {@code alarm} kinds are always in the inbox.
+     */
+    public Map<String, Map<String, Object>> choices(UUID account) {
         Map<String, Boolean> own;
         synchronized (this) {
             own = Map.copyOf(prefs.getOrDefault(account, Map.of()));
         }
-        Map<String, Boolean> result = new LinkedHashMap<>();
-        for (Kind kind : kinds) {
-            if (allowed(account, kind)) {
-                result.put(kind.key(), own.getOrDefault(kind.key(), kind.byDefault()));
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        for (Kind kind : kinds()) {
+            if (!off(kind.key()) && allowed(account, kind)) {
+                Map<String, Object> c = new LinkedHashMap<>();
+                c.put("inbox", kind.alarm() || own.getOrDefault(prefKey(Channel.INBOX, kind.key()), true));
+                c.put("push", own.getOrDefault(kind.key(), kind.byDefault()));
+                if (kind.game() != Game.NONE) {
+                    c.put("game", own.getOrDefault(prefKey(Channel.GAME, kind.key()), true));
+                }
+                if (kind.alarm()) {
+                    c.put("alarm", true);
+                }
+                result.put(kind.key(), c);
             }
         }
         return result;
+    }
+
+    /** Whether the member wants this kind on this channel (permission not checked here). */
+    public boolean wants(UUID account, Kind kind, Channel channel) {
+        if (off(kind.key())) {
+            return false;
+        }
+        if (channel == Channel.INBOX && kind.alarm()) {
+            return true;
+        }
+        if (channel == Channel.GAME && kind.game() == Game.NONE) {
+            return false;
+        }
+        Boolean own;
+        synchronized (this) {
+            own = prefs.getOrDefault(account, Map.of()).get(prefKey(channel, kind.key()));
+        }
+        return own != null ? own : channel != Channel.PUSH || kind.byDefault();
+    }
+
+    /** Like {@link #wants(UUID, Kind, Channel)} by the kind's key; unknown kinds: yes. */
+    public boolean wants(UUID account, String kind, Channel channel) {
+        Kind k = kind(kind);
+        return k == null || wants(account, k, channel);
     }
 
     /** Texts of the modules' kinds this member may get: key -> label, hint, icon (MRadmin's own are in the web UI). */
@@ -267,14 +358,16 @@ public final class PushService {
         return result;
     }
 
-    public synchronized void choose(UUID account, String kind, boolean on) {
-        if (kinds().stream().anyMatch(k -> k.key().equals(kind))) {
-            prefs.computeIfAbsent(account, k -> new HashMap<>()).put(kind, on);
+    public synchronized void choose(UUID account, String kind, Channel channel, boolean on) {
+        Kind k = kind(kind);
+        if (k != null && !(channel == Channel.INBOX && k.alarm()) && !(channel == Channel.GAME && k.game() == Game.NONE)) {
+            prefs.computeIfAbsent(account, x -> new HashMap<>()).put(prefKey(channel, kind), on);
             save();
         }
     }
 
-    private boolean allowed(UUID account, Kind kind) {
+    /** Whether this member may get the kind (feature on, permission - also for offline members). */
+    public boolean allowed(UUID account, Kind kind) {
         if (kind.feature() != null && !plugin.feature(kind.feature())) {
             return false;
         }
@@ -283,6 +376,18 @@ public final class PushService {
             return module != null && permissions.has(account, module.viewPermission());
         }
         return permissions.has(account, kind.permission());
+    }
+
+    /** Like {@link #allowed(UUID, Kind)} for a player online (their live permissions). */
+    public boolean allowed(org.bukkit.entity.Player player, Kind kind) {
+        if (kind.feature() != null && !plugin.feature(kind.feature())) {
+            return false;
+        }
+        if (kind.module() != null) {
+            var module = plugin.modules().module(kind.module());
+            return module != null && player.hasPermission(module.viewPermission());
+        }
+        return player.hasPermission(kind.permission());
     }
 
     // --------------------------------------------------------------- sending
@@ -296,9 +401,8 @@ public final class PushService {
         if (push == null || !plugin.settings().web().enabled()) {
             return;
         }
-        List<Kind> kinds = kinds();
-        Kind k = kinds.stream().filter(x -> x.key().equals(kind)).findFirst().orElse(null);
-        if (k == null) {
+        Kind k = kind(kind);
+        if (k == null || off(kind)) {
             return;
         }
         Map<UUID, List<Subscription>> copy;
@@ -311,11 +415,11 @@ public final class PushService {
                 if (who != null && !who.test(account)) {
                     continue;
                 }
-                if (!Boolean.TRUE.equals(choices(account, kinds).get(kind))) {
+                if (!allowed(account, k) || !wants(account, k, Channel.PUSH)) {
                     continue;
                 }
                 for (Subscription s : devices(account)) {
-                    deliver(account, s, title, body, url, kind, k.key().equals("lag") || k.key().startsWith("ticket"));
+                    deliver(account, s, title, body, url, kind, k.alarm() || k.key().equals("lag") || k.key().startsWith("ticket"));
                 }
             }
         });

@@ -12,7 +12,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Map** (`/map`) | the map full screen |
 | **Statistics** (`/stats`) | own values and server rankings |
 | **News** (`/news`) | tabs **News** (`/news`), **Changelog** (`/news/changelog`) and **Tickets** (`/news/tickets`, own tickets and a new one) |
-| **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). Active warnings are on top |
+| **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). For the team the **team notices** come here too (see [Team notices](#team-notices)), switch **All / Team**. Active warnings are on top |
 | **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
 
 | Administration | Tabs |
@@ -207,6 +207,24 @@ Page "Plugin configuration" under `/plugins` (the old address `/versions` redire
 - **Download** (`mradmin.versions.install`): only from the release of the plugin's own GitHub repository, only with a matching SHA-256 checksum and only if the file really contains this plugin. It is stored under the name of the installed JAR in `plugins/update/`; Paper swaps it on the next start. That is why the file name stays the old one, only the content is new. `versions.auto-download` (`off`, `patch`, `minor`, `all`) downloads updates by itself.
 - **Restart the server** (`mradmin.server.restart`): only when an update was downloaded or a plugin installed but not loaded yet, and `versions.restart-method` is set (default `none` - a server cannot start itself again). Countdown from `versions.restart-delays`, announced with the templates `restart` and `restart-now`, can be cancelled. After that the server stops (`stop` - a start script with a loop, a watchdog or the panel starts it again) or restarts via the `restart-script` of `spigot.yml` (`script`). Without a button the page shows "Restart needed" after a download. Example scripts: [Plugins & updates](plugins.md#restarting-the-server).
 - On the overview a tile shows whether updates are waiting or a restart is needed.
+
+## Team notices
+Everything the team should know in one place: new tickets, messages in claimed or all tickets, whitelist
+applications, crashes and hangs (with the starter), plugin and Paper updates waiting for the restart, lag alarm,
+maintenance and the notices of the other plugins (e.g. locked chunk loaders). Everyone only gets what they have the
+permission for.
+
+- **Inbox** (letter at the top right): shield icon, a click leads straight to the matching page (ticket, server,
+  plugins …). Once the reason is settled (ticket claimed or closed, update installed …), the notice turns grey with
+  "done" and no longer counts as new. Several of the same kind in a short time are one row ("3 notices", opens on
+  click). An unread crash turns the letter red. Kept 60 days, can be archived.
+- **In game**: one short chat line with the details in the hover and **[Open]** (needs `web.public-url`); several of
+  the same kind in a short time as one line; in a duel only after the round. On joining "n unread team notices".
+  Tickets and the lag alarm keep their usual message (with buttons) but follow the same choice.
+  **`/mradmin mute [duration|off]`** mutes them in the game (without argument it switches) - inbox and push go on.
+- **Account → Notifications**: one table, per kind a switch each for **Inbox**, **Push** and **In game**. Crashes
+  always stay in the inbox; maintenance reaches everyone in the game anyway.
+- Off for everyone: `notifications.disabled` in the `config.yml` (in the browser: Configuration → Team notices).
 
 ## Push notifications
 Under **Account → Notifications**.

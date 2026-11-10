@@ -181,11 +181,14 @@
 
   // The inbox (letter at the top right): notifications about new posts, answers to own tickets (and team messages);
   // the counter = unread notifications.
-  const hasInbox = $derived(!!(player && (player.news || player.tickets)));
+  const hasInbox = $derived(!!(player && (player.inbox || player.news || player.tickets)));
   let inboxCount = $state(0);
+  let inboxAlarm = $state(false);
   async function loadInbox() {
     try {
-      inboxCount = (await api('GET', '/self/inbox')).total;
+      const inbox = await api('GET', '/self/inbox');
+      inboxCount = inbox.total;
+      inboxAlarm = !!inbox.alarm;
     } catch {
       // keeps the last number (e.g. briefly offline)
     }
@@ -292,7 +295,7 @@
   {/if}
 {:else}
   <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
-    inbox={hasInbox ? { count: inboxCount, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
+    inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
     live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
       { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
       { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },

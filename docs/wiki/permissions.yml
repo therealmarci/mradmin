@@ -23,6 +23,8 @@ mradmin.tickets.create:
   de: "`/report` - Tickets erstellen, die eigenen ansehen, beantworten und schließen"
 mradmin.tickets.notify:
   de: "Hinweis bei neuen Tickets und Antworten, beim Betreten die Zahl offener Tickets"
+mradmin.notify.mute:
+  de: "/mradmin mute [dauer|off] - Team-Meldungen im Spiel eine Zeit lang stumm (Posteingang und Push laufen weiter)"
 mradmin.tickets.view:
   de: "Alle Tickets ansehen (`/mradmin tickets`, Dashboard, Web); kein Cooldown beim Erstellen"
 mradmin.tickets.reply:

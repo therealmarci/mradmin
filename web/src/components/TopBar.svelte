@@ -18,7 +18,8 @@
    * player area and the administration (team only) - one button the size of the letter, filled while in the administration.
    */
   // user null = visitor: instead of the name menu a sign-in button (onlogin)
-  // inbox: null (no letter) or {count, active, label} - the letter opens /inbox, the number = what is new
+  // inbox: null (no letter) or {count, alarm, active, label} - the letter opens /inbox, the number = what is new,
+  // alarm = an unread team alarm (crash): the letter turns red
   let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null, onlogin = null,
     loginLabel = '', inbox = null } = $props();
 
@@ -66,7 +67,7 @@
       </button>
     {/if}
     {#if inbox}
-      <button class="icon-btn inbox" class:active={inbox.active} class:has={inbox.count > 0} onclick={() => go('/inbox')}
+      <button class="icon-btn inbox" class:active={inbox.active} class:has={inbox.count > 0} class:alarm={inbox.alarm} onclick={() => go('/inbox')}
         aria-label={inbox.count ? `${inbox.label} (${inbox.count})` : inbox.label} title={inbox.label}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round" aria-hidden="true"><path d={ICONS.mail} /></svg>
@@ -158,6 +159,15 @@
 
   .inbox.has {
     color: var(--accent);
+  }
+
+  /* An unread team alarm (server crashed): the letter and its number red */
+  .inbox.alarm {
+    color: var(--bad);
+  }
+
+  .inbox.alarm .badge {
+    background: var(--bad);
   }
 
   /* In the administration the switch is filled, so it is always clear where you are */

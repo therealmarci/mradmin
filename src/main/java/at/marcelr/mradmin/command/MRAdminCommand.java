@@ -137,6 +137,11 @@ public final class MRAdminCommand implements TabExecutor {
                 }
             }
             case "map", "karte" -> map(sender, args);
+            case "mute", "stumm" -> {
+                if (check(sender, at.marcelr.mradmin.Perms.NOTIFY_MUTE)) {
+                    mute(sender, args);
+                }
+            }
             case "restart", "neustart", "stop", "shutdown", "starter" -> serverCommand.handle(sender, args);
             case "version", "ver" -> {
                 // For players too (in mradmin.player).
@@ -168,6 +173,9 @@ public final class MRAdminCommand implements TabExecutor {
         }
         if (sender.hasPermission(PERM_RELOAD)) {
             messages().send(sender, "help-reload");
+        }
+        if (sender.hasPermission(at.marcelr.mradmin.Perms.NOTIFY_MUTE)) {
+            messages().send(sender, "help-mute");
         }
         if (sender.hasPermission(at.marcelr.mradmin.Perms.SERVER_RESTART)) {
             messages().send(sender, "help-server");
@@ -629,6 +637,39 @@ public final class MRAdminCommand implements TabExecutor {
                 .clickEvent(ClickEvent.openUrl(url));
     }
 
+    /**
+     * /mradmin mute [duration|off]: team notices in the game off (switches without argument, for a time with one);
+     * the inbox and push go on.
+     */
+    private void mute(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            messages().send(sender, "players-only");
+            return;
+        }
+        var notices = plugin.notices();
+        java.util.UUID id = player.getUniqueId();
+        String arg = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
+        if (arg.equals("off") || arg.equals("aus") || (arg.isEmpty() && notices.muted(id))) {
+            notices.mute(id, 0);
+            messages().send(player, "notice-unmuted");
+            return;
+        }
+        if (arg.isEmpty()) {
+            notices.mute(id, Long.MAX_VALUE);
+            messages().send(player, "notice-muted");
+            return;
+        }
+        long millis = at.marcelr.mradmin.util.DurationUtil.parse(arg);
+        if (millis <= 0) {
+            messages().send(player, "notice-mute-usage");
+            return;
+        }
+        long until = System.currentTimeMillis() + millis;
+        notices.mute(id, until);
+        messages().send(player, "notice-muted-until", tag("time",
+                at.marcelr.mradmin.Texts.at(plugin, java.time.Instant.ofEpochMilli(until))));
+    }
+
     private boolean check(CommandSender sender, String permission) {
         if (sender.hasPermission(permission)) {
             return true;
@@ -654,6 +695,7 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, at.marcelr.mradmin.Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, options, "maintenance");
             addIf(sender, PERM_DISCORD, options, "discord");
             addIf(sender, PERM_RELOAD, options, "reload");
+            addIf(sender, at.marcelr.mradmin.Perms.NOTIFY_MUTE, options, "mute");
             addIf(sender, at.marcelr.mradmin.Perms.SERVER_RESTART, options, "restart", "stop", "starter");
             addIf(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE, options, "storage");
             addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
@@ -705,6 +747,11 @@ public final class MRAdminCommand implements TabExecutor {
                     }
                 }
                 case "web" -> options.addAll(WebCommand.complete(sender, args));
+                case "mute", "stumm" -> {
+                    if (args.length == 2) {
+                        options.addAll(List.of("30m", "1h", "2h", "off"));
+                    }
+                }
                 case "restart", "neustart", "stop", "shutdown", "starter" -> options.addAll(ServerCommand.complete(sender, args));
                 case "mail" -> {
                     if (args.length == 2) {

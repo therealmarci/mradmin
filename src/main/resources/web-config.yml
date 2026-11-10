@@ -437,6 +437,28 @@ sections:
         name: {de: Aufheben, en: Keep}
         help: {de: "So viele Tage bleiben die Einträge der Seite Protokoll erhalten (1-14).", en: "This many days the entries of the page Log are kept (1-14)."}
 
+  - id: notifications
+    name: {de: Team-Meldungen, en: Team notices}
+    group: {de: "Spieler & Team", en: "Players & team"}
+    help: {de: "Neue Tickets, Bewerbungen, Abstürze, Updates ... im Posteingang, als Push und im Spiel. Jedes Teammitglied wählt im Konto selbst, was es wie bekommt.", en: "New tickets, applications, crashes, updates ... in the inbox, as push and in the game. Each team member chooses in their account what they get and how."}
+    fields:
+      - key: notifications.disabled
+        type: choices
+        name: {de: Für alle ausgeschaltet, en: Off for everyone}
+        help: {de: "Diese Arten gehen an niemanden - weder Posteingang noch Push noch Spiel.", en: "These kinds go to nobody - neither inbox nor push nor game."}
+        options:
+          - {value: ticket-new, de: Neue Tickets, en: New tickets}
+          - {value: ticket-mine, de: Nachrichten in übernommenen Tickets, en: Messages in claimed tickets}
+          - {value: ticket-message, de: Alle Ticket-Nachrichten, en: All ticket messages}
+          - {value: application, de: Whitelist-Bewerbungen, en: Whitelist applications}
+          - {value: server-crash, de: Abstürze und Hänger, en: Crashes and hangs}
+          - {value: update-ready, de: Updates bereit, en: Updates ready}
+          - {value: lag, de: Lag-Alarm, en: Lag alarm}
+          - {value: maintenance, de: Wartungen, en: Maintenance}
+          - {value: chunks-locked, de: Chunkloader gesperrt, en: Chunk loader locked, plugin: MRchunks}
+          - {value: chunks-shed, de: Chunkloader wegen Lags abgeschaltet, en: Chunk loader switched off for lag, plugin: MRchunks}
+          - {value: pvp-review, de: Duell-Runde wartet auf Prüfung, en: Duel round waits for review, plugin: MRpvp}
+
   - id: tickets
     name: {de: Tickets & Meldungen, en: Tickets & reports}
     group: {de: "Spieler & Team", en: "Players & team"}

@@ -188,6 +188,7 @@ public final class SelfRoutes {
         result.put("areas", areas);
         // Own tickets (MRadmin itself, see SelfTickets) - like /report in game.
         result.put("tickets", tickets.available(s.player()));
+        result.put("inbox", inbox.available(s.player()));
         result.put("stats", stats.available());
         result.put("news", news.available());
         result.put("map", map.available());

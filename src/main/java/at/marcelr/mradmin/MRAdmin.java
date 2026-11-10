@@ -106,6 +106,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private DiscordAnnouncer discordAnnounce;
     private at.marcelr.mradmin.news.NewsDelivery newsDelivery;
     private at.marcelr.mradmin.web.self.XpPeaks xpPeaks;
+    private at.marcelr.mradmin.notify.TeamNotices notices;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
@@ -172,6 +173,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
+        notices = new at.marcelr.mradmin.notify.TeamNotices(this);
+        notices.start();
         web.requests().load();
         health = new HealthMonitor(this);
 
@@ -239,6 +242,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         eventLog.shutdown();
         if (xpPeaks != null) {
             xpPeaks.stop();
+        }
+        if (notices != null) {
+            notices.stop();
         }
         if (menuListener != null) {
             menuListener.stop();
@@ -468,17 +474,26 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     }
 
     /**
-     * A push notification to the team members who want this kind (texts "push-&lt;text&gt;-title/-body" from the
-     * language file, placeholders as name/value pairs). Does nothing while the web interface is off.
+     * A team notice of this kind (texts "push-&lt;text&gt;-title/-body" from the language file, placeholders as
+     * name/value pairs): inbox, push and game line as each member chose (see {@link #notices()}).
      */
     public void push(String kind, String text, String url, java.util.function.Predicate<java.util.UUID> who,
                      Object... placeholders) {
-        if (web == null) {
-            return;
+        push(kind, null, text, url, who, placeholders);
+    }
+
+    /** Like {@link #push(String, String, String, java.util.function.Predicate, Object...)} with what it is about
+     * ({@code ref}, e.g. "ticket:12") - the notice counts as done once that is settled. */
+    public void push(String kind, String ref, String text, String url, java.util.function.Predicate<java.util.UUID> who,
+                     Object... placeholders) {
+        if (notices != null) {
+            notices.send(kind, ref, text, url, who, placeholders);
         }
-        // Push notifications go to devices, not to players in the game - server language.
-        web.push().notify(kind, messages().server(() -> messages().plain("push-" + text + "-title", placeholders)),
-                messages().server(() -> messages().plain("push-" + text + "-body", placeholders)), url, who);
+    }
+
+    /** Team notices: inbox, push and short lines in the game. */
+    public at.marcelr.mradmin.notify.TeamNotices notices() {
+        return notices;
     }
 
     /** The look of the web interface (name, logo, colour) - also for mails, 2FA and passkeys. */

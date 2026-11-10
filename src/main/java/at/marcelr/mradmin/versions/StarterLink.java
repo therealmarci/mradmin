@@ -371,14 +371,17 @@ public final class StarterLink {
                 case "crash" -> {
                     plugin.getLogger().warning("The server crashed at " + when + " (" + e.detail() + ") - the starter started it again.");
                     plugin.discord().log("server-crash", "time", when, "reason", e.detail());
+                    plugin.push("server-crash", null, "server-crash", "/admin/server", null, "time", when, "reason", e.detail());
                 }
                 case "hang" -> {
                     plugin.getLogger().warning("The server hung at " + when + " (" + e.detail() + " s without a tick) - the starter ended and started it.");
                     plugin.discord().log("server-hang", "time", when, "seconds", e.detail());
+                    plugin.push("server-crash", null, "server-hang", "/admin/server", null, "time", when, "seconds", e.detail());
                 }
                 case "gave-up" -> {
                     plugin.getLogger().warning("The starter gave up at " + when + " after " + d[0] + " crashes.");
                     plugin.discord().log("server-gave-up", "time", when, "count", d[0], "minutes", d.length > 1 ? d[1] : "?");
+                    plugin.push("server-crash", null, "server-gave-up", "/admin/server", null, "time", when, "count", d[0]);
                 }
                 case "paper-update" -> {
                     plugin.getLogger().info("Paper was updated from build " + d[0] + " to " + (d.length > 1 ? d[1] : "?") + ".");
@@ -484,6 +487,7 @@ public final class StarterLink {
         StarterFiles.write(info, p, "Paper build downloaded by MRadmin - installed by the starter on the next restart");
         paperStaged = update.id();
         plugin.getLogger().info("Paper build " + update.id() + " is downloaded - it is installed on the next restart.");
+        plugin.push("update-ready", "paper:" + update.id(), "paper-ready", "/admin/server", null, "build", update.id());
     }
 
     /** Paper build downloaded ahead and installed on the next restart, -1 = none. */

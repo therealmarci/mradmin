@@ -15,7 +15,7 @@ description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcem
 commands:
   mradmin:
     description: Management of MRadmin (announcements, admin mode, maintenance).
-    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|map|discord|storage|reload|restart|stop|starter|version|help]
+    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|map|mute|discord|storage|reload|restart|stop|starter|version|help]
     aliases: [mra]
   report:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
@@ -54,6 +54,7 @@ permissions:
       mradmin.status: true
       mradmin.status.health: true
       mradmin.tickets.notify: true
+      mradmin.notify.mute: true
       mradmin.tickets.view: true
       mradmin.tickets.reply: true
       mradmin.tickets.claim: true
@@ -143,6 +144,9 @@ permissions:
     default: op
   mradmin.tickets.notify:
     description: Notice about new tickets and replies, on join the number of open tickets.
+    default: op
+  mradmin.notify.mute:
+    description: "/mradmin mute [duration|off] - team notices in the game off for a while (inbox and push go on)."
     default: op
   mradmin.tickets.view:
     description: View all tickets (/mradmin tickets, dashboard, web). No cooldown when creating.

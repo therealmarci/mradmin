@@ -346,7 +346,7 @@ public final class MaintenanceManager {
         messages().broadcast("maintenance-announced", resolvers(window, now));
         playSound(plugin.settings().maintenance());
         plugin.getLogger().info("Maintenance starts at " + window.start() + (window.end() == null ? "" : " and ends at " + window.end()) + ".");
-        plugin.push("maintenance", "maintenance-soon", "/admin/server/maintenance", null, "title", title(window),
+        plugin.push("maintenance", "maintenance-soon", "maintenance-soon", "/admin/server/maintenance", null, "title", title(window),
                 "start", Texts.at(plugin, window.start()));
     }
 
@@ -358,7 +358,7 @@ public final class MaintenanceManager {
 
     private void started(Window window) {
         Instant now = Instant.now();
-        plugin.push("maintenance", "maintenance-start", "/admin/server/maintenance", null, "title", title(window),
+        plugin.push("maintenance", "maintenance", "maintenance-start", "/admin/server/maintenance", null, "title", title(window),
                 "end", window.end() == null ? messages().plain("push-open-end") : Texts.at(plugin, window.end()));
         Settings.MaintenanceSettings m = plugin.settings().maintenance();
         messages().broadcast("maintenance-started", resolvers(window, now));

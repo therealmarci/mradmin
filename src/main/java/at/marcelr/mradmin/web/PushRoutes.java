@@ -12,10 +12,11 @@ import java.util.Map;
 /**
  * The member's own push notifications.
  * <pre>
- *  GET  /api/push                          server key, kinds the member may get (with their choice), their devices
+ *  GET  /api/push                          server key (null without push), the kinds the member may get with the
+ *                                          choice per channel {inbox, push, game?, alarm?}, their devices
  *  POST /api/push/subscribe   {endpoint, p256dh, auth}   this browser (bound to this session)
  *  POST /api/push/unsubscribe {endpoint}
- *  POST /api/push/choose      {kind, on}
+ *  POST /api/push/choose      {kind, channel: inbox|push|game, on}   also without push (inbox, game)
  *  POST /api/push/test                     a test notification to all own devices
  * </pre>
  */
@@ -47,9 +48,9 @@ public final class PushRoutes {
     }
 
     private void state(Http http) throws Exception {
-        PushService push = push();
+        PushService push = server.push();
         List<Map<String, Object>> devices = new ArrayList<>();
-        for (PushService.Subscription s : push.devices(http.account().id())) {
+        for (PushService.Subscription s : push.available() ? push.devices(http.account().id()) : List.<PushService.Subscription>of()) {
             Map<String, Object> d = new LinkedHashMap<>();
             d.put("endpoint", s.endpoint());
             d.put("device", s.device());
@@ -58,7 +59,7 @@ public final class PushRoutes {
             devices.add(d);
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("key", push.publicKey());
+        result.put("key", push.available() ? push.publicKey() : null);
         result.put("kinds", push.choices(http.account().id()));
         // Names of the modules' kinds (MRadmin's own come from the web interface's texts).
         result.put("labels", push.labels(http.account().id()));
@@ -88,7 +89,8 @@ public final class PushRoutes {
     }
 
     private void choose(Http http) throws Exception {
-        push().choose(http.account().id(), String.valueOf(http.string("kind")), "true".equals(http.string("on")));
+        server.push().choose(http.account().id(), String.valueOf(http.string("kind")),
+                PushService.Channel.of(String.valueOf(http.string("channel"))), "true".equals(http.string("on")));
         http.json(200, Map.of());
     }
 
