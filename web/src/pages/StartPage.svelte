@@ -8,6 +8,7 @@
   import Widget from '../components/Widget.svelte';
   import Toast from '../components/Toast.svelte';
   import { brand } from '../lib/branding.svelte.js';
+  import { ICONS } from '../lib/icons.js';
 
   // player: the signed-in player (null = visitor); canEdit: mradmin.appearance; onsignin: opens the sign-in window
   let { player = null, canEdit = false, onsignin = () => {} } = $props();
@@ -19,6 +20,9 @@
   let editPage = $state('members');
   let selected = $state(null);
   let catalog = $state(false);
+  // the window "insert widget": search and the group shown
+  let catalogQuery = $state('');
+  let catalogGroup = $state('all');
   let busy = $state(false);
   let error = $state('');
   let message = $state('');
@@ -45,6 +49,9 @@
   const SIZES = { banner: [12, 3], hints: [12, 2], address: [4, 2], online: [4, 2], greeting: [6, 2], tiles: [12, 3],
     stats: [4, 3], news: [8, 4], text: [6, 3], image: [6, 3], links: [4, 2], discord: [6, 2], login: [4, 2], apply: [4, 2] };
   const PERSONAL = ['greeting', 'tiles', 'stats'];
+  const TYPE_ICON = { banner: 'home', hints: 'pulse', address: 'server', online: 'users', greeting: 'heart', tiles: 'grid',
+    stats: 'chart', news: 'news', text: 'text', image: 'image', links: 'link', discord: 'chat', login: 'login', apply: 'userPlus' };
+  const GROUP_HUE = { status: 210, personal: 265, content: 160 };
   const page = $derived(player ? 'members' : 'guests');
   const DATA = {
     banner: () => ({ image: '', address: '', online: true }), address: () => ({ title: '', address: '' }),
@@ -103,6 +110,23 @@
     } finally {
       busy = false;
     }
+  }
+
+  // What the window offers: allowed on this page, in the chosen group, matching the search.
+  const offered = $derived.by(() => {
+    const q = catalogQuery.trim().toLowerCase();
+    return GROUPS.map(([group, types]) => [group, types.filter((type) => allowed(type)
+      && (catalogGroup === 'all' || catalogGroup === group)
+      && (!q || (t('widget.type.' + type) + ' ' + t('widget.desc.' + type)).toLowerCase().includes(q)))])
+      .filter(([, types]) => types.length);
+  });
+  const onPage = (type) => draft[editPage].filter((w) => w.type === type).length;
+  const after = $derived(selected ? draft[editPage].find((w) => w.id === selected) : null);
+
+  function openCatalog() {
+    catalogQuery = '';
+    catalogGroup = 'all';
+    catalog = true;
   }
 
   function insert(type) {
@@ -217,7 +241,7 @@
             onclick={() => { editPage = pg; selected = null; }}>{t('widget.page.' + pg)}</button>
         {/each}
       </div>
-      <button class="secondary" onclick={() => (catalog = true)}>+ {t('widget.insert')}</button>
+      <button class="secondary" onclick={openCatalog}>+ {t('widget.insert')}</button>
       <button class="ghost" onclick={() => { if (window.confirm(t('widget.templateConfirm'))) api('GET', '/landing/edit').then((r) => (draft[editPage] = r.template[editPage])); }}>
         {t('widget.template')}
       </button>
@@ -249,7 +273,7 @@
       </div>
     {/each}
     {#if editing && !shown.length}
-      <button class="empty" onclick={() => (catalog = true)}>+ {t('widget.insert')}</button>
+      <button class="empty" onclick={openCatalog}>+ {t('widget.insert')}</button>
     {/if}
   </div>
 {:else}
@@ -325,25 +349,58 @@
   </aside>
 {/if}
 
-<!-- Catalog: insert a widget -->
+<!-- Catalog: insert a widget - search, groups as chips, one quiet card per widget with its size on the grid -->
+{#snippet glyph(name, size = 18)}
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+    stroke-linejoin="round" aria-hidden="true"><path d={ICONS[name] ?? ICONS.box} /></svg>
+{/snippet}
+
 {#if catalog}
   <div class="overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && (catalog = false)}>
     <div class="catalog card" role="dialog" aria-modal="true" aria-label={t('widget.insert')}>
-      <div class="drawer-head">
-        <strong>{t('widget.insert')}</strong>
+      <div class="cat-head">
+        <div class="cat-title">
+          <strong>{t('widget.insert')}</strong>
+          <span class="cat-where">{after ? t('widget.insertAfter', { name: t('widget.type.' + after.type) }) : t('widget.insertEnd')}</span>
+        </div>
         <button class="x" onclick={() => (catalog = false)} aria-label={t('common.close')}>✕</button>
       </div>
-      {#each GROUPS as [group, types] (group)}
-        {#if types.some(allowed)}<span class="group">{t('widget.group.' + group)}</span>{/if}
-        <div class="choices">
-          {#each types.filter(allowed) as type (type)}
-            <button class="choice" onclick={() => insert(type)}>
-              <strong>{t('widget.type.' + type)}</strong>
-              <span>{t('widget.desc.' + type)}</span>
+      <div class="cat-tools">
+        <!-- svelte-ignore a11y_autofocus -->
+        <input class="cat-search" type="search" bind:value={catalogQuery} placeholder={t('widget.search')} autofocus />
+        <div class="cat-chips" role="tablist">
+          {#each ['all', ...GROUPS.map(([g]) => g).filter((g) => GROUPS.find(([x]) => x === g)[1].some(allowed))] as g (g)}
+            <button role="tab" aria-selected={catalogGroup === g} class:on={catalogGroup === g} onclick={() => (catalogGroup = g)}>
+              {g === 'all' ? t('widget.all') : t('widget.group.' + g)}
             </button>
           {/each}
         </div>
-      {/each}
+      </div>
+      <div class="cat-body">
+        {#each offered as [group, types] (group)}
+          <span class="group">{t('widget.group.' + group)}</span>
+          <div class="choices">
+            {#each types as type (type)}
+              {@const n = onPage(type)}
+              <button class="choice" style="--hue:{GROUP_HUE[group]}" onclick={() => insert(type)}>
+                <span class="c-icon">{@render glyph(TYPE_ICON[type])}</span>
+                <span class="c-text">
+                  <strong>{t('widget.type.' + type)}</strong>
+                  <span class="c-desc">{t('widget.desc.' + type)}</span>
+                </span>
+                <span class="c-meta">
+                  <span class="c-size" title={t('widget.width', { w: SIZES[type][0] })}>
+                    <span class="c-bar" style="width:{(SIZES[type][0] / 12) * 100}%"></span>
+                  </span>
+                  {#if n}<span class="c-count">{t('widget.onPage', { n })}</span>{/if}
+                </span>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <p class="cat-empty">{t('widget.noMatch')}</p>
+        {/each}
+      </div>
     </div>
   </div>
 {/if}
@@ -633,49 +690,179 @@
   }
 
   .catalog {
-    width: min(720px, 100%);
+    width: min(760px, 100%);
     max-height: calc(100dvh - 32px);
-    overflow: auto;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .cat-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px 10px;
+  }
+
+  .cat-title {
+    display: grid;
+    gap: 2px;
+  }
+
+  .cat-title strong {
+    font-size: 1.05rem;
+  }
+
+  .cat-where {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .cat-tools {
     display: grid;
     gap: 10px;
-    padding: 18px;
+    padding: 0 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cat-search {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .cat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .cat-chips button {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    justify-content: flex-start;
+  }
+
+  .cat-chips button.on {
+    color: var(--text);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .cat-body {
+    overflow: auto;
+    padding: 6px 18px 18px;
+    display: grid;
+    align-content: start;
+    gap: 8px;
   }
 
   .group {
-    margin-top: 4px;
-    font-size: 0.78rem;
+    margin-top: 8px;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--muted);
     font-weight: 700;
   }
 
   .choices {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
   }
 
   .choice {
     display: grid;
-    justify-items: start;
-    gap: 3px;
-    padding: 10px 12px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    gap: 6px 12px;
+    align-items: start;
+    justify-content: stretch;
+    padding: 12px;
     text-align: left;
-    background: var(--surface-2);
+    background: transparent;
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 10px;
+    transition: border-color 0.12s, background 0.12s;
   }
 
-  .choice:hover {
-    border-color: var(--accent);
+  .choice:hover,
+  .choice:focus-visible {
+    border-color: hsl(var(--hue) 60% 55%);
+    background: hsl(var(--hue) 60% 55% / 6%);
+    filter: none;
   }
 
-  .choice span {
-    font-size: 0.8rem;
+  .c-icon {
+    grid-row: 1 / 3;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    color: hsl(var(--hue) 65% 62%);
+    background: hsl(var(--hue) 60% 55% / 12%);
+  }
+
+  .c-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .c-text strong {
+    font-size: 0.9rem;
+  }
+
+  .c-desc {
+    font-size: 0.78rem;
     color: var(--muted);
     font-weight: 400;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .c-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* how wide it starts on the 12-column grid */
+  .c-size {
+    flex: 0 0 48px;
+    height: 5px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--muted) 22%, transparent);
+    overflow: hidden;
+  }
+
+  .c-bar {
+    display: block;
+    height: 100%;
+    background: hsl(var(--hue) 60% 55% / 70%);
+  }
+
+  .c-count {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .cat-empty {
+    margin: 20px 0;
+    text-align: center;
+    color: var(--muted);
   }
 
   /* tablet: small widgets half width, others full; phone: all one below the other */

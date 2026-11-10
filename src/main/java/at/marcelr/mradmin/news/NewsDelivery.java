@@ -50,6 +50,8 @@ public final class NewsDelivery implements Listener {
     private final News news;
     private final KumaIncidents incidents;
     private final Map<UUID, Integer> seen = new HashMap<>();
+    /** When each player last got the previews (epoch ms): a planned post that became visible later still comes. */
+    private final Map<UUID, Long> seenAt = new HashMap<>();
     private final Map<UUID, Set<String>> seenIncidents = new HashMap<>();
     private boolean loaded;
 
@@ -116,6 +118,8 @@ public final class NewsDelivery implements Listener {
             if (player.hasPermission(Perms.WEB_SELF)) {
                 preview(player, post);
                 markSeen(player.getUniqueId(), post.id());
+                // also by time, so a planned post shown live does not come again on the next join
+                seenAt.put(player.getUniqueId(), Math.max(seenAt.getOrDefault(player.getUniqueId(), 0L), System.currentTimeMillis()));
             }
         }
     }
@@ -240,10 +244,14 @@ public final class NewsDelivery implements Listener {
     /** The newest posts the player has not had yet (at most chat-preview.max, then a hint how many more). */
     private void unseen(Player player) {
         int last = seen(player.getUniqueId());
+        long lastAt = seenAt.getOrDefault(player.getUniqueId(), 0L);
         long since = System.currentTimeMillis() - settings().chatPreviewDays() * 86_400_000L;
+        // New = a higher id than the last one seen, or (planned posts) visible only since the last time.
         List<News.Post> fresh = new ArrayList<>(news.visible().stream()
-                .filter(p -> !p.alert() && p.id() > last && p.created() >= since).toList());
-        int newest = news.all().stream().mapToInt(News.Post::id).max().orElse(last);
+                .filter(p -> !p.alert() && visibleSince(p) >= since
+                        && (p.id() > last || (lastAt > 0 && visibleSince(p) > lastAt))).toList());
+        // Only what is visible counts as seen - a planned post comes when its time is there.
+        int newest = news.visible().stream().mapToInt(News.Post::id).max().orElse(last);
         if (!fresh.isEmpty()) {
             fresh.sort(Comparator.comparingLong(News.Post::created).reversed());
             int max = settings().chatPreviewMax();
@@ -256,6 +264,13 @@ public final class NewsDelivery implements Listener {
             }
         }
         markSeen(player.getUniqueId(), newest);
+        seenAt.put(player.getUniqueId(), System.currentTimeMillis());
+        save();
+    }
+
+    /** When the post became visible: its "visible from" time, else when it was written. */
+    private static long visibleSince(News.Post p) {
+        return Math.max(p.created(), p.starts());
     }
 
     // -------------------------------------------------------------------- messages
@@ -370,6 +385,7 @@ public final class NewsDelivery implements Listener {
         y.options().setHeader(List.of("MRadmin - the newest post each player got as a chat preview, and the notes from",
                 "Uptime Kuma they got (managed by the plugin)."));
         seen.forEach((uuid, last) -> y.set("posts." + uuid, last));
+        seenAt.forEach((uuid, at) -> y.set("at." + uuid, at));
         seenIncidents.forEach((uuid, keys) -> {
             if (!keys.isEmpty()) {
                 y.set("incidents." + uuid, List.copyOf(keys));
@@ -388,6 +404,12 @@ public final class NewsDelivery implements Listener {
         if (posts != null) {
             for (String key : posts.getKeys(false)) {
                 uuid(key, uuid -> seen.put(uuid, posts.getInt(key)));
+            }
+        }
+        var at = y.getConfigurationSection("at");
+        if (at != null) {
+            for (String key : at.getKeys(false)) {
+                uuid(key, uuid -> seenAt.put(uuid, at.getLong(key)));
             }
         }
         var notes = y.getConfigurationSection("incidents");
