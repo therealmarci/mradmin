@@ -11,7 +11,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **My game** (`/game/…`) | one tab per plugin (chunk loaders, duels, waypoints …) |
 | **Map** (`/map`) | the map full screen |
 | **Statistics** (`/stats`) | own values and server rankings |
-| **Inbox** (`/inbox`, letter at the top right) | everything on one page, laid out like the plugin areas: a head with the number of new entries, below tiles for warnings, **My tickets**, **News** and **Changelogs** with cards in status colours (new blue, open ticket green, read/closed grey). A click opens the card over the page (read a post, a changelog, a ticket conversation with reply field, a new ticket). The number on the letter shows what is new since the last visit (new posts, answers of the team) |
+| **Inbox** (`/inbox`, letter at the top right) | laid out like a mail inbox: warnings on top, below the filters **All · News · Changelogs · Tickets** and the **New ticket** button. On the left one list with everything that comes in - news, changelogs and your own tickets mixed, newest first, with day separators; unread entries are bold, the colour bar shows the state (new blue, open ticket green, read/closed grey). On the right you read the chosen entry or have the ticket conversation; on the phone a tap opens the entry over the full width (with "Back"). The number on the letter shows what is new since the last visit (new posts, answers of the team) |
 | **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
 
 | Administration | Tabs |
