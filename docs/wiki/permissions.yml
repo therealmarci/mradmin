@@ -23,6 +23,8 @@ mradmin.tickets.create:
   de: "`/report` - Tickets erstellen, die eigenen ansehen, beantworten und schließen"
 mradmin.tickets.notify:
   de: "Hinweis bei neuen Tickets und Antworten, beim Betreten die Zahl offener Tickets"
+mradmin.notify.mute:
+  de: "/mradmin mute [dauer|off] - Team-Meldungen im Spiel eine Zeit lang stumm (Posteingang und Push laufen weiter)"
 mradmin.tickets.view:
   de: "Alle Tickets ansehen (`/mradmin tickets`, Dashboard, Web); kein Cooldown beim Erstellen"
 mradmin.tickets.reply:
@@ -68,11 +70,11 @@ mradmin.player.freeze:
 mradmin.player.kick:
   de: "Spieler vom Server kicken"
 mradmin.web:
-  de: "Weboberfläche benutzen (eigenes Konto über `/mradmin web setup`); im Web gelten dieselben Permissions wie im Spiel"
+  de: "Verwaltung der Weboberfläche benutzen (Anmeldung mit `/web` plus eigene Anmeldung: Passwort, Passkey oder Discord); im Web gelten dieselben Permissions wie im Spiel"
 mradmin.web.audit:
   de: "Protokoll aller Aktionen in der Weboberfläche ansehen"
 mradmin.web.manage:
-  de: "Web-Konten anderer verwalten (`/mradmin web invite|logout|remove`)"
+  de: "Web-Konten anderer verwalten (`/mradmin web sessions|logout|reset|remove`)"
 mradmin.web.console.view:
   de: "Konsolenausgabe auf der Seite Protokoll der Weboberfläche mitlesen (keine Befehle)"
 mradmin.web.console.execute:
@@ -101,3 +103,7 @@ mradmin.map.admin:
   de: "`/mradmin map [setup]` - Zustand der Karte und von squaremap, squaremap neu einrichten; im Adminportal die Schalter Karte und Spieler auf der Karte"
 mradmin.server.setup:
   de: "`/mradmin starter setup` - Start-Dateien (`mrserver.sh`, `mrserver.cmd`) in den Server-Ordner schreiben"
+mradmin.appearance:
+  de: "Weboberfläche: Aussehen ändern - Name, Logo, Browser-Symbol, Akzentfarbe und Fußzeile (Server → Aussehen)"
+mradmin.applications:
+  de: "Weboberfläche: Whitelist-Bewerbungen in ihrem Ticket annehmen (setzt den Spieler auf die Whitelist) oder ablehnen"

@@ -9,7 +9,9 @@ Die Seite hat immer dieselbe Adresse (`<Adresse des Servers>/me`) - am besten al
 2. Der Chat zeigt den Link zur Seite und den Code - ein Klick auf den Code kopiert ihn.
 3. Code auf der Seite eingeben. Er gilt 2 Minuten und nur einmal.
 
-Danach bleibt das Gerät **höchstens 14 Tage** angemeldet und wird schon nach **7 Tagen ohne Besuch** abgemeldet - dann fragt die Seite einfach wieder nach einem Code. `/web devices` zeigt, auf wie vielen Geräten du angemeldet bist, `/web logout` meldet alle ab. Einzelne Geräte gehen auch auf der Seite unter **Geräte** (Klick auf deinen Namen oben rechts), dort steht auch, wie lange die Anmeldung noch gilt.
+Danach bleibt das Gerät **höchstens 14 Tage** angemeldet und wird schon nach **7 Tagen ohne Besuch** abgemeldet - dann fragt die Seite einfach wieder nach einem Code. `/web devices` zeigt, auf wie vielen Geräten du angemeldet bist, `/web logout` meldet alle ab. Einzelne Geräte gehen auch auf der Seite unter **Anmeldungen & Geräte** (Klick auf deinen Namen oben rechts), dort steht auch, wie lange die Anmeldung noch gilt.
+
+**Ohne Spiel anmelden:** Unter **Anmeldungen & Geräte** kannst du dir eine eigene Anmeldung einrichten - ein **Passwort** (Anmeldung mit deinem Spielernamen oder deiner bestätigten E-Mail-Adresse), einen **Passkey** (Fingerabdruck, Face ID, Windows Hello) oder **Discord**. Dann kommst du auch vom Handy rein, ohne vorher `/web` einzugeben. Freiwillig dazu: **2FA** mit einer Authenticator-App. Hast du eine E-Mail-Adresse hinterlegt, hilft „Passwort vergessen?“ auf der Anmeldeseite.
 
 ## Was auf der Seite steht
 Was es gibt, hängt davon ab, was auf dem Server installiert und eingeschaltet ist:

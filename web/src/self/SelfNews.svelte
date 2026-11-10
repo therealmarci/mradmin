@@ -1,21 +1,24 @@
 <script>
-  // The page "News" of the player area: active warnings on top (written by the team or pinned in Uptime Kuma), then
-  // two areas to switch between - news (the newest or pinned one big, the others as cards, read in a window) and the
-  // changelog (a timeline of versions, each written out like a document with its headings). Links like /me/news#post-3 open that post,
-  // /me/news#changelog the changelog.
+  // The tabs "News" and "Changelogs" of the player area (entry News, /news and /news/changelog): active warnings on top
+  // (written by the team or pinned in Uptime Kuma), then either the news (the newest or pinned one big, the others as
+  // cards, read in a window) or the changelog (a plain list of versions, each with its headings and bullet points
+  // headings). /news#post-3 opens that news, /news/changelog#post-4 marks that version.
+  import { go } from '../lib/router.svelte.js';
   import { tick } from 'svelte';
   import { api } from '../lib/api.js';
   import { poll } from '../lib/poll.js';
   import { t, lang, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
-  import { lines } from '../lib/changelog.js';
+  import ChangelogDoc from '../components/ChangelogDoc.svelte';
 
   const NEWS_PAGE = 9;
   const RELEASES_PAGE = 5;
 
   let data = $state(null);
   let error = $state('');
-  let area = $state(location.hash === '#changelog' ? 'changelog' : 'news');
+  // section: news | changelog (the tab)
+  let { section = 'news' } = $props();
+  const area = $derived(section);
   let reading = $state(null);
   let newsPage = $state(0);
   let releasePage = $state(0);
@@ -49,13 +52,13 @@
     if (!id) return;
     const n = data.news.find((p) => p.id === id);
     if (n) {
-      area = 'news';
+      if (area !== 'news') return go('/news#post-' + id, true);
       reading = n;
       return;
     }
     const index = data.changelog.findIndex((p) => p.id === id);
     if (index >= 0) {
-      area = 'changelog';
+      if (area !== 'changelog') return go('/news/changelog#post-' + id, true);
       releasePage = Math.floor(index / RELEASES_PAGE);
       flash = id;
       await tick();
@@ -63,19 +66,14 @@
     }
   }
 
-  function show(which) {
-    area = which;
-    history.replaceState(null, '', which === 'changelog' ? '/me/news#changelog' : '/me/news');
-  }
-
   function read(post) {
     reading = post;
-    history.replaceState(null, '', '/me/news#post-' + post.id);
+    history.replaceState(null, '', '/news#post-' + post.id);
   }
 
   function close() {
     reading = null;
-    history.replaceState(null, '', '/me/news');
+    history.replaceState(null, '', '/news');
   }
 
   const featured = $derived(data?.news[0] ?? null);
@@ -110,16 +108,6 @@
         <p class="muted">{t('self.news.subtitle')}</p>
       </div>
     </div>
-    {#if data}
-      <div class="switch" role="tablist" aria-label={t('self.news.title')}>
-        <button role="tab" aria-selected={area === 'news'} class:active={area === 'news'} onclick={() => show('news')}>
-          📣 {t('self.news.areaNews')} <span class="n">{data.news.length}</span>
-        </button>
-        <button role="tab" aria-selected={area === 'changelog'} class:active={area === 'changelog'} onclick={() => show('changelog')}>
-          📝 {t('self.news.areaChangelog')} <span class="n">{data.changelog.length}</span>
-        </button>
-      </div>
-    {/if}
   </header>
 
   {#if error}<div class="error">{error}</div>{/if}
@@ -152,7 +140,7 @@
       {:else}
         <button class="featured" onclick={() => read(featured)}>
           <span class="badges">
-            {#if featured.pinned}<span class="badge pin">📌 {t('self.hero.pinned')}</span>{:else if fresh(featured.created)}<span class="badge new">{t('self.news.fresh')}</span>{/if}
+            {#if fresh(featured.created)}<span class="badge new">{t('self.news.fresh')}</span>{/if}
             <span class="when">{dateOnly(featured.created)}</span>
           </span>
           <span class="f-title">{featured.title}</span>
@@ -167,7 +155,7 @@
               {#each newsShown as p (p.id)}
                 <button class="news-card" onclick={() => read(p)}>
                   <span class="badges">
-                    {#if p.pinned}<span class="badge pin">📌</span>{:else if fresh(p.created)}<span class="badge new">{t('self.news.fresh')}</span>{/if}
+                    {#if fresh(p.created)}<span class="badge new">{t('self.news.fresh')}</span>{/if}
                     <span class="when">{dateOnly(p.created)}</span>
                   </span>
                   <span class="c-title">{p.title}</span>
@@ -187,35 +175,19 @@
           <p>{t('self.news.noChangelog')}</p>
         </section>
       {:else}
-        <section class="card tile">
-          <ol class="timeline">
-            {#each releases as r, i (r.id)}
-              <li class="release" class:flash={flash === r.id} id="post-{r.id}">
-                <span class="node" class:latest={releasePage === 0 && i === 0} aria-hidden="true"></span>
+        <ol class="releases">
+            {#each releases as r (r.id)}
+              <li class="release card" class:flash={flash === r.id} id="post-{r.id}">
                 <div class="r-head">
-                  {#if r.version}<span class="version">{r.version}</span>{/if}
-                  {#if releasePage === 0 && i === 0}<span class="badge new">{t('self.news.latest')}</span>{/if}
+                  <h3>{#if r.version}<span class="version">{r.version}</span>{/if}{#if r.title && r.title !== r.version}{r.version ? ' · ' : ''}{r.title}{/if}</h3>
                   <span class="when">{dateOnly(r.created)}</span>
                 </div>
-                {#if r.title && r.title !== r.version}<h3>{r.title}</h3>{/if}
                 {#if r.text}<p class="r-intro">{r.text}</p>{/if}
-                <div class="doc">
-                  {#each lines(r.entries) as l}
-                    {#if l.heading}
-                      <div class="d-head h{l.level}" style="--indent: {l.indent}">{l.text}</div>
-                    {:else}
-                      <div class="d-line t-{l.type}" style="--indent: {l.indent}">
-                        <span class="tag">{t('news.type.' + l.type)}</span>
-                        <span class="d-text">{l.text}</span>
-                      </div>
-                    {/if}
-                  {/each}
-                </div>
+                <ChangelogDoc entries={r.entries} />
               </li>
             {/each}
           </ol>
           {@render pager(releasePage, releasePages, (n) => (releasePage = n))}
-        </section>
       {/if}
     {/if}
   {:else if !error}
@@ -230,7 +202,6 @@
       onclick={(e) => e.stopPropagation()}>
       <div class="reader-head">
         <span class="badges">
-          {#if reading.pinned}<span class="badge pin">📌 {t('self.hero.pinned')}</span>{/if}
           <span class="when">{dateTime(reading.created)}{#if reading.updated - reading.created > 60_000} · {t('self.news.updated', { time: dateTime(reading.updated) })}{/if}</span>
         </span>
         <button class="secondary close" aria-label={t('common.close')} onclick={close}>✕</button>
@@ -248,7 +219,7 @@
     gap: 16px;
   }
 
-  /* Head in the look of the tiles: icon, title, the switch between the two areas. */
+  /* Head in the look of the tiles: icon, title. */
   .head {
     position: relative;
     overflow: hidden;
@@ -302,37 +273,6 @@
 
   .intro p {
     margin: 2px 0 0;
-  }
-
-  .switch {
-    position: relative;
-    display: inline-flex;
-    padding: 4px;
-    gap: 4px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .switch button {
-    background: transparent;
-    color: var(--muted);
-    padding: 8px 14px;
-    border-radius: 9px;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
-
-  .n {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--muted) 18%, transparent);
   }
 
   /* Warnings: red, impossible to miss. */
@@ -447,11 +387,6 @@
     border-radius: 999px;
   }
 
-  .badge.pin {
-    color: var(--warn);
-    background: color-mix(in srgb, var(--warn) 16%, transparent);
-  }
-
   .badge.new {
     color: var(--good);
     background: color-mix(in srgb, var(--good) 16%, transparent);
@@ -549,71 +484,35 @@
     margin: 0;
   }
 
-  /* Changelog: a timeline of versions. */
-  .timeline {
+  /* Changelog: every version in its own tile, inside a plain list. */
+  .releases {
     list-style: none;
     margin: 0;
-    padding: 0 0 0 26px;
-    position: relative;
+    padding: 0;
     display: grid;
-    gap: 26px;
-  }
-
-  .timeline::before {
-    content: '';
-    position: absolute;
-    left: 7px;
-    top: 6px;
-    bottom: 6px;
-    width: 2px;
-    background: var(--border);
+    gap: 14px;
   }
 
   .release {
-    position: relative;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     scroll-margin-top: 90px;
-    border-radius: 12px;
     transition: box-shadow 0.4s;
   }
 
   .release.flash {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 35%, transparent);
-    padding: 8px;
-    margin: -8px;
-  }
-
-  .node {
-    position: absolute;
-    left: -26px;
-    top: 4px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 3px solid var(--border);
-  }
-
-  .node.latest {
-    border-color: var(--good);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   }
 
   .r-head {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
   }
 
   .version {
-    font-weight: 800;
-    font-size: 1.15rem;
-    padding: 2px 12px;
-    border-radius: 10px;
-    color: var(--good);
-    background: color-mix(in srgb, var(--good) 14%, transparent);
     font-variant-numeric: tabular-nums;
   }
 
@@ -626,102 +525,6 @@
     margin: 0;
     color: var(--muted);
     white-space: pre-line;
-  }
-
-  /* A changelog like a document: headings and lines as written; every step of indent shows a thin guide line on the
-     left, so the entries below a heading stay visibly together. */
-  .doc {
-    display: grid;
-  }
-
-  .d-head,
-  .d-line {
-    --step: 20px;
-    padding-left: calc(var(--indent) * var(--step));
-    background: repeating-linear-gradient(90deg, var(--border) 0 2px, transparent 2px var(--step)) left top /
-      calc(var(--indent) * var(--step)) 100% no-repeat;
-  }
-
-  .d-head {
-    padding-top: 12px;
-    padding-bottom: 4px;
-    font-weight: 800;
-    overflow-wrap: anywhere;
-  }
-
-  .d-head:first-child {
-    padding-top: 0;
-  }
-
-  .d-head.h1 {
-    font-size: 0.82rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .d-head.h2 {
-    font-size: 1rem;
-  }
-
-  .d-head.h3 {
-    font-size: 0.9rem;
-    color: var(--muted);
-  }
-
-  .d-line {
-    --t: var(--muted);
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding-top: 3px;
-    padding-bottom: 3px;
-  }
-
-  .t-new {
-    --t: var(--good);
-  }
-
-  .t-changed {
-    --t: var(--accent);
-  }
-
-  .t-fixed {
-    --t: var(--warn);
-  }
-
-  .t-removed {
-    --t: var(--bad);
-  }
-
-  .tag {
-    flex-shrink: 0;
-    min-width: 76px;
-    padding: 1px 8px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--t);
-    background: color-mix(in srgb, var(--t) 14%, transparent);
-  }
-
-  .d-text {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  @media (max-width: 520px) {
-    .d-head,
-    .d-line {
-      --step: 12px;
-    }
-
-    .tag {
-      min-width: 0;
-    }
   }
 
   .pager {
@@ -780,14 +583,6 @@
   @media (max-width: 640px) {
     .head {
       padding: 18px 16px;
-    }
-
-    .switch {
-      width: 100%;
-    }
-
-    .switch button {
-      flex: 1;
     }
 
     .featured {

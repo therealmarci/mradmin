@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 20
+lang-version: 21
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -44,19 +44,17 @@ health-recovered: "<prefix><green>✅ Server runs smoothly again <gray>(<tps> TP
 # --- Web interface (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>web interface: set up your account, signed-in devices"
 web-usage: |-
-  <gray>/mradmin web setup <dark_gray>- <gray>setup link for you (also to reset password and 2FA)
   <gray>/mradmin web sessions [player] <dark_gray>- <gray>signed-in devices
   <gray>/mradmin web logout [player] <dark_gray>- <gray>sign out all devices
-  <gray>/mradmin web invite <player> <dark_gray>- <gray>setup link for someone else (admins, console)
-  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the web account (admins)
-web-status: "<prefix><hover:show_text:'<gray><address><newline>Accounts: <accounts> · devices: <sessions>'><gray>Web interface: <state></hover>"
+  <gray>/mradmin web reset <player> <dark_gray>- <gray>remove own sign-ins, e.g. lost phone (admins, console)
+  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the account (admins)
+web-status: "<prefix><hover:show_text:'<gray><address><newline>Accounts with an own sign-in: <accounts> · devices: <sessions>'><gray>Web interface: <state></hover>"
+web-setup-moved: "<prefix><hover:show_text:'<gray>Sign in with /web and set up a password, a passkey or Discord under Sign-ins.'><yellow>There are no setup links any more - everything goes through /web.</hover>"
+web-reset-done: "<prefix><hover:show_text:'<gray>Password, 2FA, passkeys, Discord and e-mail removed, all devices signed out. They get in again with /web.'><green>Sign-ins of <white><player></white> reset.</hover>"
+web-reset-none: "<prefix><red><white><player></white> has no account in the web interface."
 web-state-on: "<green>running"
 web-state-off: "<red>off</red> <gray>(web.enabled in the config)"
 web-off: "<prefix><hover:show_text:'<gray>Set web.enabled: true, then /mradmin reload'><red>The web interface is off.</hover>"
-web-setup-console: "<prefix><gray>From the console: /mradmin web invite <player>"
-web-setup-link: "<prefix><green>Your setup link:</green> <link> <hover:show_text:'<gray>Valid for 10 minutes, works once.'><red>Do not share!</hover>"
-web-setup-link-other: "<prefix><green>Link for <white><player></white>:</green> <link> <hover:show_text:'<gray>Valid for 10 minutes, works once.'><red>Only for <player>!</hover>"
-web-link-label: "<aqua><u>[Open setup]</u></aqua>"
 # The player's own page in the web interface (/web). Placeholders: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Your page: <link> <gray>· code: <code> <hover:show_text:'<gray>Works <seconds> seconds and only once.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -77,8 +75,6 @@ alert-title: "<red><b>ATTENTION"
 alert-subtitle: "<white>Critical warning"
 warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
 incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-no-public-url: "<prefix><hover:show_text:'<gray>web.public-url is not set.'><yellow>The link only works on this machine.</hover>"
-web-target-no-permission: "<prefix><hover:show_text:'<gray>Signing in does not work without it.'><yellow><player> lacks mradmin.web.</hover>"
 web-sessions-header: "<prefix><gray>Signed-in devices of <white><player></white>:"
 web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, last <seen>)"
 web-sessions-none: "<prefix><gray><player> is not signed in anywhere."
@@ -490,6 +486,7 @@ ticket-categories:
   # From the public forms of the web interface (not selectable). Contact requests exist only in the web.
   unban: "Unban request"
   contact: "Contact request"
+  application: "Whitelist application"
 ticket-staff-anonymous: "Team"
 ticket-status-open: "<green>open"
 ticket-status-closed: "<gray>closed"
@@ -699,6 +696,8 @@ discord:
   plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
   server-restart: "🔄 **{admin}** restarts the server (countdown: {time}, reason: {reason})."
   server-restart-cancelled: "❎ **{admin}** cancelled the restart."
+  server-schedule-paused: "⏸️ **{admin}** paused the planned restarts for 24 hours."
+  server-schedule-resumed: "▶️ **{admin}** switched the planned restarts on again."
   server-stop: "🛑 **{admin}** stops the server (countdown: {time}, reason: {reason})."
   server-stop-cancelled: "❎ **{admin}** cancelled the server stop."
   server-crash: "💥 The server crashed at {time} ({reason}) - the starter started it again."
@@ -808,6 +807,11 @@ request-ban-console: "Console"
 request-appeal-note: "The request was rejected - the player appealed (possible once, after that the decision is final)."
 request-accepted-note: "Unbanned by <admin>."
 request-rejected-note: "Rejected by <admin>."
+request-application-subject: "Whitelist application: <player>"
+# First message in the ticket of a whitelist application. <name> <player> <email> <time>
+request-application-text: "Name: <name>\nMinecraft: <player>\nE-mail: <email>\nApplied: <time>"
+request-application-accepted-note: "Accepted by <admin> - put on the whitelist."
+request-application-rejected-note: "Rejected by <admin>."
 push-ticket-contact-title: "Contact request #<id>"
 push-ticket-contact-body: "<player>: <summary>"
 mail-test-usage: "<prefix><gray>Usage: <white>/mradmin mail test <address>"
@@ -819,6 +823,27 @@ mail-test-failed: "<prefix><red>Test mail failed: <white><error>"
 # Mails to requesters (plain text, no MiniMessage). Placeholders: <name> <id> <subject> <answer> <link> <server> <time>
 mail-server-name: "Minecraft server"
 mail-no-text: "(no further message)"
+mail-button: "Open link"
+mail-imprint: "Imprint"
+mail-privacy: "Privacy"
+mail-email-confirm-subject: "Confirm your e-mail address - <server>"
+mail-email-confirm-body: |-
+  Hello <name>,
+
+  you want to use this address to sign in to <server>. Confirm it with this link (valid for <minutes> minutes):
+
+  <link>
+
+  Was it not you? Then simply ignore this mail - nothing happens without a click.
+mail-reset-subject: "New password - <server>"
+mail-reset-body: |-
+  Hello <name>,
+
+  someone asked for a new password for your sign-in to <server>. Set it with this link (valid for <minutes> minutes):
+
+  <link>
+
+  Was it not you? Then ignore this mail - your password stays as it is.
 mail-test-subject: "MRadmin: test mail"
 mail-test-body: |-
   Hello,
@@ -834,6 +859,47 @@ mail-unban-received-body: |-
   <link>
 
   Please do not reply to this mail, nobody reads it.
+mail-application-confirm-subject: "Confirm your application - <server>"
+mail-application-confirm-body: |-
+  Hi <name>,
+
+  you applied for the whitelist of <server> with the Minecraft name <player>. Confirm your e-mail address with this link (valid for 24 hours) - only then the team sees your application:
+
+  <link>
+
+  Not you? Just ignore this mail - nothing happens without a click.
+mail-application-received-subject: "Your whitelist application (#<id>)"
+mail-application-received-body: |-
+  Hi <name>,
+
+  thanks for your application - the team will look at it and get back to you.
+
+  The status and questions of the team are here - you can answer there too:
+  <link>
+
+  Please do not reply to this mail, it is not read.
+mail-application-accepted-subject: "Welcome - your application was accepted"
+mail-application-accepted-body: |-
+  Hi <name>,
+
+  good news: your application was accepted, you are on the whitelist.
+
+  <answer>
+
+  Server address: <address>
+
+  Make your account for the web interface now - also without having been in game before:
+  <link>
+mail-application-rejected-subject: "Your whitelist application was rejected"
+mail-application-rejected-body: |-
+  Hi <name>,
+
+  unfortunately your application was rejected.
+
+  <answer>
+
+  The whole conversation: <link>
+mail-application-no-address: "(see our website)"
 mail-contact-received-subject: "Your request: <subject>"
 mail-contact-received-body: |-
   Hello <name>,
@@ -923,3 +989,27 @@ map-state-missing: "not installed"
 map-state-installed: "installed, active after the next restart"
 map-state-disabled: "disabled in the config"
 map-state-error: "error: <error>"
+# Team notices (inbox, push, line in the game). <title> <details> <count> <open>
+push-application-title: "New whitelist application"
+push-application-body: "<player> wants to play (ticket #<id>)."
+push-server-crash-title: "Server crashed"
+push-server-crash-body: "Crashed at <time> (<reason>) - the starter started it again."
+push-server-hang-title: "Server hung"
+push-server-hang-body: "At <time> it hung for <seconds> s - the starter started it again."
+push-server-gave-up-title: "Starter gave up"
+push-server-gave-up-body: "At <time> after <count> crashes - the server was off until the next start."
+push-update-available-title: "Update available: <plugin>"
+push-update-available-body: "<plugin> <version> is out (installed: <installed>)."
+push-update-ready-title: "Update ready: <plugin>"
+push-update-ready-body: "<plugin> <version> is downloaded and installed on the next restart."
+push-paper-ready-title: "Paper update ready"
+push-paper-ready-body: "Paper build <build> is downloaded and installed on the next restart."
+team-notice: "<dark_gray>[<aqua>Team</aqua>]</dark_gray> <hover:show_text:'<gray><details>'><white><title></white></hover> <open>"
+team-notice-group: "<dark_gray>[<aqua>Team</aqua>]</dark_gray> <hover:show_text:'<gray><details>'><white><title></white> <gray>(+<count>)</gray></hover> <open>"
+team-notice-open: "<aqua>[Open]</aqua>"
+team-notice-join: "<prefix><hover:show_text:'<gray>In the inbox of the web interface. Mute with /mradmin mute'><aqua><count> unread team notices</aqua></hover> <open>"
+notice-muted: "<prefix><hover:show_text:'<gray>Inbox and push go on. On again with /mradmin mute'><gray>Team notices in the game <red>muted</red>.</hover>"
+notice-muted-until: "<prefix><hover:show_text:'<gray>Inbox and push go on. On earlier with /mradmin mute off'><gray>Team notices in the game muted until <white><time></white>.</hover>"
+notice-unmuted: "<prefix><gray>Team notices in the game <green>on</green> again."
+notice-mute-usage: "<prefix><gray>Usage: <white>/mradmin mute [30m|1h|off]"
+help-mute: "<gold>/mradmin mute [duration|off]</gold> <dark_gray>- <gray>mute team notices in the game"

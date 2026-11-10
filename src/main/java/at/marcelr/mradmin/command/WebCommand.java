@@ -28,8 +28,8 @@ import static at.marcelr.mradmin.Messages.tag;
  * makes one for themselves ({@code setup}, needs mradmin.web), admins or the console for others ({@code invite}).
  * <pre>
  *  /mradmin web                      status
- *  /mradmin web setup                own setup link (also to reset password and 2FA)
- *  /mradmin web invite &lt;player&gt;      setup link for someone else            mradmin.web.manage / console
+ *  /mradmin web setup                hint: own sign-ins are set up in the web (Account -> Sign-ins) since 1.5
+ *  /mradmin web reset &lt;player&gt;       remove all own sign-ins (lost device)  mradmin.web.manage / console
  *  /mradmin web sessions [player]    signed-in browsers                       others: mradmin.web.manage
  *  /mradmin web logout [player]      sign out all browsers                    others: mradmin.web.manage
  *  /mradmin web remove &lt;player&gt;      delete the web account                  mradmin.web.manage
@@ -54,8 +54,8 @@ final class WebCommand {
     void handle(CommandSender sender, String[] args) {
         String action = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "status";
         switch (action) {
-            case "setup", "einrichten" -> setup(sender);
-            case "invite", "einladen" -> invite(sender, args);
+            case "setup", "einrichten", "invite", "einladen" -> messages().send(sender, "web-setup-moved");
+            case "reset", "zuruecksetzen" -> reset(sender, args);
             case "sessions", "geraete" -> sessions(sender, args);
             case "logout", "abmelden" -> logout(sender, args);
             case "remove", "delete", "loeschen" -> remove(sender, args);
@@ -66,7 +66,7 @@ final class WebCommand {
     static List<String> complete(CommandSender sender, String[] args) {
         if (args.length == 2) {
             return sender.hasPermission(AuthRoutes.PERM_MANAGE)
-                    ? List.of("setup", "invite", "sessions", "logout", "remove") : List.of("setup", "sessions", "logout");
+                    ? List.of("sessions", "logout", "reset", "remove") : List.of("sessions", "logout");
         }
         if (args.length == 3 && sender.hasPermission(AuthRoutes.PERM_MANAGE)) {
             return Npcs.online().stream().map(Player::getName).toList();
@@ -85,27 +85,15 @@ final class WebCommand {
         messages().send(sender, "web-status",
                 tag("state", messages().get(running ? "web-state-on" : "web-state-off")),
                 tag("address", s.publicUrl().isEmpty() ? s.bind() + ":" + s.port() : s.publicUrl()),
-                tag("accounts", auth().accounts().size()), tag("sessions", auth().sessionCount()));
+                tag("accounts", auth().ownLoginCount()), tag("sessions", auth().sessionCount()));
         messages().send(sender, "web-usage");
     }
 
-    // ------------------------------------------------------------------- links
+    // ------------------------------------------------------------------- reset
 
-    private void setup(CommandSender sender) {
-        if (!(sender instanceof Player player)) {
-            messages().send(sender, "web-setup-console");
-            return;
-        }
-        if (!check(sender, WebPermissions.PERM_WEB) || !running(sender)) {
-            return;
-        }
-        String token = auth().createSetup(player.getUniqueId(), player.getName());
-        sendLink(sender, player.getName(), token, true);
-        audit(sender, player.getName(), "setup-link", "self");
-    }
-
-    private void invite(CommandSender sender, String[] args) {
-        if (!check(sender, AuthRoutes.PERM_MANAGE) || !running(sender)) {
+    /** Removes all own sign-ins of a player (lost device, taken-over account) - afterwards only /web gets them in. */
+    private void reset(CommandSender sender, String[] args) {
+        if (!check(sender, AuthRoutes.PERM_MANAGE)) {
             return;
         }
         OfflinePlayer target = target(sender, args);
@@ -113,28 +101,12 @@ final class WebCommand {
             return;
         }
         String name = target.getName() == null ? args[2] : target.getName();
-        if (!plugin.web().permissions().has(target.getUniqueId(), WebPermissions.PERM_WEB)) {
-            messages().send(sender, "web-target-no-permission", tag("player", name));
+        if (!auth().resetLogins(target.getUniqueId())) {
+            messages().send(sender, "web-reset-none", tag("player", name));
+            return;
         }
-        String token = auth().createSetup(target.getUniqueId(), name);
-        sendLink(sender, name, token, false);
-        audit(sender, name, "setup-link", "invited by " + sender.getName());
-    }
-
-    /** Clickable for players; the console gets the plain address (it ends up in the log - it works only 10 minutes). */
-    private void sendLink(CommandSender sender, String name, String token, boolean self) {
-        Settings.WebSettings s = plugin.settings().web();
-        String base = s.publicUrl().isEmpty()
-                ? "http://" + (s.bind().equals("0.0.0.0") ? "localhost" : s.bind()) + ":" + s.port() : s.publicUrl();
-        String url = base + "/setup#" + token;
-        if (s.publicUrl().isEmpty()) {
-            messages().send(sender, "web-no-public-url");
-        }
-        Component link = sender instanceof Player
-                ? messages().get("web-link-label").clickEvent(ClickEvent.openUrl(url))
-                .hoverEvent(HoverEvent.showText(Component.text(url)))
-                : Component.text(url);
-        messages().send(sender, self ? "web-setup-link" : "web-setup-link-other", tag("player", name), tag("link", link));
+        messages().send(sender, "web-reset-done", tag("player", name));
+        audit(sender, name, "logins-reset", "by " + sender.getName());
     }
 
     // ---------------------------------------------------------------- sessions
@@ -145,13 +117,13 @@ final class WebCommand {
             return;
         }
         String name = target.getName() == null ? "?" : target.getName();
-        List<WebAuth.Session> list = auth().sessions(target.getUniqueId());
+        List<at.marcelr.mradmin.web.self.PlayerSessions.Session> list = auth().sessions(target.getUniqueId());
         if (list.isEmpty()) {
             messages().send(sender, "web-sessions-none", tag("player", name));
             return;
         }
         messages().send(sender, "web-sessions-header", tag("player", name));
-        for (WebAuth.Session s : list) {
+        for (at.marcelr.mradmin.web.self.PlayerSessions.Session s : list) {
             messages().send(sender, "web-sessions-entry", tag("device", device(s.agent())), tag("ip", s.ip()),
                     tag("seen", Texts.at(plugin, Instant.ofEpochMilli(s.lastSeen()))));
         }

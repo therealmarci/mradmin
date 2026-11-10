@@ -131,7 +131,7 @@ class WebConfigFormTest {
             for (Object text : texts) {
                 if (text instanceof Map<?, ?> m) {
                     for (Object key : m.keySet()) {
-                        if (!Set.of("de", "en", "value", "key", "type", "name").contains(String.valueOf(key))) {
+                        if (!Set.of("de", "en", "value", "key", "type", "name", "plugin").contains(String.valueOf(key))) {
                             broken.add(section.get("id") + ": " + m);
                         }
                     }

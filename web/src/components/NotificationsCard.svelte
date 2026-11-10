@@ -1,5 +1,7 @@
 <script>
-  // Push notifications: switch on for this device, choose the kinds (only those the member may get), other devices.
+  // Team notices: per kind (only those the member may get) a switch each for the inbox, push on the devices and the
+  // line in the game (columns); push on/off for this device and the other devices. Alarm kinds (crash) always stay
+  // in the inbox; kinds that never reach the game have no switch there. Works without push too (inbox, game).
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
   import { dateTime } from '../lib/format.js';
@@ -19,12 +21,12 @@
   let endpoint = $state(null);
   let permission = $state(supported ? Notification.permission : 'denied');
 
-  const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', lag: '🐢', maintenance: '🔧' };
+  const CHANNELS = ['inbox', 'push', 'game'];
 
   async function load() {
     try {
       data = await api('GET', '/push');
-      if (supported) {
+      if (supported && data.key) {
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         endpoint = sub && data.devices.some((d) => d.endpoint === sub.endpoint) ? sub.endpoint : null;
@@ -82,13 +84,13 @@
     }
   }
 
-  async function choose(kind, on) {
-    data.kinds[kind] = on;
+  async function choose(kind, channel, on) {
+    data.kinds[kind][channel] = on;
     try {
-      await api('POST', '/push/choose', { kind, on: String(on) });
+      await api('POST', '/push/choose', { kind, channel, on: String(on) });
     } catch (e) {
       error = errorText(e);
-      data.kinds[kind] = !on;
+      data.kinds[kind][channel] = !on;
     }
   }
 
@@ -110,6 +112,17 @@
     }
   }
 
+  // Kinds grouped by the plugin that sends them - MRadmin first, then the others by name.
+  const groups = $derived.by(() => {
+    const map = new Map();
+    for (const [kind, c] of Object.entries(data?.kinds ?? {})) {
+      const name = c.plugin ?? 'MRadmin';
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push([kind, c]);
+    }
+    return [...map].sort(([a], [b]) => (a === 'MRadmin' ? -1 : b === 'MRadmin' ? 1 : a.localeCompare(b)));
+  });
+
   const others = $derived((data?.devices ?? []).filter((d) => d.endpoint !== endpoint));
 </script>
 
@@ -122,7 +135,9 @@
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 
-  {#if !supported}
+  {#if data && !data.key}
+    <p class="muted small">{t('push.serverOff')}</p>
+  {:else if !supported}
     <p class="warn small">{ios && !installed ? t('push.iosInstall') : t('push.unsupported')}</p>
   {:else if data}
     <div class="device-box">
@@ -132,11 +147,11 @@
       </div>
       {#if endpoint}
         <div class="buttons">
-          <button class="secondary" onclick={test} disabled={busy}>{t('push.test')}</button>
-          <button class="danger" onclick={() => disable(null)} disabled={busy}>{t('push.disable')}</button>
+          <button class="secondary small" onclick={test} disabled={busy}>{t('push.test')}</button>
+          <button class="secondary small" onclick={() => disable(null)} disabled={busy}>{t('push.disable')}</button>
         </div>
       {:else}
-        <button onclick={enable} disabled={busy || permission === 'denied'}>{t('push.enable')}</button>
+        <button class="secondary small" onclick={enable} disabled={busy || permission === 'denied'}>{t('push.enable')}</button>
       {/if}
     </div>
   {/if}
@@ -146,20 +161,38 @@
     {#if Object.keys(data.kinds).length === 0}
       <p class="muted small">{t('push.noKinds')}</p>
     {:else}
-      <ul class="kinds">
-        {#each Object.entries(data.kinds) as [kind, on] (kind)}
-          <li>
-            <label>
-              <span class="kicon" aria-hidden="true">{data.labels?.[kind]?.icon ?? ICON[kind] ?? '•'}</span>
-              <span class="ktext">
-                <strong>{data.labels?.[kind]?.label ?? t('push.kind.' + kind)}</strong>
-                <span class="muted small">{data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}</span>
+      <div class="kinds" role="table" aria-label={t('push.kinds')}>
+        {#each groups as [name, entries] (name)}
+          <div class="krow ghead" role="row">
+            <span class="gname" role="columnheader">{name}</span>
+            {#each CHANNELS as c}<span class="col" role="columnheader">{t('push.col.' + c)}</span>{/each}
+          </div>
+          {#each entries as [kind, c] (kind)}
+            {@const label = data.labels?.[kind]?.label ?? t('push.kind.' + kind)}
+            {@const hint = data.labels?.[kind]?.hint ?? t('push.kindHint.' + kind)}
+            <div class="krow" role="row">
+              <span class="kname" role="cell" title={hint}>
+                <span class="ktitle">{label}</span>
+                <span class="khint">{hint}</span>
               </span>
-              <input type="checkbox" class="switch" checked={on} onchange={(e) => choose(kind, e.currentTarget.checked)} />
-            </label>
-          </li>
+              {#each CHANNELS as ch}
+                <span class="col" role="cell">
+                  {#if c[ch] === undefined}
+                    <span class="none" title={t('push.noGame')}>–</span>
+                  {:else if ch === 'inbox' && c.alarm}
+                    <input type="checkbox" class="switch" checked disabled title={t('push.alwaysInbox')}
+                      aria-label={`${label}: ${t('push.col.' + ch)}`} />
+                  {:else}
+                    <input type="checkbox" class="switch" checked={c[ch]} aria-label={`${label}: ${t('push.col.' + ch)}`}
+                      onchange={(e) => choose(kind, ch, e.currentTarget.checked)} />
+                  {/if}
+                </span>
+              {/each}
+            </div>
+          {/each}
         {/each}
-      </ul>
+      </div>
+      <p class="muted small">{t('push.muteHint')}</p>
     {/if}
 
     {#if others.length}
@@ -224,9 +257,9 @@
     gap: 12px;
     justify-content: space-between;
     align-items: center;
-    background: var(--surface-2);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 14px;
   }
 
   .buttons {
@@ -235,7 +268,6 @@
     flex-wrap: wrap;
   }
 
-  .kinds,
   .devices {
     list-style: none;
     margin: 0;
@@ -244,39 +276,87 @@
     gap: 8px;
   }
 
-  .kinds label {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  /* One quiet table: a header row per plugin, thin lines between the kinds, the three channels as fixed columns
+     so the switches stand in line. */
+  .kinds {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 4.8rem);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 12px;
-    cursor: pointer;
+    overflow: hidden;
   }
 
-  .kicon {
-    font-size: 1.2rem;
+  .krow {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+    padding: 8px 4px 8px 14px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   }
 
-  .ktext {
-    flex: 1;
+  .krow.ghead {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    background: var(--surface-2);
+    border-top-color: var(--border);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .krow.ghead:first-child {
+    border-top: 0;
+  }
+
+  .gname {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--text);
+  }
+
+  .kname {
     display: grid;
     gap: 1px;
     min-width: 0;
   }
 
-  /* A switch instead of a plain checkbox. */
+  .ktitle {
+    font-size: 0.9rem;
+  }
+
+  .khint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .col {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .none {
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  /* A small switch instead of a plain checkbox. */
   .switch {
     appearance: none;
-    width: 42px;
-    height: 24px;
+    width: 32px;
+    height: 18px;
     border-radius: 999px;
-    background: var(--border);
+    background: color-mix(in srgb, var(--muted) 35%, transparent);
     position: relative;
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
+    margin: 0;
     border: none;
     transition: background 0.15s;
   }
@@ -284,10 +364,10 @@
   .switch::after {
     content: '';
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #fff;
     transition: transform 0.15s;
@@ -298,12 +378,31 @@
   }
 
   .switch:checked::after {
-    transform: translateX(18px);
+    transform: translateX(14px);
   }
 
   .switch:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .switch:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 560px) {
+    .kinds {
+      grid-template-columns: minmax(0, 1fr) repeat(3, 3.6rem);
+    }
+
+    .krow {
+      padding-left: 10px;
+    }
+
+    .khint {
+      display: none;
+    }
   }
 
   .devices li {

@@ -9,12 +9,15 @@
   import { go } from '../lib/router.svelte.js';
   import Carousel from '../components/Carousel.svelte';
 
+  // guest: the start page for visitors - only general slides (GET /api/start/news)
+  let { guest = false } = $props();
+
   let data = $state(null);
   let now = $state(Date.now());
 
   async function load() {
     try {
-      data = await api('GET', '/self/news?lang=' + lang);
+      data = await api('GET', (guest ? '/start/news' : '/self/news') + '?lang=' + lang);
     } catch {
       data = null;
     }
@@ -58,7 +61,6 @@
     <div class="kind">
       <span aria-hidden="true">{s.icon ?? (s.level === 'info' ? 'ℹ️' : icon[s.type])}</span>
       {s.type === 'notice' ? s.title : t('self.hero.kind.' + kind)}
-      {#if s.pinned}<span class="pin" title={t('self.hero.pinned')}>📌</span>{/if}
       {#if s.created}<span class="when">{dateTime(s.created)}</span>{/if}
     </div>
     {#if s.type === 'maintenance'}
@@ -83,16 +85,16 @@
       {#if s.type === 'incident'}
         <a class="more" tabindex={active ? 0 : -1} href={s.link} target="_blank" rel="noopener noreferrer">{t('self.hero.toStatus')} ↗</a>
       {:else}
-        <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/news')}>{t('self.hero.readMore')} →</button>
+        <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox')}>{t('self.hero.readMore')} →</button>
       {/if}
     {:else if s.type === 'ticket'}
       <h2>{s.title}</h2>
       <p>{t(s.open ? 'self.hero.ticketAnswer' : 'self.hero.ticketClosed', { time: dateTime(s.time) })}</p>
-      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/tickets/' + s.id)}>{t('self.hero.toTicket')} →</button>
+      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox#ticket-' + s.id)}>{t('self.hero.toTicket')} →</button>
     {:else}
       <h2>{s.title}</h2>
       <p class="text">{s.text}</p>
-      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/me/news#post-' + s.id)}>{t('self.hero.readMore')} →</button>
+      <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/inbox#post-' + s.id)}>{t('self.hero.readMore')} →</button>
     {/if}
   {/snippet}
 </Carousel>

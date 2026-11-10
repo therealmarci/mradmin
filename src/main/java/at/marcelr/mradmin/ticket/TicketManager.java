@@ -236,7 +236,7 @@ public final class TicketManager {
         Ticket open = bySource(source, report.key());
         String subject = TicketText.limit(report.subject(), 100);
         if (report.push() != null) {
-            plugin.push(report.push(), "report", "/tickets/" + (open != null ? open.id() : nextId), null,
+            plugin.notices().sendReport(report.push(), "ticket:" + (open != null ? open.id() : nextId), "report", "/admin/community/tickets/" + (open != null ? open.id() : nextId),
                     "subject", subject, "player", report.playerName(), "plugin", source);
         }
         if (open != null) {
@@ -344,7 +344,7 @@ public final class TicketManager {
      * empty) goes to the person first. @return error key or null
      */
     public String decide(Ticket ticket, boolean accepted, UUID who, String name, String text) {
-        if (ticket.request() == null || !ticket.request().unban()) {
+        if (ticket.request() == null || !ticket.request().decidable()) {
             return "not-unban";
         }
         if (!ticket.open()) {
@@ -355,8 +355,11 @@ public final class TicketManager {
             ticket.add(new Ticket.Message(who, name, true, clean, Instant.now()));
         }
         ticket.request(ticket.request().withDecision(accepted ? WebRequest.ACCEPTED : WebRequest.REJECTED));
-        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain(accepted ? "request-accepted-note"
-                : "request-rejected-note", "admin", name)), Instant.now()));
+        String note = ticket.request().application()
+                ? (accepted ? "request-application-accepted-note" : "request-application-rejected-note")
+                : (accepted ? "request-accepted-note" : "request-rejected-note");
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain(note,
+                "admin", name)), Instant.now()));
         ticket.close(name, Instant.now());
         ticket.creatorUnread(true);
         ticket.staffUnread(false);
@@ -391,8 +394,8 @@ public final class TicketManager {
         if (ticket.request() == null || plugin.web() == null) {
             return;
         }
-        if (!ticket.open() && ticket.request().unban() && ticket.request().decision() == null) {
-            // Closed without a decision (in game or plain close in the web): the ban stays, so it counts as rejected.
+        if (!ticket.open() && ticket.request().decidable() && ticket.request().decision() == null) {
+            // Closed without a decision (in game or plain close in the web): the ban stays / no whitelist, so it counts as rejected.
             ticket.request(ticket.request().withDecision(WebRequest.REJECTED));
             save(ticket);
         }
@@ -816,8 +819,11 @@ public final class TicketManager {
     }
 
     private void notifyNew(Ticket ticket) {
-        for (Player staff : ticket.visibleInGame() ? Bukkit.getOnlinePlayers() : List.<Player>of()) {
-            if (staff.hasPermission(PERM_NOTIFY) && !ticket.isCreator(staff.getUniqueId())) {
+        // Applications come as a short team notice (they have their own kind and permission).
+        boolean application = ticket.request() != null && ticket.request().application();
+        for (Player staff : ticket.visibleInGame() && !application ? Bukkit.getOnlinePlayers() : List.<Player>of()) {
+            if (staff.hasPermission(PERM_NOTIFY) && !ticket.isCreator(staff.getUniqueId())
+                    && plugin.notices().wantsGame(staff.getUniqueId(), "ticket-new")) {
                 messages().send(staff, "ticket-notify-new", tag("id", ticket.id()), Messages.lazy("type", () -> categoryName(ticket.category())),
                         tag("player", ticket.creatorName()), Messages.lazy("summary", () -> summary(ticket)),
                         tag("text", TicketText.preview(ticket.description(), PREVIEW)),
@@ -826,8 +832,11 @@ public final class TicketManager {
             }
         }
         // Push to the team's devices - not for lock tickets, those come as "chunk loader locked".
-        if (ticket.source() == null) {
-            plugin.push("ticket-new", ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/tickets/" + ticket.id(),
+        if (application) {
+            plugin.push("application", "ticket:" + ticket.id(), "application", "/admin/community/tickets/" + ticket.id(),
+                    null, "id", ticket.id(), "player", ticket.creatorName());
+        } else if (ticket.source() == null) {
+            plugin.push("ticket-new", "ticket:" + ticket.id(), ticket.visibleInGame() ? "ticket-new" : "ticket-contact", "/admin/community/tickets/" + ticket.id(),
                     id -> !ticket.isCreator(id),
                     "id", ticket.id(), "player", ticket.creatorName(), "summary", messages().server(() -> summary(ticket)));
         }
@@ -838,13 +847,13 @@ public final class TicketManager {
      * (who wants it) "any ticket message". The author never gets their own message.
      */
     private void pushMessage(Ticket ticket, String author, String text, UUID except) {
-        String url = "/tickets/" + ticket.id();
+        String url = "/admin/community/tickets/" + ticket.id();
         Object[] values = {"id", ticket.id(), "player", author, "text", TicketText.preview(text, 200)};
         UUID claimer = ticket.claimedBy();
         if (claimer != null) {
-            plugin.push("ticket-mine", "ticket-message", url, id -> id.equals(claimer) && !id.equals(except), values);
+            plugin.push("ticket-mine", "ticket:" + ticket.id(), "ticket-message", url, id -> id.equals(claimer) && !id.equals(except), values);
         }
-        plugin.push("ticket-message", "ticket-message", url, id -> !id.equals(claimer) && !id.equals(except), values);
+        plugin.push("ticket-message", "ticket:" + ticket.id(), "ticket-message", url, id -> !id.equals(claimer) && !id.equals(except), values);
     }
 
     /** To the member who claimed the ticket if they are online, otherwise to the whole team on duty. */
@@ -853,7 +862,8 @@ public final class TicketManager {
         List<Player> to = claimer != null ? List.of(claimer) : Bukkit.getOnlinePlayers().stream()
                 .filter(p -> p.hasPermission(PERM_NOTIFY)).map(p -> (Player) p).toList();
         for (Player staff : to) {
-            if (!staff.equals(except)) {
+            String kind = staff.getUniqueId().equals(ticket.claimedBy()) ? "ticket-mine" : "ticket-message";
+            if (!staff.equals(except) && plugin.notices().wantsGame(staff.getUniqueId(), kind)) {
                 messages().send(staff, key, resolvers);
                 sound(staff);
             }
@@ -880,7 +890,7 @@ public final class TicketManager {
                     .hoverEvent(HoverEvent.showText(messages().get("ticket-button-mine-hover")))));
         }
         int open = openCountInGame();
-        if (open > 0 && player.hasPermission(PERM_NOTIFY)) {
+        if (open > 0 && player.hasPermission(PERM_NOTIFY) && !plugin.notices().muted(player.getUniqueId())) {
             messages().send(player, "ticket-join-staff", tag("count", open), tag("unread", staffUnreadCountInGame()),
                     Messages.lazy("list", this::listButton));
         }

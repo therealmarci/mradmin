@@ -2,33 +2,91 @@
 
 Use MRadmin from your phone, tablet or PC: answer tickets, manage players, schedule maintenance, keep an eye on the server status - with the same permissions as in game. This page describes the web interface in detail. What players see on their own page is described under [Player page](spielerseite.md), updates and restarts under [Plugins & updates](plugins.md).
 
+## Layout
+Since 1.5 there is **one** web interface for players and team. Team members switch between the player area and the administration with the **shield button** at the top right (filled in colour while in the administration). The language is changed in the menu under your own name. Every area has tabs at the top.
+
+| Player area | Content |
+|---|---|
+| **Home** (`/`) | start page made of widgets - one for visitors and one for signed-in players |
+| **My game** (`/game/…`) | one tab per plugin (chunk loaders, duels, waypoints …) |
+| **Map** (`/map`) | the map full screen |
+| **Statistics** (`/stats`) | own values and server rankings |
+| **News** (`/news`) | tabs **News** (`/news`), **Changelog** (`/news/changelog`) and **Tickets** (`/news/tickets`, own tickets and a new one) |
+| **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). For the team the **team notices** come here too (see [Team notices](#team-notices)), switch **All / Team**. Active warnings are on top |
+| **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
+
+| Administration | Tabs |
+|---|---|
+| **Overview** (`/admin`) | dashboard |
+| **Community** (`/admin/community/…`) | players · tickets · punishments · posts · announcements |
+| **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
+| **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console · appearance (MRadmin's config: plugins → MRadmin) |
+
+Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
+
 ## Setup
 1. In the config set `web.enabled: true` and `web.public-url` to your address (e.g. `https://admin.yourserver.com`), then `/mradmin reload`. For many tickets `storage.type: sqlite` is recommended.
 2. Set up a **reverse proxy**: domain with HTTPS → `http://127.0.0.1:8125`. The built-in web server only listens locally and has no HTTPS of its own.
-3. **Create an account:** in game `/mradmin web setup` (permission `mradmin.web`) → open the link → set a password, connect an authenticator app via QR code → save the recovery codes. For others: `/mradmin web invite <player>` (also from the console).
+3. **Sign in:** everyone gets in with the code from `/web` in game - the account is made then. Team members (permission `mradmin.web`) then set up an own sign-in under **Account → Sign-ins**: password, passkey or Discord. Only then the administration opens.
 
 | Command | What it does | Permission |
 |---|---|---|
-| `/mradmin web` | Status (running, address, accounts, devices) | `mradmin.web` |
-| `/mradmin web setup` | Setup link for you | `mradmin.web` |
+| `/web` | Code to sign in (players and team) | `mradmin.web.self` or `mradmin.web` |
+| `/mradmin web` | Status (running, address, accounts with an own sign-in, devices) | `mradmin.web` |
 | `/mradmin web sessions [player]` | Signed-in devices | `mradmin.web` (others: `.manage`) |
 | `/mradmin web logout [player]` | Sign out all devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web invite <player>` | Setup link for someone else | `mradmin.web.manage` |
-| `/mradmin web remove <player>` | Delete a web account | `mradmin.web.manage` |
+| `/mradmin web reset <player>` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone | `mradmin.web.manage` |
+| `/mradmin web remove <player>` | Delete the account | `mradmin.web.manage` |
 
-**Forgot your password or lost your phone?** Simply get a new setup link. It resets password and 2FA and signs out all devices.
+**Forgot the password?** With a confirmed e-mail address, "Forgot password?" sends a link by mail (needs `mail.*`). And `/web` in game always works.
 
-## Security
-- **Start page:** whoever is not signed in first chooses "I am a player" (→ player page, sign-in with the code from `/web`) or "I am in the team" (→ team sign-in). If the player page is off (`player-web.enabled: false`), it goes straight to the team sign-in.
-- Sign-in in two steps: first Minecraft name and password, then the code from the authenticator app (or a recovery code) - everything is checked together. Passkey and Discord are offered in the first step as an alternative. Passwords are stored with PBKDF2 (600,000 rounds), session cookies only as a hash.
-- **Passkeys** (fingerprint, Face ID, Windows Hello, password manager): add them under **Account** - for safety with a fresh code from the app. After that, signing in works without name, password and code; the device check (fingerprint, PIN) is always required and replaces both factors. Passkeys are bound to the address from `web.public-url` (without it only `http://localhost` for testing). Only public keys are stored. Whoever resets their account with a setup link loses all passkeys (lost phone).
-- **Switching 2FA off** is possible under **Account** as soon as a passkey exists. Then the account only signs in with a passkey - with name and password 2FA is always required. Steps that otherwise require a fresh code (unlocking the console, adding a passkey) are then confirmed with a passkey. The last passkey cannot be removed without 2FA; 2FA can be switched on again any time (new QR code, new recovery codes). Switch off: `web.login.passkeys: false`.
-- **Sign in with Discord** (`web.login.discord`): create a Discord application, add the redirect `<public-url>/api/discord/callback`, put client ID and secret into the config. Everyone links their Discord under **Account → Security** (only while signed in, so nobody takes over someone else's account; without setup it says what is missing in the config). After that sign-in with one click; counts like a passkey - 2FA can be switched off, confirmations (console, 2FA, adding a passkey) also work via Discord. Only `identify` (ID, name, avatar) is requested.
-- After 5 failed attempts the account is locked for 15 minutes, plus at most 10 sign-in attempts per minute and IP. So that this works with the visitors' real IP, enter your proxy under `web.trusted-proxies`.
-- Cookies: `HttpOnly`, `SameSite=Strict`, `Secure` over HTTPS. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
-- The same permissions apply in the web as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` is signed out everywhere right away.
-- Every sign-in and action is recorded in the log (web: **Log**, with `mradmin.web.audit`), sign-ins and setups also in the Discord log (`web-login`, `web-setup`).
-- Forgot your password or lost your phone: simply get a new setup link. It resets password and 2FA and signs out all devices.
+## Sign-in and security
+- **One sign-in for everyone** (since 1.5): players and team use the same account (one per Minecraft UUID). Everyone gets in with the 6-digit code from `/web` (valid 2 minutes). A device stays signed in for `player-web.session-days` (default 14 days), without use at most `player-web.idle-days` (7 days).
+- **Own sign-in** under **Account → Sign-ins** (player area: **Sign-ins & devices**), to get in without the game:
+  - **Password** - sign in with the player name or a confirmed **e-mail address**. The address counts only after the click on the link in the confirmation mail; it makes "forgot password" possible. Passwords are stored with PBKDF2 (600,000 rounds).
+  - **Passkey** (fingerprint, Face ID, Windows Hello, password manager) - bound to the address from `web.public-url` (without it only `http://localhost` for testing). Only public keys are stored. Switch off: `web.login.passkeys: false`.
+  - **Discord** (`web.login.discord`): create a Discord application, add the redirect `<public-url>/api/discord/callback`, client ID and secret into the config; only `identify` is asked for.
+  - **2FA** (code from an authenticator app) is optional: when on, the password sign-in also asks for the code (or a recovery code).
+- The **first** own sign-in is set up just like that. Every further one - and changing or removing one - is confirmed with an existing one (password, 2FA code or passkey).
+- **Team:** the administration opens with `mradmin.web` **and** at least one own sign-in. `web.login.require-2fa: true` also requires 2FA (default off). A `/web` sign-in is enough once the own sign-in is set up. Without it the page shows the **Sign-ins** card right away.
+- **Sensitive steps** (unlocking the web console, emergency restart) are confirmed with an own sign-in: 2FA code, passkey, Discord or password.
+- After 5 failed attempts the account is locked for 15 minutes, plus at most 10 sign-in attempts per minute and IP. For this to work with the visitors' real IP, enter your proxy under `web.trusted-proxies` - single addresses or ranges like `172.16.0.0/12` (a proxy in Docker whose address changes).
+- Cookies: `HttpOnly`, `SameSite=Strict`, over HTTPS `Secure`; session cookies, recovery codes and mail links only as hashes. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
+- The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
+- Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
+- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
+
+## Appearance (Server, `mradmin.appearance`)
+The web interface carries the name and colours of your server - players never see "MRadmin".
+- **Name** and **tagline** (sign-in page), **accent colour** (buttons, highlights; the text colour on it is chosen by the page), **text and up to 4 links** in the footer (e.g. Discord, website, rules).
+- **Logo** (sign-in page, mails) and **browser icon** (tab, bar, "add to home screen"): PNG, WebP or SVG, at most 512 KB. Without an own icon the logo is used. SVGs with scripts or embedded content are refused.
+- One tile each for brand, logo and icon, accent colour (with suggested colours), footer and links, and the start page; on the right a **preview** of the sign-in and start page, light and dark, that stays in view while scrolling. Unsaved changes show a bar at the bottom with **Save** and **Discard**; after saving everything applies to everyone right away.
+- The name shows in the browser tab, on the sign-in page, in the bar, in mails, in the 2FA app and for passkeys.
+- Saved in `config.yml` (section `branding`, also editable in the file), the pictures under `plugins/MRadmin/branding/`.
+- **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
+
+### Start page (widgets)
+There are **two start pages** (`/`): one for **visitors** (not signed in) and one for **signed-in players**. Both are made of **widgets** in a grid with 12 columns; each widget has a width (1-12 columns) and a height (1-8 rows). Personal widgets exist only on the signed-in page, the log-in call only on the visitors' page. On tablets small widgets get half the width and bigger ones the full width, on phones all are one below the other.
+
+**Edit** right on the start page (`mradmin.appearance`, **Edit** button at the top; switch between **Visitors** and **Signed in** at the top, both are saved together):
+- **Move:** drag the ⠿ grip and drop it on another widget (left half = before, right half = after).
+- **Size:** drag the handle at the bottom right or enter width/height in the settings.
+- **Insert:** **+ Insert widget** (goes after the selected one), **settings** ⚙, **remove** ✕.
+- **Save** or **Discard**; **Load template** replaces the selected page with the template (only when saving).
+
+| Group | Widgets |
+|---|---|
+| Server & status | **Banner** (logo, name, tagline, background picture, address, players online - signed in with "Hello <name>", for visitors with Log in), **Notices** (maintenance, restart, warnings, posts - personal when signed in), **Server address**, **Players online** |
+| Personal (signed-in only) | **Greeting**, **My areas** (one tile per area of the plugins), **My statistics** |
+| Content | **News**, **Text** (with formatting), **Picture** (PNG, WebP, SVG up to 512 KB), **Links**, **Discord** (invite), **Log-in call** |
+
+Widgets without content (empty text, no picture, no links) stay hidden outside the edit mode. **Log in** is at the top right of the bar and opens a window over the page (directly: `/login`). The earlier start page is split onto both pages by itself on the update (everyone → both, visitors only → visitors, signed-in only → signed in). Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`. Name, logo, colour and footer are set under Server → Appearance.
+
+## Punishments (Community, with LibertyBans)
+- All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.
+- Filter by type (ban, mute, warning, kick) and search for player or reason; a click on the player opens their page.
+- **Lift** right in the list, with the same permissions as in game (`libertybans.<type>.undo.target.uuid`).
+- Permissions like in LibertyBans: `libertybans.commands` plus `libertybans.list.banlist` (bans), `libertybans.list.mutelist` (mutes) or `libertybans.list.history` (warnings and "All"); plus `mradmin.player.view`. Without LibertyBans there is no such tab.
 
 ## Overview (dashboard)
 - At the top the **situation**: if something gets out of hand, every message is listed here with an icon and a word, the most urgent first: low TPS, high tick time, full memory, little disk space, high CPU load, high ping, unanswered tickets and tickets assigned to you, locked, conspicuous or paused chunk loaders, /nosleep blocks, maintenance. If everything runs smoothly, the most important current values are shown there. Updates every 2 seconds.
@@ -48,7 +106,7 @@ Use MRadmin from your phone, tablet or PC: answer tickets, manage players, sched
 - One page per player: at the top a short preview with location, game mode, ping, health, first visit and play time; freeze (`mradmin.player.freeze`) and kick with a reason (`mradmin.player.kick`, Discord log `player-kick`).
 - Below that **one tile per section** with its status at a glance (e.g. "2 open", "3 / 5 loaders", "in duel #12", "banned until …"). A click opens the section with all details and actions (address `/players/<uuid>/<section>`, so it can also be bookmarked). Sections: their tickets (`mradmin.tickets.view`) and one section per plugin, each only with its permissions - if the plugin is missing, the tile is missing:
   - **MRsleep:** /nosleep blocks, cooldown, bypass, ban (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
-  - **MRchunks:** their loaders (with size), chunk budget and dummy limit with their origin (default, permission, admin), set the budget (`mrchunks.admin.limit`); on a loader's page change its size (`mrchunks.admin.resize`) and suspend its limit lock for up to 24 hours (`mrchunks.admin.suspendlock`); the charts of the measurements are there as well (1m to 12h, `mrchunks.admin.gui`) with a live view (`mrchunks.admin.live`). Ban from chunk loaders (`mrchunks.admin.ban`), delete all loaders (`mrchunks.admin.manage`), invitations and loaders shared with them (`mrchunks.admin.gui`). View, remove and create linked accounts - by player name as alt or main account, without the players' consent (`mrchunks.admin.manage`, like `/mrchunks link`).
+  - **MRchunks:** their loaders (with size), chunk budget and dummy limit with their origin (default, permission, admin), set the budget (`mrchunks.admin.limit`); on a loader's page change its size (`mrchunks.admin.resize`) and suspend its limit lock for up to 24 hours (`mrchunks.admin.suspendlock`), adjust its lag limits for good (`mrchunks.admin.limits`); the charts of the measurements are there as well (1m to 12h, `mrchunks.admin.gui`) with a live view (`mrchunks.admin.live`). Ban from chunk loaders (`mrchunks.admin.ban`), delete all loaders (`mrchunks.admin.manage`), invitations and loaders shared with them (`mrchunks.admin.gui`). View, remove and create linked accounts - by player name as alt or main account, without the players' consent (`mrchunks.admin.manage`, like `/mrchunks link`).
   - **MRpvp:** duel statistics, the running round (click → duel control) and the last rounds as tiles (`mrpvp.admin.games`), ban from duels with a reason and quick-select of the duration (`mrpvp.admin.ban`, durations from `gui.ban-durations` in the MRpvp config), give back saved states (`mrpvp.admin.restore`), reset statistics (`mrpvp.admin.reset`).
   - **LibertyBans:** active punishments and history (`libertybans.commands` + `libertybans.list.history`), ban, mute, warn and kick (`libertybans.<type>.do.target.uuid`), lift (`libertybans.<type>.undo.target.uuid`). The duration comes from the quick-select `libertybans.durations` in the MRadmin config; if LibertyBans has its duration permissions switched on (`duration-permissions`), they apply here as well. It runs via LibertyBans' API - so with its kick screen, messages and notifications. In the player list banned (`libertybans.list.banlist`) and muted (`libertybans.list.mutelist`) players are marked.
 - Players in tickets, chunk loaders and on the sleep page link straight to their page.
@@ -96,7 +154,7 @@ Two sections: **Posts** for the player page (`mradmin.news`) and **Announcements
 ### Posts
 Three kinds of posts for the players, texts separately in German and English (everyone sees their language, if it is missing, the other one):
 
-- **News** (announcements, events): title and text, **Pin** always puts it in front.
+- **News** (announcements, events): title and text.
 - **Changelog**: version, optionally title and introduction, plus **entries** with a kind (New, Changed, Fixed, Removed) and **headings** on three levels (1 main heading, e.g. "Plugins"; 2 sub heading, e.g. "MRpvp"; 3 a further level). Entries belong to the heading above them and are indented below it, under every level all kinds are possible - add, reorder, remove. On the player page a timeline, on Discord the sections in order.
 - **Critical warning**: title and text. When sent, all players who are online get the warning in chat and as a title on the screen (`player-web.news.alerts`); whoever joins later sees it in chat as long as it is active. It runs until "Active until" or until **End**.
 
@@ -114,7 +172,7 @@ Every player with `mradmin.web.self` gets new news and changelogs **once as a pr
 
 What is already pinned at server start is not announced to everyone again. Incidents are changed and ended in Uptime Kuma. In the Discord channel of the announcements (`discord-announce.kuma`) every incident is posted once (red pings the role), with a link "More" to the news page of the player page (not to Kuma), edited when it changes in Kuma and set to "✅ Resolved" at the end.
 
-**Visible until** hides a post after this day (it stays in the list, gray). Creating, editing, ending and deleting are recorded in the web log. It is stored in MRadmin's storage under `news` (who already got which preview: `news-seen`).
+**Visible from** and **Visible until** (date and time, empty = right away / for good) decide when players see a post. A planned post shows as "Planned" in the list; chat preview, warning in game and Discord go out only when it becomes visible. Expired posts stay grey in the list. The hero tile of the start page always shows only the newest post (news or changelog), all others are in the entry **News**. Creating, editing, ending and deleting are recorded in the web log. It is stored in MRadmin's storage under `news` (who already got which preview: `news-seen`).
 
 ### Announcements
 **Send** (`mradmin.announce`): one of your own templates (with values if it has placeholders) or an own text ("title | subtitle") on the screen, optionally also on the community Discord. Everything goes to the web log.
@@ -133,7 +191,7 @@ Everything around the running server is under one entry in the bar: **Server**. 
 
 | Tab | What is there | Permission |
 |---|---|---|
-| **Overview** | Running for how long, [starter](starter.md) active or not, Paper build and whether it is up to date (checked every 15 minutes, also without the starter), next planned restart. On the right **Restart** and **Stop** with a countdown (`versions.restart-delays`) or the running countdown (with its reason) and **Cancel**; optionally an own **Reason**, otherwise MRadmin names one. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
+| **Overview** | Four values side by side (details on hover): up for, Paper build with a coloured dot (green up to date, yellow newer build available - checked every 15 minutes, also without the starter), [starter](starter.md) active or not, next planned restart. Below **Restart** and **Stop** with a countdown (`versions.restart-delays`, default 15/30/60 minutes), shorter times through the red **Emergency** button (window: first 2FA code or passkey, then restart/stop, a time from `versions.emergency-delays` and a required reason), or the running countdown (with its reason) and **Cancel** (for a planned restart: **Skip this restart**); optionally an own **Reason**, otherwise MRadmin names one. With planned restarts also **Pause planned restarts for 24 h** / **Switch on again**. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
 | **Plugins** | Versions, updates, installing, configuration in the browser - see [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
 | **Log** | Events and console output - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
 | **Console** | Run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
@@ -149,6 +207,24 @@ Page "Plugin configuration" under `/plugins` (the old address `/versions` redire
 - **Download** (`mradmin.versions.install`): only from the release of the plugin's own GitHub repository, only with a matching SHA-256 checksum and only if the file really contains this plugin. It is stored under the name of the installed JAR in `plugins/update/`; Paper swaps it on the next start. That is why the file name stays the old one, only the content is new. `versions.auto-download` (`off`, `patch`, `minor`, `all`) downloads updates by itself.
 - **Restart the server** (`mradmin.server.restart`): only when an update was downloaded or a plugin installed but not loaded yet, and `versions.restart-method` is set (default `none` - a server cannot start itself again). Countdown from `versions.restart-delays`, announced with the templates `restart` and `restart-now`, can be cancelled. After that the server stops (`stop` - a start script with a loop, a watchdog or the panel starts it again) or restarts via the `restart-script` of `spigot.yml` (`script`). Without a button the page shows "Restart needed" after a download. Example scripts: [Plugins & updates](plugins.md#restarting-the-server).
 - On the overview a tile shows whether updates are waiting or a restart is needed.
+
+## Team notices
+Everything the team should know in one place: new tickets, messages in claimed or all tickets, whitelist
+applications, crashes and hangs (with the starter), plugin and Paper updates waiting for the restart, lag alarm,
+maintenance and the notices of the other plugins (e.g. locked chunk loaders). Everyone only gets what they have the
+permission for.
+
+- **Inbox** (letter at the top right): shield icon, a click leads straight to the matching page (ticket, server,
+  plugins …). Once the reason is settled (ticket claimed or closed, update installed …), the notice turns grey with
+  "done" and no longer counts as new. Several of the same kind in a short time are one row ("3 notices", opens on
+  click). An unread crash turns the letter red. Kept 60 days, can be archived.
+- **In game**: one short chat line with the details in the hover and **[Open]** (needs `web.public-url`); several of
+  the same kind in a short time as one line; in a duel only after the round. On joining "n unread team notices".
+  Tickets and the lag alarm keep their usual message (with buttons) but follow the same choice.
+  **`/mradmin mute [duration|off]`** mutes them in the game (without argument it switches) - inbox and push go on.
+- **Account → Notifications**: one table, grouped by plugin, per kind a switch each for **Inbox**, **Push** and **In game**. Crashes
+  always stay in the inbox; maintenance reaches everyone in the game anyway.
+- Off for everyone: `notifications.disabled` in the `config.yml` (in the browser: Configuration → Team notices).
 
 ## Push notifications
 Under **Account → Notifications**.
@@ -179,6 +255,7 @@ Two public pages, without sign-in, both end up as tickets for the team (`web.req
   - After a decline **one appeal** is possible, then the ticket opens again. After that the decision is final.
   - Unban requests are also visible **in game** in the ticket menu.
 - **Contact** (`<public-url>/kontakt`, linked below the imprint and in the footer): name, mail address, subject, message. These requests **only exist in the web**, they never show up in game.
+- **Whitelist application** (`<public-url>/bewerben` and as the widget "Whitelist application" on the visitors' start page, `web.requests.application.enabled`, off by default, needs mail): name, Minecraft name, e-mail. MRadmin checks the name at Mojang (offline servers: offline UUID); players already on the whitelist or with an open application are refused. Only after the **confirmation link by mail** (valid 24 hours) the application reaches the team as a **ticket**. In it: **Accept and whitelist** (puts the player on the whitelist with `whitelist add`) or **Reject** (a text in the reply field is the reason), questions through the reply field - both with `mradmin.applications` (in `mradmin.groups.staff`). The banner of the start page also shows visitors an **Apply** button (grey while applications are closed). Accepted: a mail with the server address (`web.requests.application.server-address`) and the status link, where the applicant makes their **account for the web interface** right away (password, sign in with Minecraft name or e-mail) - without having been in game before.
 - After sending, you get a **private status link** (`/anfrage/...`): state, history, answer, appeal.
 - **Mails** (optional, section `mail`): confirmation of receipt with the status link, the team's answers and the decision. Test with `/mradmin mail test <address>`. Without sending mails, answers can be seen via the status link, and for contact requests a button in the ticket opens your own mail program.
 - **Spam protection without external services:** invisible honeypot field, minimum fill-in time, a small calculation in the browser (proof of work, about 1 s), limits per IP and minute/hour, a maximum of open contact requests.

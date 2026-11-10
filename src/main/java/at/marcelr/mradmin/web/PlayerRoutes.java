@@ -39,6 +39,8 @@ import static at.marcelr.mradmin.Messages.tag;
  *  GET  /api/players/{uuid}/modules/{id}               a module's part (and its actions, see ModuleRoutes)
  *  GET  /api/players/{uuid}/libertybans                LibertyBans: punishments and what the member may do
  *  POST /api/players/{uuid}/libertybans   {action: punish|undo, type, duration?, reason?, id?}
+ *  GET  /api/punishments?filter=active|all  LibertyBans: punishments of all players (active: banlist/mutelist,
+ *                                         all: list.history) and which types the member may lift
  * </pre>
  * No IP addresses - they are personal data and not needed here.
  */
@@ -80,6 +82,7 @@ public final class PlayerRoutes {
         server.route("POST", "/api/players/{uuid}/kick", r::kick);
         server.route("GET", "/api/players/{uuid}/libertybans", r::punishments);
         server.route("POST", "/api/players/{uuid}/libertybans", r::punishAction);
+        server.route("GET", "/api/punishments", r::allPunishments);
     }
 
     private boolean may(Http http, String permission) {
@@ -457,6 +460,53 @@ public final class PlayerRoutes {
         result.put("online", server.sync(() -> Bukkit.getPlayer(id) != null));
         result.put("self", id.equals(http.account().id()));
         http.json(200, result);
+    }
+
+    /**
+     * Punishments of all players (page Community -> Punishments), newest first, at most 300. Active ones like LibertyBans'
+     * /banlist and /mutelist (bans only with list.banlist, mutes only with list.mutelist, warns with list.history);
+     * all of them (also expired, lifted and kicks) only with list.history.
+     */
+    private void allPunishments(Http http) throws Exception {
+        require(http, Perms.PLAYER_VIEW);
+        Bans bans = Bans.get(plugin);
+        if (bans == null) {
+            throw new Http.WebException(404, "plugin-missing");
+        }
+        require(http, LB_COMMANDS);
+        boolean history = may(http, LB_HISTORY);
+        boolean banlist = may(http, "libertybans.list.banlist");
+        boolean mutelist = may(http, "libertybans.list.mutelist");
+        boolean all = "all".equals(http.query().get("filter")) && history;
+        if (!history && !banlist && !mutelist) {
+            throw new Http.WebException(403, "no-permission");
+        }
+        List<Map<String, Object>> entries = new ArrayList<>();
+        Map<UUID, String> names = new HashMap<>();
+        for (Bans.Listed l : bans.recent(!all, 300)) {
+            Bans.Entry e = l.entry();
+            boolean visible = all || e.type().equals("ban") ? banlist || history
+                    : e.type().equals("mute") ? mutelist || history : history;
+            if (!visible) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.id());
+            m.put("type", e.type());
+            m.put("player", names.computeIfAbsent(l.victim(), PlayerRoutes::name));
+            m.put("uuid", l.victim().toString());
+            m.put("reason", e.reason());
+            m.put("operator", e.operator() == null ? null : names.computeIfAbsent(e.operator(), PlayerRoutes::name));
+            m.put("start", e.start());
+            m.put("end", e.end());
+            m.put("active", e.active());
+            entries.add(m);
+        }
+        Map<String, Object> undo = new LinkedHashMap<>();
+        for (String type : List.of("ban", "mute", "warn")) {
+            undo.put(type, may(http, LB_HISTORY) && may(http, "libertybans." + type + ".undo.target.uuid"));
+        }
+        http.json(200, Map.of("entries", entries, "all", all, "history", history, "undo", undo));
     }
 
     /** {action: punish, type, duration?, reason?} or {action: undo, type, id} - with LibertyBans' permissions. */

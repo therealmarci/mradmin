@@ -35,18 +35,46 @@ public record Settings(
         MailSettings mail,
         RequestSettings requests,
         VersionsSettings versions,
-        PlayerWebSettings playerWeb
+        PlayerWebSettings playerWeb,
+        BrandingSettings branding
 ) {
+
+    /**
+     * The look of the web interface for players (section branding, edited in the web under Server -> Appearance).
+     *
+     * @param name       name of the server instead of "MRadmin" (empty = the text mail-server-name of the language file)
+     * @param tagline    short line under the name (sign-in page)
+     * @param accent     accent colour #rrggbb
+     * @param footerText text in the footer of the page and the mails
+     * @param links      up to 4 links in the footer (only with label and http(s) address)
+     */
+    public record BrandingSettings(String name, String tagline, String accent, String footerText, List<Link> links) {
+
+        /** A link in the footer. */
+        public record Link(String label, String url) {
+        }
+    }
 
     /**
      * The version page of the web interface: MRtechnology plugins, their updates and the restart button.
      *
      * @param restartMethod "none" (no restart button - a server cannot start itself again), "stop" (a start script,
      *                      watchdog or panel brings the server back) or "script" (restart-script from spigot.yml)
-     * @param restartDelays countdown choices in ms (0 = now)
+     * @param restartDelays   countdown choices in ms of a normal restart (0 = now)
+     * @param emergencyDelays short countdown choices for an emergency (web: red area, reason required)
      */
     public record VersionsSettings(boolean enabled, int checkHours, at.marcelr.mradmin.versions.ReleasePicker.Auto autoDownload,
-                                   boolean includePrereleases, String restartMethod, List<Long> restartDelays) {
+                                   String channel, String devToken, String restartMethod, List<Long> restartDelays,
+                                   List<Long> emergencyDelays) {
+
+        /** Whether the default channel offers betas. */
+        public boolean includePrereleases() {
+            return channel.equals("beta");
+        }
+
+        public boolean hasDevToken() {
+            return !devToken.isBlank();
+        }
     }
 
     /**
@@ -62,8 +90,10 @@ public record Settings(
      * the contact form below the imprint. Spam protection: at most {@code perIpPerHour} requests per address, at most
      * {@code maxOpenContact} open contact requests, a small proof of work ({@code powBits}) in the browser.
      */
+    /** ... {@code application}: whitelist applications from the start page, {@code applicationAddress}: the server address for the acceptance mail. */
     public record RequestSettings(boolean unban, boolean kickMessage, boolean contact, int perIpPerHour, int maxOpenContact,
-                                  int powBits, int minTextLength, int maxTextLength, boolean notifyByMail) {
+                                  int powBits, int minTextLength, int maxTextLength, boolean notifyByMail,
+                                  boolean application, String applicationAddress) {
     }
 
     /**
@@ -79,7 +109,7 @@ public record Settings(
      * {@code pushContact} is the contact sent to the push services (mailto:... or https:..., empty = from publicUrl).
      */
     public record WebSettings(boolean enabled, String bind, int port, String publicUrl, Set<String> trustedProxies,
-                              int sessionDays, boolean passkeys, boolean password,
+                              boolean require2fa, boolean passkeys, boolean password,
                               java.util.Map<String, List<String>> roles, java.util.Map<String, String> players,
                               String imprintUrl, String privacyUrl, long auditRetention, boolean maskIp,
                               String pushContact, boolean itemIcons) {
@@ -318,7 +348,34 @@ public record Settings(
         }
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
-                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c));
+                storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c),
+                branding(c, log));
+    }
+
+    private static BrandingSettings branding(FileConfiguration c, Logger log) {
+        String accent = c.getString("branding.accent", "#2f6fed").trim();
+        if (!accent.matches("#[0-9a-fA-F]{6}")) {
+            log.warning("branding.accent '" + accent + "' is not a colour like #2f6fed, using #2f6fed.");
+            accent = "#2f6fed";
+        }
+        List<BrandingSettings.Link> links = new ArrayList<>();
+        var section = c.getConfigurationSection("branding.links");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String label = section.getString(key + ".label", "").trim();
+                String url = section.getString(key + ".url", "").trim();
+                if (!label.isEmpty() && url.matches("https?://\\S+") && links.size() < 4) {
+                    links.add(new BrandingSettings.Link(cut(label, 40), cut(url, 300)));
+                }
+            }
+        }
+        return new BrandingSettings(cut(c.getString("branding.name", "").trim(), 40),
+                cut(c.getString("branding.tagline", "").trim(), 120), accent.toLowerCase(Locale.ROOT),
+                cut(c.getString("branding.footer-text", "").trim(), 300), List.copyOf(links));
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
     }
 
     /**
@@ -331,7 +388,7 @@ public record Settings(
      */
     public record PlayerWebSettings(boolean enabled, int sessionDays, int idleDays, int codeSeconds, int maxDevices,
                                     boolean rankings, int rankingTop, List<String> rankingKinds,
-                                    boolean news, int newsSeconds, int newsSlides, boolean newsMaintenance,
+                                    boolean news, int newsSeconds, boolean newsMaintenance,
                                     boolean newsRestart, boolean newsPluginNotices, boolean newsTickets,
                                     List<String> personalStats, boolean chatPreview, int chatPreviewMax,
                                     int chatPreviewDays, boolean alertChat, boolean alertTitle) {
@@ -349,7 +406,6 @@ public record Settings(
                 List.copyOf(c.getStringList("player-web.rankings.statistics")),
                 c.getBoolean("player-web.news.enabled", true),
                 Math.clamp(c.getInt("player-web.news.seconds", 8), 0, 120),
-                Math.clamp(c.getInt("player-web.news.slides", 5), 0, 30),
                 c.getBoolean("player-web.news.show-maintenance", true),
                 c.getBoolean("player-web.news.show-restart", true),
                 c.getBoolean("player-web.news.show-plugin-notices", true),
@@ -363,6 +419,11 @@ public record Settings(
     }
 
     private static VersionsSettings versions(FileConfiguration c, Logger log) {
+        String channel = c.getString("versions.channel", "stable").trim().toLowerCase(Locale.ROOT);
+        if (!channel.equals("stable") && !channel.equals("beta")) {
+            log.warning("versions.channel '" + channel + "' is unknown (stable, beta - dev only per plugin), using stable.");
+            channel = "stable";
+        }
         // "off" without quotes is a boolean in YAML - false counts as off.
         String auto = c.getString("versions.auto-download", "off").trim().toUpperCase(Locale.ROOT);
         at.marcelr.mradmin.versions.ReleasePicker.Auto mode;
@@ -379,22 +440,26 @@ public record Settings(
             log.warning("versions.restart-method '" + method + "' is unknown (none, stop, script), using none.");
             method = "none";
         }
+        List<Long> delays = delays(c, "versions.restart-delays", List.of(900_000L, 1_800_000L, 3_600_000L), log);
+        List<Long> emergency = delays(c, "versions.emergency-delays", List.of(300_000L, 60_000L, 0L), log);
+        return new VersionsSettings(c.getBoolean("versions.enabled", true),
+                Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
+                channel, c.getString("versions.dev-token", "").trim(), method, delays, emergency);
+    }
+
+    /** Countdown choices of the restart button in ms (0 = now), up to 1h; empty or all invalid = the defaults. */
+    private static List<Long> delays(FileConfiguration c, String key, List<Long> defaults, Logger log) {
         List<Long> delays = new ArrayList<>();
-        for (String raw : c.getStringList("versions.restart-delays")) {
+        for (String raw : c.getStringList(key)) {
             String value = raw.trim().toLowerCase(Locale.ROOT);
             long ms = value.equals("now") || value.equals("0") ? 0 : DurationUtil.parse(value);
             if (ms < 0 || ms > 3_600_000L) {
-                log.warning("versions.restart-delays: '" + raw + "' is not a duration up to 1h (e.g. 5m, now), skipped.");
+                log.warning(key + ": '" + raw + "' is not a duration up to 1h (e.g. 5m, now), skipped.");
                 continue;
             }
             delays.add(ms);
         }
-        if (delays.isEmpty()) {
-            delays = List.of(300_000L, 60_000L, 0L);
-        }
-        return new VersionsSettings(c.getBoolean("versions.enabled", true),
-                Math.clamp(c.getInt("versions.check-interval-hours", 6), 1, 168), mode,
-                c.getBoolean("versions.include-prereleases", false), method, List.copyOf(delays));
+        return delays.isEmpty() ? defaults : List.copyOf(delays);
     }
 
     private static MailSettings mail(FileConfiguration c, Logger log) {
@@ -420,7 +485,9 @@ public record Settings(
                 Math.clamp(c.getInt("web.requests.spam.proof-of-work", 16), 0, 24),
                 Math.clamp(c.getInt("web.requests.min-text-length", 20), 1, 1000),
                 Math.clamp(c.getInt("web.requests.max-text-length", 3000), 100, 4000),
-                c.getBoolean("web.requests.notify-by-mail", true));
+                c.getBoolean("web.requests.notify-by-mail", true),
+                c.getBoolean("web.requests.application.enabled", false),
+                c.getString("web.requests.application.server-address", "").trim());
     }
 
     private static HealthSettings health(FileConfiguration c, Logger log) {
@@ -469,7 +536,7 @@ public record Settings(
                 Math.clamp(c.getInt("web.port", 8125), 1, 65535),
                 url,
                 Set.copyOf(c.getStringList("web.trusted-proxies")),
-                Math.clamp(c.getInt("web.session-days", 30), 1, 365),
+                c.getBoolean("web.login.require-2fa", false),
                 c.getBoolean("web.login.passkeys", true),
                 c.getBoolean("web.login.password", true),
                 java.util.Map.copyOf(roles),

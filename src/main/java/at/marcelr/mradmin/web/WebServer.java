@@ -48,7 +48,7 @@ public final class WebServer {
         void handle(Http http) throws Exception;
     }
 
-    private record Route(String method, String[] parts, Handler handler, boolean open, boolean self) {
+    private record Route(String method, String[] parts, Handler handler, boolean open, boolean self, boolean account) {
     }
 
     private final MRAdmin plugin;
@@ -76,11 +76,19 @@ public final class WebServer {
         this.push = new at.marcelr.mradmin.web.push.PushService(plugin, auth, permissions);
         this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
         this.requests = new PublicRequests(plugin, this);
+        this.applications = new Applications(plugin, this);
         this.playerSessions = new at.marcelr.mradmin.web.self.PlayerSessions(plugin);
+        auth.useSessions(playerSessions);
         this.news = new at.marcelr.mradmin.news.News(plugin);
     }
 
     private final PublicRequests requests;
+    private final Applications applications;
+
+    /** Whitelist applications from the start page (public, become tickets once the address is confirmed). */
+    public Applications applications() {
+        return applications;
+    }
 
     /** Unban requests and the contact form (public, without sign-in). */
     public PublicRequests requests() {
@@ -119,8 +127,9 @@ public final class WebServer {
     }
 
     /**
-     * A sensitive step is confirmed by the member: either with a fresh 2FA code ({code}) or - also without 2FA - with
-     * one of their passkeys ({request, credential}, after POST /api/confirm/passkey).
+     * A sensitive step is confirmed by the member with one of their own sign-ins: a fresh 2FA code ({code}), a passkey
+     * ({request, credential}, after POST /api/confirm/passkey), Discord ({discord: true}, after the round trip) or
+     * their password ({password}).
      */
     public boolean confirmed(Http http) throws java.io.IOException {
         if ("true".equals(http.string("discord"))) {
@@ -130,6 +139,10 @@ public final class WebServer {
         var credential = http.body().get("credential");
         if (credential != null && !credential.isJsonNull()) {
             return passkeys.finishConfirm(http.account().id(), http.string("request"), credential.toString());
+        }
+        String password = http.string("password");
+        if (password != null && !password.isEmpty()) {
+            return auth.checkPassword(http.account().id(), password);
         }
         return auth.confirmCode(http.account().id(), http.string("code"));
     }
@@ -142,14 +155,19 @@ public final class WebServer {
         return plugin;
     }
 
-    /** A route that needs a session; {@code path} may contain {name} parts. */
+    /** A route of the administration: a session, the team permission and an own sign-in; {name} parts allowed. */
     public void route(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false, false));
+        routes.add(new Route(method, path.split("/"), handler, false, false, false));
+    }
+
+    /** A route of the own account (sign-ins, browsers): any signed-in browser, also without the team permission. */
+    public void account(String method, String path, Handler handler) {
+        routes.add(new Route(method, path.split("/"), handler, false, false, true));
     }
 
     /** A route anyone may call (sign-in, setup). */
     public void open(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, true, false));
+        routes.add(new Route(method, path.split("/"), handler, true, false, false));
     }
 
     /**
@@ -157,7 +175,7 @@ public final class WebServer {
      * {@link at.marcelr.mradmin.web.self.PlayerSessions}) and player-web.enabled. {@link Http#player()} is the player.
      */
     public void self(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false, true));
+        routes.add(new Route(method, path.split("/"), handler, false, true, false));
     }
 
     private final at.marcelr.mradmin.web.self.PlayerSessions playerSessions;
@@ -322,23 +340,31 @@ public final class WebServer {
                 if (!plugin.settings().playerWeb().enabled()) {
                     throw new Http.WebException(404, "player-web-off");
                 }
-                var player = playerSessions.session(http.cookie(PLAYER_COOKIE), http.storedIp());
+                var player = session(http);
                 if (player == null) {
                     throw new Http.WebException(401, "player-signed-out");
                 }
                 http.player = player;
+                http.session = player;
+                http.account = auth.ensure(player.player(), player.name());
             } else if (!route.open()) {
-                WebAuth.Session session = auth.session(http.cookie(COOKIE), http.storedIp());
+                var session = session(http);
                 if (session == null) {
                     throw new Http.WebException(401, "signed-out");
                 }
-                if (!permissions.has(session.account(), WebPermissions.PERM_WEB)) {
-                    // Lost the web permission: all sessions of this account end.
-                    auth.revokeAll(session.account(), null);
-                    throw new Http.WebException(403, "no-web-permission");
-                }
                 http.session = session;
-                http.account = auth.account(session.account());
+                http.player = session;
+                http.account = auth.ensure(session.player(), session.name());
+                // The administration: the team permission plus an own sign-in (password, passkey or Discord; with
+                // web.login.require-2fa also 2FA). Without, only the own account and its sign-ins are open.
+                if (!route.account()) {
+                    if (!permissions.has(session.player(), WebPermissions.PERM_WEB)) {
+                        throw new Http.WebException(403, "no-web-permission");
+                    }
+                    if (!auth.teamReady(session.player())) {
+                        throw new Http.WebException(403, "team-login-missing");
+                    }
+                }
             }
             route.handler().handle(http);
             if (!http.answered()) {
@@ -347,6 +373,12 @@ public final class WebServer {
             return;
         }
         throw new Http.WebException(404, "not-found");
+    }
+
+    /** The signed-in browser: the cookie of 1.5 or - until it is renewed - the one of the old player page. */
+    private at.marcelr.mradmin.web.self.PlayerSessions.Session session(Http http) {
+        var session = playerSessions.session(http.cookie(COOKIE), http.storedIp());
+        return session != null ? session : playerSessions.session(http.cookie(PLAYER_COOKIE), http.storedIp());
     }
 
     private static Map<String, String> match(Route route, Http http) {
@@ -421,6 +453,34 @@ public final class WebServer {
         if (file.contains("..") || file.contains("\\")) {
             throw new Http.WebException(404, "not-found");
         }
+        // The look of the server: own logo and icon, the app manifest with name and colour.
+        if (file.equals("branding/logo") || file.equals("branding/icon")) {
+            var image = plugin.branding().image(file.substring(9));
+            if (image == null && file.equals("branding/icon")) {
+                image = plugin.branding().image("logo");
+            }
+            if (image == null) {
+                byte[] fallback = resource("web/icon.svg");
+                http.send(200, "image/svg+xml", fallback == null ? new byte[0] : fallback, "no-cache");
+            } else {
+                // ?v=<time saved> in the address - it can be cached for long.
+                http.send(200, image.type(), image.data(), "public, max-age=604800");
+            }
+            return;
+        }
+        if (file.startsWith("branding/landing/")) {
+            var image = plugin.branding().landingImage(file.substring(17));
+            if (image == null) {
+                throw new Http.WebException(404, "not-found");
+            }
+            // The id is new for every upload - the picture never changes.
+            http.send(200, image.type(), image.data(), "public, max-age=31536000, immutable");
+            return;
+        }
+        if (file.equals("manifest.webmanifest")) {
+            http.send(200, "application/manifest+json", plugin.branding().manifest().getBytes(StandardCharsets.UTF_8), "no-cache");
+            return;
+        }
         byte[] data = resource("web/" + file);
         if (data == null && !file.contains(".")) {
             file = "index.html";
@@ -434,6 +494,10 @@ public final class WebServer {
                 return;
             }
             throw new Http.WebException(404, "not-found");
+        }
+        if (file.equals("index.html")) {
+            // Name, icon and accent colour of the server - in the page before the first paint.
+            data = plugin.branding().index(new String(data, StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
         }
         // Files under assets/ have a hash in their name - they can be cached for good.
         String cache = file.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-cache";

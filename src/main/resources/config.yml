@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 49
+config-version: 58
 
 
 # ------------------------------------------------------------------------------
@@ -358,8 +358,14 @@ versions:
   check-interval-hours: 6
   # Download new versions by themselves: "off", "patch" (only hotfixes 1.2.x), "minor" (1.x), "all".
   auto-download: "off"
-  # Also offer beta/alpha versions. If a pre-release (0.x) is installed, newer 0.x versions are always offered.
-  include-prereleases: false
+  # Default channel of the plugins: "stable" (default) or "beta" (also beta releases, BET-...). Each plugin can get
+  # its own channel on the page Server > Plugins - also "dev" (unfinished builds, only with dev-token). 0.x plugins
+  # exist only as beta and always get betas. Switching back to stable never downgrades: a beta stays until a newer
+  # stable comes.
+  channel: "stable"
+  # Release token of the dev channel (from the developer). Only with it "dev" can be chosen; the dev builds are
+  # sealed with it. Keep it secret.
+  dev-token: ""
   # Restart button in the web interface. A server cannot start itself again - something outside has to do it:
   #   none   = no restart button (default); after downloading, the page says "restart needed"
   #   stop   = the server stops; your start script with a loop, a watchdog or your hosting panel starts it again
@@ -367,8 +373,11 @@ versions:
   # Only switch it on if you know the server comes back - otherwise the button just stops it.
   # Not needed with the starter (section server below): then the button always works.
   restart-method: none
-  # Countdown choices of the restart button, announced like /mradmin announce restart ("now" = without countdown).
-  restart-delays: ["5m", "1m", "now"]
+  # Countdown choices of the restart button, announced like /mradmin announce restart. Players should normally get
+  # at least 15 minutes warning.
+  restart-delays: ["15m", "30m", "60m"]
+  # Short choices for an emergency (red area on the web page, a reason is required; "now" = without countdown).
+  emergency-delays: ["5m", "1m", "now"]
 
 # Starter and planned restarts. The starter (mrserver.sh / mrserver.cmd in the server folder) starts the server,
 # brings it back after restarts, crashes and hangs and keeps Paper up to date - controlled from here and the web
@@ -379,9 +388,10 @@ server:
   # Memory of the server (e.g. 1G, 4096M) - takes effect on the next start.
   memory-min: "1G"
   memory-max: "4G"
-  # Extra Java options, e.g. Aikar's flags. Only tuning options: anything that could run programs or read and write
-  # files is ignored (with a warning in the console). Set other options in mrserver.properties on the machine.
-  java-flags: ""
+  # Extra Java options - by default Aikar's flags (recommended for Paper, https://docs.papermc.io/paper/aikars-flags).
+  # Only tuning options: anything that could run programs or read and write files is ignored (with a warning in the
+  # console). Set other options in mrserver.properties on the machine. "" = none.
+  java-flags: "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true"
   # Paper updates on every start of the starter: "auto" = newest stable build of this Minecraft version (never a
   # new Minecraft version, e.g. 26.3 -> 26.4), "notify" = only show it, "off". If a new build does not start, the
   # starter goes back to the old one by itself.
@@ -391,7 +401,7 @@ server:
   # The countdown starts before, so the server goes down at the time.
   restart-times: []
   # Countdown of planned restarts and of "mrserver stop" / "mrserver restart" without a time (up to 1h).
-  countdown: "5m"
+  countdown: "15m"
   # What /stop (console or game) does under the starter: "stop" = the server stays down, "restart" = it comes back.
   plain-stop: "stop"
   # Countdowns of restarts and stops also in the community Discord (discord-announce). The team log (discord)
@@ -455,21 +465,25 @@ web:
   # "https://admin.yourserver.com". Without HTTPS, login cookies are not marked "Secure" - for testing only.
   public-url: ""
   # Addresses of your reverse proxy. MRadmin only trusts these for the real visitor IP (X-Forwarded-For) - important for
-  # limiting login attempts and for the log.
+  # limiting login attempts and for the log. Single addresses or ranges, e.g. "172.16.0.0/12" for a proxy in Docker.
   trusted-proxies: ["127.0.0.1"]
-  # A device stays logged in this long (days). Logging out is possible at any time in the web or with /mradmin web logout.
-  session-days: 30
+  # Sign-in: everyone gets in with the code from /web in game (how long a browser stays signed in: player-web.session-days
+  # and idle-days). On top, everyone can set up an own sign-in under Account -> Sign-ins to get in without the game:
+  # a password (with the player name or a confirmed e-mail address; "forgot password" needs mail), a passkey or
+  # Discord. The team needs at least one own sign-in for the administration. /mradmin web reset <player> removes all
+  # own sign-ins of a player (lost device).
   login:
-    # Passkeys (fingerprint, Face ID, Windows Hello, password manager): add them in the web under "Account" (with a code
-    # from the app), then log in without password and code. They only work for the address from public-url (without it:
-    # only http://localhost for testing). A reset via setup link removes all passkeys of the account.
+    # The team additionally needs 2FA (code from an authenticator app) for the administration.
+    require-2fa: false
+    # Passkeys (fingerprint, Face ID, Windows Hello, password manager): sign in without password and code. They only
+    # work for the address from public-url (without it: only http://localhost for testing).
     passkeys: true
-    # Password - always together with a code from the authenticator app.
+    # Password (with name or confirmed e-mail address) - with a code from the app if the account has 2FA switched on.
     password: true
     # Log in with Discord: create a Discord application (https://discord.com/developers/applications), under OAuth2 add
     # the redirect "<public-url>/api/discord/callback" (without public-url: http://localhost:<port>/...),
-    # enter client ID and secret here. Everyone links their Discord in the web under Account -> Security (only
-    # possible while logged in). With Discord linked, 2FA can be switched off - like with a passkey.
+    # enter client ID and secret here. Everyone links their Discord in the web under Account -> Sign-ins (only
+    # possible while signed in).
     # The secret is secret: do not share it; if it happens anyway, regenerate it in Discord.
     discord:
       enabled: false
@@ -538,6 +552,14 @@ web:
     # they never show up in game. Replies go out by mail (see "mail" below).
     contact:
       enabled: true
+    # Whitelist applications: visitors apply on the start page (widget "Whitelist application", address
+    # <public-url>/bewerben) with name, Minecraft name and e-mail. After confirming the address by mail the
+    # application arrives as a ticket; accepting it (permission mradmin.applications) puts the player on the
+    # whitelist and lets them make their web account right away. Needs "mail" below.
+    application:
+      enabled: false
+      # Server address in the acceptance mail, e.g. play.example.com. Empty = "see our website".
+      server-address: ""
     # Also send the team's replies and decisions by mail (if an address was given and "mail" is
     # set up). The status link is always shown right after submitting.
     notify-by-mail: true
@@ -553,6 +575,25 @@ web:
       max-open-contact: 50
       # Difficulty of the calculation (0 = off, 16 = about one second on a phone, every +1 doubles the time).
       proof-of-work: 16
+
+# Look of the web interface for players: the name of your server instead of "MRadmin" (browser tab, sign-in, bar,
+# mails, 2FA app, passkeys), accent colour and footer. Easiest in the web under Server -> Appearance (with a preview);
+# logo and browser icon are uploaded there (files in plugins/MRadmin/branding/). Permission: mradmin.appearance
+branding:
+  # Name of your server. Empty = the text mail-server-name of the language file.
+  name: ""
+  # Short line under the name on the sign-in page (empty = none).
+  tagline: ""
+  # Accent colour of buttons and highlights, e.g. "#2f6fed". The text colour on it is chosen by itself.
+  accent: "#2f6fed"
+  # Text in the footer of the page and of the mails (empty = none).
+  footer-text: ""
+  # Up to 4 links in the footer (label + http(s) address), e.g. Discord, website, rules. Empty = not shown.
+  links:
+    link-1: {label: "", url: ""}
+    link-2: {label: "", url: ""}
+    link-3: {label: "", url: ""}
+    link-4: {label: "", url: ""}
 
 # Player area of the web interface: every player gets their own page - their chunk loaders, duel statistics, tickets,
 # rankings ... (whatever the installed MRtechnology plugins offer). The address is always <web.public-url>/me (can be
@@ -584,14 +625,12 @@ player-web:
   # Own statistics as a tile on the start page, in this order (the first one big). Same names as under
   # rankings.statistics. Empty list [] = no tile.
   personal-stats: [play-time, blocks-mined, mob-kills, deaths]
-  # Slideshow at the top of the start page: planned maintenance, a planned restart and the posts of the team - news
-  # and changelogs, written in the web interface under "News" (permission mradmin.news), in German and English.
+  # Slideshow at the top of the start page: planned maintenance, a planned restart and the newest post of the team -
+  # news or changelog, written in the web interface under "News" (permission mradmin.news), in German and English.
   news:
     enabled: true
     # Seconds per slide before the next one comes (0 = only by hand).
     seconds: 8
-    # How many of the newest posts are in the slideshow (all of them are on the page "News").
-    slides: 5
     show-maintenance: true
     show-restart: true
     # Warnings of the plugins about the player's own things, e.g. MRchunks: loaders locked for lag, close to the lag
@@ -713,7 +752,21 @@ logging:
 
 
 # ------------------------------------------------------------------------------
-#   14) DISCORD LOGS (admin)
+#   14) TEAM NOTICES
+# ------------------------------------------------------------------------------
+# Notices for the team: new tickets, whitelist applications, crashes, updates waiting for the restart, lag, maintenance
+# and the notices of the other MRtechnology plugins (e.g. a locked chunk loader). Each member chooses per kind in the
+# web interface (account -> notifications) whether they get it in the inbox, as push and as a line in the game;
+# /mradmin mute mutes the lines in the game for a while.
+notifications:
+  # Kinds switched off for everyone (no inbox, push or game line), e.g. [update-ready, lag].
+  # MRadmin: ticket-new, ticket-mine, ticket-message, application, server-crash, update-available, update-ready, lag,
+  # maintenance. Other plugins: chunks-locked, chunks-shed (MRchunks), pvp-review (MRpvp).
+  disabled: []
+
+
+# ------------------------------------------------------------------------------
+#   15) DISCORD LOGS (admin)
 # ------------------------------------------------------------------------------
 # Create a webhook: Discord channel -> Edit Channel -> Integrations -> Webhooks
 #                   -> New Webhook -> Copy Webhook URL.
@@ -822,6 +875,12 @@ discord:
     server-restart-cancelled:
       enabled: true
       color: "#95A5A6"
+    server-schedule-paused:
+      enabled: true
+      color: "#95A5A6"
+    server-schedule-resumed:
+      enabled: true
+      color: "#95A5A6"
     server-stop:
       enabled: true
       color: "#E67E22"
@@ -847,7 +906,7 @@ discord:
 
 
 # ------------------------------------------------------------------------------
-#   15) DISCORD ANNOUNCEMENTS (community)
+#   16) DISCORD ANNOUNCEMENTS (community)
 # ------------------------------------------------------------------------------
 # Own webhook for the public announcement channel of your Discord - separate from the admin logs above.
 # Deliberately sparing: at most 3 posts per maintenance (scheduled, started, ended). Moving, extending and
@@ -910,7 +969,7 @@ discord-announce:
 
 
 # ------------------------------------------------------------------------------
-#   16) UPDATES
+#   17) UPDATES
 # ------------------------------------------------------------------------------
 updates:
   enabled: true
@@ -924,7 +983,7 @@ updates:
 
 
 # ------------------------------------------------------------------------------
-#   17) MENUS
+#   18) MENUS
 # ------------------------------------------------------------------------------
 gui:
   # How often open menus are refreshed (in ticks, 20 = 1 second).

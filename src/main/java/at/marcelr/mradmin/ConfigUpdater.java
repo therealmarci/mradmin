@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -50,8 +51,15 @@ public final class ConfigUpdater {
  * check-hours); the settings of squaremap's own page (address, reverse-proxy, chunk-grid, layers ...) are gone.
  * 39: map.squaremap.full-render (render every world completely after squaremap was installed or updated).
  * 40: map.player-page (players on the map, chunk grid, open at the player, follow).
+ * 51: versions.emergency-delays; server.countdown 5m -> 15m and restart-delays 5m/1m/now -> 15m/30m/60m (old defaults).
+ * 52: one sign-in for everyone: web.session-days is gone (player-web.session-days / idle-days for all browsers),
+ * web.login.require-2fa (team needs 2FA, default off); new comments of web.login.
+ * 53: branding (name, tagline, accent, footer-text, links) - the look of the web interface.
      */
-    public static final int CURRENT_VERSION = 49;
+    public static final int CURRENT_VERSION = 58;
+
+    /** Aikar's flags (default of server.java-flags since config-version 58). */
+    static final String AIKAR_FLAGS = "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true";
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -196,6 +204,25 @@ public final class ConfigUpdater {
             }
             if (version < 37) {
                 takeOverMap(plugin, template);
+            }
+            // v50: versions.include-prereleases became versions.channel (stable / beta, per plugin also dev).
+            if (version < 50 && existing.getBoolean("versions.include-prereleases", false)) {
+                template.set("versions.channel", "beta");
+            }
+            // v51: players get at least 15 minutes warning - only the old defaults are replaced.
+            if (version < 51) {
+                if ("5m".equalsIgnoreCase(existing.getString("server.countdown", "").trim())) {
+                    template.set("server.countdown", "15m");
+                }
+                List<String> delays = existing.getStringList("versions.restart-delays").stream()
+                        .map(d -> d.trim().toLowerCase(java.util.Locale.ROOT)).toList();
+                if (delays.equals(List.of("5m", "1m", "now"))) {
+                    template.set("versions.restart-delays", List.of("15m", "30m", "60m"));
+                }
+            }
+            // v58: Aikar's flags are the default - only where nothing was set (the old default).
+            if (version < 58 && existing.getString("server.java-flags", "").isBlank()) {
+                template.set("server.java-flags", AIKAR_FLAGS);
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

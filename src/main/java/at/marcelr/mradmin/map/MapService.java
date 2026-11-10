@@ -197,13 +197,13 @@ public final class MapService {
 
     // ------------------------------------------------------------ links
 
-    /** Link to the map of the player page (web.public-url + /me/map), or "" without a public address or player page. */
+    /** Link to the map of the player page (web.public-url + /map), or "" without a public address or player page. */
     public String url() {
         String base = plugin.settings().web().publicUrl();
         if (squaremap == null || base == null || base.isBlank() || !plugin.settings().playerWeb().enabled()) {
             return "";
         }
-        return base.replaceAll("/+$", "") + "/me/map";
+        return base.replaceAll("/+$", "") + "/map";
     }
 
     /** Link to the map centred on a place, or "" if there is none or the world is not on the map. */

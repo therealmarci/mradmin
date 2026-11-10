@@ -278,11 +278,20 @@ sections:
           - {value: patch, de: Hotfixes, en: Hotfixes}
           - {value: minor, de: Neue Funktionen, en: New features}
           - {value: all, de: Alle, en: All}
-      - key: versions.include-prereleases
-        type: bool
+      - key: versions.channel
+        type: choice
         when: versions.enabled
-        name: {de: Auch Vorabversionen, en: Pre-releases too}
-        help: {de: "Auch Vorabversionen anbieten. Ist eine 0.x installiert, werden neuere 0.x immer angeboten.", en: "Also offer pre-releases. If a 0.x is installed, newer 0.x versions are always offered."}
+        name: {de: Standard-Kanal, en: Default channel}
+        help: {de: "Welche Releases die Plugins bekommen. Pro Plugin änderbar auf der Seite Server - Plugins, dort auch Dev. Zurück auf Stable stuft nie zurück.", en: "Which releases the plugins get. Per plugin on the page Server - Plugins, there also dev. Back to stable never downgrades."}
+        options:
+          - {value: stable, de: Stable, en: Stable}
+          - {value: beta, de: Beta (auch Vorabversionen), en: Beta (also pre-releases)}
+      - key: versions.dev-token
+        type: secret
+        when: versions.enabled
+        advanced: true
+        name: {de: Freigabetoken Dev-Kanal, en: Dev channel release token}
+        help: {de: "Vom Entwickler. Nur damit lässt sich pro Plugin der Kanal Dev wählen (unfertige Builds). Geheim halten.", en: "From the developer. Only with it the channel dev can be chosen per plugin (unfinished builds). Keep it secret."}
       - key: versions.restart-method
         heading: {de: "Neustart-Knopf", en: "Restart button"}
         type: choice
@@ -297,7 +306,12 @@ sections:
         type: strings
         when: versions.enabled
         name: {de: Countdown zur Auswahl, en: Countdown choices}
-        help: {de: "Z.B. 5m, 1m - „now“ = sofort.", en: "E.g. 5m, 1m - \"now\" = right away."}
+        help: {de: "Normale Neustarts, z.B. 15m, 30m, 60m (Spieler sollen mind. 15 min vorher gewarnt werden).", en: "Normal restarts, e.g. 15m, 30m, 60m (players should get at least 15 minutes warning)."}
+      - key: versions.emergency-delays
+        type: strings
+        when: versions.enabled
+        name: {de: Notfall-Countdown, en: Emergency countdown}
+        help: {de: "Kurze Zeiten im roten Notfall-Bereich (nur mit Grund) - z.B. 5m, 1m, now.", en: "Short times in the red emergency area (only with a reason) - e.g. 5m, 1m, now."}
 
   - id: health
     name: {de: Serverzustand, en: Server health}
@@ -422,6 +436,29 @@ sections:
         unit: {de: Tage, en: days}
         name: {de: Aufheben, en: Keep}
         help: {de: "So viele Tage bleiben die Einträge der Seite Protokoll erhalten (1-14).", en: "This many days the entries of the page Log are kept (1-14)."}
+
+  - id: notifications
+    name: {de: Team-Meldungen, en: Team notices}
+    group: {de: "Spieler & Team", en: "Players & team"}
+    help: {de: "Neue Tickets, Bewerbungen, Abstürze, Updates ... im Posteingang, als Push und im Spiel. Jedes Teammitglied wählt im Konto selbst, was es wie bekommt.", en: "New tickets, applications, crashes, updates ... in the inbox, as push and in the game. Each team member chooses in their account what they get and how."}
+    fields:
+      - key: notifications.disabled
+        type: choices
+        name: {de: Für alle ausgeschaltet, en: Off for everyone}
+        help: {de: "Diese Arten gehen an niemanden - weder Posteingang noch Push noch Spiel.", en: "These kinds go to nobody - neither inbox nor push nor game."}
+        options:
+          - {value: ticket-new, de: Neue Tickets, en: New tickets}
+          - {value: ticket-mine, de: Nachrichten in übernommenen Tickets, en: Messages in claimed tickets}
+          - {value: ticket-message, de: Alle Ticket-Nachrichten, en: All ticket messages}
+          - {value: application, de: Whitelist-Bewerbungen, en: Whitelist applications}
+          - {value: server-crash, de: Abstürze und Hänger, en: Crashes and hangs}
+          - {value: update-available, de: Updates verfügbar, en: Updates available}
+          - {value: update-ready, de: Updates bereit, en: Updates ready}
+          - {value: lag, de: Lag-Alarm, en: Lag alarm}
+          - {value: maintenance, de: Wartungen, en: Maintenance}
+          - {value: chunks-locked, de: Chunkloader gesperrt, en: Chunk loader locked, plugin: MRchunks}
+          - {value: chunks-shed, de: Lag-Schutz der Chunkloader, en: Lag protection of the chunk loaders, plugin: MRchunks}
+          - {value: pvp-review, de: Duell-Runde wartet auf Prüfung, en: Duel round waits for review, plugin: MRpvp}
 
   - id: tickets
     name: {de: Tickets & Meldungen, en: Tickets & reports}
@@ -861,23 +898,20 @@ sections:
       - key: web.trusted-proxies
         type: strings
         name: {de: Vertrauenswürdige Proxys, en: Trusted proxies}
-        help: {de: Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For)., en: MRadmin only trusts these for the real visitor IP (X-Forwarded-For).}
-      - key: web.session-days
+        help: {de: "Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For). Einzelne Adressen oder Bereiche, z.B. 172.16.0.0/12 für einen Proxy in Docker.", en: "MRadmin only trusts these for the real visitor IP (X-Forwarded-For). Single addresses or ranges, e.g. 172.16.0.0/12 for a proxy in Docker."}
+      - key: web.login.require-2fa
         heading: {de: "Anmeldung", en: "Sign-in"}
-        type: int
-        min: 1
-        max: 365
-        unit: {de: Tage, en: days}
-        name: {de: Team-Geräte angemeldet für, en: Team devices signed in for}
-        help: {de: "So lange bleibt ein Gerät des Teams angemeldet. Abmelden geht jederzeit im Web oder mit /mradmin web logout.", en: "A team device stays signed in this long. Signing out is possible at any time in the web or with /mradmin web logout."}
+        type: bool
+        name: {de: 2FA fürs Team erzwingen, en: Require 2FA for the team}
+        help: {de: "Das Team braucht für die Verwaltung zusätzlich 2FA (Code aus einer App). Sonst reicht eine eigene Anmeldung (Passwort, Passkey oder Discord).", en: "The team additionally needs 2FA (code from an app) for the administration. Otherwise an own sign-in (password, passkey or Discord) is enough."}
       - key: web.login.passkeys
         type: bool
         name: {de: Anmeldung mit Passkey, en: Sign-in with passkey}
-        help: {de: "Anmelden mit Fingerabdruck, Face ID, Windows Hello oder Passwort-Manager statt Passwort und Code. Funktioniert nur unter der öffentlichen Adresse.", en: "Sign in with fingerprint, Face ID, Windows Hello or a password manager instead of password and code. Only works under the public address."}
+        help: {de: "Anmelden mit Fingerabdruck, Face ID, Windows Hello oder Passwort-Manager. Funktioniert nur unter der öffentlichen Adresse.", en: "Sign in with fingerprint, Face ID, Windows Hello or a password manager. Only works under the public address."}
       - key: web.login.password
         type: bool
         name: {de: Anmeldung mit Passwort, en: Sign-in with password}
-        help: {de: Immer zusammen mit dem Code aus der App., en: Always together with the code from the app.}
+        help: {de: "Mit Spielername oder bestätigter E-Mail-Adresse - mit Code aus der App, wenn 2FA an ist.", en: "With the player name or a confirmed e-mail address - with a code from the app if 2FA is on."}
       - key: web.login.discord.enabled
         type: bool
         name: {de: Anmeldung mit Discord, en: Sign-in with Discord}
@@ -967,6 +1001,40 @@ sections:
         when: web.console.enabled
         name: {de: IP-Adressen ausblenden, en: Hide IP addresses}
         help: {de: "IP-Adressen in der Ausgabe ausblenden (z.B. beim Join).", en: "Hide IP addresses in the output (e.g. on join)."}
+
+  - id: branding
+    name: {de: Aussehen, en: Appearance}
+    group: {de: "Weboberfläche & Karte", en: "Web interface & map"}
+    help: {de: "Name, Farbe und Fußzeile der Weboberfläche - mit Vorschau und Logo-Upload unter Server → Aussehen.", en: "Name, colour and footer of the web interface - with preview and logo upload under Server → Appearance."}
+    fields:
+      - key: branding.name
+        type: string
+        name: {de: Name des Servers, en: Name of the server}
+        help: {de: "Statt „MRadmin“ in Browser-Tab, Anmeldung, Leiste, Mails, 2FA-App und bei Passkeys. Leer = Text mail-server-name.", en: "Instead of \"MRadmin\" in the browser tab, sign-in, bar, mails, 2FA app and passkeys. Empty = text mail-server-name."}
+      - key: branding.tagline
+        type: string
+        name: {de: Spruch, en: Tagline}
+        help: {de: Kurze Zeile unter dem Namen auf der Anmeldeseite., en: Short line under the name on the sign-in page.}
+      - key: branding.accent
+        type: color
+        name: {de: Akzentfarbe, en: Accent colour}
+        help: {de: "Knöpfe und Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst.", en: "Buttons and highlights; the text colour on it is chosen by the page."}
+      - key: branding.footer-text
+        type: string
+        name: {de: Text in der Fußzeile, en: Footer text}
+        help: {de: Auf der Seite und in den Mails. Leer = keiner., en: On the page and in the mails. Empty = none.}
+      - key: branding.links
+        type: table
+        name: {de: Links in der Fußzeile, en: Footer links}
+        help: {de: "Bis zu 4 Links, z.B. Discord, Website, Regeln. Ohne Name oder Adresse wird ein Link nicht gezeigt.", en: "Up to 4 links, e.g. Discord, website, rules. Without a label or address a link is not shown."}
+        columns:
+          - {key: label, type: string, name: {de: Name, en: Label}, default: ""}
+          - {key: url, type: string, name: {de: Adresse, en: Address}, default: ""}
+        rows:
+          link-1: {de: Link 1, en: Link 1}
+          link-2: {de: Link 2, en: Link 2}
+          link-3: {de: Link 3, en: Link 3}
+          link-4: {de: Link 4, en: Link 4}
 
   - id: player-web
     name: {de: Spielerseite, en: Player page}
@@ -1065,13 +1133,6 @@ sections:
         unit: {de: Sekunden, en: seconds}
         name: {de: Pro Folie, en: Per slide}
         help: {de: 0 = nur von Hand., en: 0 = only by hand.}
-      - key: player-web.news.slides
-        type: int
-        when: player-web.news.enabled
-        min: 1
-        max: 20
-        name: {de: Neueste Beiträge im Karussell, en: Newest posts in the slideshow}
-        help: {de: "So viele der neuesten Beiträge kommen ins Karussell (alle stehen auf der Seite Neuigkeiten).", en: "This many of the newest posts go into the slideshow (all of them are on the page News)."}
       - key: player-web.news.show-maintenance
         type: bool
         when: player-web.news.enabled
@@ -1146,6 +1207,15 @@ sections:
         type: bool
         name: {de: Kontaktformular, en: Contact form}
         help: {de: "Öffentliches Kontaktformular unter /kontakt - Anfragen landen als Ticket.", en: "Public contact form at /kontakt - requests arrive as a ticket."}
+      - key: web.requests.application.enabled
+        type: bool
+        name: {de: Whitelist-Bewerbung, en: Whitelist application}
+        help: {de: "Besucher bewerben sich auf der Startseite (Widget) oder unter /bewerben mit Name, Minecraft-Name und E-Mail. Nach der Bestätigung per Mail kommt die Bewerbung als Ticket. Braucht den Mailversand.", en: "Visitors apply on the start page (widget) or at /bewerben with name, Minecraft name and e-mail. After confirming by mail the application arrives as a ticket. Needs mail."}
+      - key: web.requests.application.server-address
+        type: string
+        when: web.requests.application.enabled
+        name: {de: Serveradresse in der Annahme-Mail, en: Server address in the acceptance mail}
+        help: {de: "z.B. play.example.com - leer = Hinweis auf die Website.", en: "e.g. play.example.com - empty = see the website."}
       - key: web.requests.notify-by-mail
         type: bool
         name: {de: Antworten auch per Mail, en: Replies by mail too}
@@ -1470,6 +1540,8 @@ sections:
           plugin-update-downloaded: {de: Update heruntergeladen, en: Update downloaded}
           server-restart: {de: Neustart geplant, en: Restart planned}
           server-restart-cancelled: {de: Neustart abgebrochen, en: Restart cancelled}
+          server-schedule-paused: {de: Automatische Neustarts ausgesetzt, en: Planned restarts paused}
+          server-schedule-resumed: {de: Automatische Neustarts wieder an, en: Planned restarts on again}
           server-stop: {de: Stopp geplant, en: Stop planned}
           server-stop-cancelled: {de: Stopp abgebrochen, en: Stop cancelled}
           server-crash: {de: Server abgestürzt (Starter), en: Server crashed (starter)}

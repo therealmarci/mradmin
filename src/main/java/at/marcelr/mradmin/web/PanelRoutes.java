@@ -359,8 +359,22 @@ public final class PanelRoutes {
             Ticket t = plugin.tickets().get(id);
             return t == null ? null : t.request();
         });
-        if (request == null || !request.unban()) {
+        if (request == null || !request.decidable()) {
             throw new Http.WebException(404, "not-found");
+        }
+        if (request.application()) {
+            require(http, Perms.APPLICATIONS);
+            if (accept) {
+                server.sync(() -> {
+                    server.applications().whitelist(request.mcName());
+                    return null;
+                });
+                plugin.getLogger().info(http.account().name() + " (web) put " + request.mcName()
+                        + " on the whitelist through application #" + id + ".");
+            }
+            act(http, accept ? "application-accept" : "application-reject", (tickets, t) -> tickets.decide(t, accept,
+                    http.account().id(), http.account().name(), text), request.mcName());
+            return;
         }
         if (accept) {
             require(http, "libertybans.ban.undo.target.uuid");
@@ -431,6 +445,11 @@ public final class PanelRoutes {
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("kind", request.kind());
             r.put("email", request.email() == null ? "" : request.email());
+            if (request.application()) {
+                r.put("player", request.mcName());
+                r.put("uuid", request.mcUuid());
+                r.put("decision", request.decision());
+            }
             if (request.unban()) {
                 r.put("stage", request.stage());
                 r.put("decision", request.decision());

@@ -53,12 +53,22 @@ public final class News {
      * from this time on (ms, 0 = never); {@code ended}: a warning ended by hand (ms, 0 = not). {@code discord}: whether
      * it was posted to Discord. Pinned posts come first.
      */
+    /**
+     * One post. {@code starts}: visible from (0 = right away), {@code expires}: visible until (0 = for good);
+     * {@code delivered}: chat previews / warning in game / Discord went out (a post planned for later gets them when
+     * it becomes visible, see {@link NewsDelivery#tick}); {@code wantDiscord}: to Discord when it becomes visible.
+     */
     public record Post(int id, String kind, Map<String, String> title, Map<String, String> text, String version,
-                       List<Entry> entries, boolean pinned, boolean discord, long created, long updated, long expires,
-                       long ended, String author) {
+                       List<Entry> entries, boolean discord, long created, long updated, long starts, long expires,
+                       long ended, String author, boolean delivered, boolean wantDiscord) {
 
         public boolean visible(long now) {
-            return (expires == 0 || expires > now) && ended == 0;
+            return (starts == 0 || starts <= now) && (expires == 0 || expires > now) && ended == 0;
+        }
+
+        /** When the players see it as written: the start, otherwise the creation. */
+        public long published() {
+            return starts > 0 ? Math.max(starts, created) : created;
         }
 
         public boolean alert() {
@@ -107,11 +117,11 @@ public final class News {
         this.plugin = plugin;
     }
 
-    /** All posts, pinned first, then newest first. */
+    /** All posts, newest first (by the time they are published). */
     public synchronized List<Post> all() {
         load();
         List<Post> list = new ArrayList<>(posts.values());
-        list.sort(Comparator.comparing(Post::pinned).reversed().thenComparing(Comparator.comparingLong(Post::created).reversed()));
+        list.sort(Comparator.comparingLong(Post::published).reversed());
         return list;
     }
 
@@ -131,16 +141,21 @@ public final class News {
         return posts.get(id);
     }
 
-    /** Creates ({@code id} 0) or changes a post; returns it as stored. Discord state and creation stay. */
+    /**
+     * Creates ({@code id} 0) or changes a post; returns it as stored. Discord state, creation and whether it was
+     * delivered stay; {@code wantDiscord} is only kept for a post not delivered yet.
+     */
     public synchronized Post save(int id, String kind, Map<String, String> title, Map<String, String> text,
-                                  String version, List<Entry> entries, boolean pinned, long expires, String author) {
+                                  String version, List<Entry> entries, long starts, long expires, String author,
+                                  boolean wantDiscord) {
         load();
         long now = System.currentTimeMillis();
         Post old = id > 0 ? posts.get(id) : null;
         int postId = old != null ? old.id() : nextId++;
+        boolean delivered = old != null && old.delivered();
         Post post = new Post(postId, kind, Map.copyOf(title), Map.copyOf(text), version == null ? "" : version,
-                List.copyOf(entries), pinned, old != null && old.discord(), old != null ? old.created() : now, now, expires,
-                old != null ? old.ended() : 0, old != null ? old.author() : author);
+                List.copyOf(entries), old != null && old.discord(), old != null ? old.created() : now, now, starts, expires,
+                old != null ? old.ended() : 0, old != null ? old.author() : author, delivered, !delivered && wantDiscord);
         posts.put(postId, post);
         write();
         return post;
@@ -151,9 +166,25 @@ public final class News {
         load();
         Post p = posts.get(id);
         if (p != null && !p.discord()) {
-            posts.put(id, copy(p, true, p.ended()));
+            posts.put(id, copy(p, true, p.ended(), p.delivered()));
             write();
         }
+    }
+
+    /** Notes that chat previews / the warning went out (and Discord was tried if wanted). */
+    public synchronized void markDelivered(int id) {
+        load();
+        Post p = posts.get(id);
+        if (p != null && !p.delivered()) {
+            posts.put(id, copy(p, p.discord(), p.ended(), true));
+            write();
+        }
+    }
+
+    /** Posts that are visible now but were not delivered yet (planned for later). */
+    public synchronized List<Post> dueForDelivery(long now) {
+        load();
+        return posts.values().stream().filter(p -> !p.delivered() && p.visible(now)).toList();
     }
 
     /** Ends a warning now. @return whether there was an active one */
@@ -163,14 +194,14 @@ public final class News {
         if (p == null || !p.alert() || p.ended() != 0) {
             return false;
         }
-        posts.put(id, copy(p, p.discord(), System.currentTimeMillis()));
+        posts.put(id, copy(p, p.discord(), System.currentTimeMillis(), p.delivered()));
         write();
         return true;
     }
 
-    private static Post copy(Post p, boolean discord, long ended) {
-        return new Post(p.id(), p.kind(), p.title(), p.text(), p.version(), p.entries(), p.pinned(), discord, p.created(),
-                p.updated(), p.expires(), ended, p.author());
+    private static Post copy(Post p, boolean discord, long ended, boolean delivered) {
+        return new Post(p.id(), p.kind(), p.title(), p.text(), p.version(), p.entries(), discord, p.created(),
+                p.updated(), p.starts(), p.expires(), ended, p.author(), delivered, delivered ? false : p.wantDiscord());
     }
 
     public synchronized boolean delete(int id) {
@@ -219,8 +250,9 @@ public final class News {
                 }
             }
             posts.put(id, new Post(id, kind, texts(p, "title"), texts(p, "text"), p.getString("version", ""),
-                    List.copyOf(entries), p.getBoolean("pinned"), p.getBoolean("discord"), p.getLong("created"),
-                    p.getLong("updated"), p.getLong("expires"), p.getLong("ended"), p.getString("author", "")));
+                    List.copyOf(entries), p.getBoolean("discord"), p.getLong("created"), p.getLong("updated"),
+                    p.getLong("starts"), p.getLong("expires"), p.getLong("ended"), p.getString("author", ""),
+                    p.getBoolean("delivered", true), p.getBoolean("want-discord")));
             nextId = Math.max(nextId, id + 1);
         }
     }
@@ -258,11 +290,17 @@ public final class News {
                 }
                 y.set(base + "entries", list);
             }
-            y.set(base + "pinned", p.pinned());
             y.set(base + "discord", p.discord());
             y.set(base + "created", p.created());
             y.set(base + "updated", p.updated());
+            if (p.starts() > 0) {
+                y.set(base + "starts", p.starts());
+            }
             y.set(base + "expires", p.expires());
+            if (!p.delivered()) {
+                y.set(base + "delivered", false);
+                y.set(base + "want-discord", p.wantDiscord());
+            }
             y.set(base + "ended", p.ended());
             y.set(base + "author", p.author());
         }

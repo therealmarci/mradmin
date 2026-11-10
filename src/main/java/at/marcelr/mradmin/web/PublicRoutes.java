@@ -27,6 +27,10 @@ import java.util.UUID;
  *  POST /api/public/status               {token} or {name, code}: state and conversation of a request
  *  POST /api/public/status/reply         {token | name+code, text}
  *  POST /api/public/status/appeal        {token | name+code, text}: the one appeal after a rejection
+ *  POST /api/public/apply                {name, player, email, challenge, nonce, website}: whitelist application,
+ *                                        a confirmation link goes to the address
+ *  POST /api/public/apply/confirm        {code}: the link was opened - the application becomes a ticket -> {token}
+ *  POST /api/public/status/account       {token, password}: an accepted applicant makes their web account (signed in)
  * </pre>
  * "website" is the honeypot field (invisible on the page, bots fill it in).
  */
@@ -52,6 +56,9 @@ public final class PublicRoutes {
         server.open("POST", "/api/public/status", r::status);
         server.open("POST", "/api/public/status/reply", r::reply);
         server.open("POST", "/api/public/status/appeal", r::appeal);
+        server.open("POST", "/api/public/apply", r::apply);
+        server.open("POST", "/api/public/apply/confirm", r::confirmApplication);
+        server.open("POST", "/api/public/status/account", r::account);
     }
 
     private Settings.RequestSettings settings() {
@@ -70,6 +77,7 @@ public final class PublicRoutes {
         limit(http, "info", 30);
         Settings.RequestSettings s = settings();
         http.json(200, Map.of("unban", requests.unbanAvailable(), "contact", requests.contactAvailable(),
+                "application", server.applications().available(),
                 "mail", requests.mailer().enabled() && s.notifyByMail(), "minText", s.minTextLength(),
                 "maxText", s.maxTextLength()));
     }
@@ -105,11 +113,83 @@ public final class PublicRoutes {
         }
         requests.checkHourly(http);
         String token = requests.newToken();
-        WebRequest request = new WebRequest(WebRequest.CONTACT, email, token, 0, null, null, 0, 0, null, null);
+        WebRequest request = WebRequest.contact(email, token);
         Ticket ticket = server.sync(() -> plugin.tickets().createRequest(request, TicketManager.GUEST, name, subject,
                 text, null));
         requests.sendReceived(ticket);
         http.json(200, Map.of("token", token));
+    }
+
+    // ------------------------------------------------------------ application
+
+    private void apply(Http http) throws Exception {
+        limit(http, "send", 6);
+        Applications applications = server.applications();
+        if (!applications.available()) {
+            throw new Http.WebException(404, "feature-disabled");
+        }
+        String name = TicketText.limit(TicketText.clean(http.string("name")).replace('\n', ' '), 32).strip();
+        String player = String.valueOf(http.string("player")).strip();
+        String email = String.valueOf(http.string("email")).strip();
+        if (name.length() < 2) {
+            throw new Http.WebException(400, "name-missing");
+        }
+        if (!PublicRequests.validName(player)) {
+            throw new Http.WebException(400, "application-player-invalid");
+        }
+        if (!Mailer.validAddress(email)) {
+            throw new Http.WebException(400, "email-invalid");
+        }
+        requests.checkSpam(http, http.string("challenge"), http.string("nonce"), http.string("website"));
+        Applications.Profile profile = applications.resolve(player);
+        if (profile == null) {
+            throw new Http.WebException(400, "application-player-unknown");
+        }
+        String state = server.sync(() -> applications.whitelisted(profile.uuid()) ? "application-whitelisted"
+                : applications.openFor(profile.uuid()) != null ? "application-open"
+                : plugin.tickets().openContactRequests() >= settings().maxOpenContact() ? "contact-full" : null);
+        if (state != null) {
+            throw new Http.WebException(state.equals("contact-full") ? 429 : 400, state);
+        }
+        requests.checkHourly(http);
+        String code = applications.add(name, profile, email);
+        requests.sendApplicationConfirm(email, name, profile.name(), code);
+        http.json(200, Map.of("ok", true, "email", Mailer.mask(email)));
+    }
+
+    private void confirmApplication(Http http) throws Exception {
+        limit(http, "code", 10);
+        if (!server.applications().available()) {
+            throw new Http.WebException(404, "feature-disabled");
+        }
+        String code = http.string("code");
+        String token = code == null || code.length() > 64 ? null : server.applications().confirm(code, requests::newToken);
+        if (token == null) {
+            throw new Http.WebException(400, "application-link-invalid");
+        }
+        http.json(200, Map.of("token", token));
+    }
+
+    /** The accepted applicant's own account: only from the status link, only once (no password yet). */
+    private void account(Http http) throws Exception {
+        limit(http, "reply", 6);
+        String token = http.string("token");
+        Ticket ticket = token == null || token.isBlank() || token.length() > 64 ? null
+                : server.sync(() -> plugin.tickets().byToken(token));
+        WebRequest r = ticket == null ? null : ticket.request();
+        if (r == null || !r.application() || !WebRequest.ACCEPTED.equals(r.decision())) {
+            throw new Http.WebException(404, "not-found");
+        }
+        at.marcelr.mradmin.web.auth.WebAuth.Result result = server.auth().createForApplicant(UUID.fromString(r.mcUuid()),
+                r.mcName(), r.email(), http.string("password"), http.ip(), http.header("User-Agent"));
+        if (!result.ok()) {
+            throw new Http.WebException(400, result.error());
+        }
+        http.setCookie(WebServer.COOKIE, result.token(), server.playerSessions().cookieSeconds(),
+                plugin.settings().web().secure());
+        plugin.getLogger().info(r.mcName() + " made a web account through their accepted whitelist application #"
+                + ticket.id() + ".");
+        http.json(200, Map.of("ok", true));
     }
 
     // ------------------------------------------------------------------ unban
@@ -179,8 +259,7 @@ public final class PublicRoutes {
                 "start", at(ban.start()), "end", ban.end() == 0 ? m.plain("request-ban-permanent") : at(ban.end()));
         String subject = m.plain("request-unban-subject", "name", proof.name());
         String token = requests.newToken();
-        WebRequest request = new WebRequest(WebRequest.UNBAN, email, token, ban.id(), ban.reason(), operator,
-                ban.start(), ban.end(), WebRequest.STAGE_REQUEST, null);
+        WebRequest request = WebRequest.unban(email, token, ban.id(), ban.reason(), operator, ban.start(), ban.end());
         Ticket ticket = server.sync(() -> plugin.tickets().createRequest(request, proof.player(), proof.name(), subject,
                 text, note));
         requests.markUsed(ban.id());
@@ -316,6 +395,13 @@ public final class PublicRoutes {
             s.put("ban", Map.of("id", r.banId(), "reason", String.valueOf(r.banReason()),
                     "operator", String.valueOf(r.banOperator()), "start", r.banStart(), "end", r.banEnd()));
             s.put("canAppeal", canAppeal(t, banActive));
+        }
+        if (r.application()) {
+            s.put("player", r.mcName());
+            s.put("decision", r.decision());
+            var account = server.auth().account(UUID.fromString(r.mcUuid()));
+            s.put("hasAccount", account != null && account.hasPassword());
+            s.put("address", settings().applicationAddress());
         }
         s.put("canReply", t.open());
         List<Map<String, Object>> messages = new ArrayList<>();

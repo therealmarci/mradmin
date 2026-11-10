@@ -107,6 +107,19 @@ public final class StarterFiles {
         return dir.resolve("paper-previous.jar");
     }
 
+    /**
+     * A newer Paper build MRadmin downloaded ahead of time (checksum checked) - the starter puts it in place on the next
+     * start instead of downloading it then. Its build and SHA-256 are in {@link #paperPendingInfo()}.
+     */
+    public Path paperPending() {
+        return dir.resolve("paper-pending.jar");
+    }
+
+    /** {@code build}, {@code minecraft}, {@code sha256} of {@link #paperPending()}. */
+    public Path paperPendingInfo() {
+        return dir.resolve("paper-pending.properties");
+    }
+
     /** Settings only the server owner changes on the machine itself (Java, mode) - not from the web. */
     public Path local() {
         return server.resolve("mrserver.properties");

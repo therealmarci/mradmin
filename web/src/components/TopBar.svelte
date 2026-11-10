@@ -1,18 +1,27 @@
 <script>
-  // The bar of the team panel and the player area: the places on the left, language flags and the own name (a click
-  // opens a small menu) on the right. Phone: flags and name stay on top, the places move to a bar at the bottom - at
+  // The bar of the team panel and the player area: the places on the left; on the right the switch player area /
+  // administration (team only, one small button), the letter of the inbox and the own head + name (a click opens a
+  // small menu with the language flags, account and sign-out). Visitors see the flags next to the sign-in button. Phone: flags and name stay on top, the places move to a bar at the bottom - at
   // most five, with more the first four plus a menu button for the rest.
   import { head } from '../lib/format.js';
   import LangFlags from './LangFlags.svelte';
   import { ICONS } from '../lib/icons.js';
+  import { brand, picture } from '../lib/branding.svelte.js';
+  import { t } from '../lib/i18n.js';
 
   /**
    * items: [{path, label, icon}] - icon is a key of ICONS or an emoji; current: path of the highlighted place;
    * onnav(path); user: {uuid, name}; menu: [{label, icon, active?, danger?, onclick}];
    * moreLabel: text of the menu button for the rest on the phone;
-   * live: null (no dot) or true/false (connection of the team panel).
+   * live: null (no dot) or true/false (connection of the team panel);
+   * modes: null or {current: 'player' | 'admin', player, admin (labels), onswitch(mode)} - the switch between the
+   * player area and the administration (team only) - one button the size of the letter, filled while in the administration.
    */
-  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '' } = $props();
+  // user null = visitor: instead of the name menu a sign-in button (onlogin)
+  // inbox: null (no letter) or {count, alarm, active, label} - the letter opens /inbox, the number = what is new,
+  // alarm = an unread team alarm (crash): the letter turns red
+  let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null, onlogin = null,
+    loginLabel = '', inbox = null } = $props();
 
   let menuOpen = $state(false);
   let moreOpen = $state(false);
@@ -40,6 +49,8 @@
 {/snippet}
 
 <header class="top mr-topbar">
+  <!-- The server: logo and name (Server -> Appearance) -->
+  <span class="brand"><img src={picture('icon')} alt="" width="24" height="24" /><span class="brand-name">{brand.name}</span></span>
   <nav class="desktop">
     {#each items as item (item.path)}
       <button class="link" class:active={current === item.path} aria-current={current === item.path ? 'page' : undefined}
@@ -47,7 +58,26 @@
     {/each}
   </nav>
   <div class="right">
-    <LangFlags />
+    {#if modes}
+      {@const other = modes.current === 'admin' ? 'player' : 'admin'}
+      <button class="icon-btn mode" class:on={modes.current === 'admin'} aria-pressed={modes.current === 'admin'}
+        aria-label={modes[other]} title={modes[other]} onclick={() => modes.onswitch(other)}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true"><path d={ICONS.shield} /></svg>
+      </button>
+    {/if}
+    {#if inbox}
+      <button class="icon-btn inbox" class:active={inbox.active} class:has={inbox.count > 0} class:alarm={inbox.alarm} onclick={() => go('/inbox')}
+        aria-label={inbox.count ? `${inbox.label} (${inbox.count})` : inbox.label} title={inbox.label}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true"><path d={ICONS.mail} /></svg>
+        {#if inbox.count > 0}<span class="badge">{inbox.count > 99 ? '99+' : inbox.count}</span>{/if}
+      </button>
+    {/if}
+    {#if !user}
+      <LangFlags />
+      <button class="login" onclick={onlogin}>{loginLabel}</button>
+    {:else}
     <div class="account">
       <button class="who" aria-haspopup="menu" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
         <span class="face">
@@ -59,6 +89,10 @@
       </button>
       {#if menuOpen}
         <div class="menu" role="menu">
+          <div class="lang-row">
+            <span>{t('self.language')}</span>
+            <LangFlags />
+          </div>
           {#each menu as entry}
             <button role="menuitem" class:active={entry.active} class:out={entry.danger}
               onclick={() => { menuOpen = false; entry.onclick(); }}>
@@ -68,6 +102,7 @@
         </div>
       {/if}
     </div>
+    {/if}
   </div>
 </header>
 
@@ -101,6 +136,64 @@
 </nav>
 
 <style>
+  /* Small square buttons on the right: the switch to the administration and the letter of the inbox */
+  .icon-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .icon-btn:hover,
+  .icon-btn.active {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+
+  .inbox.has {
+    color: var(--accent);
+  }
+
+  /* An unread team alarm (server crashed): the letter and its number red */
+  .inbox.alarm {
+    color: var(--bad);
+  }
+
+  .inbox.alarm .badge {
+    background: var(--bad);
+  }
+
+  /* In the administration the switch is filled, so it is always clear where you are */
+  .mode.on,
+  .mode.on:hover {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .badge {
+    position: absolute;
+    top: 1px;
+    right: 0;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 17px;
+    color: #fff;
+    background: var(--bad);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+
   .top {
     position: sticky;
     top: 0;
@@ -132,6 +225,45 @@
   .link.active {
     color: var(--text);
     background: var(--surface-2);
+  }
+
+  .login {
+    padding: 7px 16px;
+    font-weight: 600;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    margin-right: 6px;
+    font-weight: 700;
+  }
+
+  .brand img {
+    border-radius: 6px;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Language in the name menu */
+  .lang-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 6px 8px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.88rem;
   }
 
   .right {
@@ -249,7 +381,17 @@
   }
 
   /* Phone: flags and name on top, the places in a bar at the bottom (the rest behind the menu button). */
+  @media (max-width: 1100px) {
+    .brand-name {
+      display: none;
+    }
+  }
+
   @media (max-width: 759px) {
+    .brand-name {
+      display: inline;
+    }
+
     .desktop {
       display: none;
     }

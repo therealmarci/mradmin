@@ -18,8 +18,11 @@ import java.util.Map;
  *  POST /api/versions/check              ask GitHub now (at most once a minute)            mradmin.versions.install
  *  POST /api/versions/{name}/download    newest version into plugins/update/               mradmin.versions.install
  *  POST /api/versions/{name}/install     plugin that is not installed into plugins/        mradmin.versions.install
+ *  POST /api/versions/{name}/channel {channel: default|stable|beta|dev}                     mradmin.versions.install
  *  POST /api/restart       {delay, kind, reason} restart (kind=stop: stop) after delay ms mradmin.server.restart
  *  POST /api/restart/cancel                                                                 mradmin.server.restart
+ *  POST /api/restart/schedule {pause}   pause planned restarts for 24 h / switch them on   mradmin.server.restart
+ *  POST /api/restart/confirm {code | passkey}  sign in again for an emergency restart (2 min) mradmin.server.restart
  * </pre>
  * Downloads and restarts go into the web log.
  */
@@ -27,6 +30,14 @@ public final class VersionRoutes {
 
     private final WebServer server;
     private final MRAdmin plugin;
+    /** How long an emergency confirmation is valid, and how wrong codes lock it. */
+    private static final long CONFIRM_MILLIS = 120_000L;
+    private static final int MAX_FAILURES = 5;
+    private static final long FAILURE_LOCK_MILLIS = 15 * 60_000L;
+    /** session id -> emergency restart allowed until (epoch ms), used up by the restart */
+    private final java.util.Map<String, Long> emergencyOk = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, int[]> failures = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, Long> lockedUntil = new java.util.concurrent.ConcurrentHashMap<>();
 
     private VersionRoutes(WebServer server) {
         this.server = server;
@@ -39,8 +50,11 @@ public final class VersionRoutes {
         server.route("POST", "/api/versions/check", r::check);
         server.route("POST", "/api/versions/{name}/download", r::download);
         server.route("POST", "/api/versions/{name}/install", r::install);
+        server.route("POST", "/api/versions/{name}/channel", r::channel);
         server.route("POST", "/api/restart", r::restart);
         server.route("POST", "/api/restart/cancel", r::cancel);
+        server.route("POST", "/api/restart/schedule", r::schedule);
+        server.route("POST", "/api/restart/confirm", r::confirmEmergency);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -84,7 +98,30 @@ public final class VersionRoutes {
             p.put("config", configurable.contains(e.name));
             p.put("downloading", e.downloading);
             p.put("error", e.error);
-            p.put("checksum", e.latest != null && e.latest.sha256() != null);
+            p.put("checksum", e.channel == VersionManager.Channel.DEV || (e.latest != null && e.latest.sha256() != null));
+            p.put("channel", e.shownChannel().id());
+            // Which channels can be chosen: stable only once there is a stable release (or nothing at all yet), beta
+            // always (it also gets stables), dev only with a valid release token and a dev build.
+            p.put("channels", Map.of("stable", e.hasStable || !e.hasBeta, "beta", true, "dev", versions.devAvailable() && e.dev != null));
+            p.put("ownChannel", e.ownChannel);
+            p.put("offered", e.offered());
+            if (e.installed != null) {
+                p.put("installedInfo", installedInfo(e));
+            }
+            // A step back that is not offered (DowngradeGuard): reason config / lang / code, the two values.
+            if (e.blockedNow()) {
+                p.put("blocked", Map.of("reason", e.blocked.reason(), "have", e.blocked.have(), "offered", e.blocked.offered()));
+            }
+            p.put("devBuild", e.runsDevBuild() ? e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())) : null);
+            if (e.dev != null) {
+                Map<String, Object> dev = new LinkedHashMap<>();
+                dev.put("commit", e.dev.shortCommit());
+                dev.put("date", e.dev.date());
+                dev.put("run", e.dev.run());
+                dev.put("base", e.dev.base());
+                dev.put("size", e.dev.size());
+                p.put("dev", dev);
+            }
             if (e.name.equals(plugin.getName()) && plugin.map() != null) {
                 // squaremap belongs to MRadmin (it renders the map, MRadmin installs and updates it).
                 Map<String, Object> squaremap = new LinkedHashMap<>();
@@ -100,6 +137,9 @@ public final class VersionRoutes {
         restart.put("reason", server.sync(() -> plugin.restarts().reason()));
         restart.put("method", plugin.settings().versions().restartMethod());
         restart.put("delays", plugin.settings().versions().restartDelays());
+        restart.put("emergencyDelays", plugin.settings().versions().emergencyDelays());
+        // The running countdown is the one of a planned restart (cancelling it skips only this one).
+        restart.put("planned", "schedule".equals(plugin.restarts().by()) && plugin.restarts().endsAt() > 0);
         // The server tab: countdown kind, starter, Paper build, next planned restart, since when the server runs.
         restart.put("kind", plugin.restarts().restarting() ? "restart" : "stop");
         restart.put("enabled", plugin.restarts().enabled());
@@ -117,23 +157,48 @@ public final class VersionRoutes {
         // latest = a newer build (null if current or unknown); newest = newest stable build at all, -1 = not checked yet.
         paper.put("latest", update == null ? null : update.id());
         paper.put("newest", starter.paperLatestBuild());
+        // Downloaded ahead (with the starter, paper-update auto): put in place on the next restart, -1 = none.
+        paper.put("staged", update != null && starter.paperStaged() == update.id() ? starter.paperStaged() : -1);
         paper.put("checkedAt", starter.paperChecked());
         paper.put("failed", starter.paperFailed());
         paper.put("update", starter.settings() == null ? "auto" : starter.settings().paperUpdate());
         restart.put("paper", paper);
         var next = starter.nextPlanned();
         restart.put("nextPlanned", next == null ? 0 : next.toInstant().toEpochMilli());
+        Map<String, Object> schedule = new LinkedHashMap<>();
+        schedule.put("times", starter.settings() == null ? 0 : starter.settings().restartTimes().size());
+        schedule.put("pausedUntil", server.sync(starter::pausedUntil));
+        schedule.put("pausedBy", server.sync(starter::pausedBy));
+        restart.put("schedule", schedule);
         restart.put("startedAt", java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("plugins", plugins);
         result.put("checkedAt", versions.checkedAt());
         result.put("checking", versions.checking());
         result.put("auto", plugin.settings().versions().autoDownload().name().toLowerCase(java.util.Locale.ROOT));
+        result.put("channel", versions.defaultChannel().id());
+        // Dev is only shown with a valid token; "invalid" = set but it does not open the token check of the dev channel.
+        result.put("devToken", versions.devAvailable());
+        result.put("devTokenState", versions.devTokenState());
         result.put("restart", restart);
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /**
+     * What runs, in parts: channel (stable / beta / dev), number (1.4.0), build (null for old versions without one) and
+     * the commit if the JAR was built by GitHub Actions.
+     */
+    private static Map<String, Object> installedInfo(VersionManager.Entry e) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("channel", e.runsDevBuild() ? "dev"
+                : at.marcelr.mradmin.util.Versions.channel(e.installed).name().toLowerCase(java.util.Locale.ROOT));
+        m.put("number", at.marcelr.mradmin.util.Versions.number(e.installed));
+        m.put("build", at.marcelr.mradmin.util.Versions.isScheme(e.installed) ? at.marcelr.mradmin.util.Versions.build(e.installed) : null);
+        m.put("commit", e.installedCommit.isEmpty() ? null : e.installedCommit.substring(0, Math.min(7, e.installedCommit.length())));
+        return m;
     }
 
     private static Map<String, Object> release(ReleasePicker.Release r) {
@@ -170,7 +235,7 @@ public final class VersionRoutes {
         if (error != null) {
             throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
         }
-        audit(http, "plugin-download", name + " " + e.latest.version());
+        audit(http, "plugin-download", name + " " + e.offered());
         http.json(200, Map.of());
     }
 
@@ -182,7 +247,23 @@ public final class VersionRoutes {
         if (error != null) {
             throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
         }
-        audit(http, "plugin-install", name + " " + e.latest.version());
+        audit(http, "plugin-install", name + " " + e.offered());
+        http.json(200, Map.of());
+    }
+
+    private void channel(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        String name = http.param("name");
+        String raw = String.valueOf(http.string("channel")).trim().toLowerCase(java.util.Locale.ROOT);
+        VersionManager.Channel channel = VersionManager.Channel.of(raw);
+        if (channel == null && !raw.equals("default")) {
+            throw new Http.WebException(400, "invalid-value");
+        }
+        String error = plugin.versions().setChannel(name, channel, http.account().name() + " (web)");
+        if (error != null) {
+            throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
+        }
+        audit(http, "plugin-channel", name + " " + raw);
         http.json(200, Map.of());
     }
 
@@ -199,16 +280,28 @@ public final class VersionRoutes {
         } catch (NumberFormatException ex) {
             throw new Http.WebException(400, "invalid-duration");
         }
-        // Only the configured choices - nobody restarts in three days by accident.
-        if (!plugin.settings().versions().restartDelays().contains(delay)) {
+        // Only the configured choices - nobody restarts in three days by accident. The short emergency choices only
+        // with a reason (players should normally get at least 15 minutes warning).
+        String reason = http.string("reason");
+        boolean emergency = !plugin.settings().versions().restartDelays().contains(delay);
+        if (emergency && !plugin.settings().versions().emergencyDelays().contains(delay)) {
             throw new Http.WebException(400, "invalid-duration");
         }
+        if (emergency && (reason == null || reason.isBlank())) {
+            throw new Http.WebException(400, "restart-reason-required");
+        }
+        // An emergency needs a fresh sign-in (POST /api/restart/confirm) - used up here.
+        if (emergency) {
+            Long until = emergencyOk.remove(http.session().id());
+            if (until == null || until < System.currentTimeMillis()) {
+                throw new Http.WebException(403, "restart-confirm-required");
+            }
+        }
         String by = http.account().name() + " (web)";
-        String reason = http.string("reason");
         if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
         }
-        audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s");
+        audit(http, stop ? "server-stop" : "server-restart", delay / 1000 + " s" + (emergency ? " (emergency)" : ""));
         http.json(200, Map.of());
     }
 
@@ -219,6 +312,41 @@ public final class VersionRoutes {
             throw new Http.WebException(409, "restart-none");
         }
         audit(http, "server-restart-cancelled", "");
+        http.json(200, Map.of());
+    }
+
+    /** Emergency restart: confirm with a fresh 2FA code or a passkey like the web console; 5 wrong codes lock 15 min. */
+    private void confirmEmergency(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        java.util.UUID account = http.account().id();
+        long now = System.currentTimeMillis();
+        if (lockedUntil.getOrDefault(account, 0L) > now) {
+            throw new Http.WebException(429, "console-code-locked");
+        }
+        if (!server.confirmed(http)) {
+            int[] count = failures.computeIfAbsent(account, k -> new int[1]);
+            if (++count[0] >= MAX_FAILURES) {
+                count[0] = 0;
+                lockedUntil.put(account, now + FAILURE_LOCK_MILLIS);
+                audit(http, "server-emergency-locked", "5 wrong codes");
+            }
+            throw new Http.WebException(400, "code-wrong");
+        }
+        failures.remove(account);
+        emergencyOk.put(http.session().id(), now + CONFIRM_MILLIS);
+        audit(http, "server-emergency-confirmed", "");
+        http.json(200, Map.of("until", now + CONFIRM_MILLIS));
+    }
+
+    private void schedule(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        boolean pause = Boolean.parseBoolean(String.valueOf(http.string("pause")));
+        String by = http.account().name() + " (web)";
+        server.sync(() -> {
+            plugin.starter().pauseSchedule(pause, by);
+            return null;
+        });
+        audit(http, pause ? "server-schedule-paused" : "server-schedule-resumed", "");
         http.json(200, Map.of());
     }
 

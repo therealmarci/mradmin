@@ -1,10 +1,11 @@
 package at.marcelr.mradmin.starter;
 
+import at.marcelr.mradmin.util.Versions;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -51,16 +52,7 @@ public final class Setup {
             Files.copy(ownJar, plugins.resolve(ownJar.getFileName()), StandardCopyOption.REPLACE_EXISTING);
             copiedPlugin = true;
         }
-        if (!ownJar.toAbsolutePath().normalize().equals(files.starterJar().toAbsolutePath().normalize())) {
-            Path tmp = files.starterJar().resolveSibling("starter.jar.tmp");
-            Files.copy(ownJar, tmp, StandardCopyOption.REPLACE_EXISTING);
-            try {
-                Files.move(tmp, files.starterJar(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                // Windows: a running starter holds starter.jar - swapped on its next restart.
-                Files.move(tmp, files.starterJarNew(), StandardCopyOption.REPLACE_EXISTING);
-            }
-        }
+        copyStarter(files, ownJar);
         writeWrapper(files.server().resolve("mrserver.sh"), "/starter/mrserver.sh", true);
         // Started from a running mrserver.cmd (first setup on Windows): it must not be replaced while cmd reads it.
         Path cmd = files.server().resolve("mrserver.cmd");
@@ -83,6 +75,21 @@ public final class Setup {
             StarterFiles.write(files.launch(), launch, "Written by MRadmin from config.yml (section server) - do not edit.");
         }
         return new Result(local, newLocal, copiedPlugin);
+    }
+
+    /** The starter becomes a copy of {@code jar} (on Windows as starter-new.jar if the running starter holds it). */
+    private static void copyStarter(StarterFiles files, Path jar) throws IOException {
+        if (jar.toAbsolutePath().normalize().equals(files.starterJar().toAbsolutePath().normalize())) {
+            return;
+        }
+        Path tmp = files.starterJar().resolveSibling("starter.jar.tmp");
+        Files.copy(jar, tmp, StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.move(tmp, files.starterJar(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            // Windows: a running starter holds starter.jar - swapped on its next restart.
+            Files.move(tmp, files.starterJarNew(), StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     /**
@@ -115,11 +122,14 @@ public final class Setup {
     }
 
     private static boolean hasMradmin(Path plugins) throws IOException {
-        if (!Files.isDirectory(plugins)) {
-            return false;
-        }
+        return Files.isDirectory(plugins) && installedMradmin(plugins) != null;
+    }
+
+    /** The MRadmin JAR in plugins/, null if there is none. */
+    private static Path installedMradmin(Path plugins) throws IOException {
         try (var list = Files.list(plugins)) {
-            return list.anyMatch(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).matches("mradmin.*\\.jar"));
+            return list.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).matches("mradmin.*\\.jar"))
+                    .sorted().reduce((a, b) -> b).orElse(null);
         }
     }
 
@@ -186,7 +196,32 @@ public final class Setup {
 
     /** The only config.yml keys the installer may set (seed.properties, applied once by MRadmin). */
     public static final List<String> SEED_KEYS = List.of("server.memory-min", "server.memory-max", "web.enabled",
-            "web.public-url", "storage.type");
+            "web.public-url", "web.bind", "web.trusted-proxies", "storage.type", "versions.channel", "versions.dev-token");
+
+    /** Docker's networks (bridge 172.17.x and the own networks of docker compose): the proxy's address changes. */
+    static final String DOCKER_RANGE = "172.16.0.0/12";
+
+    /**
+     * Where the reverse proxy runs - "here" (same machine, MRadmin listens only locally), "docker" (in Docker on this
+     * machine: listen on all addresses, trust Docker's networks) or the address / range of another machine.
+     * @return {bind, trusted proxies (comma separated)}, null for an unknown answer
+     */
+    static String[] proxy(String answer) {
+        if (answer == null || answer.isBlank() || answer.equalsIgnoreCase("here") || answer.equalsIgnoreCase("none")) {
+            return new String[]{"127.0.0.1", "127.0.0.1"};
+        }
+        if (answer.equalsIgnoreCase("docker")) {
+            return new String[]{"0.0.0.0", "127.0.0.1," + DOCKER_RANGE};
+        }
+        String trimmed = answer.trim();
+        return at.marcelr.mradmin.web.IpRanges.valid(trimmed) ? new String[]{"0.0.0.0", "127.0.0.1," + trimmed} : null;
+    }
+
+    /** seed.properties: channel of single plugins on the page Plugins, e.g. {@code plugin-channel.MRadmin=dev}. */
+    public static final String SEED_PLUGIN_CHANNEL = "plugin-channel.";
+
+    /** Environment variable with the release token of the dev channel (not an argument - those show in process lists). */
+    public static final String ENV_DEV_TOKEN = "MRSERVER_DEV_TOKEN";
 
     /** null if fine (empty = none), otherwise why not. */
     static String webUrlProblem(String url) {
@@ -202,9 +237,18 @@ public final class Setup {
      * the web settings, into seed.properties, which MRadmin takes over into config.yml on its first start.
      *
      * @param web    switch the web interface on (listens only locally, storage SQLite)
-     * @param webUrl public address, null/empty = none yet
+     * @param webUrl  public address, null/empty = none yet
+     * @param channel stable/beta/dev or null; beta = versions.channel beta, dev = beta for all plus MRadmin itself on
+     *                dev with the release token
      */
-    static void seed(StarterFiles files, String min, String max, boolean web, String webUrl) throws IOException {
+    static void seed(StarterFiles files, String min, String max, boolean web, String webUrl, String channel,
+                     String devToken) throws IOException {
+        seed(files, min, max, web, webUrl, channel, devToken, null);
+    }
+
+    /** Like above, {@code proxy} = answer of {@link #proxy} (null = not asked). */
+    static void seed(StarterFiles files, String min, String max, boolean web, String webUrl, String channel,
+                     String devToken, String[] proxy) throws IOException {
         Properties launch = StarterFiles.read(files.launch());
         Properties seed = StarterFiles.read(files.seed());
         if (min != null) {
@@ -221,6 +265,17 @@ public final class Setup {
             if (webUrl != null && !webUrl.isEmpty()) {
                 seed.setProperty("web.public-url", webUrl);
             }
+            if (proxy != null) {
+                seed.setProperty("web.bind", proxy[0]);
+                seed.setProperty("web.trusted-proxies", proxy[1]);
+            }
+        }
+        if ("beta".equals(channel) || "dev".equals(channel)) {
+            seed.setProperty("versions.channel", "beta");
+        }
+        if ("dev".equals(channel) && devToken != null && !devToken.isBlank()) {
+            seed.setProperty("versions.dev-token", devToken.trim());
+            seed.setProperty(SEED_PLUGIN_CHANNEL + "MRadmin", "dev");
         }
         StarterFiles.write(files.launch(), launch, "Written by MRadmin from config.yml (section server) - do not edit.");
         if (!seed.isEmpty()) {
@@ -254,9 +309,37 @@ public final class Setup {
             System.out.println(urlProblem);
             return 2;
         }
+        String proxyAnswer = option(args, "--proxy");
+        String[] proxy = proxyAnswer == null ? null : proxy(proxyAnswer);
+        if (proxyAnswer != null && proxy == null) {
+            System.out.println("Unknown proxy '" + proxyAnswer + "' - here, docker or the address of the proxy machine (e.g. 10.0.0.5 or 10.0.0.0/24).");
+            return 2;
+        }
+        String channel = option(args, "--channel");
+        if (channel != null && Channels.normalize(channel) == null) {
+            System.out.println("Unknown channel '" + channel + "' - stable, beta or dev.");
+            return 2;
+        }
+        channel = Channels.normalize(channel);
+        String devToken = System.getenv(ENV_DEV_TOKEN);
+        // The channel picks the MRadmin only on a new server - an existing one changes it on the page Server -> Plugins
+        // (with the protection against steps back).
+        boolean fresh = !Files.exists(files.server().resolve("plugins/MRadmin/config.yml"));
+        if (channel != null && !fresh) {
+            System.out.println("This server already ran MRadmin - choose the channel in the web interface: Server -> Plugins.");
+            channel = null;
+        }
         Path own = ownJar();
         if (downloaded && !verifyDownload(own)) {
             Files.deleteIfExists(own);
+            return 1;
+        }
+        Channels.Pick pick;
+        try {
+            // Before anything changes: a wrong release token stops here.
+            pick = Channels.resolve(channel, devToken);
+        } catch (IOException e) {
+            System.out.println("ERROR: " + e.getMessage());
             return 1;
         }
         System.out.println("Setting up the MRadmin starter in " + files.server());
@@ -264,8 +347,29 @@ public final class Setup {
         if (result.copiedPlugin()) {
             System.out.println("  MRadmin copied to plugins/" + own.getFileName());
         }
-        if (memoryMin != null || memoryMax != null || web) {
-            seed(files, JavaFlags.memory(memoryMin), JavaFlags.memory(memoryMax), web, webUrl);
+        if (pick != null) {
+            // Paper swaps plugins/update/<name> in on the first start - the running JAR cannot be replaced on Windows.
+            Path plugin = installedMradmin(files.server().resolve("plugins"));
+            Path update = files.server().resolve("plugins/update").resolve(plugin.getFileName());
+            System.out.println("  Downloading MRadmin " + pick.label() + " ...");
+            try {
+                Channels.download(pick, devToken, update);
+            } catch (IOException e) {
+                System.out.println("ERROR: " + e.getMessage());
+                return 1;
+            }
+            copyStarter(files, update);
+            System.out.println("  MRadmin " + pick.label() + " ready (checksum ok) - it replaces " + Main.version()
+                    + " on the first start.");
+        } else if ("beta".equals(channel)) {
+            System.out.println("  No beta newer than MRadmin " + Main.version() + " - betas come as updates later.");
+        }
+        if (channel != null) {
+            System.out.println("  Update channel: " + ("dev".equals(channel) ? "beta, MRadmin itself dev" : channel));
+        }
+        if (memoryMin != null || memoryMax != null || web || channel != null) {
+            seed(files, JavaFlags.memory(memoryMin), JavaFlags.memory(memoryMax), web || proxy != null, webUrl, channel,
+                    devToken, proxy);
         }
         if (memoryMin != null || memoryMax != null) {
             System.out.println("  Memory: " + Objects.requireNonNullElse(JavaFlags.memory(memoryMin), "1G") + " - "
@@ -333,14 +437,14 @@ public final class Setup {
     private static boolean verifyDownload(Path own) throws IOException, InterruptedException {
         Properties info = Main.buildInfo();
         String repo = info.getProperty("githubRepository", "therealmarci/mradmin");
-        String tag = "mc" + Main.minecraft() + "-v" + Main.version();
+        String version = Main.version();
+        String tag = "mc" + Main.minecraft() + (Versions.isScheme(version) ? "-" : "-v") + version;
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        HttpRequest request = HttpRequest.newBuilder(URI.create("https://api.github.com/repos/" + repo + "/releases/tags/" + tag))
-                .timeout(Duration.ofSeconds(20)).header("User-Agent", Main.userAgent())
-                .header("Accept", "application/vnd.github+json").GET().build();
+        HttpRequest request = Channels.request("https://api.github.com/repos/" + repo + "/releases/tags/" + tag)
+                .timeout(Duration.ofSeconds(20)).build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            System.out.println("ERROR: could not check the download (GitHub answered " + response.statusCode() + ").");
+            System.out.println("ERROR: could not check the download (" + Channels.github(response.statusCode()) + ").");
             return false;
         }
         String expected = null;

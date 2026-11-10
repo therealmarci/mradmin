@@ -2,8 +2,10 @@ import { mount } from 'svelte';
 import './app.css';
 import App from './App.svelte';
 import { lang } from './lib/i18n.js';
+import { load as loadBranding } from './lib/branding.svelte.js';
 
 document.documentElement.lang = lang;
+loadBranding();
 
 // Service worker: push notifications (and installable as an app). It caches nothing.
 if ('serviceWorker' in navigator) {

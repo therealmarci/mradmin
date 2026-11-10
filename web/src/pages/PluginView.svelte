@@ -37,7 +37,7 @@
   });
 
   async function update() {
-    if (!confirm(t('versions.downloadConfirm', { name: p.name, version: p.latest.version }))) return;
+    if (!confirm(t('versions.downloadConfirm', { name: p.name, version: offered }))) return;
     busy = true;
     error = '';
     try {
@@ -52,6 +52,10 @@
   }
 
   const st = $derived(p ? pluginState(p) : null);
+  // What the channel offers: release version, or "Dev abc1234" on the dev channel.
+  const offered = $derived(!p ? '' : p.channel === 'dev' ? (p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–') : p.latest ? p.latest.version : '–');
+  const published = $derived(!p ? null : p.channel === 'dev' ? p.dev?.date : p.latest?.published);
+  const badge = $derived(!p?.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : st?.tone === 'good' ? 'current' : null);
   const showConfig = $derived(tab === 'config' && !!p?.config);
 </script>
 
@@ -91,9 +95,13 @@
       <section class="box">
         <h2>{t('plugins.tab.version')}</h2>
         <div class="facts">
-          <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}</div>
-          <div><span>{t('versions.latest')}</span>{p.latest ? p.latest.version : '–'}{#if p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}</div>
-          <div><span>{t('versions.published')}</span>{p.latest?.published ? dateTime(p.latest.published) : '–'}</div>
+          <div><span>{t('plugins.installed')}</span>{p.installed ?? '–'}{#if p.devBuild} <em class="pre">{t('plugins.devBuild', { commit: p.devBuild })}</em>{/if}</div>
+          <div><span>{t('plugins.col.channel')}</span>{t('plugins.channel.' + p.channel)}{#if !p.ownChannel} <span class="muted">({t('plugins.channel.default')})</span>{/if}</div>
+          <!-- one line for what the chosen channel offers: release, or the dev build on the dev channel -->
+          <div><span>{t('plugins.col.available')}</span>{offered}{#if p.channel !== 'dev' && p.latest?.prerelease} <em class="pre">{t('plugins.prerelease')}</em>{/if}
+            {#if p.channel === 'dev' && p.dev?.commit && p.installedInfo?.commit && p.dev.commit.startsWith(p.installedInfo.commit)} <span class="muted">({t('plugins.sameAsInstalled')})</span>{/if}
+            {#if badge}<em class="badge {badge}">{t('plugins.badge.' + badge)}</em>{/if}</div>
+          <div><span>{t('versions.published')}</span>{published ? dateTime(published) : '–'}{#if p.channel === 'dev' && p.dev} <span class="muted">· {t('plugins.devBase', { base: p.dev.base })}</span>{/if}</div>
           <div><span>Minecraft</span>{p.minecraft}</div>
           {#if p.mod}<div><span>{t('versions.mod')}</span>{p.mod.version}</div>{/if}
           {#if p.squaremap && (p.squaremap.version || p.squaremap.staged)}
@@ -106,19 +114,20 @@
         <div class="row">
           {#if p.update && data.may.install}
             {#if p.checksum}
-              <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: p.latest.version })}</button>
+              <button disabled={busy || p.downloading} onclick={update}>⬇ {t('versions.download', { version: offered })}</button>
             {:else}
               <span class="muted small">{t('versions.noChecksum')}</span>
             {/if}
           {/if}
           {#if p.staged}<span class="muted small">{t('plugins.stagedHint')}</span>{/if}
+          {#if p.blocked}<span class="small blocked">{t('plugins.blocked.' + p.blocked.reason, { name: p.name, version: offered, have: p.blocked.have, offered: p.blocked.offered })}</span>{/if}
           <span class="links">
             <a href={p.website} target="_blank" rel="noopener noreferrer">{t('versions.website')} ↗</a>
             {#if p.latest}<a href={p.latest.page} target="_blank" rel="noopener noreferrer">GitHub ↗</a>{/if}
           </span>
         </div>
   
-        {#if p.latest?.notes}
+        {#if p.channel !== 'dev' && p.latest?.notes}
           <details open={p.update || !!p.staged}>
             <summary>{t('versions.notes', { version: p.latest.version })}</summary>
             <div class="notes">{@html markdown(p.latest.notes)}</div>
@@ -298,6 +307,32 @@
     color: var(--muted);
     font-size: 0.74rem;
     font-weight: 600;
+  }
+
+  .blocked {
+    color: var(--warn);
+  }
+
+  .badge {
+    font-style: normal;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0 7px;
+    margin-left: 4px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+
+  .badge.current {
+    color: var(--good);
+  }
+
+  .badge.current::before {
+    content: '✓ ';
+  }
+
+  .badge.newer {
+    color: var(--warn);
   }
 
   .pre {

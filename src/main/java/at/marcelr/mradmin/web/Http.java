@@ -33,7 +33,7 @@ public final class Http {
     private boolean answered;
 
     /** Set by the server for requests with a valid session. */
-    WebAuth.Session session;
+    at.marcelr.mradmin.web.self.PlayerSessions.Session session;
     WebAuth.Account account;
     /** Set by the server for requests of the player area (/web) with a valid player session. */
     at.marcelr.mradmin.web.self.PlayerSessions.Session player;
@@ -53,13 +53,13 @@ public final class Http {
         InetSocketAddress remote = exchange.getRemoteAddress();
         String direct = remote == null ? "?" : remote.getAddress().getHostAddress();
         String forwarded = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
-        if (forwarded == null || !trusted.contains(direct)) {
+        if (forwarded == null || !IpRanges.matches(trusted, direct)) {
             return direct;
         }
         List<String> hops = List.of(forwarded.split(","));
         for (int i = hops.size() - 1; i >= 0; i--) {
             String hop = hops.get(i).trim();
-            if (!hop.isEmpty() && !trusted.contains(hop)) {
+            if (!hop.isEmpty() && !IpRanges.matches(trusted, hop)) {
                 return hop;
             }
         }
@@ -99,7 +99,7 @@ public final class Http {
         return exchange.getRequestHeaders().getFirst(name);
     }
 
-    public WebAuth.Session session() {
+    public at.marcelr.mradmin.web.self.PlayerSessions.Session session() {
         return session;
     }
 
@@ -175,6 +175,17 @@ public final class Http {
             }
         }
         return null;
+    }
+
+    /** The raw body (uploads), at most {@code max} bytes - more is refused with 413. */
+    public byte[] raw(int max) throws IOException {
+        try (InputStream in = exchange.getRequestBody()) {
+            byte[] data = in.readNBytes(max + 1);
+            if (data.length > max) {
+                throw new WebException(413, "too-large");
+            }
+            return data;
+        }
     }
 
     /** The JSON body (empty object if there is none or it is not JSON). */

@@ -6,6 +6,7 @@ import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.api.AdminModule;
 import at.marcelr.mradmin.api.HealthEntry;
 import at.marcelr.mradmin.api.MRadminService;
+import at.marcelr.mradmin.api.RestartInfo;
 import at.marcelr.mradmin.api.WebItems;
 import at.marcelr.mradmin.api.Report;
 import at.marcelr.mradmin.api.WebModule;
@@ -135,6 +136,53 @@ public final class Modules implements MRadminService {
     @Override
     public void log(String moduleId, String event, String text, int color) {
         plugin.eventLog().add(moduleId, event, text, color);
+    }
+
+    @Override
+    public void teamNotice(String moduleId, String kind, String ref, String link,
+                           java.util.function.Function<String, String[]> texts) {
+        AdminModule module = module(moduleId);
+        if (plugin.notices() == null || module == null || link == null || !link.startsWith("/")) {
+            return;
+        }
+        java.util.Map<String, String[]> all = new java.util.LinkedHashMap<>();
+        for (String lang : plugin.messages().languages()) {
+            String[] t = call(module, () -> texts.apply(lang), null);
+            if (t != null && t.length >= 2 && t[0] != null) {
+                all.put(lang, new String[]{t[0], t[1] == null ? "" : t[1]});
+            }
+        }
+        // The line in the game comes from the module itself (with its own buttons), filtered by teamNoticeInGame.
+        plugin.notices().send(kind, ref == null ? null : "module:" + moduleId + ":" + ref, link, null, all, false);
+    }
+
+    @Override
+    public void teamNoticeDone(String moduleId, String ref) {
+        if (plugin.notices() != null) {
+            plugin.notices().resolve("module:" + moduleId + ":" + ref);
+        }
+    }
+
+    @Override
+    public boolean teamNoticeInGame(java.util.UUID player, String kind) {
+        return plugin.notices() == null || plugin.notices().wantsGame(player, kind);
+    }
+
+    @Override
+    public @Nullable RestartInfo nextRestart() {
+        var restarts = plugin.restarts();
+        if (restarts == null) {
+            return null;
+        }
+        if (restarts.endsAt() > 0) {
+            String reason = restarts.reason();
+            return new RestartInfo(restarts.endsAt(), restarts.restarting(), true,
+                    "schedule".equals(restarts.by()), reason == null ? "" : reason);
+        }
+        // Planned restarts only count if something brings the server back (otherwise MRadmin skips them).
+        var next = plugin.starter() == null || !restarts.enabled() ? null : plugin.starter().nextPlanned();
+        return next == null ? null
+                : new RestartInfo(next.toInstant().toEpochMilli(), true, false, true, "");
     }
 
     @Override

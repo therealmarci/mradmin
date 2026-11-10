@@ -1,9 +1,27 @@
 # Plugins & Updates
 
-In der Weboberfläche unter **Plugins** (Seite „Plugin-Konfiguration“) siehst du **alle MRtechnology-Plugins**: oben die auf deinem Server mit installierter und neuester Version und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
+In der Weboberfläche unter **Server → Plugins** siehst du **alle MRtechnology-Plugins** als Tabelle: oben die auf deinem Server mit installierter Version, Kanal, **neuester Version im Kanal** (Badge **Aktuell**, wenn sie installiert ist, **Neu**, wenn nicht) und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
+
+## Kanäle: Stable, Beta, Dev
+Jedes Plugin folgt einem **Kanal** - in der Spalte **Kanal** umschaltbar (`mradmin.versions.install`):
+
+| Kanal | Was kommt | Für wen |
+|---|---|---|
+| **Stable** | nur stabile Versionen (`STA-…`) | jeden Server - Standard |
+| **Beta** | auch Betas (`BET-…`) - neue Funktionen früher, noch nicht ganz fertig | wer Neues früh ausprobieren will |
+| **Dev** | jeder Entwicklungsstand (nach jedem Commit), unfertig | nur Testserver, nur mit Freigabetoken |
+
+- Ohne eigene Wahl folgt ein Plugin dem **Standard-Kanal** `versions.channel` (`stable` oder `beta`); „zurück auf Standard“ hebt die eigene Wahl wieder auf. 0.x-Plugins gibt es nur als Beta, sie bekommen immer Betas.
+- **Zurück auf Stable stuft nie zurück:** Läuft eine Beta oder ein Dev-Build, bleibt sie, bis eine neuere stabile Version erscheint (ältere Versionen könnten mit den bereits umgebauten Einstellungen nicht umgehen).
+- **Schutz vor Rückschritten** - gilt für jeden Kanal, auch für `versions.auto-download`:
+  - Hat die angebotene Version eine kleinere `config-version` (config.yml) oder `lang-version` (Sprachdateien) als dein Server, wird sie **nicht installiert**: deine Einstellungen wurden schon von einer neueren Version umgebaut.
+  - Stammen laufender und angebotener Build aus GitHub (alle Releases und Dev-Builds), muss der angebotene ein **Nachfolger** des laufenden sein. Wichtig nach Dev: Ein Dev-Build trägt die Nummer des letzten Releases - ein späterer Hotfix sähe „neuer“ aus, würde aber die Funktionen des Dev-Builds wieder entfernen. Er wird erst angeboten, wenn er den Dev-Stand enthält.
+  - Gesperrte Versionen zeigt die Seite mit **„Zurückstufen gesperrt“** und dem Grund. Wer wirklich zurück will, macht es von Hand: alte JAR einspielen und die `config.yml` aus einem Backup (`config.v<nummer>.backup.yml`) zurückholen.
+- **Stable ist ausgegraut**, solange es noch keine stabile Version gibt (Plugins mit bisher nur Betas, 0.x). **Beta ist immer wählbar** - sie bekommt auch die stabilen Versionen, du kannst also auf Beta bleiben, auch wenn gerade eine Stable die neueste ist.
+- **Dev** erscheint nur, wenn in der Konfiguration ein **gültiger Freigabetoken** steht (`versions.dev-token`, bekommst du vom Entwickler). Ist er falsch, bleibt Dev ausgeblendet und die Seite zeigt einen Hinweis. Die Dev-Builds liegen verschlüsselt im GitHub-Release `mc0-dev`; MRadmin entschlüsselt sie mit dem Token und prüft die Prüfsumme. Ein Plugin, auf dem ein Dev-Build läuft, ist mit **Dev** und dem Commit (z.B. `Dev c44ebd6`) markiert. Dev-Builds lädt `versions.auto-download` nur bei `all` von selbst.
 
 ## Installieren
-Nicht installierte Plugins installierst du mit einem Klick (`mradmin.versions.install`). MRadmin lädt das offizielle Release für deine Minecraft-Version (nur mit passender Prüfsumme) nach `plugins/` - **geladen wird es beim nächsten Neustart**. Gibt es bisher nur Vorabversionen (z.B. MRpvp 0.x), wird die neueste davon angeboten.
+Nicht installierte Plugins installierst du mit einem Klick (`mradmin.versions.install`). MRadmin lädt das offizielle Release für deine Minecraft-Version (nur mit passender Prüfsumme) nach `plugins/` - **geladen wird es beim nächsten Neustart**. Installiert wird, was der Kanal des Plugins anbietet (siehe oben); gibt es bisher nur Vorabversionen (z.B. MRpvp 0.x), die neueste davon.
 
 ## Einstellen im Browser
 Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration** (`mradmin.config`, in `mradmin.groups.admin`): alle Einstellungen der `config.yml` als Formular mit Erklärungen (Deutsch/Englisch). Speichern prüft jeden Wert, schreibt die Datei (Kommentare bleiben, die alte Datei liegt als `config.backup-web.yml` daneben) und lädt das Plugin sofort neu - ohne Befehl, ohne Neustart. Von Hand bearbeiten geht weiterhin. Verfügbar für MRadmin und alle MRtechnology-Plugins in aktueller Version.
@@ -19,7 +37,7 @@ Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration** (
 > [!TIP]
 > Am einfachsten mit dem **[Starter](starter.md)**, der in MRadmin steckt: Er startet den Server nach jedem Neustart, Absturz oder Hänger wieder, spielt Paper-Updates ein und kann täglich neu starten. Dann brauchst du `versions.restart-method` nicht; neu starten geht außerdem jederzeit mit `/mradmin restart`.
 
-Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** (`mradmin.server.restart`) mit Countdown (`versions.restart-delays`, Standard 5 Minuten, 1 Minute, sofort, angekündigt wie `/mradmin announce restart`) gibt es nur, solange ein Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
+Nach dem Herunterladen oder Installieren zeigt die Seite „Neustart nötig“. Einen **Neustart-Knopf** (`mradmin.server.restart`) mit Countdown (`versions.restart-delays`, Standard 15, 30 und 60 Minuten, angekündigt wie `/mradmin announce restart`; kürzere Zeiten nur über den Knopf **Notfall** mit erneuter Anmeldung und Grund, `versions.emergency-delays`) gibt es nur, solange ein Update oder ein neu installiertes Plugin auf den Neustart wartet, und erst, wenn du `versions.restart-method` einstellst - denn ein Server kann sich nicht selbst wieder starten, das muss etwas außerhalb tun:
 
 | `versions.restart-method` | Was passiert |
 |---|---|

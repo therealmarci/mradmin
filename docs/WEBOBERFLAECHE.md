@@ -2,55 +2,91 @@
 
 MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail. Was Spieler auf ihrer eigenen Seite sehen, steht unter [Spielerseite](wiki/spielerseite.md), Updates und Neustart unter [Plugins & Updates](wiki/plugins.md).
 
+## Aufbau
+Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit dem **Schild-Knopf** zwischen Spielerbereich und Verwaltung (in der Verwaltung ist er farbig gefüllt). Die Sprache stellt man im Menü unter dem eigenen Namen um. Jeder Bereich hat oben Reiter.
+
+| Spielerbereich | Inhalt |
+|---|---|
+| **Start** (`/`) | Startseite aus Widgets - eine eigene für Gäste und eine für angemeldete Spieler |
+| **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
+| **Karte** (`/map`) | die Karte im Vollbild |
+| **Statistik** (`/stats`) | eigene Werte und Server-Ranglisten |
+| **Neuigkeiten** (`/news`) | Reiter **Neuigkeiten** (`/news`), **Changelog** (`/news/changelog`) und **Tickets** (`/news/tickets`, eigene Tickets und neues Ticket) |
+| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Fürs Team kommen hier auch die **Team-Meldungen** dazu (siehe [Team-Meldungen](#team-meldungen)), Umschalter **Alles / Team**. Aktive Warnungen stehen oben |
+| **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
+
+| Verwaltung | Reiter |
+|---|---|
+| **Übersicht** (`/admin`) | Dashboard |
+| **Community** (`/admin/community/…`) | Spieler · Tickets · Strafen · Beiträge · Ankündigungen |
+| **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
+| **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole · Aussehen (MRadmins Konfiguration: Plugins → MRadmin) |
+
+Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
+
 ## Einrichten
 1. In der Config `web.enabled: true` und `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`), dann `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
 2. **Reverse Proxy** einrichten: Domain mit HTTPS → `http://127.0.0.1:8125`. Der eingebaute Webserver lauscht nur lokal und hat selbst kein HTTPS.
-3. **Konto anlegen:** im Spiel `/mradmin web setup` (Permission `mradmin.web`) → Link öffnen → Passwort festlegen, Authenticator-App per QR-Code verbinden → Wiederherstellungscodes sichern. Für andere: `/mradmin web invite <spieler>` (auch aus der Konsole).
+3. **Anmelden:** Jeder kommt mit dem Code aus `/web` im Spiel rein - das Konto entsteht dabei von selbst. Wer im Team ist (Permission `mradmin.web`), richtet danach unter **Konto → Anmeldungen** eine eigene Anmeldung ein: Passwort, Passkey oder Discord. Erst dann öffnet sich die Verwaltung.
 
 | Befehl | Was er tut | Permission |
 |---|---|---|
-| `/mradmin web` | Status (läuft, Adresse, Konten, Geräte) | `mradmin.web` |
-| `/mradmin web setup` | Einrichtungslink für dich | `mradmin.web` |
+| `/web` | Code für die Anmeldung (für Spieler und Team) | `mradmin.web.self` oder `mradmin.web` |
+| `/mradmin web` | Status (läuft, Adresse, Konten mit eigener Anmeldung, Geräte) | `mradmin.web` |
 | `/mradmin web sessions [spieler]` | Angemeldete Geräte | `mradmin.web` (andere: `.manage`) |
 | `/mradmin web logout [spieler]` | Alle Geräte abmelden | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web invite <spieler>` | Einrichtungslink für jemand anderen | `mradmin.web.manage` |
-| `/mradmin web remove <spieler>` | Web-Konto löschen | `mradmin.web.manage` |
+| `/mradmin web reset <spieler>` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy | `mradmin.web.manage` |
+| `/mradmin web remove <spieler>` | Konto löschen | `mradmin.web.manage` |
 
-**Passwort vergessen oder Handy weg?** Einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu und meldet alle Geräte ab.
+**Passwort vergessen?** Mit bestätigter E-Mail-Adresse kommt über „Passwort vergessen?“ ein Link per Mail (braucht `mail.*`). Und `/web` im Spiel geht immer.
 
-## Sicherheit
-- **Startseite:** Wer nicht angemeldet ist, wählt zuerst „Ich bin Spieler“ (→ Spielerseite, Anmeldung mit dem Code aus
-  `/web`) oder „Ich bin im Team“ (→ Team-Anmeldung). Ist die Spielerseite aus (`player-web.enabled: false`), geht es
-  direkt zur Team-Anmeldung.
-- Anmeldung in zwei Schritten: erst Minecraft-Name und Passwort, dann der Code aus der Authenticator-App (oder ein
-  Wiederherstellungscode) - geprüft wird alles zusammen. Passkey und Discord stehen im ersten Schritt als Alternative.
-  Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert, Sitzungs-Cookies nur als Hash.
-- **Passkeys** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager): unter **Konto** hinzufügen - zur Sicherheit
-  mit einem frischen Code aus der App. Danach geht die Anmeldung ohne Name, Passwort und Code; die Prüfung des Geräts
-  (Fingerabdruck, PIN) ist immer Pflicht und ersetzt beide Faktoren. Passkeys sind an die Adresse aus
-  `web.public-url` gebunden (ohne sie nur `http://localhost` zum Testen). Gespeichert werden nur öffentliche
-  Schlüssel. Wer sein Konto per Einrichtungslink zurücksetzt, verliert alle Passkeys (verlorenes Handy).
-- **2FA ausschalten** geht unter **Konto**, sobald ein Passkey da ist. Dann meldet sich das Konto nur noch per Passkey
-  an - mit Name und Passwort ist 2FA immer Pflicht. Schritte, die sonst einen frischen Code verlangen (Konsole
-  entsperren, Passkey hinzufügen), bestätigt man dann mit einem Passkey. Der letzte Passkey lässt sich ohne 2FA nicht
-  entfernen; 2FA kann jederzeit wieder eingeschaltet werden (neuer QR-Code, neue Wiederherstellungscodes).
-  Abschalten: `web.login.passkeys: false`.
-- **Mit Discord anmelden** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung
-  `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config. Jeder verknüpft sein Discord
-  unter **Konto → Sicherheit** (nur angemeldet, damit niemand ein fremdes Konto übernimmt; ohne Einrichtung steht dort,
-  was in der Config fehlt). Danach Anmeldung mit
-  einem Klick; zählt wie ein Passkey - 2FA lässt sich ausschalten, Bestätigungen (Konsole, 2FA, Passkey hinzufügen)
-  gehen auch per Discord. Abgefragt wird nur `identify` (ID, Name, Avatar).
-- Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP.
-  Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein.
-- Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`. Änderungen nur mit eigenem Header und passender
-  Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
-- Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über
-  `web.roles` und `web.players`. Wer `mradmin.web` verliert, ist sofort überall abgemeldet.
-- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen und
-  Einrichtungen auch im Discord-Log (`web-login`, `web-setup`).
-- Passwort vergessen oder Handy weg: einfach einen neuen Einrichtungslink holen. Der setzt Passwort und 2FA neu
-  und meldet alle Geräte ab.
+## Anmeldung und Sicherheit
+- **Eine Anmeldung für alle** (seit 1.5): Spieler und Team nutzen dasselbe Konto (eines pro Minecraft-UUID). Rein kommt jeder mit dem 6-stelligen Code aus `/web` (2 Minuten gültig). Ein Gerät bleibt `player-web.session-days` angemeldet (Standard 14 Tage), ohne Nutzung höchstens `player-web.idle-days` (7 Tage).
+- **Eigene Anmeldung** unter **Konto → Anmeldungen** (Spielerseite: **Anmeldungen & Geräte**), damit es auch ohne Spiel geht:
+  - **Passwort** - Anmeldung mit Spielername oder bestätigter **E-Mail-Adresse**. Die Adresse gilt erst nach dem Klick auf den Link in der Bestätigungsmail; sie ermöglicht „Passwort vergessen“. Passwörter werden mit PBKDF2 (600.000 Runden) gespeichert.
+  - **Passkey** (Fingerabdruck, Face ID, Windows Hello, Passwort-Manager) - an die Adresse aus `web.public-url` gebunden (ohne sie nur `http://localhost` zum Testen). Gespeichert werden nur öffentliche Schlüssel. Abschalten: `web.login.passkeys: false`.
+  - **Discord** (`web.login.discord`): Discord-Anwendung anlegen, Weiterleitung `<public-url>/api/discord/callback` eintragen, Client ID und Secret in die Config; abgefragt wird nur `identify`.
+  - **2FA** (Code aus einer Authenticator-App) ist freiwillig: Ist sie an, fragt die Anmeldung mit Passwort zusätzlich nach dem Code (oder einem Wiederherstellungscode).
+- Die **erste** eigene Anmeldung richtet man einfach so ein. Jede weitere - und Ändern oder Entfernen - bestätigt man mit einer vorhandenen (Passwort, 2FA-Code oder Passkey).
+- **Team:** Die Verwaltung öffnet sich mit `mradmin.web` **und** mindestens einer eigenen Anmeldung. `web.login.require-2fa: true` verlangt zusätzlich 2FA (Standard aus). Eine `/web`-Anmeldung reicht, sobald die eigene Anmeldung eingerichtet ist. Ohne sie zeigt die Seite direkt die Karte **Anmeldungen** zum Einrichten.
+- **Heikle Schritte** (Web-Konsole entsperren, Notfall-Neustart) bestätigt man mit einer eigenen Anmeldung: 2FA-Code, Passkey, Discord oder Passwort.
+- Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt, dazu höchstens 10 Anmeldeversuche pro Minute und IP. Damit das mit der echten IP der Besucher funktioniert, trägst du deinen Proxy unter `web.trusted-proxies` ein - einzelne Adressen oder Bereiche wie `172.16.0.0/12` (Proxy in Docker, dessen Adresse wechselt).
+- Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`; Sitzungs-Cookies, Wiederherstellungscodes und Mail-Links nur als Hash. Änderungen nur mit eigenem Header und passender Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
+- Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über `web.roles` und `web.players`. Wer `mradmin.web` verliert, sieht die Verwaltung sofort nicht mehr (bleibt aber als Spieler angemeldet).
+- Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen auch im Discord-Log (`web-login`).
+- **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks (`/mradmin web setup`, `invite`) gibt es nicht mehr.
+
+## Aussehen (Server, `mradmin.appearance`)
+Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler taucht „MRadmin“ nirgends auf.
+- **Name** und **Spruch** (Anmeldeseite), **Akzentfarbe** (Knöpfe, Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst), **Text und bis zu 4 Links** in der Fußzeile (z.B. Discord, Website, Regeln).
+- **Logo** (Anmeldeseite, Mails) und **Browser-Symbol** (Tab, Leiste, „Zum Startbildschirm hinzufügen“): PNG, WebP oder SVG, höchstens 512 KB. Ohne eigenes Symbol gilt das Logo. SVGs mit Skripten oder eingebetteten Inhalten werden abgelehnt.
+- Je eine Kachel für Marke, Logo und Symbol, Akzentfarbe (mit Farbvorschlägen), Fußzeile und Links sowie die Startseite; rechts eine **Vorschau** der Anmelde- und Startseite, hell und dunkel, die beim Scrollen stehen bleibt. Ungespeicherte Änderungen zeigen unten eine Leiste mit **Speichern** und **Verwerfen**; nach dem Speichern gilt alles sofort für alle.
+- Der Name erscheint im Browser-Tab, auf der Anmeldeseite, in der Leiste, in den Mails, in der 2FA-App und bei Passkeys.
+- Gespeichert wird in der `config.yml` (Abschnitt `branding`, auch per Datei änderbar), die Bilder unter `plugins/MRadmin/branding/`.
+- **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.
+
+### Startseite (Widgets)
+Es gibt **zwei Startseiten** (`/`): eine für **Gäste** (nicht angemeldet) und eine für **angemeldete Spieler**. Beide bestehen aus **Widgets** in einem Raster mit 12 Spalten; jedes Widget hat eine Breite (1-12 Spalten) und eine Höhe (1-8 Reihen). Persönliche Widgets gibt es nur auf der Seite der Angemeldeten, die Log-In-Aufforderung nur auf der Seite der Gäste. Auf dem Tablet werden kleine Widgets halb breit und größere voll breit, auf dem Handy liegen alle untereinander.
+
+**Bearbeiten** direkt auf der Startseite (`mradmin.appearance`, Knopf **Bearbeiten** oben; oben umschalten zwischen **Gäste** und **Angemeldete**, gespeichert werden beide zusammen):
+- **Verschieben:** am Griff ⠿ ziehen und auf ein anderes Widget fallen lassen (linke Hälfte = davor, rechte = danach).
+- **Größe:** am Griff unten rechts ziehen oder Breite/Höhe in den Einstellungen eingeben.
+- **Einfügen:** **+ Widget einfügen** (kommt nach dem gewählten Widget), **Einstellungen** ⚙, **Entfernen** ✕.
+- **Speichern** oder **Verwerfen**; **Vorlage laden** ersetzt die gerade gewählte Seite durch die Vorlage (erst beim Speichern).
+
+| Gruppe | Widgets |
+|---|---|
+| Server & Status | **Banner** (Logo, Name, Spruch, Hintergrundbild, Adresse, Spieler online - angemeldet mit „Hallo <Name>“, für Gäste mit Log In), **Hinweise** (Wartung, Neustart, Warnungen, Beiträge - angemeldet persönlich), **Server-Adresse**, **Spieler online** |
+| Persönlich (nur angemeldet) | **Begrüßung**, **Meine Bereiche** (eine Kachel pro Bereich der Plugins), **Meine Statistik** |
+| Inhalte | **Neuigkeiten**, **Text** (mit Formatierung), **Bild** (PNG, WebP, SVG bis 512 KB), **Links**, **Discord** (Einladung), **Log-In-Aufforderung** |
+
+Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch auf beide Seiten aufgeteilt (für alle → beide, nur Gäste → Gäste, nur Angemeldete → Angemeldete). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Server → Aussehen ein.
+
+## Strafen (Community, mit LibertyBans)
+- Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.
+- Filter nach Art (Bann, Mute, Verwarnung, Kick) und Suche nach Spieler oder Grund; ein Klick auf den Spieler öffnet seine Seite.
+- **Aufheben** direkt in der Liste, mit denselben Rechten wie im Spiel (`libertybans.<art>.undo.target.uuid`).
+- Rechte wie bei LibertyBans: `libertybans.commands` plus `libertybans.list.banlist` (Banns), `libertybans.list.mutelist` (Mutes) bzw. `libertybans.list.history` (Verwarnungen und „Alle“); dazu `mradmin.player.view`. Ohne LibertyBans gibt es den Reiter nicht.
 
 ## Übersicht (Dashboard)
 - Oben die **Lage**: Läuft etwas aus dem Ruder, steht hier jede Meldung mit Symbol und Wort, die dringendsten
@@ -92,7 +128,7 @@ MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalt
   (`mradmin.tickets.view`) und ein Bereich pro Plugin, jeweils nur mit dessen Permissions - fehlt das Plugin, fehlt
   die Kachel:
   - **MRsleep:** /nosleep-Blockaden, Cooldown, Bypass, Sperre (`mrsleep.admin.gui`, `.clear`, `.bypass`, `.ban`).
-  - **MRchunks:** seine Loader (mit Größe), Chunk-Budget und Dummy-Limit mit Herkunft (Standard, Permission, Admin), Budget setzen; auf der Seite eines Loaders seine Größe ändern (`mrchunks.admin.resize`) und seine Limit-Sperre für bis zu 24 Stunden aussetzen (`mrchunks.admin.suspendlock`); dort stehen auch die Diagramme der Messwerte (1m bis 12h, `mrchunks.admin.gui`) mit Live-Ansicht (`mrchunks.admin.live`)
+  - **MRchunks:** seine Loader (mit Größe), Chunk-Budget und Dummy-Limit mit Herkunft (Standard, Permission, Admin), Budget setzen; auf der Seite eines Loaders seine Größe ändern (`mrchunks.admin.resize`) und seine Limit-Sperre für bis zu 24 Stunden aussetzen (`mrchunks.admin.suspendlock`), seine Lag-Grenzen dauerhaft anpassen (`mrchunks.admin.limits`); dort stehen auch die Diagramme der Messwerte (1m bis 12h, `mrchunks.admin.gui`) mit Live-Ansicht (`mrchunks.admin.live`)
     (`mrchunks.admin.limit`), für Chunkloader sperren (`mrchunks.admin.ban`), alle Loader löschen
     (`mrchunks.admin.manage`), Einladungen und mit ihm geteilte Loader (`mrchunks.admin.gui`). Verknüpfte Accounts
     ansehen, lösen und neu verknüpfen - per Spielername als Zweit- oder Haupt-Account, ohne Zustimmung der Spieler
@@ -195,12 +231,12 @@ Zwei Bereiche: **Beiträge** für die Spielerseite (`mradmin.news`) und **Ankün
 Drei Arten von Beiträgen für die Spieler, Texte getrennt auf Deutsch und Englisch (jeder sieht seine Sprache, fehlt sie,
 die andere):
 
-- **Neuigkeit** (Ankündigungen, Events): Titel und Text, **Anheften** stellt sie immer nach vorne.
+- **Neuigkeit** (Ankündigungen, Events): Titel und Text.
 - **Changelog**: Version, optional Titel und Einleitung, dazu **Einträge** mit Art (Neu, Geändert, Behoben, Entfernt) und
   **Überschriften** in drei Ebenen (1 Hauptüberschrift, z.B. „Plugins“; 2 Zwischenüberschrift, z.B. „MRpvp“; 3 eine
   weitere Gliederung). Einträge gehören zur Überschrift darüber und werden darunter eingerückt, unter jeder Ebene sind
-  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine Zeitleiste, im Discord die
-  Abschnitte der Reihe nach.
+  alle Arten möglich - hinzufügen, umsortieren, entfernen. Auf der Spielerseite eine schlichte Liste (Version mit Datum,
+  darunter Aufzählungspunkte), im Discord die Abschnitte der Reihe nach.
 - **Kritische Warnung**: Titel und Text. Beim Senden bekommen alle Spieler, die online sind, die Warnung im Chat und als
   Titel auf dem Bildschirm (`player-web.news.alerts`); wer später joint, sieht sie im Chat, solange sie aktiv ist. Sie
   läuft bis „Aktiv bis“ oder bis **Beenden**.
@@ -229,7 +265,10 @@ Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce
 (rot pingt die Rolle), mit Link „Mehr dazu“ zur Seite Neuigkeiten der Spielerseite (nicht zu Kuma), bei Änderungen in
 Kuma bearbeitet und am Ende auf „✅ Behoben“ gestellt.
 
-**Sichtbar bis** blendet einen Beitrag nach diesem Tag aus (er bleibt in der Liste, grau). Anlegen, Bearbeiten, Beenden
+**Sichtbar ab** und **Sichtbar bis** (Datum und Uhrzeit, leer = sofort bzw. für immer) legen fest, wann Spieler einen
+Beitrag sehen. Ein geplanter Beitrag steht in der Liste als „Geplant“; Chat-Vorschau, Warnung im Spiel und Discord gehen
+erst raus, wenn er sichtbar wird. Abgelaufene bleiben grau in der Liste. In der Hero-Kachel der Startseite steht immer
+nur der neueste Beitrag (Neuigkeit oder Changelog), alle anderen im Eintrag **Neuigkeiten**. Anlegen, Bearbeiten, Beenden
 und Löschen landen im Web-Protokoll. Gespeichert wird im Speicher von MRadmin unter `news` (wer welche Vorschau schon
 bekommen hat: `news-seen`).
 
@@ -256,7 +295,7 @@ Alles rund um den laufenden Server steht unter einem Eintrag in der Leiste: **Se
 
 | Reiter | Was dort ist | Recht |
 |---|---|---|
-| **Übersicht** | Läuft seit wann, [Starter](wiki/starter.md) aktiv oder nicht, Paper-Build und ob er aktuell ist (geprüft alle 15 Minuten, auch ohne Starter), nächster geplanter Neustart. Rechts **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`) bzw. der laufende Countdown (mit Grund) und **Abbrechen**; optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
+| **Übersicht** | Vier Werte nebeneinander (Einzelheiten beim Drüberfahren): läuft seit, Paper-Build mit Farbpunkt (grün aktuell, gelb neuer Build verfügbar - geprüft alle 15 Minuten, auch ohne Starter), [Starter](wiki/starter.md) aktiv oder nicht, nächster geplanter Neustart. Darunter **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`, Standard 15/30/60 Minuten), kürzere Zeiten über den roten Knopf **Notfall** (Fenster: erst 2FA-Code oder Passkey, dann Neustart/Stopp, Zeit aus `versions.emergency-delays` und Pflicht-Grund), bzw. der laufende Countdown (mit Grund) und **Abbrechen** (bei einem geplanten Neustart: **Diesen Neustart überspringen**); optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Mit geplanten Neustarts zusätzlich **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
 | **Plugins** | Versionen, Updates, Installieren, Konfiguration im Browser - siehe [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
 | **Protokoll** | Ereignisse und Konsolenausgabe - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
 | **Konsole** | Befehle ausführen - siehe [Konsole](#konsole-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
@@ -301,12 +340,29 @@ Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` 
   (`script`). Ohne Knopf zeigt die Seite nach dem Herunterladen „Neustart nötig“. Beispiel-Skripte: [Plugins & Updates](wiki/plugins.md#server-neu-starten).
 - Auf der Übersicht zeigt eine Kachel, ob Updates warten oder ein Neustart nötig ist.
 
-## Push-Benachrichtigungen
-Unter **Konto → Benachrichtigungen**.
+## Team-Meldungen
+Alles, was das Team wissen sollte, an einem Ort: neue Tickets, Nachrichten in übernommenen bzw. allen Tickets,
+Whitelist-Bewerbungen, Abstürze und Hänger (mit Starter), Plugin- und Paper-Updates, die auf den Neustart warten,
+Lag-Alarm, Wartungen und die Meldungen der anderen Plugins (z.B. gesperrte Chunkloader). Jeder bekommt nur, wofür er
+die Rechte hat.
 
-- Meldungen direkt aufs Gerät, auch bei geschlossener Seite: neue Tickets, Nachrichten in meinen Tickets, alle
-  Ticket-Nachrichten, gesperrte Chunkloader, Lag-Alarm, Wartungen. Jeder legt selbst fest, welche er bekommt - und
-  bekommt nur, wofür er die Rechte hat.
+- **Posteingang** (Brief oben rechts): Schild-Symbol, ein Klick führt direkt zur passenden Seite (Ticket, Server,
+  Plugins …). Ist der Anlass erledigt (Ticket übernommen oder geschlossen, Update installiert …), wird die Meldung
+  grau mit „erledigt“ und zählt nicht mehr als neu. Mehrere gleiche kurz hintereinander stehen als eine Zeile
+  („3 Meldungen“, aufklappbar). Ein ungelesener Absturz färbt den Brief rot. Aufbewahrt 60 Tage, archivierbar.
+- **Im Spiel**: eine kurze Chatzeile mit den Einzelheiten im Hover und **[Öffnen]** (braucht `web.public-url`);
+  mehrere gleiche kurz hintereinander als eine Zeile; im Duell erst nach der Runde. Beim Betreten „n ungelesene
+  Team-Meldungen“. Tickets und Lag-Alarm behalten ihre gewohnte Nachricht (mit Knöpfen), folgen aber derselben Wahl.
+  **`/mradmin mute [dauer|off]`** schaltet das im Spiel stumm (ohne Angabe umschalten) - Posteingang und Push
+  laufen weiter.
+- **Konto → Benachrichtigungen**: eine Tabelle, nach Plugin gruppiert, pro Art je ein Schalter für **Posteingang**, **Push** und
+  **Im Spiel**. Abstürze bleiben immer im Posteingang; Wartungen kommen im Spiel ohnehin an alle.
+- Für alle abschalten: `notifications.disabled` in der `config.yml` (im Browser: Konfiguration → Team-Meldungen).
+
+## Push-Benachrichtigungen
+Unter **Konto → Benachrichtigungen** (Spalte Push).
+
+- Team-Meldungen direkt aufs Gerät, auch bei geschlossener Seite.
 - Pro Gerät einschaltbar (mehrere Geräte möglich, „Test senden“). Ein Gerät, das abgemeldet wird, bekommt nichts mehr.
 - Ohne Drittanbieter: Standard-Web-Push (VAPID, verschlüsselt - der Push-Dienst des Browsers kann nichts mitlesen).
   Auf iPhone/iPad nur als installierte App (Teilen → „Zum Home-Bildschirm“) und über HTTPS.
@@ -344,7 +400,8 @@ Nur für Admins (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole)
   (`web-console`), gesperrte Versuche im Protokoll.
 
 ## Entbannungsanträge & Kontaktformular
-Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`web.requests` in der Config).
+Öffentliche Seiten ohne Anmeldung, alle landen als Tickets beim Team (`web.requests` in der Config): Entbannung,
+Kontakt und die Whitelist-Bewerbung.
 
 - **Entbannung** (`<public-url>/entbannung`, braucht LibertyBans): Wer gebannt ist und joinen will, sieht in der
   Ban-Meldung die Adresse und einen **persönlichen Code** (z. B. `1-K7F2QX`). Nur mit Name und Code sieht man den
@@ -358,6 +415,15 @@ Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`w
   - Entbannungsanträge sind auch **ingame** im Ticket-Menü sichtbar.
 - **Kontakt** (`<public-url>/kontakt`, verlinkt unter dem Impressum und in der Fußzeile): Name, Mail-Adresse, Betreff,
   Nachricht. Diese Anfragen gibt es **nur im Web**, ingame tauchen sie nie auf.
+- **Whitelist-Bewerbung** (`<public-url>/bewerben` und als Widget „Whitelist-Bewerbung“ auf der Startseite für Gäste,
+  `web.requests.application.enabled`, Standard aus, braucht den Mailversand): Name, Minecraft-Name, E-Mail. Den Namen
+  prüft MRadmin bei Mojang (Offline-Server: Offline-UUID); wer schon auf der Whitelist steht oder schon eine offene
+  Bewerbung hat, wird abgewiesen. Erst nach dem **Bestätigungslink per Mail** (24 Stunden gültig) kommt die Bewerbung als
+  **Ticket** zum Team. Darin: **Annehmen und whitelisten** (setzt den Spieler mit `whitelist add` auf die Whitelist)
+  oder **Ablehnen** (Text im Antwortfeld = Begründung), Rückfragen über das Antwortfeld - beides mit
+  `mradmin.applications` (in `mradmin.groups.staff`). Im Banner der Startseite steht für Gäste zusätzlich ein Knopf **Bewerben** (ausgegraut, solange Bewerbungen geschlossen sind). Angenommen: Mail mit der Serveradresse
+  (`web.requests.application.server-address`) und dem Statuslink, über den sich der Bewerber gleich ein **Konto für die
+  Weboberfläche** anlegt (Passwort, angemeldet mit Minecraft-Name oder E-Mail) - ohne vorher im Spiel gewesen zu sein.
 - Nach dem Absenden bekommt man einen **privaten Statuslink** (`/anfrage/...`): Stand, Verlauf, antworten,
   Einspruch.
 - **Mails** (optional, Abschnitt `mail`): Eingangsbestätigung mit Statuslink, Antworten des Teams und die

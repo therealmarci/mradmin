@@ -35,6 +35,8 @@ public final class StarterLink {
     private ServerSettings settings;
     private final Set<String> planned = new HashSet<>();
     private boolean warnedNoRestart;
+    private long pausedUntil;
+    private String pausedBy = "";
     private volatile long lastTick;
     private volatile String wish;
     private BukkitTask tickTask;
@@ -44,6 +46,8 @@ public final class StarterLink {
     private volatile long paperChecked;
     private volatile boolean paperFailed;
     private int paperAnnounced = -1;
+    /** Build lying in paper-pending.jar (downloaded ahead, checksum checked), -1 = none. */
+    private volatile int paperStaged = -1;
     private BukkitTask paperTask;
 
     public StarterLink(MRAdmin plugin) {
@@ -72,7 +76,8 @@ public final class StarterLink {
         settings = ServerSettings.load(plugin.getConfig(), plugin.getLogger());
         warnedNoRestart = false;
         stopTasks();
-        scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 200L, 200L);
+        loadPause();
+        scheduleTask = Bukkit.getScheduler().runTaskTimer(plugin, this::checkSchedule, 100L, 20L);
         // Paper: first check after 10 seconds, then every 15 minutes (shown on the server overview).
         paperTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::checkPaper, 200L, 15 * 60 * 20L);
         if (!active()) {
@@ -93,6 +98,9 @@ public final class StarterLink {
      * written once into config.yml on the first start - before storage and web interface start - and the file is
      * deleted. Only these keys, so nothing else can be set this way.
      */
+    /** Plugin channels from the installation (seed.properties) - the VersionManager takes them over once. */
+    static final java.util.Map<String, String> SEEDED_CHANNELS = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void applySeed(MRAdmin plugin) {
         String env = System.getenv(StarterFiles.ENV);
         if (env == null || env.isBlank()) {
@@ -109,8 +117,18 @@ public final class StarterLink {
             if (value == null) {
                 continue;
             }
-            plugin.getConfig().set(key, key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value) : value);
-            taken.add(key.equals("web.public-url") ? key : key + "=" + value);
+            Object typed = key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value)
+                    : key.equals("web.trusted-proxies") ? java.util.Arrays.stream(value.split(",")).map(String::trim)
+                            .filter(x -> !x.isEmpty()).toList() : value;
+            plugin.getConfig().set(key, typed);
+            taken.add(key.equals("web.public-url") || key.equals("versions.dev-token") ? key : key + "=" + value);
+        }
+        for (String key : seed.stringPropertyNames()) {
+            if (key.startsWith(at.marcelr.mradmin.starter.Setup.SEED_PLUGIN_CHANNEL)) {
+                String name = key.substring(at.marcelr.mradmin.starter.Setup.SEED_PLUGIN_CHANNEL.length());
+                SEEDED_CHANNELS.put(name, seed.getProperty(key).trim());
+                taken.add("channel of " + name + "=" + seed.getProperty(key).trim());
+            }
         }
         plugin.saveConfig();
         try {
@@ -208,6 +226,52 @@ public final class StarterLink {
 
     // ------------------------------------------------------------------ planned restarts
 
+    /** How long "pause planned restarts" lasts. */
+    public static final long PAUSE_MILLIS = 24 * 3_600_000L;
+
+    /** Until when planned restarts are paused (epoch ms), 0 = not paused. */
+    public long pausedUntil() {
+        return pausedUntil > System.currentTimeMillis() ? pausedUntil : 0;
+    }
+
+    public String pausedBy() {
+        return pausedUntil() > 0 ? pausedBy : null;
+    }
+
+    /**
+     * Pauses planned restarts for {@link #PAUSE_MILLIS} (a running planned countdown is cancelled) or switches them
+     * on again. Kept over restarts (storage "restart-pause"). Main thread.
+     */
+    public void pauseSchedule(boolean pause, String by) {
+        pausedUntil = pause ? System.currentTimeMillis() + PAUSE_MILLIS : 0;
+        pausedBy = pause ? by : "";
+        if (pause && plugin.restarts().running() && "schedule".equals(plugin.restarts().by())) {
+            plugin.restarts().cancel(by);
+        }
+        plugin.getLogger().info(by + (pause ? " paused planned restarts for 24 hours." : " switched planned restarts on again."));
+        plugin.discord().log(pause ? "server-schedule-paused" : "server-schedule-resumed", "admin", by);
+        org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+        y.set("until", pausedUntil);
+        y.set("by", pausedBy);
+        String text = y.saveToString();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.storage().saveState("restart-pause", text));
+    }
+
+    private void loadPause() {
+        try {
+            String text = plugin.storage().loadState("restart-pause");
+            if (text != null && !text.isBlank()) {
+                org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+                y.loadFromString(text);
+                pausedUntil = y.getLong("until");
+                pausedBy = y.getString("by", "");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Could not read the pause of planned restarts (restart-pause): " + e.getMessage());
+        }
+    }
+
+    /** Every second: starts the countdown so that it begins exactly countdown before the planned time. */
     private void checkSchedule() {
         if (settings.restartTimes().isEmpty() || plugin.restarts().running()) {
             return;
@@ -226,11 +290,18 @@ public final class StarterLink {
                 ZonedDateTime at = day.atTime(time).atZone(now.getZone());
                 long until = at.toInstant().toEpochMilli() - now.toInstant().toEpochMilli();
                 String key = at.toString();
-                if (until > 0 && until <= settings.countdown() + 15_000L && planned.add(key)) {
+                if (until > 0 && until <= settings.countdown() + 1_000L && planned.add(key)) {
+                    if (at.toInstant().toEpochMilli() < pausedUntil()) {
+                        plugin.getLogger().info("Planned restart at " + time + " skipped - planned restarts are paused.");
+                        return;
+                    }
                     plugin.getLogger().info("Planned restart at " + time + ".");
                     String why = plugin.messages().server(() -> plugin.messages().plain("restart-reason-schedule"))
                             .replace("{time}", time.toString());
-                    plugin.restarts().start(until, "schedule", true, why);
+                    // Checked every second: a countdown that begins on time is announced with the round value (15m,
+                    // not 14m 59s). Later (server started within the countdown) it gets the time that is left.
+                    long delay = Math.abs(until - settings.countdown()) <= 1_000L ? settings.countdown() : until;
+                    plugin.restarts().start(delay, "schedule", true, why);
                     return;
                 }
             }
@@ -240,16 +311,17 @@ public final class StarterLink {
         }
     }
 
-    /** The next planned restart, or null. */
+    /** The next planned restart (after a pause), or null. */
     public ZonedDateTime nextPlanned() {
         if (settings == null || settings.restartTimes().isEmpty()) {
             return null;
         }
         ZonedDateTime now = ZonedDateTime.now(plugin.settings().zone());
+        long paused = pausedUntil();
         ZonedDateTime best = null;
         for (LocalTime time : settings.restartTimes()) {
             ZonedDateTime at = now.toLocalDate().atTime(time).atZone(now.getZone());
-            if (!at.isAfter(now)) {
+            while (!at.isAfter(now) || at.toInstant().toEpochMilli() < paused) {
                 at = at.plusDays(1);
             }
             if (best == null || at.isBefore(best)) {
@@ -302,14 +374,17 @@ public final class StarterLink {
                 case "crash" -> {
                     plugin.getLogger().warning("The server crashed at " + when + " (" + e.detail() + ") - the starter started it again.");
                     plugin.discord().log("server-crash", "time", when, "reason", e.detail());
+                    plugin.push("server-crash", null, "server-crash", "/admin/server", null, "time", when, "reason", e.detail());
                 }
                 case "hang" -> {
                     plugin.getLogger().warning("The server hung at " + when + " (" + e.detail() + " s without a tick) - the starter ended and started it.");
                     plugin.discord().log("server-hang", "time", when, "seconds", e.detail());
+                    plugin.push("server-crash", null, "server-hang", "/admin/server", null, "time", when, "seconds", e.detail());
                 }
                 case "gave-up" -> {
                     plugin.getLogger().warning("The starter gave up at " + when + " after " + d[0] + " crashes.");
                     plugin.discord().log("server-gave-up", "time", when, "count", d[0], "minutes", d.length > 1 ? d[1] : "?");
+                    plugin.push("server-crash", null, "server-gave-up", "/admin/server", null, "time", when, "count", d[0]);
                 }
                 case "paper-update" -> {
                     plugin.getLogger().info("Paper was updated from build " + d[0] + " to " + (d.length > 1 ? d[1] : "?") + ".");
@@ -362,6 +437,13 @@ public final class StarterLink {
                         + Paper.buildOf(Bukkit.getVersion()) + ")" + (auto
                         ? " - the starter installs it on the next restart." : " - install it by hand or use the starter."));
             }
+            try {
+                stagePaper(update);
+            } catch (IOException e) {
+                // The starter downloads it itself on the restart then - only the early download failed.
+                paperStaged = -1;
+                plugin.getLogger().warning("Could not download Paper build " + update.id() + " ahead: " + e.getMessage());
+            }
         } catch (IOException | RuntimeException e) {
             paperFailed = true;
             plugin.getLogger().fine("Paper update check failed: " + e.getMessage());
@@ -369,6 +451,62 @@ public final class StarterLink {
             Thread.currentThread().interrupt();
         } finally {
             paperChecked = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * With the starter and server.paper-update: auto, the new build is downloaded now (checksum checked) and lies in
+     * paper-pending.jar - the starter only has to put it in place on the next restart. An older file goes away.
+     */
+    private void stagePaper(Paper.Build update) throws IOException, InterruptedException {
+        if (!active()) {
+            return;
+        }
+        Path jar = files.paperPending();
+        Path info = files.paperPendingInfo();
+        Properties have = StarterFiles.read(info);
+        int haveBuild = at.marcelr.mradmin.starter.Supervisor.integer(have, "build", -1);
+        boolean auto = settings.paperUpdate().equals("auto");
+        if (update == null || !auto) {
+            // Nothing (more) to install, or updates are not automatic (any more): no leftover file.
+            if (haveBuild >= 0 || Files.exists(jar)) {
+                Files.deleteIfExists(jar);
+                Files.deleteIfExists(info);
+            }
+            paperStaged = -1;
+            return;
+        }
+        if (haveBuild == update.id() && Files.isRegularFile(jar)) {
+            paperStaged = haveBuild;
+            return;
+        }
+        plugin.getLogger().info("Downloading Paper build " + update.id() + " for the next restart ...");
+        Files.deleteIfExists(info);
+        new Paper(at.marcelr.mradmin.starter.Main.userAgent()).download(update, jar);
+        Properties p = new Properties();
+        p.setProperty("build", String.valueOf(update.id()));
+        p.setProperty("minecraft", update.minecraft());
+        p.setProperty("sha256", update.sha256());
+        StarterFiles.write(info, p, "Paper build downloaded by MRadmin - installed by the starter on the next restart");
+        paperStaged = update.id();
+        plugin.getLogger().info("Paper build " + update.id() + " is downloaded - it is installed on the next restart.");
+        plugin.push("update-ready", "paper:" + update.id(), "paper-ready", "/admin/server", null, "build", update.id());
+    }
+
+    /** Paper build downloaded ahead and installed on the next restart, -1 = none. */
+    public int paperStaged() {
+        return paperStaged;
+    }
+
+    /**
+     * Once in a planned restart, 5 minutes before the end: asks Paper and GitHub again, so a build or plugin release
+     * from the last hours still comes along (downloads as versions.auto-download / server.paper-update allow).
+     */
+    public void recheckBeforeRestart() {
+        plugin.getLogger().info("Planned restart in 5 minutes - checking Paper and plugins for updates once more.");
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::checkPaper);
+        if (plugin.versions() != null) {
+            plugin.versions().check(null);
         }
     }
 

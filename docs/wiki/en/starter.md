@@ -10,10 +10,11 @@ The starter is **optional**. Without it MRadmin works as before.
 ## What it does
 - **Restart and stop with a countdown** from the browser (page **Server**, tab Overview), in game (`/mradmin restart`, `/mradmin stop`) or on the machine (`mrserver restart`, `mrserver stop`). Announced in game like `/mradmin announce restart` (presets `restart` and `stop` in the language file), in the community Discord only with `server.discord-announce: true`.
 - **With a reason:** Every restart and stop is shown with its reason in the console, the [log](weboberflaeche.md) and the team Discord. Add your own reason at the end (`/mradmin restart 5m hardware swap`, `mrserver stop 10m moving`) or type it into the **Reason** field in the browser. Without one, MRadmin names it itself: "Planned restart (05:00)", waiting updates (e.g. "Updates: MRchunks 1.2.2, Paper 244") or "no reason given".
-- **Daily restarts** at fixed times (`server.restart-times`); the countdown starts before.
+- **Daily restarts** at fixed times (`server.restart-times`). The countdown starts exactly `server.countdown` before (default 15 minutes). On the page **Server** you can **pause them for 24 hours** (e.g. during an event) or **skip** a running planned restart.
+- **Enough warning for the players:** in the browser, restart and stop offer 15, 30 and 60 minutes (`versions.restart-delays`). Shorter times only through the red button in the row **Emergency** (for restart and stop): it first asks for your 2FA code or passkey again, then for the time (`versions.emergency-delays`) and a reason. Players in a duel get the countdown as a line above the hotbar instead of a title across the screen.
 - **Crashes:** if the server goes down, the starter starts it again after 10 seconds. After `server.crashes.max` crashes within `server.crashes.window-minutes` minutes (default 3 in 15) it gives up - then something is fundamentally wrong and the server stays down until you look.
 - **Hangs:** if the server has not ticked for `server.hang-seconds` seconds (default 180), the starter ends it and starts it again.
-- **Paper updates** (`server.paper-update: auto`): before every start the newest **stable** build of your Minecraft version from the official PaperMC download, only with a matching checksum. **It never installs a new Minecraft version (e.g. 26.3 → 26.4).** If a new build does not start, the starter goes back to the old one by itself and skips the broken one. MRadmin checks every 15 minutes whether Paper is up to date (also without the starter) and shows it on the page **Server**.
+- **Paper updates** (`server.paper-update: auto`): before every start the newest **stable** build of your Minecraft version from the official PaperMC download, only with a matching checksum. **It never installs a new Minecraft version (e.g. 26.3 → 26.4).** If a new build does not start, the starter goes back to the old one by itself and skips the broken one. MRadmin checks every 15 minutes whether Paper is up to date (also without the starter) and shows it on the page **Server**. With the starter MRadmin downloads a new build right away - the control card then shows "ready for the restart", and the restart does not have to download first. 5 minutes before a planned restart MRadmin checks Paper and the plugins once more.
 - **Reports:** crashes, hangs, giving up and Paper updates appear after the next start in the console, in the [log](weboberflaeche.md#log-mradminwebaudit) and in the Discord log (events `server-crash`, `server-hang`, `server-gave-up`, `paper-updated`, `paper-rollback`).
 - **Autostart** when the machine boots.
 
@@ -27,10 +28,13 @@ The starter is **optional**. Without it MRadmin works as before.
 | Linux (as a normal user, not root) | `curl -fsSL https://mrtechnology.marcelr.at/install.sh \| sh` |
 | Windows (PowerShell) | `irm https://mrtechnology.marcelr.at/install.ps1 \| iex` |
 
-The script checks Java 25 and installs it on request (Debian/Ubuntu with `sudo apt`, Windows with `winget`), asks for the **folder** (default `~/MINECRAFT/Server` or `%USERPROFILE%\MINECRAFT\Server`, must be empty), the **memory** (min./max.), the **public address of the web interface** (optional) and the [Minecraft EULA](https://aka.ms/MinecraftEULA). Then it downloads MRadmin and Paper (both with checksum), switches on the web interface (only locally on port 8125, storage SQLite) and on request sets up the autostart and starts. Install more MRtechnology plugins afterwards in the browser under **Server → Plugins**.
+The script checks Java 25 and installs it on request (Debian/Ubuntu with `sudo apt`, Windows with `winget`), asks for the **folder** (default `~/MINECRAFT/Server` or `%USERPROFILE%\MINECRAFT\Server`, must be empty), the **memory** (min./max.), the **public address of the web interface** (optional), whether you want **beta versions** (default no; yes = the newest MRadmin beta if it is newer than the stable version, and `versions.channel: beta` for all plugins) and the [Minecraft EULA](https://aka.ms/MinecraftEULA). Then it downloads MRadmin and Paper (both with checksum), switches on the web interface (only locally on port 8125, storage SQLite) and on request sets up the autostart and starts. Install more MRtechnology plugins afterwards in the browser under **Server → Plugins**.
 
 > [!TIP]
-> Without questions, e.g. for scripts: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (also `--dir <folder>`, `--no-start`); Windows with the environment variables `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` before the command. The scripts are public: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+> Without questions, e.g. for scripts: Linux `… | sh -s -- --memory-min 4G --memory-max 4G --web-url https://admin.example.com --accept-eula --yes` (also `--dir <folder>`, `--no-start`, `--beta` or `--stable`, `--proxy here|docker|<address>`); Windows with the environment variables `MR_DIR`, `MR_MEMORY_MIN`, `MR_MEMORY_MAX`, `MR_WEB_URL`, `MR_PROXY`, `MR_CHANNEL=beta`, `MR_ACCEPT_EULA=1`, `MR_YES=1`, `MR_START=0` before the command. The scripts are public: [install.sh](https://mrtechnology.marcelr.at/install.sh), [install.ps1](https://mrtechnology.marcelr.at/install.ps1).
+
+> [!NOTE]
+> Test servers with **dev builds** (every development state) only with the developer's release token: Linux `--dev` (asks for the token) or `MR_DEV_TOKEN`, Windows `MR_DEV_TOKEN`. MRadmin then comes as a dev build, the other plugins follow beta; the token goes into `config.yml` as `versions.dev-token`.
 
 **By hand:**
 1. Create an empty folder and put **`mrserver.sh`** (Linux) or **`mrserver.cmd`** (Windows) from the [MRadmin download](https://mrtechnology.marcelr.at/download/mradmin/) into it.
@@ -70,10 +74,10 @@ In the server folder `./mrserver.sh <command>` (Linux) or `mrserver <command>` (
 
 | Command | What it does |
 |---|---|
-| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …]` | set up the folder, download Paper if missing; MRadmin takes memory and web interface over into `config.yml` on its first start |
+| `setup [--accept-eula] [--mode …] [--memory-min 2G] [--memory-max 4G] [--web] [--web-url …] [--proxy here\|docker\|<address>] [--channel stable\|beta\|dev]` | set up the folder, download Paper if missing; MRadmin takes memory, web interface and channel over into `config.yml` on its first start. `--proxy` says where your reverse proxy runs: `here` (this machine, MRadmin only listens locally), `docker` (Docker on this machine: listens on all addresses, trusts `172.16.0.0/12`) or the address/range of another machine. `--channel` only works on a new server (dev needs the token in `MRSERVER_DEV_TOKEN`) |
 | `install` · `uninstall` | autostart on · off (a running server keeps running) |
 | `start` · `run` | start in the background · start in the current terminal |
-| `stop [time\|now]` · `restart [time\|now]` | stop or restart with a countdown (without a time: `server.countdown`, default 5 minutes) |
+| `stop [time\|now]` · `restart [time\|now]` | stop or restart with a countdown (without a time: `server.countdown`, default 15 minutes) |
 | `cancel` | cancel a countdown |
 | `status` | is the server running? Paper build, mode |
 | `console <command>` | send a command to the server console |
@@ -90,7 +94,7 @@ Times like `30s`, `5m`, `1h`, a number (seconds) or `now`. If MRadmin does not a
 | `server.java-flags` | empty | extra Java options for tuning (e.g. Aikar's flags) |
 | `server.paper-update` | `auto` | `auto` = on every start, `notify` = only show, `off` |
 | `server.restart-times` | `[]` | daily restarts, e.g. `["05:00"]` (time zone `general.timezone`) |
-| `server.countdown` | `5m` | countdown of planned restarts and of `mrserver stop/restart` without a time |
+| `server.countdown` | `15m` | countdown of planned restarts and of `mrserver stop/restart` without a time |
 | `server.plain-stop` | `stop` | what a plain `/stop` does: `stop` = the server stays down, `restart` = it comes back |
 | `server.discord-announce` | `false` | countdown of restarts/stops also in the community Discord (the team log always gets it) |
 | `server.crashes.max` · `window-minutes` | `3` · `15` | when the starter gives up |

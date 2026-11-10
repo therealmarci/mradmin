@@ -15,6 +15,8 @@ public final class Perms {
     // tickets
     public static final String TICKETS_CREATE = "mradmin.tickets.create";
     public static final String TICKETS_NOTIFY = "mradmin.tickets.notify";
+    /** /mradmin mute - team notices in the game off for a while. */
+    public static final String NOTIFY_MUTE = "mradmin.notify.mute";
     public static final String TICKETS_VIEW = "mradmin.tickets.view";
     public static final String TICKETS_REPLY = "mradmin.tickets.reply";
     public static final String TICKETS_CLAIM = "mradmin.tickets.claim";
@@ -69,6 +71,10 @@ public final class Perms {
     public static final String MAP = "mradmin.map";
     public static final String MAP_ADMIN = "mradmin.map.admin";
     public static final String CONFIG = "mradmin.config";
+    /** Look of the web interface: name, logo, colour, footer (Server -> Appearance). */
+    public static final String APPEARANCE = "mradmin.appearance";
+    /** Accept or reject whitelist applications (their tickets). */
+    public static final String APPLICATIONS = "mradmin.applications";
 
     private Perms() {
     }

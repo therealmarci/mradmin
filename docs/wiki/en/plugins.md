@@ -1,9 +1,27 @@
 # Plugins & updates
 
-In the web interface under **Plugins** (page "Plugin configuration") you see **all MRtechnology plugins**: at the top the ones on your server with installed and newest version and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+In the web interface under **Server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, **latest version in the channel** (badge **Up to date** when it is installed, **New** when not) and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+
+## Channels: stable, beta, dev
+Every plugin follows a **channel** - switch it in the column **Channel** (`mradmin.versions.install`):
+
+| Channel | What comes | For whom |
+|---|---|---|
+| **Stable** | stable versions only (`STA-…`) | every server - default |
+| **Beta** | also betas (`BET-…`) - new features earlier, not quite finished | if you want to try new things early |
+| **Dev** | every development build (after every commit), unfinished | test servers only, only with the release token |
+
+- Without a choice of its own a plugin follows the **default channel** `versions.channel` (`stable` or `beta`); "back to default" removes the own choice. 0.x plugins only exist as beta and always get betas.
+- **Back to stable never downgrades:** a running beta or dev build stays until a newer stable version comes (older versions could not handle the settings that were already migrated).
+- **Protection against steps back** - for every channel, also for `versions.auto-download`:
+  - If the offered version has a lower `config-version` (config.yml) or `lang-version` (language files) than your server, it is **not installed**: your settings were already migrated by a newer version.
+  - If the running and the offered build both come from GitHub (all releases and dev builds), the offered one must be a **successor** of the running one. Important after dev: a dev build carries the number of the last release - a later hotfix would look "newer" but would remove the features of the dev build again. It is offered only once it contains the dev state.
+  - Blocked versions show **"Step back blocked"** with the reason on the page. If you really want to go back, do it by hand: put the old JAR in and restore the `config.yml` from a backup (`config.v<number>.backup.yml`).
+- **Stable is greyed out** as long as there is no stable version yet (plugins with only betas so far, 0.x). **Beta can always be chosen** - it also gets the stable versions, so you can stay on beta even while a stable is the newest.
+- **Dev** only appears when a **valid release token** is in the configuration (`versions.dev-token`, you get it from the developer). If it is wrong, dev stays hidden and the page shows a note. The dev builds lie sealed in the GitHub release `mc0-dev`; MRadmin opens them with the token and checks the checksum. A plugin that runs a dev build is marked with **Dev** and the commit (e.g. `Dev c44ebd6`). `versions.auto-download` fetches dev builds by itself only with `all`.
 
 ## Install
-You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. If there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them is offered.
+You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. What gets installed is what the channel of the plugin offers (see above); if there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them.
 
 ## Configure in the browser
 The page of an installed plugin has the tab **Configuration** (`mradmin.config`, in `mradmin.groups.admin`): all settings of `config.yml` as a form with explanations (German/English). Saving checks every value, writes the file (comments stay, the old file is kept next to it as `config.backup-web.yml`) and reloads the plugin right away - without a command, without a restart. Editing by hand still works. Available for MRadmin and all MRtechnology plugins in a current version.
@@ -19,7 +37,7 @@ The page of an installed plugin has the tab **Configuration** (`mradmin.config`,
 > [!TIP]
 > Easiest with the **[starter](starter.md)** built into MRadmin: it starts the server again after every restart, crash or hang, installs Paper updates and can restart daily. Then you do not need `versions.restart-method`; you can also restart at any time with `/mradmin restart`.
 
-After a download or installation the page shows "Restart needed". A **restart button** (`mradmin.server.restart`) with a countdown (`versions.restart-delays`, default 5 minutes, 1 minute, right away, announced like `/mradmin announce restart`) only exists while an update or a newly installed plugin waits for the restart, and only once you set `versions.restart-method` - because a server cannot start itself again, something outside has to do it:
+After a download or installation the page shows "Restart needed". A **restart button** (`mradmin.server.restart`) with a countdown (`versions.restart-delays`, default 15, 30 and 60 minutes, announced like `/mradmin announce restart`; shorter times only through the **Emergency** button after signing in again and with a reason, `versions.emergency-delays`) only exists while an update or a newly installed plugin waits for the restart, and only once you set `versions.restart-method` - because a server cannot start itself again, something outside has to do it:
 
 | `versions.restart-method` | What happens |
 |---|---|

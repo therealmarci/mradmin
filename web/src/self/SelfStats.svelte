@@ -23,7 +23,7 @@
 
   function show(which) {
     tab = which;
-    history.replaceState(null, '', which === 'server' ? '/me/stats#server' : '/me/stats');
+    history.replaceState(null, '', which === 'server' ? '/stats#server' : '/stats');
   }
 
   async function setHidden(hidden) {

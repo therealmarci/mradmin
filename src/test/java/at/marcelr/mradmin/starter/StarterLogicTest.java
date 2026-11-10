@@ -139,7 +139,7 @@ class StarterLogicTest {
         assertNotNull(Setup.webUrlProblem("https://x.com/\"><script>"));
 
         StarterFiles files = new StarterFiles(dir);
-        Setup.seed(files, "2G", "6G", true, "https://admin.example.com");
+        Setup.seed(files, "2G", "6G", true, "https://admin.example.com", null, null);
         java.util.Properties launch = StarterFiles.read(files.launch());
         assertEquals("2G", launch.getProperty("memory-min"));
         assertEquals("6G", launch.getProperty("memory-max"));

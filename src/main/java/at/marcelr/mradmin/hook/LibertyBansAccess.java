@@ -81,6 +81,34 @@ final class LibertyBansAccess implements Bans {
     }
 
     @Override
+    public List<Listed> recent(boolean activeOnly, int limit) throws Exception {
+        Set<Long> active = new HashSet<>();
+        List<Punishment> chosen;
+        var builder = api.getSelector().selectionBuilder();
+        if (activeOnly) {
+            chosen = builder.selectActiveOnly().limitToRetrieve(limit).build()
+                    .getAllSpecificPunishments(SortPunishments.NEWEST_FIRST)
+                    .toCompletableFuture().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            chosen.forEach(p -> active.add(p.getIdentifier()));
+        } else {
+            chosen = builder.selectAll().limitToRetrieve(limit).build()
+                    .getAllSpecificPunishments(SortPunishments.NEWEST_FIRST)
+                    .toCompletableFuture().get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            for (Punishment p : api.getSelector().selectionBuilder().selectActiveOnly().build()
+                    .getAllSpecificPunishments().toCompletableFuture().get(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                active.add(p.getIdentifier());
+            }
+        }
+        List<Listed> result = new ArrayList<>();
+        for (Punishment p : chosen) {
+            if (p.getVictim() instanceof PlayerVictim victim) {
+                result.add(new Listed(victim.getUUID(), entry(p, active.contains(p.getIdentifier()))));
+            }
+        }
+        return result;
+    }
+
+    @Override
     public Map<UUID, Set<String>> activeBansAndMutes() throws Exception {
         Map<UUID, Set<String>> result = new HashMap<>();
         for (Punishment p : api.getSelector().selectionBuilder()

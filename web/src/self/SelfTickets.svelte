@@ -19,6 +19,11 @@
   async function load() {
     try {
       data = await api('GET', '/self/tickets');
+      // A link with #new (e.g. from the inbox) opens the form right away.
+      if (location.hash === '#new' && data.categories.length && !creating) {
+        history.replaceState(null, '', '/news/tickets');
+        start();
+      }
     } catch (e) {
       error = errorText(e);
     }
@@ -56,7 +61,7 @@
     error = '';
     try {
       const r = await api('POST', '/self/tickets', { category, target: target.trim(), subject: subject.trim(), text });
-      go('/me/tickets/' + r.id);
+      go('/news/tickets/' + r.id);
     } catch (e) {
       error = errorText(e);
     } finally {
@@ -160,7 +165,7 @@
         <ul class="list">
           {#each shown as x (x.id)}
             <li>
-              <button class="ticket" class:unread={x.unread} class:closed={!x.open} onclick={() => go('/me/tickets/' + x.id)}>
+              <button class="ticket" class:unread={x.unread} class:closed={!x.open} onclick={() => go('/news/tickets/' + x.id)}>
                 <span class="t-top">
                   <span class="id">#{x.id}</span>
                   <span class="chip">{x.category}</span>

@@ -55,9 +55,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(20, Map.ofEntries(
+    private final Messages messages = new Messages(21, Map.ofEntries(
             // 20: restarts and stops name their reason.
             Map.entry(20, Set.of("discord.server-restart", "discord.server-stop", "server-usage")),
+            // 21: one sign-in for everyone - no setup links, /mradmin web reset.
+            Map.entry(21, Set.of("web-usage", "web-status")),
             // 19: the map is shown by MRadmin (player page), squaremap only renders.
             Map.entry(19, Set.of("help-map", "help-map-admin", "map-link", "map-unavailable", "map-status-on", "map-status-off")),
             // 18: only a short warning fills the screen, the text comes in the chat.
@@ -89,8 +91,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             Map.entry(15, Set.of("discord-announce.kuma-status-link")),
             Map.entry(16, Set.of(
                     "reload-invalid", "storage-pending", "health-alert", "health-recovered", "web-status", "web-off",
-                    "web-setup-link", "web-setup-link-other", "web-self-link", "web-self-no-url", "web-self-devices",
-                    "web-no-public-url", "web-target-no-permission", "announce-invalid-part", "mode-on", "mode-off",
+                    "web-self-link", "web-self-no-url", "web-self-devices",
+                    "announce-invalid-part", "mode-on", "mode-off",
                     "mode-off-no-world", "mode-resumed", "mode-save-failed", "mode-load-failed", "freeze-frozen",
                     "gui-hub-announce-lore", "gui-switch-admin-on-lore", "gui-switch-admin-off-lore",
                     "gui-switch-staffchat-on-lore", "gui-switch-staffchat-off-lore", "gui-status-activity-none-lore",
@@ -104,6 +106,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private DiscordAnnouncer discordAnnounce;
     private at.marcelr.mradmin.news.NewsDelivery newsDelivery;
     private at.marcelr.mradmin.web.self.XpPeaks xpPeaks;
+    private at.marcelr.mradmin.notify.TeamNotices notices;
     private final Announcer announcer = new Announcer(this);
     private MaintenanceManager maintenance;
     private AdminModeManager adminMode;
@@ -121,6 +124,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private at.marcelr.mradmin.map.MapService map;
     private Storage storage;
     private WebServer web;
+    private final at.marcelr.mradmin.branding.Branding branding = new at.marcelr.mradmin.branding.Branding(this);
+    private final at.marcelr.mradmin.branding.Landing landing = new at.marcelr.mradmin.branding.Landing(this);
     private HealthMonitor health;
     private StaffChat staffChat;
     private MenuListener menuListener;
@@ -159,10 +164,17 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.PublicRoutes.register(web);
         at.marcelr.mradmin.web.ItemRoutes.register(web);
         at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        at.marcelr.mradmin.web.BrandingRoutes.register(web);
+        // Every mail also as HTML in the look of the server.
+        web.requests().mailer().useHtml(branding::mail);
         web.playerSessions().load();
+        webAuth.takeOverOldSessions();
+        landing.load();
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
         items = new at.marcelr.mradmin.items.ItemAssets(this);
         web.push().load();
+        notices = new at.marcelr.mradmin.notify.TeamNotices(this);
+        notices.start();
         web.requests().load();
         health = new HealthMonitor(this);
 
@@ -180,6 +192,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.load();
         adminMode = new AdminModeManager(this);
         updateChecker = new UpdateChecker(this);
+        // The join notice follows the member's choice for update notices and /mradmin mute.
+        updateChecker.gameFilter(p -> notices == null || notices.wantsGame(p.getUniqueId(), "update-available"));
         versions = new at.marcelr.mradmin.versions.VersionManager(this);
         starter = new at.marcelr.mradmin.versions.StarterLink(this);
         restarts = new at.marcelr.mradmin.versions.RestartManager(this);
@@ -231,6 +245,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (xpPeaks != null) {
             xpPeaks.stop();
         }
+        if (notices != null) {
+            notices.stop();
+        }
         if (menuListener != null) {
             menuListener.stop();
             menuListener.closeAll();
@@ -255,6 +272,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (newsDelivery != null) {
             newsDelivery.incidents().stop();
+            newsDelivery.stop();
         }
         if (web != null) {
             web.playerSessions().flush();
@@ -316,6 +334,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         versions.start();
         menuListener.start();
         newsDelivery.incidents().start();
+        newsDelivery.start();
         // After all plugins are enabled: their modules bring the layers of the web map.
         Bukkit.getScheduler().runTask(this, map::start);
     }
@@ -457,17 +476,36 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     }
 
     /**
-     * A push notification to the team members who want this kind (texts "push-&lt;text&gt;-title/-body" from the
-     * language file, placeholders as name/value pairs). Does nothing while the web interface is off.
+     * A team notice of this kind (texts "push-&lt;text&gt;-title/-body" from the language file, placeholders as
+     * name/value pairs): inbox, push and game line as each member chose (see {@link #notices()}).
      */
     public void push(String kind, String text, String url, java.util.function.Predicate<java.util.UUID> who,
                      Object... placeholders) {
-        if (web == null) {
-            return;
+        push(kind, null, text, url, who, placeholders);
+    }
+
+    /** Like {@link #push(String, String, String, java.util.function.Predicate, Object...)} with what it is about
+     * ({@code ref}, e.g. "ticket:12") - the notice counts as done once that is settled. */
+    public void push(String kind, String ref, String text, String url, java.util.function.Predicate<java.util.UUID> who,
+                     Object... placeholders) {
+        if (notices != null) {
+            notices.send(kind, ref, text, url, who, placeholders);
         }
-        // Push notifications go to devices, not to players in the game - server language.
-        web.push().notify(kind, messages().server(() -> messages().plain("push-" + text + "-title", placeholders)),
-                messages().server(() -> messages().plain("push-" + text + "-body", placeholders)), url, who);
+    }
+
+    /** Team notices: inbox, push and short lines in the game. */
+    public at.marcelr.mradmin.notify.TeamNotices notices() {
+        return notices;
+    }
+
+    /** The look of the web interface (name, logo, colour) - also for mails, 2FA and passkeys. */
+    public at.marcelr.mradmin.branding.Branding branding() {
+        return branding;
+    }
+
+    /** The public start page in front of the sign-in. */
+    public at.marcelr.mradmin.branding.Landing landing() {
+        return landing;
     }
 
     public WebServer web() {

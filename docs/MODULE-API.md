@@ -319,7 +319,7 @@ sections:
 | `duration` | Dauer wie `15m`, `1h30m`, `2d` (Zahl = Minuten), mit Klartext daneben | `permanent: true` erlaubt `permanent` |
 | `strings` | Liste als Chips | `count` (genau so viele Einträge, dann feste Felder), `item: duration`, `permanent`, `item: time` (Uhrzeiten `HH:MM` mit Zeitwähler und Knopf „Hinzufügen“, sortiert, ohne Doppelte; ohne Anführungszeichen geschriebene Zahlen wie 330 werden als 05:30 gelesen) |
 | `ints` | Liste ganzer Zahlen als Chips | `min`, `max`, `count`, `unit` |
-| `choices` | Mehrfachauswahl aus festen Werten (Chips zum Anklicken) | `options` wie bei `choice` |
+| `choices` | Mehrfachauswahl aus festen Werten (Chips zum Anklicken) | `options` wie bei `choice`; eine Option mit `plugin: <Name>` erscheint nur, solange dieses Plugin installiert ist |
 | `worlds` | Welten des Servers zum Anklicken | |
 | `table` | Abschnitt mit Unterschlüsseln als Tabelle (z.B. Discord-Ereignisse) | `columns`: `{key, type: bool\|color\|int\|string, name, default}` (`default` = Wert, solange eine Zeile den Schlüssel nicht hat), `rows`: Name je Zeile |
 
@@ -339,6 +339,42 @@ Discord-Teil `plugin.mradmin().log(...)`.
 sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-mradmin-webhook`, eigene
 `webhook-url` leer): `log(...)` fürs Protokoll, `adminLog(...)` statt des eigenen Webhooks.
 
+## Neustarts (`nextRestart`, ab API 14)
+
+`MRadminService#nextRestart()` liefert den nächsten Neustart oder Stopp als `RestartInfo`, sonst `null`:
+
+- `at` - Zeitpunkt (Epoch-ms), `millisLeft()` - Restzeit
+- `restart` - `true` = der Server kommt wieder, `false` = Stopp
+- `countdown` - `true` = der Countdown läuft schon (Spieler werden gewarnt); `false` = nur geplant
+  (`server.restart-times`), kann noch ausgesetzt werden
+- `planned` - `true` = geplanter Neustart, `false` = von jemandem gestartet (Web, Befehl, `mrserver`)
+- `reason` - Grund in der Server-Sprache (kann leer sein)
+
+Ein laufender Countdown geht vor dem nächsten geplanten Neustart. Geplante Neustarts zählen nur, wenn etwas den
+Server zurückbringt (Starter oder `versions.restart-method`) und sie nicht gerade ausgesetzt sind. Billig, darf
+jeden Tick aufgerufen werden (Server-Thread). MRpvp nutzt es, um kurz vor einem Neustart keine Duelle mehr zu
+starten. Ankündigungen von MRadmin erreichen Spieler, für die ein Modul `busy` meldet, ohne Titel (nur Actionbar
+und Chat).
+
+## Team-Meldungen (`teamNotice`, ab API 15)
+
+Ein Modul meldet dem Team etwas - im Posteingang der Weboberfläche und als Push, so wie jedes Teammitglied es für
+diese Art unter **Konto → Benachrichtigungen** gewählt hat. Die Nachricht im Spiel schickt das Modul selbst (mit
+eigenen Knöpfen) - nur an Mitglieder, für die `teamNoticeInGame` `true` liefert:
+
+- `teamNotice(moduleId, kind, ref, link, texts)` - `kind` ist eine der eigenen `pushKinds()` (nur Mitglieder mit der
+  `viewPermission()` des Moduls bekommen sie), `link` ein Pfad der Weboberfläche (z.B. `/admin/features/mrchunks`),
+  `texts` liefert zu einem Sprachcode (`de`, `en` …) `{titel, text}` in dieser Sprache. `ref` (darf `null` sein) sagt,
+  worum es geht, z.B. `loader:12`.
+- `teamNoticeDone(moduleId, ref)` - der Anlass ist erledigt (z.B. der Loader läuft wieder): die Meldungen dazu werden
+  im Posteingang grau und zählen nicht mehr als neu.
+- `teamNoticeInGame(player, kind)` - für Module, die das Team im Spiel selbst benachrichtigen (z.B. mit Teleport-Knopf):
+  will dieses Mitglied die Art im Spiel und hat es nicht mit `/mradmin mute` stummgeschaltet? Mit älterem MRadmin
+  immer `true`.
+
+Mehrere gleiche Meldungen kurz hintereinander zeigt MRadmin im Posteingang zusammen. Ein Ticket über `report(…)` mit `Report#push()` landet ebenfalls im Posteingang (ohne eigene Zeile im
+Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -350,7 +386,7 @@ sorgt `log`. So nutzen die Plugins MRadmins Webhook als Rückfall (`discord.use-
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -18,8 +18,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Sign-in of players to their own page (the player area of the web interface, see {@link SelfRoutes}) - separate from
- * the team's web accounts. There is no password: the page (always the same address, it can be bookmarked) asks for a
+ * Signed-in browsers of the web interface - one kind of session for everyone (players and team, since 1.5; the
+ * accounts and their own sign-ins are in {@link at.marcelr.mradmin.web.auth.WebAuth}). Without an own sign-in: the page (always the same address, it can be bookmarked) asks for a
  * 6-digit code that {@code /web} gives in game (valid {@code player-web.code-seconds}, once). A signed-in browser
  * stays signed in for at most {@code player-web.session-days} after the code, and is signed out earlier after
  * {@code player-web.idle-days} without use - then the page asks for a new code. Only hashes of codes and cookie tokens
@@ -42,6 +42,11 @@ public final class PlayerSessions {
      */
     public record Session(String id, String hash, UUID player, String name, long created, long verified, long lastSeen,
                           long expires, String ip, String agent) {
+
+        /** The account (= the player). */
+        public UUID account() {
+            return player;
+        }
     }
 
     /** Result of redeeming a code: the cookie token, or an error key. */
@@ -197,6 +202,39 @@ public final class PlayerSessions {
             save();
         }
         return removed;
+    }
+
+    /** Signs out all browsers of the player except the one with the public id {@code keep} (null = all). @return how many */
+    public synchronized int revokeAllExcept(UUID player, String keep) {
+        if (keep == null) {
+            return revokeAll(player);
+        }
+        int before = sessions.size();
+        sessions.values().removeIf(s -> s.player().equals(player) && !s.id().equals(keep));
+        int removed = before - sessions.size();
+        if (removed > 0) {
+            save();
+        }
+        return removed;
+    }
+
+    public synchronized int count() {
+        return sessions.size();
+    }
+
+    /**
+     * Takes over a session of the old team interface (same cookie token hash), so the browser stays signed in.
+     * @return false if it has run out or is there already
+     */
+    public synchronized boolean adopt(String hash, String id, UUID player, String name, long created, long lastSeen,
+                                      String ip, String agent) {
+        if (sessions.containsKey(hash) || expiry(created, lastSeen) < System.currentTimeMillis()) {
+            return false;
+        }
+        sessions.put(hash, new Session(id == null ? Secrets.token(9) : id, hash, player, name, created, created,
+                lastSeen, expiry(created, lastSeen), ip == null ? "" : ip, agent == null ? "" : agent));
+        save();
+        return true;
     }
 
     /** Signs out the browser with this cookie. */

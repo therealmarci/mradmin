@@ -239,6 +239,30 @@ public final class Messages {
         }
     }
 
+    /**
+     * Runs {@code action} with the texts of one language ("de", "en" ...; unknown -> English) - for texts that are
+     * stored in every language at once (the team notices of the inbox).
+     */
+    public <T> T in(String code, Supplier<T> action) {
+        YamlConfiguration target = languages.getOrDefault(code, english);
+        YamlConfiguration previous = CURRENT.get();
+        CURRENT.set(target);
+        try {
+            return action.get();
+        } finally {
+            if (previous == null) {
+                CURRENT.remove();
+            } else {
+                CURRENT.set(previous);
+            }
+        }
+    }
+
+    /** The loaded languages ("de", "en" ...). */
+    public Set<String> languages() {
+        return Set.copyOf(languages.keySet());
+    }
+
     /** Runs {@code action} once per recipient, each time in the recipient's language (see {@link #as}). */
     public void each(Iterable<? extends CommandSender> recipients, Consumer<CommandSender> action) {
         for (CommandSender recipient : recipients) {
