@@ -11,7 +11,8 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Mein Spiel** (`/game/…`) | ein Reiter pro Plugin (Chunkloader, Duelle, Wegpunkte …) |
 | **Karte** (`/map`) | die Karte im Vollbild |
 | **Statistik** (`/stats`) | eigene Werte und Server-Ranglisten |
-| **Posteingang** (`/inbox`, Brief oben rechts) | aufgebaut wie ein E-Mail-Postfach: Warnungen oben, darunter Filter **Alles · Neuigkeiten · Changelogs · Tickets** und der Knopf **Neues Ticket**. Links eine Liste mit allem, was hereinkommt - Neuigkeiten, Changelogs und die eigenen Tickets gemischt, die neuesten oben, mit Tagestrennern; Ungelesenes ist fett, die Farbleiste zeigt den Zustand (neu blau, offenes Ticket grün, gelesen/geschlossen grau). Rechts wird der gewählte Eintrag gelesen bzw. der Ticket-Chat geführt; am Handy öffnet ein Tippen den Eintrag über die ganze Breite (mit „Zurück“). Die Zahl am Brief zeigt, was seit dem letzten Besuch neu ist (neue Beiträge, Antworten des Teams) |
+| **Neuigkeiten** (`/news`) | Reiter **Neuigkeiten** (`/news`), **Changelog** (`/news/changelog`) und **Tickets** (`/news/tickets`, eigene Tickets und neues Ticket) |
+| **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Aktive Warnungen stehen oben |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
 | Verwaltung | Reiter |

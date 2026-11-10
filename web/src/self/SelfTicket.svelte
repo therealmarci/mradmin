@@ -9,7 +9,7 @@
   import { dateTime } from '../lib/format.js';
 
   // onread: opening marks the ticket read - the inbox counter in the bar may load again
-  // embedded: inside the inbox panel (no back link)
+  // embedded: inside the inbox window (no back link)
   let { id, onread = null, embedded = false } = $props();
 
   let ticket = $state(null);
@@ -85,7 +85,7 @@
 </script>
 
 <div class="page">
-  {#if !embedded}<button class="back" onclick={() => go('/inbox')}>← {t('inbox.title')}</button>{/if}
+  {#if !embedded}<button class="back" onclick={() => go('/news/tickets')}>← {t('self.tickets.title')}</button>{/if}
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if ticket}

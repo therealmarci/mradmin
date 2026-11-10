@@ -45,6 +45,9 @@
   import SelfStats from './self/SelfStats.svelte';
   import SelfMap from './self/SelfMap.svelte';
   import Inbox from './self/Inbox.svelte';
+  import SelfNews from './self/SelfNews.svelte';
+  import SelfTickets from './self/SelfTickets.svelte';
+  import SelfTicket from './self/SelfTicket.svelte';
   import { poll } from './lib/poll.js';
 
   // null = signed out, undefined = still asking the server
@@ -165,9 +168,18 @@
     ...(player.areas?.length ? [{ path: `/game/${player.areas[0].module}/${player.areas[0].id}`, area: 'game', label: t('nav.game'), icon: 'grid' }] : []),
     ...(player.map ? [{ path: '/map', area: 'map', label: t('self.nav.map'), icon: 'pin' }] : []),
     ...(player.stats ? [{ path: '/stats', area: 'stats', label: t('self.nav.stats'), icon: 'chart' }] : []),
+    ...(newsTabs.length ? [{ path: newsTabs[0].path, area: 'news', label: t('self.nav.news'), icon: 'news' }] : []),
   ]);
 
-  // The inbox (letter at the top right): news, changelogs and own tickets; the counter = what is new since the last visit.
+  // Entry News: the tabs news, changelogs and own tickets
+  const newsTabs = $derived(!player ? [] : [
+    ...(player.news ? [{ id: 'news', label: t('self.news.areaNews'), path: '/news' },
+      { id: 'changelog', label: t('self.news.areaChangelog'), path: '/news/changelog' }] : []),
+    ...(player.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/news/tickets' }] : []),
+  ]);
+
+  // The inbox (letter at the top right): notifications about new posts, answers to own tickets (and team messages);
+  // the counter = unread notifications.
   const hasInbox = $derived(!!(player && (player.news || player.tickets)));
   let inboxCount = $state(0);
   async function loadInbox() {
@@ -225,6 +237,7 @@
     if (admin && area === 'community' && !sub.length) to = first(communityTabs);
     else if (admin && area === 'features' && !sub.length) to = first(featureTabs);
     else if (!admin && area === 'game' && sub.length < 2) to = first(gameTabs);
+    else if (!admin && area === 'news' && !sub.length && player && !player.news) to = first(newsTabs);
     if (to && to !== p) untrack(() => go(to, true));
   });
 
@@ -366,6 +379,15 @@
         {/if}
       {:else if area === 'stats' && player.stats}
         <SelfStats />
+      {:else if area === 'news' && newsTabs.length}
+        <AreaTabs tabs={newsTabs} current={sub[0] ?? 'news'} />
+        {#if sub[0] === 'tickets' && sub[1] && player.tickets}
+          {#key sub[1]}<SelfTicket id={Number(sub[1])} onread={loadInbox} />{/key}
+        {:else if sub[0] === 'tickets' && player.tickets}
+          <SelfTickets />
+        {:else if player.news}
+          {#key sub[0]}<SelfNews section={sub[0] === 'changelog' ? 'changelog' : 'news'} />{/key}
+        {/if}
       {:else if area === 'inbox' && hasInbox}
         <Inbox {player} onseen={loadInbox} />
       {:else}

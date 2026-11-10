@@ -1,7 +1,7 @@
 // Tiny router: the path decides the page, links change it without reloading. A "#anchor" or "?query" in the path stays
 // in the address (the page can use it), route.path is without them.
 //
-// Since 1.5 there is one interface: the player area without a prefix (/, /game/…, /map, /stats, /inbox/…, /account)
+// Since 1.5 there is one interface: the player area without a prefix (/, /game/…, /map, /stats, /news/…, /inbox, /account)
 // and the administration under /admin/…. Old addresses (bookmarks, links in Discord and mails, links inside older
 // pages) are translated here by canonical() - also go('/tickets/12') from a page lands on /admin/community/tickets/12.
 
@@ -10,14 +10,14 @@ const PLAYER = [
   [/^\/me\/login$/, () => '/'],
   [/^\/me\/devices$/, () => '/account'],
   [/^\/me\/map$/, () => '/map'],
-  [/^\/me\/news$/, () => '/inbox'],
+  [/^\/me\/news$/, () => '/news'],
   [/^\/me\/stats$/, () => '/stats'],
-  [/^\/me\/tickets(?:\/(\d+))?$/, (m) => '/inbox' + (m[1] ? '#ticket-' + m[1] : '')],
+  [/^\/me\/tickets(?:\/(\d+))?$/, (m) => '/news/tickets' + (m[1] ? '/' + m[1] : '')],
   // earlier layouts of 1.5: news and statistics under Server, tickets under Help, inbox with tabs
-  [/^\/(?:server|inbox)\/news$/, () => '/inbox'],
+  [/^\/(?:server|inbox)\/news$/, () => '/news'],
   [/^\/server\/stats$/, () => '/stats'],
-  [/^\/(?:help|inbox)(?:\/tickets(?:\/(\d+))?)$/, (m) => '/inbox' + (m[1] ? '#ticket-' + m[1] : '')],
-  [/^\/help$/, () => '/inbox'],
+  [/^\/(?:help|inbox)(?:\/tickets(?:\/(\d+))?)$/, (m) => '/news/tickets' + (m[1] ? '/' + m[1] : '')],
+  [/^\/help$/, () => '/news/tickets'],
   [/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/, (m) => `/game/${m[1]}/${m[2]}`],
 ];
 
@@ -30,7 +30,6 @@ const ADMIN = [
   [/^\/pvp((?:\/\d+)|(?:\/(?:kits|new-kit)(?:\/[a-z0-9_-]+)?))?$/, (m) => '/admin/features/mrpvp' + (m[1] ?? '')],
   [/^\/waypoints$/, () => '/admin/features/map'],
   [/^\/maintenance$/, () => '/admin/server/maintenance'],
-  [/^\/news$/, () => '/admin/community/news'],
   // first layout of 1.5 (area Communication, tab Settings)
   [/^\/admin\/communication\/maintenance$/, () => '/admin/server/maintenance'],
   [/^\/admin\/communication\/(news|announce)$/, (m) => '/admin/community/' + m[1]],
