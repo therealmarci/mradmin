@@ -152,6 +152,24 @@ public final class Channels {
         return request;
     }
 
+    /** One file with the releases of all MRtechnology plugins, built by the website (no GitHub API limit). */
+    static final String RELEASE_FEED = "https://mrtechnology.marcelr.at/api/releases.json";
+
+    /** MRadmin's releases from the website's file, null if it cannot be read. */
+    private static Object feedReleases() throws InterruptedException {
+        try {
+            HttpResponse<byte[]> r = get(RELEASE_FEED);
+            if (r.statusCode() != 200) {
+                return null;
+            }
+            Object repos = Json.object(Json.parse(new String(r.body(), StandardCharsets.UTF_8))).get("repos");
+            Object list = repos == null ? null : Json.object(repos).get(REPO);
+            return list instanceof java.util.List<?> ? list : null;
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
     /**
      * What to install for {@code channel}. Checks the release token before anything is changed.
      *
@@ -161,6 +179,11 @@ public final class Channels {
     public static Pick resolve(String channel, String token) throws IOException, InterruptedException {
         String minecraft = Main.minecraft();
         if ("beta".equals(channel)) {
+            // First the website's file with all releases (no GitHub API limit), then GitHub.
+            Object fromFeed = feedReleases();
+            if (fromFeed != null) {
+                return pickBeta(fromFeed, minecraft, Main.version());
+            }
             HttpResponse<byte[]> r = get("https://api.github.com/repos/" + REPO + "/releases?per_page=50");
             if (r.statusCode() != 200) {
                 throw new IOException("Could not look up the MRadmin betas (" + github(r.statusCode()) + ").");

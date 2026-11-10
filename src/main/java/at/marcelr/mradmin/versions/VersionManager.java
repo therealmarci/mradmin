@@ -4,6 +4,7 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Settings;
 import at.marcelr.mradmin.util.Versions;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
@@ -574,9 +575,13 @@ public final class VersionManager {
         Settings.VersionsSettings s = settings();
         worker.execute(() -> {
             try {
+                // The timer reads the website's file with all releases (no GitHub API limit); a click on "check now"
+                // asks GitHub directly, so a release of a few minutes ago shows up at once.
+                feed = by == null ? loadFeed() : null;
                 for (Entry e : list) {
                     checkOne(e);
                 }
+                feed = null;
                 checkedAt = System.currentTimeMillis();
             } finally {
                 checking = false;
@@ -610,7 +615,9 @@ public final class VersionManager {
         // Betas on the beta and dev channel, and always for 0.x - like the update check (Versions.wantsBeta).
         boolean prereleases = Versions.wantsBeta(e.installed, e.channel != Channel.STABLE);
         try {
-            String body = fetch("https://api.github.com/repos/" + e.repository + "/releases?per_page=50");
+            JsonElement fromFeed = feed == null ? null : feed.get(e.repository.toLowerCase(java.util.Locale.ROOT));
+            String body = fromFeed != null && fromFeed.isJsonArray() ? fromFeed.toString()
+                    : fetch("https://api.github.com/repos/" + e.repository + "/releases?per_page=50");
             JsonArray releases = JsonParser.parseString(body).getAsJsonArray();
             e.latest = ReleasePicker.pick(releases, e.name, e.minecraft, false, prereleases);
             if (e.latest == null && !e.isInstalled()) {
@@ -728,6 +735,30 @@ public final class VersionManager {
 
     private static String devUrl(Entry e, String file) {
         return "https://github.com/" + e.repository + "/releases/download/" + DEV_TAG + "/" + file;
+    }
+
+    /**
+     * One file with the releases of all MRtechnology plugins, built by the website from GitHub - GitHub allows only 60
+     * API requests per hour and IP without login, several servers behind one address used that up quickly.
+     */
+    private static final String RELEASE_FEED = "https://mrtechnology.marcelr.at/api/releases.json";
+    /** The repositories of the feed while a check runs (null = ask GitHub). */
+    private volatile com.google.gson.JsonObject feed;
+
+    /** The website's release file, null if it cannot be read (then GitHub is asked). */
+    private com.google.gson.JsonObject loadFeed() {
+        try {
+            HttpResponse<String> r = client.send(request(RELEASE_FEED).header("Accept", "application/json").build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() / 100 == 2) {
+                return JsonParser.parseString(r.body()).getAsJsonObject().getAsJsonObject("repos");
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } catch (Exception ex) {
+            plugin.getLogger().fine("Release file of the website not readable: " + ex.getMessage());
+        }
+        return null;
     }
 
     private String fetch(String url) throws IOException, InterruptedException {
