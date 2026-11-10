@@ -35,8 +35,14 @@ final class SqlStorage implements Storage {
 
     /** Version of the tables; raise it and add the changes in {@link #migrateSchema} when they change. */
     private static final int SCHEMA = 2;
-    /** Documents that were YAML files before. */
-    private static final List<String> STATE_FILES = List.of("maintenance", "frozen", "discord-announce");
+    /**
+     * Documents that were YAML files before - all of them, so switching from yaml to sqlite or mysql keeps web accounts,
+     * sessions, requests, push devices, news and the rest (each only if the database does not have it yet).
+     */
+    private static final List<String> STATE_FILES = List.of("maintenance", "frozen", "discord-announce",
+            "web-accounts", "web-sessions", "player-sessions", "web-requests", "applications-pending", "web-push",
+            "news", "news-seen", "inbox-seen", "team-notices", "announce-templates", "landing", "versions-channels",
+            "map-hidden", "map-locks", "ranking-hidden", "xp-peaks", "restart-pause");
     private static final String NEXT_ID = "ticket-next-id";
 
     private final MRAdmin plugin;

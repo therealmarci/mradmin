@@ -38,6 +38,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Behoben & geändert
 - **Chunkloader: eigene Grenzen (mit MRchunks):** Auf der Seite eines Chunkloaders öffnet **Grenzen anpassen** (Recht `mrchunks.admin.limits`) ein Fenster mit Warn- und Sperrgrenze pro Messwert nur für diesen Loader; die Kachel „Aktivität“ zeigt dann „eigene Grenzen“.
+- **Wechsel von yaml auf SQLite/MySQL übernimmt alles:** Bisher kamen nur Wartung, eingefrorene Spieler, Discord-Ankündigungen und Tickets mit; jetzt auch Web-Konten, Sitzungen, Entbannungs- und Kontaktanfragen, Bewerbungen, Push-Geräte, Neuigkeiten, Posteingang und Team-Meldungen, Ankündigungs-Vorlagen, Startseite, Kanäle, Kartenschalter, Ranglisten-Austragungen und XP-Höchststände (jeweils nur, wenn die Datenbank sie noch nicht hat).
 - **Aikar-Flags als Standard:** `server.java-flags` hat jetzt die von Paper empfohlenen Aikar-Flags als Standard; Server, bei denen das Feld leer war, bekommen sie beim Update (`config-version` 58). Eigene Flags bleiben unverändert.
 - **Vertrauenswürdige Proxys als Bereich:** `web.trusted-proxies` versteht jetzt auch Bereiche wie `172.16.0.0/12` - für einen Reverse-Proxy in Docker, dessen Adresse sich ändert.
 - **Einrichtung mit Proxy:** `mrserver setup --proxy here|docker|<adresse>` (und die Frage im Installer) stellt `web.bind` und `web.trusted-proxies` passend ein - Proxy auf diesem Rechner, in Docker auf diesem Rechner oder auf einem anderen Rechner.
