@@ -71,6 +71,8 @@ public final class Perms {
     public static final String CONFIG = "mradmin.config";
     /** Look of the web interface: name, logo, colour, footer (Server -> Appearance). */
     public static final String APPEARANCE = "mradmin.appearance";
+    /** Accept or reject whitelist applications (their tickets). */
+    public static final String APPLICATIONS = "mradmin.applications";
 
     private Perms() {
     }

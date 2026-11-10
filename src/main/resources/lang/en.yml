@@ -486,6 +486,7 @@ ticket-categories:
   # From the public forms of the web interface (not selectable). Contact requests exist only in the web.
   unban: "Unban request"
   contact: "Contact request"
+  application: "Whitelist application"
 ticket-staff-anonymous: "Team"
 ticket-status-open: "<green>open"
 ticket-status-closed: "<gray>closed"
@@ -806,6 +807,11 @@ request-ban-console: "Console"
 request-appeal-note: "The request was rejected - the player appealed (possible once, after that the decision is final)."
 request-accepted-note: "Unbanned by <admin>."
 request-rejected-note: "Rejected by <admin>."
+request-application-subject: "Whitelist application: <player>"
+# First message in the ticket of a whitelist application. <name> <player> <email> <time>
+request-application-text: "Name: <name>\nMinecraft: <player>\nE-mail: <email>\nApplied: <time>"
+request-application-accepted-note: "Accepted by <admin> - put on the whitelist."
+request-application-rejected-note: "Rejected by <admin>."
 push-ticket-contact-title: "Contact request #<id>"
 push-ticket-contact-body: "<player>: <summary>"
 mail-test-usage: "<prefix><gray>Usage: <white>/mradmin mail test <address>"
@@ -853,6 +859,47 @@ mail-unban-received-body: |-
   <link>
 
   Please do not reply to this mail, nobody reads it.
+mail-application-confirm-subject: "Confirm your application - <server>"
+mail-application-confirm-body: |-
+  Hi <name>,
+
+  you applied for the whitelist of <server> with the Minecraft name <player>. Confirm your e-mail address with this link (valid for 24 hours) - only then the team sees your application:
+
+  <link>
+
+  Not you? Just ignore this mail - nothing happens without a click.
+mail-application-received-subject: "Your whitelist application (#<id>)"
+mail-application-received-body: |-
+  Hi <name>,
+
+  thanks for your application - the team will look at it and get back to you.
+
+  The status and questions of the team are here - you can answer there too:
+  <link>
+
+  Please do not reply to this mail, it is not read.
+mail-application-accepted-subject: "Welcome - your application was accepted"
+mail-application-accepted-body: |-
+  Hi <name>,
+
+  good news: your application was accepted, you are on the whitelist.
+
+  <answer>
+
+  Server address: <address>
+
+  Make your account for the web interface now - also without having been in game before:
+  <link>
+mail-application-rejected-subject: "Your whitelist application was rejected"
+mail-application-rejected-body: |-
+  Hi <name>,
+
+  unfortunately your application was rejected.
+
+  <answer>
+
+  The whole conversation: <link>
+mail-application-no-address: "(see our website)"
 mail-contact-received-subject: "Your request: <subject>"
 mail-contact-received-body: |-
   Hello <name>,

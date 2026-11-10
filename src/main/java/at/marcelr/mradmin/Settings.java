@@ -90,8 +90,10 @@ public record Settings(
      * the contact form below the imprint. Spam protection: at most {@code perIpPerHour} requests per address, at most
      * {@code maxOpenContact} open contact requests, a small proof of work ({@code powBits}) in the browser.
      */
+    /** ... {@code application}: whitelist applications from the start page, {@code applicationAddress}: the server address for the acceptance mail. */
     public record RequestSettings(boolean unban, boolean kickMessage, boolean contact, int perIpPerHour, int maxOpenContact,
-                                  int powBits, int minTextLength, int maxTextLength, boolean notifyByMail) {
+                                  int powBits, int minTextLength, int maxTextLength, boolean notifyByMail,
+                                  boolean application, String applicationAddress) {
     }
 
     /**
@@ -483,7 +485,9 @@ public record Settings(
                 Math.clamp(c.getInt("web.requests.spam.proof-of-work", 16), 0, 24),
                 Math.clamp(c.getInt("web.requests.min-text-length", 20), 1, 1000),
                 Math.clamp(c.getInt("web.requests.max-text-length", 3000), 100, 4000),
-                c.getBoolean("web.requests.notify-by-mail", true));
+                c.getBoolean("web.requests.notify-by-mail", true),
+                c.getBoolean("web.requests.application.enabled", false),
+                c.getString("web.requests.application.server-address", "").trim());
     }
 
     private static HealthSettings health(FileConfiguration c, Logger log) {

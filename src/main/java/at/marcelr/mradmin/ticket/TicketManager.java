@@ -344,7 +344,7 @@ public final class TicketManager {
      * empty) goes to the person first. @return error key or null
      */
     public String decide(Ticket ticket, boolean accepted, UUID who, String name, String text) {
-        if (ticket.request() == null || !ticket.request().unban()) {
+        if (ticket.request() == null || !ticket.request().decidable()) {
             return "not-unban";
         }
         if (!ticket.open()) {
@@ -355,8 +355,11 @@ public final class TicketManager {
             ticket.add(new Ticket.Message(who, name, true, clean, Instant.now()));
         }
         ticket.request(ticket.request().withDecision(accepted ? WebRequest.ACCEPTED : WebRequest.REJECTED));
-        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain(accepted ? "request-accepted-note"
-                : "request-rejected-note", "admin", name)), Instant.now()));
+        String note = ticket.request().application()
+                ? (accepted ? "request-application-accepted-note" : "request-application-rejected-note")
+                : (accepted ? "request-accepted-note" : "request-rejected-note");
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain(note,
+                "admin", name)), Instant.now()));
         ticket.close(name, Instant.now());
         ticket.creatorUnread(true);
         ticket.staffUnread(false);
@@ -391,8 +394,8 @@ public final class TicketManager {
         if (ticket.request() == null || plugin.web() == null) {
             return;
         }
-        if (!ticket.open() && ticket.request().unban() && ticket.request().decision() == null) {
-            // Closed without a decision (in game or plain close in the web): the ban stays, so it counts as rejected.
+        if (!ticket.open() && ticket.request().decidable() && ticket.request().decision() == null) {
+            // Closed without a decision (in game or plain close in the web): the ban stays / no whitelist, so it counts as rejected.
             ticket.request(ticket.request().withDecision(WebRequest.REJECTED));
             save(ticket);
         }

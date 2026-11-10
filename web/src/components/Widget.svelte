@@ -9,11 +9,13 @@
   import { brand, picture } from '../lib/branding.svelte.js';
   import SelfHero from '../self/SelfHero.svelte';
   import SelfTile from '../self/SelfTile.svelte';
+  import Apply from '../pages/Apply.svelte';
 
   let { widget, ctx } = $props();
 
   const d = $derived(widget.data);
   let copied = $state(false);
+  let applying = $state(false);
 
   async function copy(text) {
     try {
@@ -152,6 +154,21 @@
     <p class="muted">{d.text || t('landing.signinText')}</p>
     <button onclick={signIn}>{t('nav.login')}</button>
   </div>
+{:else if widget.type === 'apply'}
+  <!-- Whitelist application: the form opens in a window (also at /bewerben) -->
+  <div class="box login">
+    <h2>{d.title || t('apply.widgetTitle')}</h2>
+    <p class="muted">{d.text || t('apply.widgetText')}</p>
+    <button onclick={() => !ctx.editing && (applying = true)}>{t('apply.widgetButton')}</button>
+  </div>
+  {#if applying}
+    <div class="apply-overlay" role="presentation" onclick={(e) => e.target === e.currentTarget && (applying = false)}
+      onkeydown={(e) => e.key === 'Escape' && (applying = false)}>
+      <div class="apply-dialog" role="dialog" aria-modal="true" aria-label={t('apply.title')}>
+        <Apply modal onclose={() => (applying = false)} />
+      </div>
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -454,6 +471,21 @@
     color: #4752c4;
     font-weight: 700;
     text-decoration: none;
+  }
+
+  .apply-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(0 0 0 / 50%);
+    overflow-y: auto;
+  }
+
+  .apply-dialog {
+    width: min(100%, 520px);
   }
 
   /* login */

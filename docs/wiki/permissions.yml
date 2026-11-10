@@ -103,3 +103,5 @@ mradmin.server.setup:
   de: "`/mradmin starter setup` - Start-Dateien (`mrserver.sh`, `mrserver.cmd`) in den Server-Ordner schreiben"
 mradmin.appearance:
   de: "Weboberfläche: Aussehen ändern - Name, Logo, Browser-Symbol, Akzentfarbe und Fußzeile (Server → Aussehen)"
+mradmin.applications:
+  de: "Weboberfläche: Whitelist-Bewerbungen in ihrem Ticket annehmen (setzt den Spieler auf die Whitelist) oder ablehnen"

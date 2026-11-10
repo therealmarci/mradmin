@@ -486,6 +486,7 @@ ticket-categories:
   # Aus den öffentlichen Formularen der Weboberfläche (nicht zum Erstellen wählbar). Kontaktanfragen gibt es nur im Web.
   unban: "Entbannungsantrag"
   contact: "Kontaktanfrage"
+  application: "Whitelist-Bewerbung"
 ticket-staff-anonymous: "Team"
 ticket-status-open: "<green>offen"
 ticket-status-closed: "<gray>geschlossen"
@@ -806,6 +807,11 @@ request-ban-console: "Konsole"
 request-appeal-note: "Der Antrag wurde abgelehnt - der Spieler hat Einspruch eingelegt (einmal möglich, danach ist die Entscheidung endgültig)."
 request-accepted-note: "Entbannt von <admin>."
 request-rejected-note: "Abgelehnt von <admin>."
+request-application-subject: "Whitelist-Bewerbung: <player>"
+# Erste Nachricht im Ticket einer Whitelist-Bewerbung. <name> <player> <email> <time>
+request-application-text: "Name: <name>\nMinecraft: <player>\nE-Mail: <email>\nBeworben: <time>"
+request-application-accepted-note: "Angenommen von <admin> - auf die Whitelist gesetzt."
+request-application-rejected-note: "Abgelehnt von <admin>."
 push-ticket-contact-title: "Kontaktanfrage #<id>"
 push-ticket-contact-body: "<player>: <summary>"
 mail-test-usage: "<prefix><gray>Verwendung: <white>/mradmin mail test <adresse>"
@@ -853,6 +859,47 @@ mail-unban-received-body: |-
   <link>
 
   Bitte antworte nicht auf diese Mail, sie wird nicht gelesen.
+mail-application-confirm-subject: "Bewerbung bestätigen - <server>"
+mail-application-confirm-body: |-
+  Hallo <name>,
+
+  du hast dich mit dem Minecraft-Namen <player> für die Whitelist von <server> beworben. Bestätige deine E-Mail-Adresse mit diesem Link (gültig 24 Stunden) - erst dann sieht das Team deine Bewerbung:
+
+  <link>
+
+  Warst du das nicht? Dann ignoriere diese Mail einfach - ohne Klick passiert nichts.
+mail-application-received-subject: "Deine Whitelist-Bewerbung (#<id>)"
+mail-application-received-body: |-
+  Hallo <name>,
+
+  danke für deine Bewerbung - das Team schaut sie sich an und meldet sich bei dir.
+
+  Stand und Rückfragen siehst du hier - dort kannst du auch antworten:
+  <link>
+
+  Bitte antworte nicht auf diese Mail, sie wird nicht gelesen.
+mail-application-accepted-subject: "Willkommen - deine Bewerbung wurde angenommen"
+mail-application-accepted-body: |-
+  Hallo <name>,
+
+  gute Nachrichten: deine Bewerbung wurde angenommen, du stehst auf der Whitelist.
+
+  <answer>
+
+  Serveradresse: <address>
+
+  Leg dir jetzt dein Konto für die Weboberfläche an - auch ohne vorher im Spiel gewesen zu sein:
+  <link>
+mail-application-rejected-subject: "Deine Whitelist-Bewerbung wurde abgelehnt"
+mail-application-rejected-body: |-
+  Hallo <name>,
+
+  deine Bewerbung wurde leider abgelehnt.
+
+  <answer>
+
+  Der ganze Verlauf: <link>
+mail-application-no-address: "(steht auf unserer Website)"
 mail-contact-received-subject: "Deine Anfrage: <subject>"
 mail-contact-received-body: |-
   Hallo <name>,

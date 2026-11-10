@@ -76,12 +76,19 @@ public final class WebServer {
         this.push = new at.marcelr.mradmin.web.push.PushService(plugin, auth, permissions);
         this.discord = new at.marcelr.mradmin.web.auth.DiscordLogin(plugin);
         this.requests = new PublicRequests(plugin, this);
+        this.applications = new Applications(plugin, this);
         this.playerSessions = new at.marcelr.mradmin.web.self.PlayerSessions(plugin);
         auth.useSessions(playerSessions);
         this.news = new at.marcelr.mradmin.news.News(plugin);
     }
 
     private final PublicRequests requests;
+    private final Applications applications;
+
+    /** Whitelist applications from the start page (public, become tickets once the address is confirmed). */
+    public Applications applications() {
+        return applications;
+    }
 
     /** Unban requests and the contact form (public, without sign-in). */
     public PublicRequests requests() {

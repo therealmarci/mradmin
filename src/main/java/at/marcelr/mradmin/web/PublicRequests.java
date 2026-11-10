@@ -335,7 +335,8 @@ public final class PublicRequests implements Listener {
         if (!r.hasEmail() || !settings().notifyByMail()) {
             return;
         }
-        mail(r.email(), ticket, r.unban() ? "mail-unban-received" : "mail-contact-received", "");
+        mail(r.email(), ticket, r.unban() ? "mail-unban-received" : r.application() ? "mail-application-received"
+                : "mail-contact-received", "");
     }
 
     /** Called by {@link TicketManager} after a team answer or closing (server thread): mail to the person. */
@@ -350,10 +351,24 @@ public final class PublicRequests implements Listener {
         } else if (r.unban()) {
             key = WebRequest.ACCEPTED.equals(r.decision()) ? "mail-unban-accepted"
                     : r.appeal() ? "mail-unban-rejected-final" : "mail-unban-rejected";
+        } else if (r.application()) {
+            key = WebRequest.ACCEPTED.equals(r.decision()) ? "mail-application-accepted" : "mail-application-rejected";
         } else {
             key = "mail-contact-closed";
         }
         mail(r.email(), ticket, key, answer == null ? "" : answer);
+    }
+
+    /** The confirmation link of a whitelist application (before it becomes a ticket). */
+    void sendApplicationConfirm(String to, String name, String mcName, String code) {
+        plugin.messages().server(() -> {
+            var m = plugin.messages();
+            Object[] values = {"name", name, "player", mcName, "server", m.plain("mail-server-name"),
+                    "link", plugin.settings().web().publicUrl() + "/bewerben?code=" + code};
+            mailer.send(to, m.plain("mail-application-confirm-subject", values),
+                    m.plain("mail-application-confirm-body", values));
+            return null;
+        });
     }
 
     private void mail(String to, Ticket ticket, String key, String answer) {
@@ -367,9 +382,11 @@ public final class PublicRequests implements Listener {
     private void mailNow(String to, Ticket ticket, String key, String answer) {
         var m = plugin.messages();
         String server = m.plain("mail-server-name");
+        String address = settings().applicationAddress();
         Object[] values = {"id", ticket.id(), "name", ticket.creatorName(), "subject", ticket.subject(),
                 "answer", answer.isEmpty() ? m.plain("mail-no-text") : answer, "link", statusUrl(ticket.request().token()),
-                "server", server, "time", Texts.at(plugin, Instant.now())};
+                "server", server, "time", Texts.at(plugin, Instant.now()),
+                "address", address.isEmpty() ? m.plain("mail-application-no-address") : address};
         mailer.send(to, m.plain(key + "-subject", values), m.plain(key + "-body", values));
     }
 }

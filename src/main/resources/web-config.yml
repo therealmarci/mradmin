@@ -1184,6 +1184,15 @@ sections:
         type: bool
         name: {de: Kontaktformular, en: Contact form}
         help: {de: "Öffentliches Kontaktformular unter /kontakt - Anfragen landen als Ticket.", en: "Public contact form at /kontakt - requests arrive as a ticket."}
+      - key: web.requests.application.enabled
+        type: bool
+        name: {de: Whitelist-Bewerbung, en: Whitelist application}
+        help: {de: "Besucher bewerben sich auf der Startseite (Widget) oder unter /bewerben mit Name, Minecraft-Name und E-Mail. Nach der Bestätigung per Mail kommt die Bewerbung als Ticket. Braucht den Mailversand.", en: "Visitors apply on the start page (widget) or at /bewerben with name, Minecraft name and e-mail. After confirming by mail the application arrives as a ticket. Needs mail."}
+      - key: web.requests.application.server-address
+        type: string
+        when: web.requests.application.enabled
+        name: {de: Serveradresse in der Annahme-Mail, en: Server address in the acceptance mail}
+        help: {de: "z.B. play.example.com - leer = Hinweis auf die Website.", en: "e.g. play.example.com - empty = see the website."}
       - key: web.requests.notify-by-mail
         type: bool
         name: {de: Antworten auch per Mail, en: Replies by mail too}

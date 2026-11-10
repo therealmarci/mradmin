@@ -28,7 +28,7 @@ public final class Landing {
             Map.entry("banner", false), Map.entry("hints", false), Map.entry("address", false), Map.entry("online", false),
             Map.entry("greeting", true), Map.entry("tiles", true), Map.entry("stats", true),
             Map.entry("news", false), Map.entry("text", false), Map.entry("image", false), Map.entry("links", false),
-            Map.entry("discord", false), Map.entry("login", false));
+            Map.entry("discord", false), Map.entry("login", false), Map.entry("apply", false));
     /** The two pages. */
     public static final Set<String> PAGES = Set.of("guests", "members");
     private static final int MAX_WIDGETS = 40;
@@ -268,7 +268,7 @@ public final class Landing {
             if (!TYPES.containsKey(type)) {
                 throw new IllegalArgumentException("landing-invalid");
             }
-            if ((visitors && TYPES.get(type)) || (!visitors && type.equals("login"))) {
+            if ((visitors && TYPES.get(type)) || (!visitors && (type.equals("login") || type.equals("apply")))) {
                 continue;
             }
             String id = str(in, "id", 20).replaceAll("[^a-zA-Z0-9_-]", "");
@@ -329,7 +329,7 @@ public final class Landing {
                     d.addProperty("url", url);
                     d.addProperty("text", str(data, "text", 300));
                 }
-                case "login" -> {
+                case "login", "apply" -> {
                     d.addProperty("title", str(data, "title", 80));
                     d.addProperty("text", str(data, "text", 300));
                 }

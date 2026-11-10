@@ -66,7 +66,10 @@
 
   // Unban requests: accept lifts the ban in LibertyBans; both close the ticket, the text goes to the player first.
   async function decide(accept) {
-    if (!confirm(t(accept ? 'request.acceptConfirm' : 'request.rejectConfirm', { name: ticket.creator }))) return;
+    const app = request?.kind === 'application';
+    const key = app ? (accept ? 'application.acceptConfirm' : 'application.rejectConfirm')
+      : (accept ? 'request.acceptConfirm' : 'request.rejectConfirm');
+    if (!confirm(t(key, { name: request?.player ?? ticket.creator }))) return;
     if (await action('decide', { decision: accept ? 'accept' : 'reject', text })) text = '';
   }
 
@@ -201,6 +204,19 @@
           until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
         <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
       </section>
+    {:else if request?.kind === 'application'}
+      <!-- Whitelist application: who applies, and what accepting does -->
+      <section class="card ban application">
+        <div class="ban-top">
+          <img class="app-head" src={head(request.uuid, 64)} alt="" width="40" height="40" />
+          <div class="app-who">
+            <strong>{request.player}</strong>
+            <span class="muted small">{t('application.label')}</span>
+          </div>
+          {#if request.decision}<span class="tag {request.decision}">{t('application.decision.' + request.decision)}</span>{/if}
+        </div>
+        <div class="notice small">{t('application.hint')}</div>
+      </section>
     {:else if request?.kind === 'contact'}
       <div class="notice small">
         {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
@@ -252,6 +268,13 @@
                   <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
                 {/if}
                 <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
+              {:else if me.may.ticketsClose && request?.kind === 'application'}
+                {#if me.may.applications}
+                  <button class="good" onclick={() => decide(true)} disabled={busy}>{t('application.accept')}</button>
+                  <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('application.reject')}</button>
+                {:else}
+                  <span class="muted small">{t('application.noPermission')}</span>
+                {/if}
               {:else if me.may.ticketsClose}
                 <button class="danger" onclick={close} disabled={busy}>
                   {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
@@ -454,10 +477,21 @@
     border: 1px solid color-mix(in srgb, var(--tk) 25%, var(--border));
   }
 
-  /* Unban request */
+  /* Unban request / whitelist application */
   .ban {
     display: grid;
     gap: 8px;
+  }
+
+  .app-head {
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+
+  .app-who {
+    display: grid;
+    flex: 1;
+    min-width: 0;
   }
 
   .ban-top {

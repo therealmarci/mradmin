@@ -322,6 +322,32 @@ public final class WebAuth {
         }
     }
 
+    /**
+     * An accepted whitelist applicant makes their account from the status link - without having been in game: account
+     * for the UUID, the confirmed address of the application and a password, then signed in. Slow (hashing) - web
+     * thread. @return the session, or an error ("account-exists" if it has a password already, "password-short")
+     */
+    public Result createForApplicant(UUID id, String name, String email, String password, String ip, String agent) {
+        if (password == null || password.length() < Passwords.MIN_LENGTH || password.length() > 200) {
+            return Result.fail("password-short");
+        }
+        String hash = Passwords.hash(password);
+        synchronized (this) {
+            Account account = ensure(id, name);
+            if (account.password != null) {
+                return Result.fail("account-exists");
+            }
+            account.password = hash;
+            String clean = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+            if (account.email == null && validEmail(clean) && byEmail(clean) == null) {
+                account.email = clean;
+            }
+            account.lastLogin = System.currentTimeMillis();
+            saveAccounts();
+            return startSession(account, ip, agent);
+        }
+    }
+
     /** Removes the password (the player keeps /web and their other sign-ins). */
     public synchronized void removePassword(UUID id) {
         Account account = accounts.get(id);

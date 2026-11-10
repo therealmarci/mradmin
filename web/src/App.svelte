@@ -38,6 +38,7 @@
   import Discord from './pages/Discord.svelte';
   import PlayerView from './pages/PlayerView.svelte';
   import Contact from './pages/Contact.svelte';
+  import Apply from './pages/Apply.svelte';
   import Unban from './pages/Unban.svelte';
   import RequestStatus from './pages/RequestStatus.svelte';
   import StartPage from './pages/StartPage.svelte';
@@ -116,7 +117,7 @@
   // Public pages work without signing in.
   const requestToken = $derived(route.path.match(/^\/anfrage\/([A-Za-z0-9_-]{16,64})$/)?.[1] ?? null);
   const publicPage = $derived(
-    ['/impressum', '/datenschutz', '/discord', '/kontakt', '/entbannung', '/email', '/reset'].includes(route.path) || requestToken !== null,
+    ['/impressum', '/datenschutz', '/discord', '/kontakt', '/bewerben', '/entbannung', '/email', '/reset'].includes(route.path) || requestToken !== null,
   );
 
   $effect(() => {
@@ -257,6 +258,9 @@
   <Footer />
 {:else if route.path === '/kontakt'}
   <Contact />
+  <Footer />
+{:else if route.path === '/bewerben'}
+  <Apply />
   <Footer />
 {:else if route.path === '/entbannung'}
   <Unban />

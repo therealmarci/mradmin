@@ -425,6 +425,7 @@ public final class AuthRoutes {
         may.put("ticketsClose", tickets && perms.has(account.id(), Perms.TICKETS_CLOSE));
         may.put("ticketsReopen", tickets && perms.has(account.id(), Perms.TICKETS_REOPEN));
         may.put("unban", tickets && perms.has(account.id(), "libertybans.ban.undo.target.uuid"));
+        may.put("applications", tickets && perms.has(account.id(), Perms.APPLICATIONS));
         may.put("mail", server.requests().mailer().enabled());
         may.put("status", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), Perms.STATUS));
         may.put("health", plugin.feature(Feature.SERVER_STATUS) && perms.has(account.id(), Perms.STATUS_HEALTH));

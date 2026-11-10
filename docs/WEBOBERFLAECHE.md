@@ -383,7 +383,8 @@ Nur für Admins (in `mradmin.groups.admin` - so mächtig wie die Server-Konsole)
   (`web-console`), gesperrte Versuche im Protokoll.
 
 ## Entbannungsanträge & Kontaktformular
-Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`web.requests` in der Config).
+Öffentliche Seiten ohne Anmeldung, alle landen als Tickets beim Team (`web.requests` in der Config): Entbannung,
+Kontakt und die Whitelist-Bewerbung.
 
 - **Entbannung** (`<public-url>/entbannung`, braucht LibertyBans): Wer gebannt ist und joinen will, sieht in der
   Ban-Meldung die Adresse und einen **persönlichen Code** (z. B. `1-K7F2QX`). Nur mit Name und Code sieht man den
@@ -397,6 +398,15 @@ Zwei öffentliche Seiten, ohne Anmeldung, beide landen als Tickets beim Team (`w
   - Entbannungsanträge sind auch **ingame** im Ticket-Menü sichtbar.
 - **Kontakt** (`<public-url>/kontakt`, verlinkt unter dem Impressum und in der Fußzeile): Name, Mail-Adresse, Betreff,
   Nachricht. Diese Anfragen gibt es **nur im Web**, ingame tauchen sie nie auf.
+- **Whitelist-Bewerbung** (`<public-url>/bewerben` und als Widget „Whitelist-Bewerbung“ auf der Startseite für Gäste,
+  `web.requests.application.enabled`, Standard aus, braucht den Mailversand): Name, Minecraft-Name, E-Mail. Den Namen
+  prüft MRadmin bei Mojang (Offline-Server: Offline-UUID); wer schon auf der Whitelist steht oder schon eine offene
+  Bewerbung hat, wird abgewiesen. Erst nach dem **Bestätigungslink per Mail** (24 Stunden gültig) kommt die Bewerbung als
+  **Ticket** zum Team. Darin: **Annehmen und whitelisten** (setzt den Spieler mit `whitelist add` auf die Whitelist)
+  oder **Ablehnen** (Text im Antwortfeld = Begründung), Rückfragen über das Antwortfeld - beides mit
+  `mradmin.applications` (in `mradmin.groups.staff`). Angenommen: Mail mit der Serveradresse
+  (`web.requests.application.server-address`) und dem Statuslink, über den sich der Bewerber gleich ein **Konto für die
+  Weboberfläche** anlegt (Passwort, angemeldet mit Minecraft-Name oder E-Mail) - ohne vorher im Spiel gewesen zu sein.
 - Nach dem Absenden bekommt man einen **privaten Statuslink** (`/anfrage/...`): Stand, Verlauf, antworten,
   Einspruch.
 - **Mails** (optional, Abschnitt `mail`): Eingangsbestätigung mit Statuslink, Antworten des Teams und die

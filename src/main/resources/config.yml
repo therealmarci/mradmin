@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 54
+config-version: 55
 
 
 # ------------------------------------------------------------------------------
@@ -551,6 +551,14 @@ web:
     # they never show up in game. Replies go out by mail (see "mail" below).
     contact:
       enabled: true
+    # Whitelist applications: visitors apply on the start page (widget "Whitelist application", address
+    # <public-url>/bewerben) with name, Minecraft name and e-mail. After confirming the address by mail the
+    # application arrives as a ticket; accepting it (permission mradmin.applications) puts the player on the
+    # whitelist and lets them make their web account right away. Needs "mail" below.
+    application:
+      enabled: false
+      # Server address in the acceptance mail, e.g. play.example.com. Empty = "see our website".
+      server-address: ""
     # Also send the team's replies and decisions by mail (if an address was given and "mail" is
     # set up). The status link is always shown right after submitting.
     notify-by-mail: true

@@ -40,16 +40,17 @@
   const GROUPS = [
     ['status', ['banner', 'hints', 'address', 'online']],
     ['personal', ['greeting', 'tiles', 'stats']],
-    ['content', ['news', 'text', 'image', 'links', 'discord', 'login']],
+    ['content', ['news', 'text', 'image', 'links', 'discord', 'login', 'apply']],
   ];
   const SIZES = { banner: [12, 3], hints: [12, 2], address: [4, 2], online: [4, 2], greeting: [6, 2], tiles: [12, 3],
-    stats: [4, 3], news: [8, 4], text: [6, 3], image: [6, 3], links: [4, 2], discord: [6, 2], login: [4, 2] };
+    stats: [4, 3], news: [8, 4], text: [6, 3], image: [6, 3], links: [4, 2], discord: [6, 2], login: [4, 2], apply: [4, 2] };
   const PERSONAL = ['greeting', 'tiles', 'stats'];
   const page = $derived(player ? 'members' : 'guests');
   const DATA = {
     banner: () => ({ image: '', address: '', online: true }), address: () => ({ title: '', address: '' }),
     news: () => ({ title: '', count: 4 }), text: () => ({ title: '', text: '' }), image: () => ({ image: '', alt: '', fit: 'cover' }),
     links: () => ({ title: '', items: [] }), discord: () => ({ url: '', text: '' }), login: () => ({ title: '', text: '' }),
+    apply: () => ({ title: '', text: '' }),
   };
 
   const widgets = $derived(editing ? draft[editPage] : (data?.[page] ?? []));
@@ -72,7 +73,7 @@
   const current = $derived(draft[editPage].find((w) => w.id === selected) ?? null);
   const changed = $derived(editing && JSON.stringify(draft) !== JSON.stringify({ guests: data?.guests ?? [], members: data?.members ?? [] }));
   // Personal widgets only on the players' page, the call to log in only on the visitors' page.
-  const allowed = (type) => (editPage === 'guests' ? !PERSONAL.includes(type) : type !== 'login');
+  const allowed = (type) => (editPage === 'guests' ? !PERSONAL.includes(type) : type !== 'login' && type !== 'apply');
 
   function startEdit() {
     draft = structuredClone({ guests: $state.snapshot(data.guests), members: $state.snapshot(data.members) });
@@ -317,6 +318,9 @@
     {/if}
     {#if current.type === 'login'}
       <label>{t('landingEdit.text')}<input bind:value={current.data.text} maxlength="300" placeholder={t('landing.signinText')} /></label>
+    {/if}
+    {#if current.type === 'apply'}
+      <label>{t('landingEdit.text')}<input bind:value={current.data.text} maxlength="300" placeholder={t('apply.widgetText')} /></label>
     {/if}
   </aside>
 {/if}

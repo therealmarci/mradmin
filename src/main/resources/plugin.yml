@@ -84,6 +84,7 @@ permissions:
       mradmin.player.freeze: true
       mradmin.player.kick: true
       mradmin.web.console.view: true
+      mradmin.applications: true
       # LibertyBans: kick, mute and warn players (and lift mutes and warns)
       libertybans.kick.do.target.uuid: true
       libertybans.mute.do.target.uuid: true
@@ -258,6 +259,9 @@ permissions:
     default: op
   mradmin.appearance:
     description: "Web interface: change the look - name, logo, browser icon, accent colour and footer (Server -> Appearance)."
+    default: op
+  mradmin.applications:
+    description: "Web interface: accept (puts the player on the whitelist) or reject whitelist applications in their tickets."
     default: op
   mradmin.versions.install:
     description: "Web interface: check for updates now, download updates and install missing MRtechnology plugins (loaded on the next start)."
