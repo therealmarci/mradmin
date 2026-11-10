@@ -197,7 +197,7 @@ public final class TeamNotices implements Listener {
         }
         PushService push = push();
         PushService.Kind k = push.kind(kind);
-        if (k == null || push.off(kind) || texts.isEmpty()) {
+        if (k == null || push.off(kind) || texts.isEmpty() || open(kind, ref)) {
             return;
         }
         Notice notice;
@@ -228,6 +228,18 @@ public final class TeamNotices implements Listener {
             }
             save();
         });
+    }
+
+    /** A notice of this kind about {@code ref} that is not done yet exists (then no second one). Server thread. */
+    private boolean open(String kind, String ref) {
+        if (ref == null) {
+            return false;
+        }
+        List<Notice> same;
+        synchronized (this) {
+            same = notices.stream().filter(n -> kind.equals(n.kind) && ref.equals(n.ref) && !n.done).toList();
+        }
+        return same.stream().anyMatch(n -> !done(n));
     }
 
     /** Marks every notice about {@code ref} (any kind) as done, e.g. "lag" when the TPS recovered. Any thread. */
@@ -274,6 +286,13 @@ public final class TeamNotices implements Listener {
             Ticket t = plugin.tickets() == null ? null : plugin.tickets().get(parse(ref.substring(7)));
             // A new ticket is done once someone claimed it; everything else about it once it is closed.
             done = t == null || !t.open() || ("ticket-new".equals(n.kind) && t.claimedBy() != null);
+        } else if (ref.startsWith("available:")) {
+            // An update on offer: done once it is downloaded, installed or no longer offered.
+            String[] p = ref.split(":", 3);
+            var versions = plugin.versions();
+            var entry = versions == null || p.length < 3 ? null : versions.get(p[1]);
+            done = entry == null || entry.latest == null || !p[2].equals(entry.latest.version())
+                    || !entry.updateAvailable() || p[2].equals(entry.staged);
         } else if (ref.startsWith("plugin:")) {
             String[] p = ref.split(":", 3);
             var versions = plugin.versions();

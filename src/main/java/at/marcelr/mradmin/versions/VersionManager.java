@@ -582,6 +582,13 @@ public final class VersionManager {
                 checking = false;
             }
             for (Entry e : list) {
+                // A new release on offer (not downloaded by itself below): a team notice, once per version.
+                if (e.isInstalled() && e.channel != Channel.DEV && e.latest != null && e.updateAvailable()
+                        && !ReleasePicker.autoAllowed(s.autoDownload(), e.installed, e.latest.version())) {
+                    plugin.push("update-available", "available:" + e.name + ":" + e.latest.version(), "update-available",
+                            "/admin/server/plugins", null, "plugin", e.name, "version", e.latest.version(),
+                            "installed", e.installed);
+                }
                 // Dev builds come by themselves only with auto-download: all.
                 boolean auto = e.channel == Channel.DEV ? s.autoDownload() == ReleasePicker.Auto.ALL
                         : e.latest != null && ReleasePicker.autoAllowed(s.autoDownload(), e.installed, e.latest.version());

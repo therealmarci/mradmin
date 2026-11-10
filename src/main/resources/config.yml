@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 56
+config-version: 57
 
 
 # ------------------------------------------------------------------------------
@@ -759,8 +759,8 @@ logging:
 # /mradmin mute mutes the lines in the game for a while.
 notifications:
   # Kinds switched off for everyone (no inbox, push or game line), e.g. [update-ready, lag].
-  # MRadmin: ticket-new, ticket-mine, ticket-message, application, server-crash, update-ready, lag, maintenance.
-  # Other plugins: their own kinds, e.g. chunks-locked (MRchunks).
+  # MRadmin: ticket-new, ticket-mine, ticket-message, application, server-crash, update-available, update-ready, lag,
+  # maintenance. Other plugins: chunks-locked, chunks-shed (MRchunks), pvp-review (MRpvp).
   disabled: []
 
 

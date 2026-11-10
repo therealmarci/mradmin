@@ -192,6 +192,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         maintenance.load();
         adminMode = new AdminModeManager(this);
         updateChecker = new UpdateChecker(this);
+        // The join notice follows the member's choice for update notices and /mradmin mute.
+        updateChecker.gameFilter(p -> notices == null || notices.wantsGame(p.getUniqueId(), "update-available"));
         versions = new at.marcelr.mradmin.versions.VersionManager(this);
         starter = new at.marcelr.mradmin.versions.StarterLink(this);
         restarts = new at.marcelr.mradmin.versions.RestartManager(this);

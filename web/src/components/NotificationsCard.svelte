@@ -22,7 +22,7 @@
   let permission = $state(supported ? Notification.permission : 'denied');
 
   const ICON = { 'ticket-new': '🎫', 'ticket-mine': '📌', 'ticket-message': '💬', application: '📝', 'server-crash': '💥',
-    'update-ready': '⬆️', lag: '🐢', maintenance: '🔧' };
+    'update-available': '🆕', 'update-ready': '⬆️', lag: '🐢', maintenance: '🔧' };
   const CHANNELS = ['inbox', 'push', 'game'];
 
   async function load() {

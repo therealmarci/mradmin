@@ -77,6 +77,7 @@ public final class PushService {
             new Kind("ticket-message", Perms.TICKETS_VIEW, Feature.TICKETS, false, Game.OWN),
             new Kind("application", Perms.APPLICATIONS, Feature.TICKETS, true, Game.LINE),
             new Kind("server-crash", Perms.SERVER_RESTART, null, true, null, null, Game.LINE, true),
+            new Kind("update-available", Perms.VERSIONS_VIEW, null, false, Game.OWN),
             new Kind("update-ready", Perms.VERSIONS_VIEW, null, false, Game.LINE),
             new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true, Game.OWN),
             new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true, Game.NONE));

@@ -452,11 +452,12 @@ sections:
           - {value: ticket-message, de: Alle Ticket-Nachrichten, en: All ticket messages}
           - {value: application, de: Whitelist-Bewerbungen, en: Whitelist applications}
           - {value: server-crash, de: Abstürze und Hänger, en: Crashes and hangs}
+          - {value: update-available, de: Updates verfügbar, en: Updates available}
           - {value: update-ready, de: Updates bereit, en: Updates ready}
           - {value: lag, de: Lag-Alarm, en: Lag alarm}
           - {value: maintenance, de: Wartungen, en: Maintenance}
           - {value: chunks-locked, de: Chunkloader gesperrt, en: Chunk loader locked, plugin: MRchunks}
-          - {value: chunks-shed, de: Chunkloader wegen Lags abgeschaltet, en: Chunk loader switched off for lag, plugin: MRchunks}
+          - {value: chunks-shed, de: Lag-Schutz der Chunkloader, en: Lag protection of the chunk loaders, plugin: MRchunks}
           - {value: pvp-review, de: Duell-Runde wartet auf Prüfung, en: Duel round waits for review, plugin: MRpvp}
 
   - id: tickets
