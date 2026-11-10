@@ -60,7 +60,7 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler taucht „MRadmin“ nirgends auf.
 - **Name** und **Spruch** (Anmeldeseite), **Akzentfarbe** (Knöpfe, Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst), **Text und bis zu 4 Links** in der Fußzeile (z.B. Discord, Website, Regeln).
 - **Logo** (Anmeldeseite, Mails) und **Browser-Symbol** (Tab, Leiste, „Zum Startbildschirm hinzufügen“): PNG, WebP oder SVG, höchstens 512 KB. Ohne eigenes Symbol gilt das Logo. SVGs mit Skripten oder eingebetteten Inhalten werden abgelehnt.
-- Rechts eine **Vorschau** der Anmelde- und Startseite, hell und dunkel. Nach dem Speichern gilt alles sofort für alle.
+- Je eine Kachel für Marke, Logo und Symbol, Akzentfarbe (mit Farbvorschlägen), Fußzeile und Links sowie die Startseite; rechts eine **Vorschau** der Anmelde- und Startseite, hell und dunkel, die beim Scrollen stehen bleibt. Ungespeicherte Änderungen zeigen unten eine Leiste mit **Speichern** und **Verwerfen**; nach dem Speichern gilt alles sofort für alle.
 - Der Name erscheint im Browser-Tab, auf der Anmeldeseite, in der Leiste, in den Mails, in der 2FA-App und bei Passkeys.
 - Gespeichert wird in der `config.yml` (Abschnitt `branding`, auch per Datei änderbar), die Bilder unter `plugins/MRadmin/branding/`.
 - **Mails** (Bestätigung, Passwort vergessen, Entbannung, Kontakt, Testmail) kommen im selben Aussehen: Kopf mit Logo und Name in der Akzentfarbe, Links als Knopf, Fußzeile mit Text, Links, Impressum und Datenschutz - dazu immer eine reine Textfassung. Damit das Logo in Mails erscheint, braucht es `web.public-url`.

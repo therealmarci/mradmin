@@ -1,6 +1,7 @@
 <script>
-  // Server -> Appearance (mradmin.appearance): name, tagline, accent colour, footer and links, logo and browser icon -
-  // with a live preview (sign-in page / start page, light / dark). Saving writes config.yml (section branding) and
+  // Server -> Appearance (mradmin.appearance): one tile per part - brand (name, tagline), logo and browser icon,
+  // accent colour, footer and links, start page (edited on the page itself) - and a live preview that stays in view
+  // (sign-in page / start page, light / dark). Unsaved changes show a bar at the bottom (save / discard). Saving writes config.yml (section branding) and
   // MRadmin reloads; pictures go to plugins/MRadmin/branding/ (BrandingRoutes.java).
   import { api } from '../lib/api.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -93,49 +94,53 @@
     }
   }
 
+  // A few accent colours to pick from (the field takes any other one)
+  const SWATCHES = ['#2f6fed', '#0ea5e9', '#14b8a6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
+
   const logoSrc = $derived(brand.logo ? `/branding/logo?v=${brand.logo}` : '/icon.svg');
   const iconSrc = $derived(brand.icon ? `/branding/icon?v=${brand.icon}` : brand.logo ? `/branding/logo?v=${brand.logo}` : '/icon.svg');
 </script>
 
 <div class="page">
-  <!-- The start page itself is edited right on it (button "Edit" there). -->
-  <p class="muted small start-hint">{t('appearance.startHint')} <a href="/" onclick={(e) => { e.preventDefault(); go('/'); }}>{t('appearance.toStart')} →</a></p>
-
-  {#if true}
   <Toast text={message} />
   {#if error}<div class="error">{error}</div>{/if}
-
   {#if form}
+    <header class="head">
+      <h1>{t('appearance.title')}</h1>
+      <p class="muted">{t('appearance.intro')}</p>
+    </header>
     <div class="layout">
-      <!-- The settings -->
-      <section class="card settings">
-        <h2>{t('appearance.title')}</h2>
-        <p class="muted small">{t('appearance.intro')}</p>
-
-        <label class="field">
-          <span>{t('appearance.name')}</span>
-          <input bind:value={form.name} maxlength="40" placeholder={brand.name} />
-        </label>
-        <label class="field">
-          <span>{t('appearance.tagline')}</span>
-          <input bind:value={form.tagline} maxlength="120" placeholder={t('signin.subtitle')} />
-        </label>
-        <div class="field">
-          <span>{t('appearance.accent')}</span>
-          <div class="color">
-            <input type="color" bind:value={form.accent} aria-label={t('appearance.accent')} />
-            <input class="mono" bind:value={form.accent} maxlength="7" />
-            {#if !validColor}<span class="bad-text small">{t('appearance.colorInvalid')}</span>{/if}
+      <div class="parts">
+        <!-- Brand -->
+        <section class="card part">
+          <div class="p-head">
+            <h2>{t('appearance.part.brand')}</h2>
+            <p class="muted small">{t('appearance.part.brandHint')}</p>
           </div>
-        </div>
+          <label class="field">
+            <span>{t('appearance.name')}</span>
+            <input bind:value={form.name} maxlength="40" placeholder={brand.name} />
+          </label>
+          <label class="field">
+            <span>{t('appearance.tagline')}</span>
+            <input bind:value={form.tagline} maxlength="120" placeholder={t('signin.subtitle')} />
+          </label>
+        </section>
 
-        <div class="images">
-          {#each [['logo', logoSrc, 'logoInput'], ['icon', iconSrc, 'iconInput']] as [kind, src] (kind)}
-            <div class="image">
-              <img {src} alt="" />
-              <div>
-                <strong>{t('appearance.' + kind)}</strong>
-                <span class="muted small">{t('appearance.' + kind + 'Hint')}</span>
+        <!-- Logo and browser icon -->
+        <section class="card part">
+          <div class="p-head">
+            <h2>{t('appearance.part.images')}</h2>
+            <p class="muted small">{t('appearance.part.imagesHint')}</p>
+          </div>
+          <div class="images">
+            {#each [['logo', logoSrc], ['icon', iconSrc]] as [kind, src] (kind)}
+              <div class="image">
+                <img {src} alt="" />
+                <div class="i-text">
+                  <strong>{t('appearance.' + kind)}</strong>
+                  <span class="muted small">{t('appearance.' + kind + 'Hint')}</span>
+                </div>
                 <div class="acts">
                   <button class="secondary" disabled={busy} onclick={() => (kind === 'logo' ? logoInput : iconInput).click()}>
                     {t('appearance.upload')}
@@ -145,33 +150,63 @@
                   {/if}
                 </div>
               </div>
-            </div>
-          {/each}
-          <input class="hidden" type="file" accept="image/png,image/webp,image/svg+xml" bind:this={logoInput}
-            onchange={() => upload('logo', logoInput)} />
-          <input class="hidden" type="file" accept="image/png,image/webp,image/svg+xml" bind:this={iconInput}
-            onchange={() => upload('icon', iconInput)} />
-        </div>
+            {/each}
+            <input class="hidden" type="file" accept="image/png,image/webp,image/svg+xml" bind:this={logoInput}
+              onchange={() => upload('logo', logoInput)} />
+            <input class="hidden" type="file" accept="image/png,image/webp,image/svg+xml" bind:this={iconInput}
+              onchange={() => upload('icon', iconInput)} />
+          </div>
+        </section>
 
-        <label class="field">
-          <span>{t('appearance.footer')}</span>
-          <input bind:value={form.footer} maxlength="300" />
-        </label>
-        <div class="field">
-          <span>{t('appearance.links')}</span>
-          {#each form.links as link, i (i)}
-            <div class="link">
-              <input bind:value={link.label} maxlength="40" placeholder={t('appearance.linkLabel')} />
-              <input bind:value={link.url} maxlength="300" placeholder="https://" />
-            </div>
-          {/each}
-        </div>
+        <!-- Accent colour -->
+        <section class="card part">
+          <div class="p-head">
+            <h2>{t('appearance.accent')}</h2>
+            <p class="muted small">{t('appearance.part.colorHint')}</p>
+          </div>
+          <div class="swatches" role="radiogroup" aria-label={t('appearance.accent')}>
+            {#each SWATCHES as c (c)}
+              <button class="swatch" role="radio" aria-checked={form.accent.toLowerCase() === c} aria-label={c} title={c}
+                class:on={form.accent.toLowerCase() === c} style="--c: {c}" onclick={() => (form.accent = c)}></button>
+            {/each}
+          </div>
+          <div class="color">
+            <input type="color" bind:value={form.accent} aria-label={t('appearance.accent')} />
+            <input class="mono" bind:value={form.accent} maxlength="7" aria-label={t('appearance.accent')} />
+            {#if !validColor}<span class="bad-text small">{t('appearance.colorInvalid')}</span>{/if}
+          </div>
+        </section>
 
-        <div class="save">
-          <button disabled={busy || !changed || !validColor} onclick={save}>{t('common.save')}</button>
-          {#if changed}<span class="muted small">{t('appearance.unsaved')}</span>{/if}
-        </div>
-      </section>
+        <!-- Footer and links -->
+        <section class="card part">
+          <div class="p-head">
+            <h2>{t('appearance.part.footer')}</h2>
+            <p class="muted small">{t('appearance.part.footerHint')}</p>
+          </div>
+          <label class="field">
+            <span>{t('appearance.footer')}</span>
+            <input bind:value={form.footer} maxlength="300" />
+          </label>
+          <div class="field">
+            <span>{t('appearance.links')}</span>
+            {#each form.links as link, i (i)}
+              <div class="link">
+                <input bind:value={link.label} maxlength="40" placeholder={t('appearance.linkLabel')} />
+                <input bind:value={link.url} maxlength="300" placeholder="https://" />
+              </div>
+            {/each}
+          </div>
+        </section>
+
+        <!-- Start page: edited right on it -->
+        <section class="card part start">
+          <div class="p-head">
+            <h2>{t('appearance.part.start')}</h2>
+            <p class="muted small">{t('appearance.startHint')}</p>
+          </div>
+          <button class="secondary" onclick={() => go('/')}>{t('appearance.toStart')} →</button>
+        </section>
+      </div>
 
       <!-- The preview -->
       <section class="card preview-card">
@@ -221,9 +256,19 @@
         </div>
       </section>
     </div>
+
+    {#if changed}
+      <!-- Unsaved changes: save or discard -->
+      <div class="savebar" role="region" aria-label={t('appearance.unsaved')}>
+        <span>{t('appearance.unsaved')}</span>
+        <div class="sb-acts">
+          <button class="ghost" disabled={busy} onclick={load}>{t('appearance.discard')}</button>
+          <button disabled={busy || !validColor} onclick={save}>{t('common.save')}</button>
+        </div>
+      </div>
+    {/if}
   {:else if !error}
     <p class="muted">{t('common.loading')}</p>
-  {/if}
   {/if}
 </div>
 
@@ -233,34 +278,18 @@
     gap: 14px;
   }
 
-  .start-hint {
+  .head {
+    display: grid;
+    gap: 4px;
+  }
+
+  .head h1 {
     margin: 0;
+    font-size: 1.45rem;
   }
 
-  .parts {
-    display: inline-flex;
-    justify-self: start;
-    padding: 3px;
-    gap: 2px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .parts button {
-    justify-content: flex-start;
-    padding: 6px 14px;
-    font-size: 0.88rem;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--muted);
-    border: 0;
-  }
-
-  .parts button.on {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
+  .head p {
+    margin: 0;
   }
 
   .layout {
@@ -270,19 +299,74 @@
     align-items: start;
   }
 
-  .settings {
+  .parts {
     display: grid;
     gap: 14px;
-    padding: 20px 22px;
+  }
+
+  .part {
+    display: grid;
+    gap: 14px;
+    padding: 18px 20px;
+  }
+
+  .p-head {
+    display: grid;
+    gap: 2px;
+  }
+
+  .p-head p {
+    margin: 0;
   }
 
   h2 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
   }
 
-  .settings > p {
-    margin: -8px 0 0;
+  .part.start {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .swatch {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--c);
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px rgb(255 255 255 / 25%);
+  }
+
+  .swatch.on {
+    border-color: var(--text);
+  }
+
+  .savebar {
+    position: sticky;
+    bottom: 16px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px 10px 18px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    box-shadow: var(--shadow);
+  }
+
+  .sb-acts {
+    display: flex;
+    gap: 8px;
   }
 
   .field {
@@ -335,14 +419,18 @@
     background: var(--surface);
   }
 
-  .image > div {
+  .i-text {
     display: grid;
-    gap: 4px;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
   }
 
   .acts {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    flex-shrink: 0;
   }
 
   .acts button {
@@ -367,15 +455,9 @@
     gap: 6px;
   }
 
-  .save {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
   .preview-card {
     position: sticky;
-    top: 70px;
+    top: 76px;
     display: grid;
     gap: 12px;
     padding: 14px;
@@ -592,6 +674,16 @@
 
     .preview-card {
       position: static;
+    }
+
+    .part.start {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 759px) {
+    .savebar {
+      bottom: calc(76px + env(safe-area-inset-bottom));
     }
   }
 </style>

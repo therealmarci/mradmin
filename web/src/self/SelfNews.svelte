@@ -175,10 +175,9 @@
           <p>{t('self.news.noChangelog')}</p>
         </section>
       {:else}
-        <section class="card tile">
-          <ol class="releases">
+        <ol class="releases">
             {#each releases as r (r.id)}
-              <li class="release" class:flash={flash === r.id} id="post-{r.id}">
+              <li class="release card" class:flash={flash === r.id} id="post-{r.id}">
                 <div class="r-head">
                   <h3>{#if r.version}<span class="version">{r.version}</span>{/if}{#if r.title && r.title !== r.version}{r.version ? ' · ' : ''}{r.title}{/if}</h3>
                   <span class="when">{dateOnly(r.created)}</span>
@@ -189,7 +188,6 @@
             {/each}
           </ol>
           {@render pager(releasePage, releasePages, (n) => (releasePage = n))}
-        </section>
       {/if}
     {/if}
   {:else if !error}
@@ -486,33 +484,24 @@
     margin: 0;
   }
 
-  /* Changelog: a plain list of versions, separated by a thin line. */
+  /* Changelog: every version in its own tile, inside a plain list. */
   .releases {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
+    gap: 14px;
   }
 
   .release {
     display: grid;
     gap: 8px;
-    padding: 18px 0;
-    border-top: 1px solid var(--border);
     scroll-margin-top: 90px;
-    transition: background 0.4s;
-  }
-
-  .release:first-child {
-    border-top: 0;
-    padding-top: 0;
+    transition: box-shadow 0.4s;
   }
 
   .release.flash {
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
-    border-radius: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
   }
 
   .r-head {

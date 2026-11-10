@@ -60,7 +60,7 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 The web interface carries the name and colours of your server - players never see "MRadmin".
 - **Name** and **tagline** (sign-in page), **accent colour** (buttons, highlights; the text colour on it is chosen by the page), **text and up to 4 links** in the footer (e.g. Discord, website, rules).
 - **Logo** (sign-in page, mails) and **browser icon** (tab, bar, "add to home screen"): PNG, WebP or SVG, at most 512 KB. Without an own icon the logo is used. SVGs with scripts or embedded content are refused.
-- On the right a **preview** of the sign-in and start page, light and dark. After saving everything applies to everyone right away.
+- One tile each for brand, logo and icon, accent colour (with suggested colours), footer and links, and the start page; on the right a **preview** of the sign-in and start page, light and dark, that stays in view while scrolling. Unsaved changes show a bar at the bottom with **Save** and **Discard**; after saving everything applies to everyone right away.
 - The name shows in the browser tab, on the sign-in page, in the bar, in mails, in the 2FA app and for passkeys.
 - Saved in `config.yml` (section `branding`, also editable in the file), the pictures under `plugins/MRadmin/branding/`.
 - **Mails** (confirmation, forgot password, unban, contact, test mail) come in the same look: header with logo and name in the accent colour, links as a button, footer with text, links, imprint and privacy - plus always a plain text version. For the logo in mails `web.public-url` is needed.
