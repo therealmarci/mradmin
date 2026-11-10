@@ -196,7 +196,26 @@ public final class Setup {
 
     /** The only config.yml keys the installer may set (seed.properties, applied once by MRadmin). */
     public static final List<String> SEED_KEYS = List.of("server.memory-min", "server.memory-max", "web.enabled",
-            "web.public-url", "storage.type", "versions.channel", "versions.dev-token");
+            "web.public-url", "web.bind", "web.trusted-proxies", "storage.type", "versions.channel", "versions.dev-token");
+
+    /** Docker's networks (bridge 172.17.x and the own networks of docker compose): the proxy's address changes. */
+    static final String DOCKER_RANGE = "172.16.0.0/12";
+
+    /**
+     * Where the reverse proxy runs - "here" (same machine, MRadmin listens only locally), "docker" (in Docker on this
+     * machine: listen on all addresses, trust Docker's networks) or the address / range of another machine.
+     * @return {bind, trusted proxies (comma separated)}, null for an unknown answer
+     */
+    static String[] proxy(String answer) {
+        if (answer == null || answer.isBlank() || answer.equalsIgnoreCase("here") || answer.equalsIgnoreCase("none")) {
+            return new String[]{"127.0.0.1", "127.0.0.1"};
+        }
+        if (answer.equalsIgnoreCase("docker")) {
+            return new String[]{"0.0.0.0", "127.0.0.1," + DOCKER_RANGE};
+        }
+        String trimmed = answer.trim();
+        return at.marcelr.mradmin.web.IpRanges.valid(trimmed) ? new String[]{"0.0.0.0", "127.0.0.1," + trimmed} : null;
+    }
 
     /** seed.properties: channel of single plugins on the page Plugins, e.g. {@code plugin-channel.MRadmin=dev}. */
     public static final String SEED_PLUGIN_CHANNEL = "plugin-channel.";
@@ -224,6 +243,12 @@ public final class Setup {
      */
     static void seed(StarterFiles files, String min, String max, boolean web, String webUrl, String channel,
                      String devToken) throws IOException {
+        seed(files, min, max, web, webUrl, channel, devToken, null);
+    }
+
+    /** Like above, {@code proxy} = answer of {@link #proxy} (null = not asked). */
+    static void seed(StarterFiles files, String min, String max, boolean web, String webUrl, String channel,
+                     String devToken, String[] proxy) throws IOException {
         Properties launch = StarterFiles.read(files.launch());
         Properties seed = StarterFiles.read(files.seed());
         if (min != null) {
@@ -239,6 +264,10 @@ public final class Setup {
             seed.setProperty("storage.type", "sqlite");
             if (webUrl != null && !webUrl.isEmpty()) {
                 seed.setProperty("web.public-url", webUrl);
+            }
+            if (proxy != null) {
+                seed.setProperty("web.bind", proxy[0]);
+                seed.setProperty("web.trusted-proxies", proxy[1]);
             }
         }
         if ("beta".equals(channel) || "dev".equals(channel)) {
@@ -278,6 +307,12 @@ public final class Setup {
         String urlProblem = webUrlProblem(webUrl);
         if (urlProblem != null) {
             System.out.println(urlProblem);
+            return 2;
+        }
+        String proxyAnswer = option(args, "--proxy");
+        String[] proxy = proxyAnswer == null ? null : proxy(proxyAnswer);
+        if (proxyAnswer != null && proxy == null) {
+            System.out.println("Unknown proxy '" + proxyAnswer + "' - here, docker or the address of the proxy machine (e.g. 10.0.0.5 or 10.0.0.0/24).");
             return 2;
         }
         String channel = option(args, "--channel");
@@ -333,7 +368,8 @@ public final class Setup {
             System.out.println("  Update channel: " + ("dev".equals(channel) ? "beta, MRadmin itself dev" : channel));
         }
         if (memoryMin != null || memoryMax != null || web || channel != null) {
-            seed(files, JavaFlags.memory(memoryMin), JavaFlags.memory(memoryMax), web, webUrl, channel, devToken);
+            seed(files, JavaFlags.memory(memoryMin), JavaFlags.memory(memoryMax), web || proxy != null, webUrl, channel,
+                    devToken, proxy);
         }
         if (memoryMin != null || memoryMax != null) {
             System.out.println("  Memory: " + Objects.requireNonNullElse(JavaFlags.memory(memoryMin), "1G") + " - "

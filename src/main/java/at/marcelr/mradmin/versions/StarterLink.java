@@ -117,7 +117,10 @@ public final class StarterLink {
             if (value == null) {
                 continue;
             }
-            plugin.getConfig().set(key, key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value) : value);
+            Object typed = key.equals("web.enabled") ? (Object) Boolean.parseBoolean(value)
+                    : key.equals("web.trusted-proxies") ? java.util.Arrays.stream(value.split(",")).map(String::trim)
+                            .filter(x -> !x.isEmpty()).toList() : value;
+            plugin.getConfig().set(key, typed);
             taken.add(key.equals("web.public-url") || key.equals("versions.dev-token") ? key : key + "=" + value);
         }
         for (String key : seed.stringPropertyNames()) {

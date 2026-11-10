@@ -53,13 +53,13 @@ public final class Http {
         InetSocketAddress remote = exchange.getRemoteAddress();
         String direct = remote == null ? "?" : remote.getAddress().getHostAddress();
         String forwarded = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
-        if (forwarded == null || !trusted.contains(direct)) {
+        if (forwarded == null || !IpRanges.matches(trusted, direct)) {
             return direct;
         }
         List<String> hops = List.of(forwarded.split(","));
         for (int i = hops.size() - 1; i >= 0; i--) {
             String hop = hops.get(i).trim();
-            if (!hop.isEmpty() && !trusted.contains(hop)) {
+            if (!hop.isEmpty() && !IpRanges.matches(trusted, hop)) {
                 return hop;
             }
         }

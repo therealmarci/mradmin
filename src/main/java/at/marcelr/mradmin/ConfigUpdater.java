@@ -56,7 +56,10 @@ public final class ConfigUpdater {
  * web.login.require-2fa (team needs 2FA, default off); new comments of web.login.
  * 53: branding (name, tagline, accent, footer-text, links) - the look of the web interface.
      */
-    public static final int CURRENT_VERSION = 57;
+    public static final int CURRENT_VERSION = 58;
+
+    /** Aikar's flags (default of server.java-flags since config-version 58). */
+    static final String AIKAR_FLAGS = "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true";
     public static final String BOM = "\uFEFF";
     /** Texts whose content changed with new features; the new default replaces the old value. */
     private static final Set<String> REPLACED_KEYS = Set.of();
@@ -216,6 +219,10 @@ public final class ConfigUpdater {
                 if (delays.equals(List.of("5m", "1m", "now"))) {
                     template.set("versions.restart-delays", List.of("15m", "30m", "60m"));
                 }
+            }
+            // v58: Aikar's flags are the default - only where nothing was set (the old default).
+            if (version < 58 && existing.getString("server.java-flags", "").isBlank()) {
+                template.set("server.java-flags", AIKAR_FLAGS);
             }
             template.set("config-version", CURRENT_VERSION);
             // Keep long messages on one line instead of folding them.

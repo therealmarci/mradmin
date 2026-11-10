@@ -898,7 +898,7 @@ sections:
       - key: web.trusted-proxies
         type: strings
         name: {de: Vertrauenswürdige Proxys, en: Trusted proxies}
-        help: {de: Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For)., en: MRadmin only trusts these for the real visitor IP (X-Forwarded-For).}
+        help: {de: "Nur ihnen glaubt MRadmin die echte Besucher-IP (X-Forwarded-For). Einzelne Adressen oder Bereiche, z.B. 172.16.0.0/12 für einen Proxy in Docker.", en: "MRadmin only trusts these for the real visitor IP (X-Forwarded-For). Single addresses or ranges, e.g. 172.16.0.0/12 for a proxy in Docker."}
       - key: web.login.require-2fa
         heading: {de: "Anmeldung", en: "Sign-in"}
         type: bool

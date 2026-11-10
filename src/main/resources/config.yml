@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 57
+config-version: 58
 
 
 # ------------------------------------------------------------------------------
@@ -388,9 +388,10 @@ server:
   # Memory of the server (e.g. 1G, 4096M) - takes effect on the next start.
   memory-min: "1G"
   memory-max: "4G"
-  # Extra Java options, e.g. Aikar's flags. Only tuning options: anything that could run programs or read and write
-  # files is ignored (with a warning in the console). Set other options in mrserver.properties on the machine.
-  java-flags: ""
+  # Extra Java options - by default Aikar's flags (recommended for Paper, https://docs.papermc.io/paper/aikars-flags).
+  # Only tuning options: anything that could run programs or read and write files is ignored (with a warning in the
+  # console). Set other options in mrserver.properties on the machine. "" = none.
+  java-flags: "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true"
   # Paper updates on every start of the starter: "auto" = newest stable build of this Minecraft version (never a
   # new Minecraft version, e.g. 26.3 -> 26.4), "notify" = only show it, "off". If a new build does not start, the
   # starter goes back to the old one by itself.
@@ -464,7 +465,7 @@ web:
   # "https://admin.yourserver.com". Without HTTPS, login cookies are not marked "Secure" - for testing only.
   public-url: ""
   # Addresses of your reverse proxy. MRadmin only trusts these for the real visitor IP (X-Forwarded-For) - important for
-  # limiting login attempts and for the log.
+  # limiting login attempts and for the log. Single addresses or ranges, e.g. "172.16.0.0/12" for a proxy in Docker.
   trusted-proxies: ["127.0.0.1"]
   # Sign-in: everyone gets in with the code from /web in game (how long a browser stays signed in: player-web.session-days
   # and idle-days). On top, everyone can set up an own sign-in under Account -> Sign-ins to get in without the game:
