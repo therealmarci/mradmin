@@ -1,11 +1,13 @@
 <script>
-  // The bar of the team panel and the player area: the places on the left, language flags and the own name (a click
-  // opens a small menu) on the right. Phone: flags and name stay on top, the places move to a bar at the bottom - at
+  // The bar of the team panel and the player area: the places on the left; on the right the switch player area /
+  // administration (team only, one small button), the letter of the inbox and the own head + name (a click opens a
+  // small menu with the language flags, account and sign-out). Visitors see the flags next to the sign-in button. Phone: flags and name stay on top, the places move to a bar at the bottom - at
   // most five, with more the first four plus a menu button for the rest.
   import { head } from '../lib/format.js';
   import LangFlags from './LangFlags.svelte';
   import { ICONS } from '../lib/icons.js';
   import { brand, picture } from '../lib/branding.svelte.js';
+  import { t } from '../lib/i18n.js';
 
   /**
    * items: [{path, label, icon}] - icon is a key of ICONS or an emoji; current: path of the highlighted place;
@@ -13,7 +15,7 @@
    * moreLabel: text of the menu button for the rest on the phone;
    * live: null (no dot) or true/false (connection of the team panel);
    * modes: null or {current: 'player' | 'admin', player, admin (labels), onswitch(mode)} - the switch between the
-   * player area and the administration (team only); on the phone it is in the menu.
+   * player area and the administration (team only) - one button the size of the letter, filled while in the administration.
    */
   // user null = visitor: instead of the name menu a sign-in button (onlogin)
   // inbox: null (no letter) or {count, active, label} - the letter opens /inbox, the number = what is new
@@ -56,23 +58,23 @@
   </nav>
   <div class="right">
     {#if modes}
-      <div class="modes" role="radiogroup">
-        {#each ['player', 'admin'] as m (m)}
-          <button role="radio" aria-checked={modes.current === m} class:on={modes.current === m}
-            onclick={() => modes.current !== m && modes.onswitch(m)}>{modes[m]}</button>
-        {/each}
-      </div>
+      {@const other = modes.current === 'admin' ? 'player' : 'admin'}
+      <button class="icon-btn mode" class:on={modes.current === 'admin'} aria-pressed={modes.current === 'admin'}
+        aria-label={modes[other]} title={modes[other]} onclick={() => modes.onswitch(other)}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true"><path d={ICONS.shield} /></svg>
+      </button>
     {/if}
     {#if inbox}
-      <button class="inbox" class:active={inbox.active} class:has={inbox.count > 0} onclick={() => go('/inbox')}
+      <button class="icon-btn inbox" class:active={inbox.active} class:has={inbox.count > 0} onclick={() => go('/inbox')}
         aria-label={inbox.count ? `${inbox.label} (${inbox.count})` : inbox.label} title={inbox.label}>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round" aria-hidden="true"><path d={ICONS.mail} /></svg>
         {#if inbox.count > 0}<span class="badge">{inbox.count > 99 ? '99+' : inbox.count}</span>{/if}
       </button>
     {/if}
-    <LangFlags />
     {#if !user}
+      <LangFlags />
       <button class="login" onclick={onlogin}>{loginLabel}</button>
     {:else}
     <div class="account">
@@ -86,12 +88,10 @@
       </button>
       {#if menuOpen}
         <div class="menu" role="menu">
-          {#if modes}
-            {@const other = modes.current === 'admin' ? 'player' : 'admin'}
-            <button role="menuitem" class="mode-entry" onclick={() => { menuOpen = false; modes.onswitch(other); }}>
-              <span aria-hidden="true">⇄</span> {modes[other]}
-            </button>
-          {/if}
+          <div class="lang-row">
+            <span>{t('self.language')}</span>
+            <LangFlags />
+          </div>
           {#each menu as entry}
             <button role="menuitem" class:active={entry.active} class:out={entry.danger}
               onclick={() => { menuOpen = false; entry.onclick(); }}>
@@ -135,8 +135,8 @@
 </nav>
 
 <style>
-  /* The letter of the inbox, with the number of new things */
-  .inbox {
+  /* Small square buttons on the right: the switch to the administration and the letter of the inbox */
+  .icon-btn {
     position: relative;
     display: grid;
     place-items: center;
@@ -149,8 +149,8 @@
     background: transparent;
   }
 
-  .inbox:hover,
-  .inbox.active {
+  .icon-btn:hover,
+  .icon-btn.active {
     color: var(--text);
     background: var(--surface-2);
     border-color: var(--border);
@@ -158,6 +158,14 @@
 
   .inbox.has {
     color: var(--accent);
+  }
+
+  /* In the administration the switch is filled, so it is always clear where you are */
+  .mode.on,
+  .mode.on:hover {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
   }
 
   .badge {
@@ -235,32 +243,17 @@
     white-space: nowrap;
   }
 
-  .modes {
-    display: inline-flex;
-    padding: 3px;
-    gap: 2px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .modes button {
-    justify-content: flex-start;
-    padding: 5px 12px;
-    font-size: 0.84rem;
-    border-radius: 8px;
-    background: transparent;
+  /* Language in the name menu */
+  .lang-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 6px 8px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
     color: var(--muted);
-    border: 0;
-  }
-
-  .modes button.on {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .mode-entry {
-    display: none !important;
+    font-size: 0.88rem;
   }
 
   .right {
@@ -385,16 +378,8 @@
   }
 
   @media (max-width: 759px) {
-    .modes {
-      display: none;
-    }
-
     .brand-name {
       display: inline;
-    }
-
-    .mode-entry {
-      display: flex !important;
     }
 
     .desktop {

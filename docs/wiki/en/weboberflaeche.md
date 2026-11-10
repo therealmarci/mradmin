@@ -3,7 +3,7 @@
 Use MRadmin from your phone, tablet or PC: answer tickets, manage players, schedule maintenance, keep an eye on the server status - with the same permissions as in game. This page describes the web interface in detail. What players see on their own page is described under [Player page](spielerseite.md), updates and restarts under [Plugins & updates](plugins.md).
 
 ## Layout
-Since 1.5 there is **one** web interface for players and team. Team members switch at the top right with **Player | Administration** (on the phone in the menu under the name). Every area has tabs at the top.
+Since 1.5 there is **one** web interface for players and team. Team members switch between the player area and the administration with the **shield button** at the top right (filled in colour while in the administration). The language is changed in the menu under your own name. Every area has tabs at the top.
 
 | Player area | Content |
 |---|---|

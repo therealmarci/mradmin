@@ -3,7 +3,7 @@
 MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail. Was Spieler auf ihrer eigenen Seite sehen, steht unter [Spielerseite](wiki/spielerseite.md), Updates und Neustart unter [Plugins & Updates](wiki/plugins.md).
 
 ## Aufbau
-Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit **Spieler | Verwaltung** (auf dem Handy im Menü unter dem Namen). Jeder Bereich hat oben Reiter.
+Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit dem **Schild-Knopf** zwischen Spielerbereich und Verwaltung (in der Verwaltung ist er farbig gefüllt). Die Sprache stellt man im Menü unter dem eigenen Namen um. Jeder Bereich hat oben Reiter.
 
 | Spielerbereich | Inhalt |
 |---|---|
