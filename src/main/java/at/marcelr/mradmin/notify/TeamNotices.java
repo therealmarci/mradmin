@@ -189,7 +189,8 @@ public final class TeamNotices implements Listener {
         send(kind, ref, url, who, texts, true);
     }
 
-    private void send(String kind, String ref, String url, Predicate<UUID> who, Map<String, String[]> texts, boolean line) {
+    /** Like {@link #send(String, String, String, Predicate, Map)}; {@code line} = false: no line in the game. */
+    public void send(String kind, String ref, String url, Predicate<UUID> who, Map<String, String[]> texts, boolean line) {
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(plugin, () -> send(kind, ref, url, who, texts, line));
             return;

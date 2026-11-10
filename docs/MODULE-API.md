@@ -358,8 +358,9 @@ und Chat).
 
 ## Team-Meldungen (`teamNotice`, ab API 15)
 
-Ein Modul meldet dem Team etwas - im Posteingang der Weboberfläche, als Push und als kurze Zeile im Spiel, so wie
-jedes Teammitglied es für diese Art unter **Konto → Benachrichtigungen** gewählt hat:
+Ein Modul meldet dem Team etwas - im Posteingang der Weboberfläche und als Push, so wie jedes Teammitglied es für
+diese Art unter **Konto → Benachrichtigungen** gewählt hat. Die Nachricht im Spiel schickt das Modul selbst (mit
+eigenen Knöpfen) - nur an Mitglieder, für die `teamNoticeInGame` `true` liefert:
 
 - `teamNotice(moduleId, kind, ref, link, texts)` - `kind` ist eine der eigenen `pushKinds()` (nur Mitglieder mit der
   `viewPermission()` des Moduls bekommen sie), `link` ein Pfad der Weboberfläche (z.B. `/admin/features/mrchunks`),
@@ -371,8 +372,7 @@ jedes Teammitglied es für diese Art unter **Konto → Benachrichtigungen** gew�
   will dieses Mitglied die Art im Spiel und hat es nicht mit `/mradmin mute` stummgeschaltet? Mit älterem MRadmin
   immer `true`.
 
-Mehrere gleiche Meldungen kurz hintereinander zeigt MRadmin zusammen, Spieler in einem Duell (`busy`) bekommen die Zeile
-erst danach. Ein Ticket über `report(…)` mit `Report#push()` landet ebenfalls im Posteingang (ohne eigene Zeile im
+Mehrere gleiche Meldungen kurz hintereinander zeigt MRadmin im Posteingang zusammen. Ein Ticket über `report(…)` mit `Report#push()` landet ebenfalls im Posteingang (ohne eigene Zeile im
 Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
 
 ## Versionen

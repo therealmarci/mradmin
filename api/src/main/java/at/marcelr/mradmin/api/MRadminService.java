@@ -167,10 +167,10 @@ public interface MRadminService {
     // ------------------------------------------------------------------ team notices (since API 15)
 
     /**
-     * A notice for the team - in the inbox of the web interface, as push and as a short line in the game, as each member
-     * chose for this kind in their account (only members who may see the module). The kind must be one of the module's
-     * {@link WebModule#pushKinds()}. Several of the same kind in a short time are shown together; players in a duel get
-     * the line after it; {@code /mradmin mute} silences the game line.
+     * A notice for the team - in the inbox of the web interface and as push, as each member chose for this kind in their
+     * account (only members who may see the module). The kind must be one of the module's {@link WebModule#pushKinds()}.
+     * The message in the game stays with the module (with its own buttons): send it only to members for whom
+     * {@link #teamNoticeInGame} is true - that also covers {@code /mradmin mute}.
      *
      * @param kind  the kind, e.g. "chunks-shed"
      * @param ref   what it is about, e.g. "loader:12" - {@link #teamNoticeDone} marks it as done later (may be null)

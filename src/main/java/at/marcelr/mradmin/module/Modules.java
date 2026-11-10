@@ -152,7 +152,8 @@ public final class Modules implements MRadminService {
                 all.put(lang, new String[]{t[0], t[1] == null ? "" : t[1]});
             }
         }
-        plugin.notices().send(kind, ref == null ? null : "module:" + moduleId + ":" + ref, link, null, all);
+        // The line in the game comes from the module itself (with its own buttons), filtered by teamNoticeInGame.
+        plugin.notices().send(kind, ref == null ? null : "module:" + moduleId + ":" + ref, link, null, all, false);
     }
 
     @Override

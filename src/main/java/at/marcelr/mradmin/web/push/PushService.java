@@ -278,7 +278,7 @@ public final class PushService {
             var module = plugin.modules().module(id);
             for (var info : plugin.modules().call(module, web::pushKinds, List.<at.marcelr.mradmin.api.WebPushKind>of())) {
                 if (result.stream().noneMatch(k -> k.key().equals(info.key()))) {
-                    result.add(new Kind(info.key(), null, null, info.byDefault(), id, info, Game.LINE, false));
+                    result.add(new Kind(info.key(), null, null, info.byDefault(), id, info, Game.OWN, false));
                 }
             }
         });
