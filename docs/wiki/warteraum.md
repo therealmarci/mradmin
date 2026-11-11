@@ -7,6 +7,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 ## Was MRadmin dabei macht
 - **Vor einem Neustart oder Stopp** (Countdown aus dem Browser, `/mradmin restart|stop`, geplante Neustarts) schickt MRadmin alle Spieler kurz vor dem Herunterfahren in den Warteraum (`waiting-room.on-restart`).
 - **Bei Wartungsbeginn** wechseln alle, die laut [Rechten](#rechte-im-warteraum) nicht bleiben dürfen, in den Warteraum, statt gekickt zu werden - auch wer während einer Wartung joint (`waiting-room.on-maintenance`).
+- **Die Ankündigungen sagen es dazu:** Neustart-, Stopp- und Wartungsmeldungen im Chat enden mit „Du musst nicht rausgehen.“ (Platzhalter `<stay>`, nur mit Warteraum) - so verlässt niemand vorher den Server.
 - **Infos für den Warteraum:** Über eine eigene kleine Schnittstelle (nicht die Weboberfläche) erfährt der Warteraum Neustart-Countdown und Grund, laufende und geplante Wartung und aktive Warnungen aus **Neuigkeiten**. Er merkt sich die letzte Antwort, damit die Infos auch dann noch da sind, wenn dein Server aus ist.
 
 > [!NOTE]
