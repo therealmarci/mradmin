@@ -109,6 +109,10 @@
   const roomTone = $derived(!room ? 'off' : room.restarting ? 'info' : !room.online ? 'bad' : room.ordered || room.pending ? 'info' : 'good');
   const roomState = $derived(!room ? '' : room.restarting ? t('server.room.restarting') : !room.online ? t('server.room.offline')
     : room.ordered || room.pending ? t('server.room.pending') : t('server.room.online'));
+  const roomLock = $derived(!room ? null : room.restarting ? 'restarting' : !room.online ? 'remote-offline'
+    : room.ordered ? 'ordered' : !room.starter ? 'no-starter'
+    : room.blocked && room.blocked !== 'players-waiting' ? room.blocked
+    : r?.endsAt > 0 ? 'main-restart-soon' : null);
   const restartRoom = () => act('/waitroom/restart', {}, t('server.room.ordered'), t('server.room.confirm'));
 
   // The values of the server card: one word each, the rest in the tooltip.
@@ -275,23 +279,22 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" aria-hidden="true"><path d={ICONS.restore} /></svg>
               {t('server.room.title')}
+              <span class="pill {roomTone}"><span class="dot {roomTone}"></span>{roomState}</span>
             </span>
-            <span class="big"><span class="dot {roomTone}"></span>{roomState}</span>
             {#if room.online}
-              <span class="line small muted">
-                {t('server.room.facts', { since: room.startedAt ? ago(room.startedAt) : '–', build: room.paper ?? '–',
-                  players: room.players ?? 0 })}
-              </span>
-              <span class="line small muted">
-                {room.nextRestart ? t('server.room.next', { time: when(room.nextRestart) }) : t('server.room.nextNone')}
-              </span>
-              {#if !room.starter}<span class="line small warn">{t('server.room.noStarter')}</span>
-              {:else if room.blocked && room.blocked !== 'players-waiting'}<span class="line small muted">{t('server.room.blocked.' + room.blocked)}</span>{/if}
+              <div class="badges">
+                <span class="badge" title={t('server.room.paperTip')}>Paper #{room.paper ?? '–'}</span>
+                <span class="badge">{t('server.room.since', { time: room.startedAt ? ago(room.startedAt) : '–' })}</span>
+                <span class="badge" class:info={room.players > 0}>{t('server.room.players', { n: room.players ?? 0 })}</span>
+                <span class="badge">{room.nextRestart ? t('server.room.next', { time: when(room.nextRestart) }) : t('server.room.nextNone')}</span>
+                <span class="badge" class:warn={!room.starter}>{t(room.starter ? 'server.room.starterOn' : 'server.room.starterOff')}</span>
+              </div>
             {/if}
-            {#if room.error}<span class="line small bad">{t('server.room.blocked.' + room.error)}</span>{/if}
+            {#if roomLock}<span class="lock small muted">{t('server.room.blocked.' + roomLock)}</span>{/if}
+            {#if room.error}<span class="lock small bad">{t('server.room.blocked.' + room.error)}</span>{/if}
             {#if data.may.stop}
-              <button class="secondary" disabled={busy || !room.online || !room.starter || room.ordered}
-                title={!room.starter ? t('server.room.noStarter') : ''} onclick={restartRoom}>{t('server.room.restart')}</button>
+              <button class="secondary" disabled={busy || !!roomLock} title={roomLock ? t('server.room.blocked.' + roomLock) : ''}
+                onclick={restartRoom}>{t('server.room.restart')}</button>
             {/if}
           </div>
         {/if}
@@ -628,10 +631,63 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
   }
 
-  .room .big {
+  .room .t-head {
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
+    background: color-mix(in srgb, var(--good) 12%, transparent);
+  }
+
+  .pill.info {
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .pill.bad {
+    border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+    background: color-mix(in srgb, var(--bad) 12%, transparent);
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .badge {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .badge.info {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  .badge.warn {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  }
+
+  .lock.bad {
+    color: var(--bad);
   }
 
   .room button {
