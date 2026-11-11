@@ -176,14 +176,18 @@ public final class RestartManager {
             plugin.announcer().announcePreset(preset, List.of(), by, false);
         }
         plugin.starter().prepare(restart);
-        // A moment to read it, then down.
+        // A moment to read it, then down. Behind a proxy with a waiting room the players move there first
+        // (waiting-room.on-restart) and the server goes down once the proxy had time to move them.
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            plugin.getLogger().info((restart ? "Restarting" : "Stopping") + " the server (requested by " + by + ", reason: " + reason + ").");
-            if (restart && !plugin.starter().active() && plugin.settings().versions().restartMethod().equals("script")) {
-                Bukkit.restart();
-            } else {
-                Bukkit.shutdown();
-            }
+            int sent = plugin.waitingRoom().sendAllBeforeStop();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                plugin.getLogger().info((restart ? "Restarting" : "Stopping") + " the server (requested by " + by + ", reason: " + reason + ").");
+                if (restart && !plugin.starter().active() && plugin.settings().versions().restartMethod().equals("script")) {
+                    Bukkit.restart();
+                } else {
+                    Bukkit.shutdown();
+                }
+            }, sent > 0 ? 40L : 1L);
         }, 60L);
     }
 }
