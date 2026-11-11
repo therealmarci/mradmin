@@ -70,6 +70,7 @@ public final class WaitingRoom implements Listener {
     }
 
     private final MRAdmin plugin;
+    private final RemotePlugins remote;
     private volatile Config config = new Config(false, "waitroom", true, true, "", 8126, "");
     private HttpServer server;
     private String boundTo = "";
@@ -84,6 +85,12 @@ public final class WaitingRoom implements Listener {
 
     public WaitingRoom(MRAdmin plugin) {
         this.plugin = plugin;
+        this.remote = new RemotePlugins(plugin);
+    }
+
+    /** Plugins on the waiting room server managed from here (configuration, updates). */
+    public RemotePlugins remote() {
+        return remote;
     }
 
     public Config config() {
@@ -261,7 +268,7 @@ public final class WaitingRoom implements Listener {
                 t.setDaemon(true);
                 return t;
             }));
-            server.createContext("/waiting-room/status", this::handle);
+            server.createContext("/waiting-room/", this::handle);
             server.start();
             boundTo = c.bind() + ":" + c.port();
             plugin.getLogger().info("Waiting room link listening on " + boundTo + ".");
@@ -294,7 +301,10 @@ public final class WaitingRoom implements Listener {
                 reply(exchange, 429, "{\"error\":\"rate-limit\"}");
                 return;
             }
-            if (!"GET".equals(exchange.getRequestMethod())) {
+            String path = exchange.getRequestURI().getPath();
+            boolean report = path.equals("/waiting-room/report");
+            if (!(report ? "POST" : "GET").equals(exchange.getRequestMethod())
+                    || !(report || path.equals("/waiting-room/status"))) {
                 reply(exchange, 405, "{\"error\":\"method\"}");
                 return;
             }
@@ -306,7 +316,18 @@ public final class WaitingRoom implements Listener {
                 reply(exchange, 401, "{\"error\":\"key\"}");
                 return;
             }
-            reply(exchange, 200, snapshot);
+            if (report) {
+                byte[] body = exchange.getRequestBody().readNBytes(600 * 1024 + 1);
+                String problem = body.length > 600 * 1024 ? "too-large"
+                        : remote.receive(new String(body, StandardCharsets.UTF_8));
+                reply(exchange, problem == null ? 200 : 400, problem == null ? "{\"ok\":true}"
+                        : "{\"error\":\"" + problem + "\"}");
+                return;
+            }
+            // The state plus the open orders for remote plugins (configuration, updates).
+            String state = snapshot;
+            String orders = "\"orders\":" + remote.ordersJson() + "}";
+            reply(exchange, 200, state.length() <= 2 ? "{" + orders : state.substring(0, state.length() - 1) + "," + orders);
         } catch (RuntimeException e) {
             plugin.getLogger().log(Level.WARNING, "Waiting room link request failed", e);
         }

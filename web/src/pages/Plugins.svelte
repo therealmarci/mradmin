@@ -87,7 +87,8 @@
   const byName = (a, b) => a.name.localeCompare(b.name);
   const installed = $derived(data ? data.plugins.filter((p) => p.installed).sort(byName) : []);
   const others = $derived(data ? data.plugins.filter((p) => !p.installed).sort(byName) : []);
-  const waiting = $derived(data ? data.plugins.filter((p) => p.staged || (p.pending && !p.notLoaded)) : []);
+  // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
+  const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
   // Badge next to the latest version of the channel: the installed one is it, or it is newer (not yet downloaded).
   const latestBadge = (p) => (!p.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : pluginState(p).tone === 'good' ? 'current' : null);
@@ -145,6 +146,7 @@
           <strong>{p.name}</strong>
         {/if}
         <span class="small muted desc">{pluginDescription(p.name)}</span>
+        {#if p.remote}<span class="remote small" class:off={!p.remote.online} title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span>{/if}
       </div>
     </div>
 
@@ -194,6 +196,8 @@
 
     {#if p.blocked}<p class="note warn-text">{t('plugins.blocked.' + p.blocked.reason, { name: p.name, version: offeredText(p), have: p.blocked.have, offered: p.blocked.offered })}</p>{/if}
     {#if p.notLoaded}<p class="note bad-text">{t('plugins.notLoadedHint')}</p>{/if}
+    {#if p.remote?.configPending}<p class="note small muted">{t('plugins.remote.configPending')}</p>{/if}
+    {#if p.remote?.error}<p class="note bad-text">{t('plugins.remote.error', { error: p.remote.error })}</p>{/if}
     {#if err}<p class="note bad-text">{err}</p>{/if}
   </li>
 {/snippet}
@@ -879,4 +883,7 @@
       transition: none;
     }
   }
+  .remote { display: inline-block; margin-top: 0.15rem; padding: 0 0.4rem; border-radius: 999px;
+    border: 1px solid var(--edge); color: var(--muted); width: fit-content; }
+  .remote.off { color: var(--bad); border-color: var(--bad); }
 </style>

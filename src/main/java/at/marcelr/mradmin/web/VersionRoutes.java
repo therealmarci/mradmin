@@ -85,6 +85,19 @@ public final class VersionRoutes {
         for (VersionManager.Entry e : versions.list()) {
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("name", e.name);
+            if (e.remote) {
+                // On the waiting room server: managed through its reports (network.RemotePlugins).
+                var remote = plugin.waitingRoom().remote();
+                var report = remote.report(e.name);
+                Map<String, Object> r = new LinkedHashMap<>();
+                r.put("online", report != null && report.online());
+                r.put("server", report == null ? "" : report.server());
+                r.put("seen", report == null ? 0 : report.at());
+                r.put("ordered", remote.openOrder(e.name, "update"));
+                r.put("configPending", remote.openOrder(e.name, "config") != null);
+                r.put("error", remote.error(e.name));
+                p.put("remote", r);
+            }
             p.put("installed", e.installed);
             p.put("minecraft", e.minecraft);
             p.put("website", e.website);

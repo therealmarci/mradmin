@@ -56,6 +56,10 @@ public final class ConfigEditor {
                 result.put(module.plugin().getName(), config);
             }
         }
+        // Plugins on the waiting room server: their mirror (saving becomes an order, network.RemotePlugins).
+        if (plugin.waitingRoom().active()) {
+            plugin.waitingRoom().remote().webConfigs().forEach(result::putIfAbsent);
+        }
         return result;
     }
 
