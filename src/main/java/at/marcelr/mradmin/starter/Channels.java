@@ -59,22 +59,31 @@ public final class Channels {
      * @param releases the release list of the GitHub API
      */
     static Pick pickBeta(Object releases, String minecraft, String installed) {
+        return pickNewest(releases, minecraft, installed, "MRadmin", DOWNLOADS);
+    }
+
+    /**
+     * The newest release of a plugin for this Minecraft version (stable or beta), newer than {@code installed} (null =
+     * any), whose JAR is {@code <name>-mc....jar} under {@code downloads} with a SHA-256 digest; null if there is none.
+     */
+    static Pick pickNewest(Object releases, String minecraft, String installed, String name, String downloads) {
         Pick best = null;
         String bestTag = installed;
         for (Object o : Json.array(releases)) {
             Map<String, Object> r = Json.object(o);
             String tag = Json.string(r.get("tag_name"));
             if (tag == null || Boolean.TRUE.equals(r.get("draft")) || !minecraft.equals(Versions.minecraft(tag))
-                    || Versions.compare(tag, bestTag) <= 0) {
+                    || (bestTag != null && Versions.compare(tag, bestTag) <= 0)) {
                 continue;
             }
             for (Object a : Json.array(r.get("assets"))) {
                 Map<String, Object> asset = Json.object(a);
-                String name = Json.string(asset.get("name"));
+                String file = Json.string(asset.get("name"));
                 String url = Json.string(asset.get("browser_download_url"));
                 String digest = Json.string(asset.get("digest"));
-                if (name == null || url == null || digest == null || !name.matches("MRadmin-mc[A-Za-z0-9.+-]*\\.jar")
-                        || !url.startsWith(DOWNLOADS) || !digest.matches("sha256:[0-9a-fA-F]{64}")) {
+                if (file == null || url == null || digest == null
+                        || !file.matches(java.util.regex.Pattern.quote(name) + "-mc[A-Za-z0-9.+-]*\\.jar")
+                        || !url.startsWith(downloads) || !digest.matches("sha256:[0-9a-fA-F]{64}")) {
                     continue;
                 }
                 best = new Pick(Versions.plugin(tag), url, digest.substring(7).toLowerCase(Locale.ROOT), false);
@@ -157,13 +166,17 @@ public final class Channels {
 
     /** MRadmin's releases from the website's file, null if it cannot be read. */
     private static Object feedReleases() throws InterruptedException {
+        return feedReleases(REPO);
+    }
+
+    private static Object feedReleases(String repo) throws InterruptedException {
         try {
             HttpResponse<byte[]> r = get(RELEASE_FEED);
             if (r.statusCode() != 200) {
                 return null;
             }
             Object repos = Json.object(Json.parse(new String(r.body(), StandardCharsets.UTF_8))).get("repos");
-            Object list = repos == null ? null : Json.object(repos).get(REPO);
+            Object list = repos == null ? null : Json.object(repos).get(repo);
             return list instanceof java.util.List<?> ? list : null;
         } catch (IOException | RuntimeException e) {
             return null;
@@ -212,10 +225,38 @@ public final class Channels {
     }
 
     /**
+     * The newest release (stable or beta) of another MRtechnology plugin, e.g. MRwaitroom for a waiting room server.
+     *
+     * @param repo e.g. therealmarci/mrwaitroom
+     * @throws IOException with a message for the user if there is none or GitHub cannot be reached
+     */
+    public static Pick newestPlugin(String repo, String name) throws IOException, InterruptedException {
+        String downloads = "https://github.com/" + repo + "/releases/download/";
+        Object releases = feedReleases(repo);
+        if (releases == null) {
+            HttpResponse<byte[]> r = get("https://api.github.com/repos/" + repo + "/releases?per_page=50");
+            if (r.statusCode() != 200) {
+                throw new IOException("Could not look up the " + name + " releases (" + github(r.statusCode()) + ").");
+            }
+            releases = Json.parse(new String(r.body(), StandardCharsets.UTF_8));
+        }
+        Pick pick = pickNewest(releases, Main.minecraft(), null, name, downloads);
+        if (pick == null) {
+            throw new IOException("There is no " + name + " release for Minecraft " + Main.minecraft() + " yet.");
+        }
+        return pick;
+    }
+
+    /**
      * Downloads the pick (opens a dev build with the token), checks SHA-256 and that it is MRadmin, and saves it as
      * {@code target}. Nothing is left behind if a check fails.
      */
     public static void download(Pick pick, String token, Path target) throws IOException, InterruptedException {
+        download(pick, token, target, "MRadmin");
+    }
+
+    /** Like {@link #download(Pick, String, Path)} for the plugin {@code name}. */
+    public static void download(Pick pick, String token, Path target, String name) throws IOException, InterruptedException {
         HttpResponse<byte[]> r = get(pick.url());
         if (r.statusCode() != 200) {
             throw new IOException("Download failed: HTTP " + r.statusCode());
@@ -236,8 +277,8 @@ public final class Channels {
         Path tmp = target.resolveSibling(target.getFileName() + ".download");
         Files.write(tmp, jar);
         try {
-            if (!"MRadmin".equals(pluginName(tmp))) {
-                throw new IOException("The download is not MRadmin - not using it.");
+            if (!name.equals(pluginName(tmp))) {
+                throw new IOException("The download is not " + name + " - not using it.");
             }
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         } finally {

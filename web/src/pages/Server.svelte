@@ -104,6 +104,13 @@
   }
   const when = (ms) => new Date(ms).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
+  // The waiting room server (MRwaitroom reports itself; its restart is an order it carries out when it may).
+  const room = $derived(data?.waitroom);
+  const roomTone = $derived(!room ? 'off' : !room.online ? 'bad' : room.ordered || room.pending ? 'info' : 'good');
+  const roomState = $derived(!room ? '' : !room.online ? t('server.room.offline')
+    : room.ordered || room.pending ? t('server.room.pending') : t('server.room.online'));
+  const restartRoom = () => act('/waitroom/restart', {}, t('server.room.ordered'), t('server.room.confirm'));
+
   // The values of the server card: one word each, the rest in the tooltip.
   const pausedUntil = $derived(r?.schedule?.pausedUntil > now ? r.schedule.pausedUntil : 0);
   const paperStaged = $derived(r && r.paper.staged >= 0 ? r.paper.staged : 0);
@@ -261,7 +268,33 @@
           starterActive={r.starter.active} {reason} ondone={emergencyDone} />
       {/if}
 
-      <div class="tiles">
+      <div class="tiles" class:three={!!room}>
+        {#if room}
+          <div class="card tile room">
+            <span class="t-head">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true"><path d={ICONS.restore} /></svg>
+              {t('server.room.title')}
+            </span>
+            <span class="big"><span class="dot {roomTone}"></span>{roomState}</span>
+            {#if room.online}
+              <span class="line small muted">
+                {t('server.room.facts', { since: room.startedAt ? ago(room.startedAt) : '–', build: room.paper ?? '–',
+                  players: room.players ?? 0 })}
+              </span>
+              <span class="line small muted">
+                {room.nextRestart ? t('server.room.next', { time: when(room.nextRestart) }) : t('server.room.nextNone')}
+              </span>
+              {#if !room.starter}<span class="line small warn">{t('server.room.noStarter')}</span>
+              {:else if room.blocked && room.blocked !== 'players-waiting'}<span class="line small muted">{t('server.room.blocked.' + room.blocked)}</span>{/if}
+            {/if}
+            {#if room.error}<span class="line small bad">{t('server.room.blocked.' + room.error)}</span>{/if}
+            {#if data.may.stop}
+              <button class="secondary" disabled={busy || !room.online || !room.starter || room.ordered}
+                title={!room.starter ? t('server.room.noStarter') : ''} onclick={restartRoom}>{t('server.room.restart')}</button>
+            {/if}
+          </div>
+        {/if}
         <button class="card tile" onclick={() => open('plugins')}>
           <span class="t-head">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -591,6 +624,21 @@
     gap: 14px;
   }
 
+  .tiles.three {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .room .big {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .room button {
+    justify-self: start;
+    margin-top: 4px;
+  }
+
   .tile {
     display: grid;
     align-content: start;
@@ -697,7 +745,8 @@
     }
 
     .server,
-    .tiles {
+    .tiles,
+    .tiles.three {
       grid-template-columns: minmax(0, 1fr);
     }
 

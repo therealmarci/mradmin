@@ -66,6 +66,10 @@ public final class Main {
                                               MRadmin beta, dev = dev build (token in MRSERVER_DEV_TOKEN);
                                               --proxy: where the reverse proxy runs (this machine,
                                               Docker on it, or the address / range of another machine)
+                  mrserver setup --role waitroom [--main-server main] [--main-address 10.0.0.5:25565]
+                         [--link-url http://10.0.0.5:8126] [--memory-max 2G]
+                                              set up a waiting room server (Paper + MRwaitroom instead of
+                                              MRadmin); key of MRadmin waiting-room.link in MRSERVER_LINK_KEY
                   mrserver install            start the server automatically when the machine starts
                   mrserver uninstall          no autostart any more
                   mrserver start              start the server (in the background)

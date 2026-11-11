@@ -49,9 +49,12 @@ public final class RemotePlugins {
      * What a remote plugin last reported.
      *
      * @param staged version waiting for the remote server's next start, or null
+     * @param host   the remote server itself (starter, Paper build, running since, next planned restart, what blocks a
+     *               restart) - shown on the tile "waiting room server"
      */
     public record Report(String name, String version, String commit, String branch, String repository, String form,
-                         String defaults, String config, String staged, String server, long at) {
+                         String defaults, String config, String staged, String server, Map<String, Object> host,
+                         long at) {
 
         public boolean online() {
             return System.currentTimeMillis() - at < ONLINE_MILLIS;
@@ -117,7 +120,7 @@ public final class RemotePlugins {
         }
         Report report = new Report(name, str(o, "version"), str(o, "commit"), str(o, "branch"), repository,
                 text(o, "form"), text(o, "defaults"), text(o, "config"), str(o, "staged").isEmpty() ? null : str(o, "staged"),
-                str(o, "server"), System.currentTimeMillis());
+                str(o, "server"), host(o), System.currentTimeMillis());
         boolean changed;
         synchronized (this) {
             Report old = reports.put(name, report);
@@ -264,7 +267,50 @@ public final class RemotePlugins {
         }
     }
 
+    /**
+     * Restart the remote server (it checks itself whether it may - maintenance, restarts of this server, waiting
+     * players - and reports back if not).
+     *
+     * @return null if ordered, otherwise an error key
+     */
+    public synchronized String orderRestart(String name, String by) {
+        Report report = reports.get(name);
+        if (report == null || !report.online()) {
+            return "remote-offline";
+        }
+        orders.values().removeIf(o -> o.plugin().equals(name) && "restart".equals(o.json().get("type")));
+        errors.remove(name);
+        Map<String, Object> json = new LinkedHashMap<>();
+        String id = UUID.randomUUID().toString();
+        json.put("id", id);
+        json.put("plugin", name);
+        json.put("type", "restart");
+        json.put("by", by == null ? "MRadmin" : by);
+        orders.put(id, new Order(id, name, json));
+        plugin.getLogger().info((by == null ? "MRadmin" : by) + " asked the waiting room server (" + name + ") to restart.");
+        return null;
+    }
+
     // -------------------------------------------------------------------- helpers
+
+    /** The block "host" of a report as plain values (numbers, texts, booleans). */
+    private static Map<String, Object> host(JsonObject o) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (o.get("host") instanceof JsonObject h) {
+            for (String key : h.keySet()) {
+                JsonElement v = h.get(key);
+                if (key.matches("[A-Za-z]{1,30}") && v != null && v.isJsonPrimitive()) {
+                    var p = v.getAsJsonPrimitive();
+                    result.put(key, p.isBoolean() ? p.getAsBoolean() : p.isNumber() ? p.getAsLong()
+                            : p.getAsString().length() > 100 ? p.getAsString().substring(0, 100) : p.getAsString());
+                }
+                if (result.size() >= 20) {
+                    break;
+                }
+            }
+        }
+        return Map.copyOf(result);
+    }
 
     private static String str(JsonObject o, String key) {
         try {

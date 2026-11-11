@@ -80,6 +80,8 @@ public final class WaitingRoom implements Listener {
     private volatile boolean ready;
     /** True from the moment the server goes down (players are being sent away). */
     private volatile boolean stopping;
+    /** When the waiting room last asked (epoch ms), 0 = not since this start. */
+    private volatile long lastQuestion;
     /** Failed key checks per address (simple brake against guessing). */
     private final Map<String, int[]> failures = new ConcurrentHashMap<>();
 
@@ -196,6 +198,14 @@ public final class WaitingRoom implements Listener {
     /** Still kept out by the maintenance (it may have ended or the player got the bypass meanwhile). */
     private boolean stillOut(Player player) {
         return plugin.maintenance().active() && !plugin.maintenance().canJoin(player);
+    }
+
+    /**
+     * Whether the waiting room is there to take players: it asked within the last 15 seconds (it asks every few
+     * seconds). Unknown (not asked since this start, e.g. right after starting) counts as there.
+     */
+    public boolean roomUp() {
+        return lastQuestion == 0 || System.currentTimeMillis() - lastQuestion < 15_000L;
     }
 
     /** Asks the proxy to move the player to the waiting room server. */
@@ -324,6 +334,7 @@ public final class WaitingRoom implements Listener {
                         : "{\"error\":\"" + problem + "\"}");
                 return;
             }
+            lastQuestion = System.currentTimeMillis();
             // The state plus the open orders for remote plugins (configuration, updates).
             String state = snapshot;
             String orders = "\"orders\":" + remote.ordersJson() + "}";

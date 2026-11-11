@@ -44,10 +44,15 @@ public final class Setup {
      * @param mode   null = keep / default
      */
     public static Result prepare(StarterFiles files, Path ownJar, String mode) throws IOException {
+        return prepare(files, ownJar, mode, true);
+    }
+
+    /** @param withPlugin false = waiting room server: MRadmin only as starter, not as plugin */
+    static Result prepare(StarterFiles files, Path ownJar, String mode, boolean withPlugin) throws IOException {
         Files.createDirectories(files.dir());
         boolean copiedPlugin = false;
         Path plugins = files.server().resolve("plugins");
-        if (!ownJar.toAbsolutePath().normalize().startsWith(plugins.toAbsolutePath().normalize()) && !hasMradmin(plugins)) {
+        if (withPlugin && !ownJar.toAbsolutePath().normalize().startsWith(plugins.toAbsolutePath().normalize()) && !hasMradmin(plugins)) {
             Files.createDirectories(plugins);
             Files.copy(ownJar, plugins.resolve(ownJar.getFileName()), StandardCopyOption.REPLACE_EXISTING);
             copiedPlugin = true;
@@ -165,7 +170,7 @@ public final class Setup {
 
     // ------------------------------------------------------------------ mrserver setup
 
-    private static String option(List<String> args, String name) {
+    static String option(List<String> args, String name) {
         int i = args.indexOf(name);
         return i >= 0 && i + 1 < args.size() ? args.get(i + 1) : null;
     }
@@ -284,6 +289,14 @@ public final class Setup {
     }
 
     static int fromCommandLine(StarterFiles files, List<String> args) throws IOException, InterruptedException {
+        String role = option(args, "--role");
+        if (role != null && !role.matches("main|waitroom")) {
+            System.out.println("Unknown role '" + role + "' - main (the server with MRadmin) or waitroom (MRwaitroom).");
+            return 2;
+        }
+        if ("waitroom".equals(role) || (role == null && files.waitroom())) {
+            return Waitroom.setup(files, args);
+        }
         boolean acceptEula = args.contains("--accept-eula");
         boolean downloaded = args.contains("--downloaded");
         String mode = null;
@@ -415,7 +428,7 @@ public final class Setup {
         return 0;
     }
 
-    private static boolean eula(Path file, boolean accept) throws IOException {
+    static boolean eula(Path file, boolean accept) throws IOException {
         if (Files.isRegularFile(file) && Files.readString(file).lines().anyMatch(l -> l.trim().equalsIgnoreCase("eula=true"))) {
             return true;
         }

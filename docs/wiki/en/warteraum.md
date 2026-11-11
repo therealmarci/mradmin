@@ -40,6 +40,19 @@ Once the waiting room is connected, **MRwaitroom** shows up under **Server → P
 > [!NOTE]
 > The connection always starts at the waiting room - MRadmin never connects to it. You do the first installation by hand ([guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
 
+## Restarting the waiting room server
+If the waiting room runs with the starter (`mrserver setup --role waitroom`, see [Starter](starter.md#setting-up-a-waiting-room-server)), **Server → Overview** shows the tile **Waiting room server**: running, since when, Paper build, waiting players, next planned restart. **Restart** (permission `mradmin.server.restart`) restarts it **as soon as it may**:
+
+- your server runs and is ready,
+- **no maintenance** runs,
+- **no restart of your server** comes within the next 15 minutes,
+- **nobody waits** in the waiting room.
+
+If one of these is not met, the tile shows the reason. Planned restarts are set in MRwaitroom's configuration (`server.restart-times`) - they wait in the same way until it fits.
+
+> [!TIP]
+> The other way round MRadmin takes care too: if the waiting room is restarting itself when your server's countdown ends, MRadmin waits up to 2 minutes for it before going down.
+
 ## Settings
 | Key | Default | Meaning |
 |---|---|---|

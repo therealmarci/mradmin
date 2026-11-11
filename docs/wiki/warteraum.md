@@ -40,6 +40,19 @@ Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** -
 > [!NOTE]
 > Die Verbindung geht immer vom Warteraum aus - MRadmin verbindet sich nie zu ihm. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
 
+## Warteraum-Server neu starten
+Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Übersicht** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
+
+- dein Server läuft und ist bereit,
+- **keine Wartung** läuft,
+- **kein Neustart deines Servers** in den nächsten 15 Minuten ansteht,
+- **niemand im Warteraum** wartet.
+
+Ist etwas davon nicht erfüllt, steht der Grund in der Kachel. Geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (`server.restart-times`) - sie warten genauso, bis es passt.
+
+> [!TIP]
+> Umgekehrt passt MRadmin auf: Startet der Warteraum gerade selbst neu, wenn der Countdown deines Servers abläuft, wartet MRadmin bis zu 2 Minuten auf ihn, bevor es herunterfährt.
+
 ## Einstellungen
 | Schlüssel | Standard | Bedeutung |
 |---|---|---|

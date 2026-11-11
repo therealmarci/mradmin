@@ -55,6 +55,7 @@ public final class VersionRoutes {
         server.route("POST", "/api/restart/cancel", r::cancel);
         server.route("POST", "/api/restart/schedule", r::schedule);
         server.route("POST", "/api/restart/confirm", r::confirmEmergency);
+        server.route("POST", "/api/waitroom/restart", r::waitroomRestart);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -194,10 +195,32 @@ public final class VersionRoutes {
         result.put("devToken", versions.devAvailable());
         result.put("devTokenState", versions.devTokenState());
         result.put("restart", restart);
+        // The waiting room server (MRwaitroom reports itself through waiting-room.link).
+        var remoteRoom = plugin.waitingRoom().remote().report("MRwaitroom");
+        if (plugin.waitingRoom().active() && remoteRoom != null) {
+            Map<String, Object> room = new LinkedHashMap<>(remoteRoom.host());
+            room.put("online", remoteRoom.online() && plugin.waitingRoom().roomUp());
+            room.put("seen", remoteRoom.at());
+            room.put("version", remoteRoom.version());
+            room.put("ordered", plugin.waitingRoom().remote().openOrder("MRwaitroom", "restart") != null);
+            room.put("error", plugin.waitingRoom().remote().error("MRwaitroom"));
+            result.put("waitroom", room);
+        }
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /** POST /api/waitroom/restart - the waiting room restarts as soon as it may (it checks the rules itself). */
+    private void waitroomRestart(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        String problem = plugin.waitingRoom().remote().orderRestart("MRwaitroom", http.account().name());
+        if (problem != null) {
+            throw new Http.WebException(409, problem);
+        }
+        audit(http, "waitroom-restart", "");
+        http.json(200, Map.of("ok", true));
     }
 
     /**

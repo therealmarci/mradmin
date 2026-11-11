@@ -2,6 +2,7 @@ package at.marcelr.mradmin.versions;
 
 import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Texts;
+import at.marcelr.mradmin.player.Npcs;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -177,7 +178,20 @@ public final class RestartManager {
         }
         plugin.starter().prepare(restart);
         // A moment to read it, then down. Behind a proxy with a waiting room the players move there first
-        // (waiting-room.on-restart) and the server goes down once the proxy had time to move them.
+        // (waiting-room.on-restart) and the server goes down once the proxy had time to move them. If the waiting room
+        // is restarting itself right now, wait for it up to 2 minutes - otherwise the players would be kicked after all.
+        waitForRoom(0);
+    }
+
+    private void waitForRoom(int waited) {
+        var room = plugin.waitingRoom();
+        if (room.active() && room.config().onRestart() && !room.roomUp() && waited < 120 && !Npcs.online().isEmpty()) {
+            if (waited == 0) {
+                plugin.getLogger().info("The waiting room does not answer - waiting for it up to 2 minutes before going down.");
+            }
+            Bukkit.getScheduler().runTaskLater(plugin, () -> waitForRoom(waited + 5), 100L);
+            return;
+        }
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             int sent = plugin.waitingRoom().sendAllBeforeStop();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {

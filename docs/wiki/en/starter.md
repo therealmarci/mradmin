@@ -115,3 +115,16 @@ Times like `30s`, `5m`, `1h`, a number (seconds) or `now`. If MRadmin does not a
 **The starter gave up.** `mrserver status` shows it. Look into `logs/latest.log` and `crash-reports/`, fix the cause and start with `mrserver start`.
 
 **I want a new Minecraft version.** The starter deliberately does not do that by itself, because then the plugins usually need new versions too. See [Installing & updating](https://mrtechnology.marcelr.at/wiki/allgemein/installieren/#versions).
+
+## Setting up a waiting room server
+Behind a Velocity proxy the starter can also run a **waiting room server** - Paper with [MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/) instead of MRadmin:
+
+```text
+MRSERVER_LINK_KEY=<waiting-room.link.key> ./mrserver.sh setup --role waitroom \
+    --main-server main --main-address 10.0.0.5:25565 --link-url http://10.0.0.5:8126
+```
+
+Or simply use the installer from the website and choose **waiting room server** at the first question. Afterwards `mrserver install|start|stop|restart|status|console` work as usual. Memory, Paper updates and planned restarts are set in MRwaitroom's configuration (section `server`) - most easily via **Server → Plugins → MRwaitroom** in your web interface. Restarts of the waiting room see [Waiting room (proxy)](warteraum.md#restarting-the-waiting-room-server).
+
+> [!NOTE]
+> Nobody updates the starter itself automatically on the waiting room (no MRadmin runs there). A new starter version comes with running `mrserver setup --role waitroom` again - rarely needed.
