@@ -8,7 +8,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 > Befehle und Permissions noch ändern.
 
 ## [Unveröffentlicht]
-n### Behoben & geändert
+
+### Behoben & geändert
 - **Warnungen von Uptime Kuma kamen über eine interne Adresse nicht an:** Mit `uptime-kuma.url` ohne HTTPS (z.B. `http://10.0.0.5:3001`) bat MRadmin beim Abruf der Statusseiten um ein HTTP/2-Upgrade, das Kuma abbricht - die Vorfälle blieben leer, ohne Meldung. Jetzt fragt MRadmin mit HTTP/1.1, und eine Statusseite, die sich nicht lesen lässt, steht einmal als Warnung in der Konsole (mit Adresse und Grund), sobald sie wieder geht, eine Zeile dazu.
 
 ## [STA-1.5.3-bu001] - 2026-11-11
