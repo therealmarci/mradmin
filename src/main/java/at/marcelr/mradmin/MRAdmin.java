@@ -116,6 +116,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private final at.marcelr.mradmin.log.EventLog eventLog = new at.marcelr.mradmin.log.EventLog(
             new java.io.File(getDataFolder(), "logs").toPath(), getLogger());
     private at.marcelr.mradmin.versions.RestartManager restarts;
+    private final at.marcelr.mradmin.network.WaitingRoom waitingRoom = new at.marcelr.mradmin.network.WaitingRoom(this);
     private at.marcelr.mradmin.versions.StarterLink starter;
     private at.marcelr.mradmin.items.ItemAssets items;
     private FreezeManager freeze;
@@ -218,6 +219,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(staffChat, this);
         pm.registerEvents(web.requests(), this);
         pm.registerEvents(newsDelivery, this);
+        pm.registerEvents(waitingRoom, this);
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);
@@ -242,6 +244,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
             starter.stop();
         }
         eventLog.shutdown();
+        waitingRoom.stop();
         if (xpPeaks != null) {
             xpPeaks.stop();
         }
@@ -335,6 +338,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         menuListener.start();
         newsDelivery.incidents().start();
         newsDelivery.start();
+        waitingRoom.start();
         // After all plugins are enabled: their modules bring the layers of the web map.
         Bukkit.getScheduler().runTask(this, map::start);
     }
@@ -578,5 +582,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public at.marcelr.mradmin.versions.RestartManager restarts() {
         return restarts;
+    }
+
+    /** Optional waiting room behind a proxy (section waiting-room). */
+    public at.marcelr.mradmin.network.WaitingRoom waitingRoom() {
+        return waitingRoom;
     }
 }

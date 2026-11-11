@@ -29,6 +29,7 @@ sections:
     audience: admin
     pages:
       - {id: starter, file: starter.md, title: {de: Starter (mrserver), en: Starter (mrserver)}}
+      - {id: warteraum, file: warteraum.md, title: {de: Warteraum (Proxy), en: Waiting room (proxy)}}
       - {id: befehle, file: befehle.md, title: {de: Befehle, en: Commands}}
       - {id: permissions, file: permissions.md, title: {de: Permissions, en: Permissions}}
       - {id: alle-permissions, file: /docs/PERMISSIONS.md, fileEn: en/alle-permissions.md, title: {de: Permissions aller Plugins, en: Permissions of all plugins}}

@@ -83,6 +83,10 @@ final class ServerCommand {
             messages().send(sender, "server-countdown-busy");
             return;
         }
+        if (plugin.waitingRoom().roomRestarting()) {
+            messages().send(sender, "server-waitroom-restarting");
+            return;
+        }
         if (restarts.start(delay, sender.getName(), restart, reason)) {
             messages().send(sender, "server-countdown-started",
                     unparsed("what", messages().plain(restart ? "server-what-restart" : "server-what-stop")),

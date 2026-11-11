@@ -55,6 +55,7 @@ public final class VersionRoutes {
         server.route("POST", "/api/restart/cancel", r::cancel);
         server.route("POST", "/api/restart/schedule", r::schedule);
         server.route("POST", "/api/restart/confirm", r::confirmEmergency);
+        server.route("POST", "/api/waitroom/restart", r::waitroomRestart);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -85,6 +86,19 @@ public final class VersionRoutes {
         for (VersionManager.Entry e : versions.list()) {
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("name", e.name);
+            if (e.remote) {
+                // On the waiting room server: managed through its reports (network.RemotePlugins).
+                var remote = plugin.waitingRoom().remote();
+                var report = remote.report(e.name);
+                Map<String, Object> r = new LinkedHashMap<>();
+                r.put("online", report != null && report.online());
+                r.put("server", report == null ? "" : report.server());
+                r.put("seen", report == null ? 0 : report.at());
+                r.put("ordered", remote.openOrder(e.name, "update"));
+                r.put("configPending", remote.openOrder(e.name, "config") != null);
+                r.put("error", remote.error(e.name));
+                p.put("remote", r);
+            }
             p.put("installed", e.installed);
             p.put("minecraft", e.minecraft);
             p.put("website", e.website);
@@ -181,10 +195,33 @@ public final class VersionRoutes {
         result.put("devToken", versions.devAvailable());
         result.put("devTokenState", versions.devTokenState());
         result.put("restart", restart);
+        // The waiting room server (MRwaitroom reports itself through waiting-room.link).
+        var remoteRoom = plugin.waitingRoom().remote().report("MRwaitroom");
+        if (plugin.waitingRoom().active() && remoteRoom != null) {
+            Map<String, Object> room = new LinkedHashMap<>(remoteRoom.host());
+            room.put("online", remoteRoom.online() && plugin.waitingRoom().roomUp());
+            room.put("restarting", plugin.waitingRoom().roomRestarting());
+            room.put("seen", remoteRoom.at());
+            room.put("version", remoteRoom.version());
+            room.put("ordered", plugin.waitingRoom().remote().openOrder("MRwaitroom", "restart") != null);
+            room.put("error", plugin.waitingRoom().remote().error("MRwaitroom"));
+            result.put("waitroom", room);
+        }
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /** POST /api/waitroom/restart - the waiting room restarts as soon as it may (it checks the rules itself). */
+    private void waitroomRestart(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        String problem = plugin.waitingRoom().remote().orderRestart("MRwaitroom", http.account().name());
+        if (problem != null) {
+            throw new Http.WebException(409, problem);
+        }
+        audit(http, "waitroom-restart", "");
+        http.json(200, Map.of("ok", true));
     }
 
     /**
@@ -298,6 +335,9 @@ public final class VersionRoutes {
             }
         }
         String by = http.account().name() + " (web)";
+        if (plugin.waitingRoom().roomRestarting()) {
+            throw new Http.WebException(409, "waitroom-restarting");
+        }
         if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
         }

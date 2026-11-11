@@ -115,3 +115,16 @@ Zeiten wie `30s`, `5m`, `1h`, eine Zahl (Sekunden) oder `now`. Antwortet MRadmin
 **Der Starter hat aufgegeben.** `mrserver status` zeigt es. Sieh in `logs/latest.log` und `crash-reports/` nach, behebe die Ursache und starte mit `mrserver start`.
 
 **Ich will eine neue Minecraft-Version.** Das macht der Starter bewusst nicht automatisch, weil dann meist auch die Plugins neue Versionen brauchen. Siehe [Installieren & aktualisieren](https://mrtechnology.marcelr.at/wiki/allgemein/installieren/#versionen).
+
+## Warteraum-Server einrichten
+Hinter einem Velocity-Proxy kann der Starter auch einen **Warteraum-Server** betreiben - dort läuft Paper mit [MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/) statt MRadmin:
+
+```text
+MRSERVER_LINK_KEY=<waiting-room.link.key> ./mrserver.sh setup --role waitroom \
+    --main-server main --main-address 10.0.0.5:25565 --link-url http://10.0.0.5:8126
+```
+
+Oder einfach den Installer von der Website nehmen und bei der ersten Frage **Warteraum-Server** wählen. Danach funktionieren `mrserver install|start|stop|restart|status|console` wie gewohnt. Arbeitsspeicher, Paper-Updates und geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (Abschnitt `server`) - am bequemsten über **Server → Plugins → MRwaitroom** in deiner Weboberfläche. Neustarts des Warteraums siehe [Warteraum (Proxy)](warteraum.md#warteraum-server-neu-starten).
+
+> [!NOTE]
+> Den Starter selbst aktualisiert auf dem Warteraum niemand automatisch (dort läuft kein MRadmin). Eine neue Starter-Version kommt mit einem erneuten `mrserver setup --role waitroom` - das ist selten nötig.

@@ -56,6 +56,16 @@ public final class StarterFiles {
         return dir;
     }
 
+    /** "waitroom" on a waiting room server (MRwaitroom instead of MRadmin in plugins/), missing on the main server. */
+    public Path role() {
+        return dir.resolve("role");
+    }
+
+    /** Whether this folder was set up as waiting room server ({@code mrserver setup --role waitroom}). */
+    public boolean waitroom() {
+        return "waitroom".equals(readText(role()));
+    }
+
     public Path launch() {
         return dir.resolve("launch.properties");
     }

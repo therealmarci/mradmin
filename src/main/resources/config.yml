@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 58
+config-version: 59
 
 
 # ------------------------------------------------------------------------------
@@ -416,6 +416,28 @@ server:
   # How long stopping may take (seconds) before the starter ends the server.
   stop-timeout-seconds: 180
 
+
+# Waiting room behind a proxy (Velocity): during restarts, stops and maintenance players wait on a second server
+# with the plugin MRwaitroom instead of being kicked, and come back by themselves. Needs a proxy with
+# "bungee-plugin-message-channel = true" and the waiting room as a server there. Off by default.
+# Guide: https://mrtechnology.marcelr.at/wiki/mrwaitroom/
+waiting-room:
+  enabled: false
+  # Name of the waiting room server in the proxy (section [servers] of velocity.toml).
+  server: "waitroom"
+  # Send all players there right before a restart or stop.
+  on-restart: true
+  # Send players without the maintenance bypass there when a maintenance starts or when they join during one.
+  on-maintenance: true
+  # Connection for the waiting room: it asks MRadmin here what is going on (restart, maintenance, warnings).
+  # A small endpoint of its own, independent of the web interface.
+  link:
+    # Address to listen on - the internal address of this machine (e.g. 10.0.0.5), never a public one.
+    # "" = no endpoint (the waiting room then only sees whether this server is up).
+    bind: "127.0.0.1"
+    port: 8126
+    # Shared key - the same value goes into the config.yml of the waiting room. Created on the first start if empty.
+    key: ""
 
 # ------------------------------------------------------------------------------
 #   10) STORAGE

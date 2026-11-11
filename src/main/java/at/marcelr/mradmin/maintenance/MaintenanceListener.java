@@ -5,6 +5,7 @@ import at.marcelr.mradmin.player.Npcs;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -65,7 +66,10 @@ public final class MaintenanceListener implements Listener {
         }
         if (manager().active() && !manager().canJoin(event.getPlayer())) {
             event.joinMessage(null);
-            event.getPlayer().kick(plugin.messages().as(event.getPlayer(), manager()::kickScreen));
+            // Behind a proxy with a waiting room: wait there instead of being kicked (waiting-room.on-maintenance).
+            Player player = event.getPlayer();
+            plugin.waitingRoom().sendForMaintenance(player,
+                    () -> player.kick(plugin.messages().as(player, manager()::kickScreen)));
         } else if (manager().active()) {
             plugin.messages().send(event.getPlayer(), "maintenance-join-staff",
                     manager().resolvers(manager().current(), Instant.now()));

@@ -117,6 +117,8 @@ public final class VersionManager {
         public volatile Channel channel = Channel.STABLE;
         /** True if the team chose the channel for this plugin, false if it follows versions.channel. */
         public volatile boolean ownChannel;
+        /** Runs on the waiting room server (network.RemotePlugins): updates become orders, nothing is installed here. */
+        public volatile boolean remote;
         /** Current dev build (looked up whenever a release token is set), or null. */
         public volatile DevBuild dev;
         /** Whether a stable / a beta release exists for this Minecraft version (no stable = stable greyed out). */
@@ -463,6 +465,23 @@ public final class VersionManager {
         }
         long started = java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime();
         for (Catalog.Known known : Catalog.PLUGINS) {
+            if (known.remote()) {
+                // Only once it reported itself; the version is the one it runs over there.
+                var report = plugin.waitingRoom().remote().report(known.name());
+                if (report == null) {
+                    entries.remove(known.name());
+                    continue;
+                }
+                Entry old = entries.get(known.name());
+                Entry entry = new Entry(known.name(), Versions.plugin(report.version()), minecraft, known.repository(),
+                        website.isEmpty() || website.contains("$") ? "https://github.com/" + known.repository()
+                                : website + "/download/" + known.slug() + "/", null, report.commit(), report.branch());
+                carry(old, entry);
+                entry.remote = true;
+                entry.staged = report.staged();
+                entries.put(entry.name, entry);
+                continue;
+            }
             if (Bukkit.getPluginManager().getPlugin(known.name()) != null) {
                 continue;
             }
@@ -846,6 +865,14 @@ public final class VersionManager {
      * update folder under the name of the installed JAR, a new plugin into plugins/ under the name of the release file.
      */
     private void downloadNow(Entry e, String by) {
+        if (e.remote) {
+            // On the waiting room server: an order - it downloads and checks the release itself.
+            String problem = e.channel == Channel.DEV ? "versions-no-release"
+                    : plugin.waitingRoom().remote().orderUpdate(e.name, e.latest, by);
+            e.error = problem;
+            e.downloading = false;
+            return;
+        }
         if (e.channel == Channel.DEV) {
             downloadDev(e, by);
             return;

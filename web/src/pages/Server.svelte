@@ -104,6 +104,17 @@
   }
   const when = (ms) => new Date(ms).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
+  // The waiting room server (MRwaitroom reports itself; its restart is an order it carries out when it may).
+  const room = $derived(data?.waitroom);
+  const roomTone = $derived(!room ? 'off' : room.restarting ? 'info' : !room.online ? 'bad' : room.ordered || room.pending ? 'info' : 'good');
+  const roomState = $derived(!room ? '' : room.restarting ? t('server.room.restarting') : !room.online ? t('server.room.offline')
+    : room.ordered || room.pending ? t('server.room.pending') : t('server.room.online'));
+  const roomLock = $derived(!room ? null : room.restarting ? 'restarting' : !room.online ? 'remote-offline'
+    : room.ordered ? 'ordered' : !room.starter ? 'no-starter'
+    : room.blocked && room.blocked !== 'players-waiting' ? room.blocked
+    : r?.endsAt > 0 ? 'main-restart-soon' : null);
+  const restartRoom = () => act('/waitroom/restart', {}, t('server.room.ordered'), t('server.room.confirm'));
+
   // The values of the server card: one word each, the rest in the tooltip.
   const pausedUntil = $derived(r?.schedule?.pausedUntil > now ? r.schedule.pausedUntil : 0);
   const paperStaged = $derived(r && r.paper.staged >= 0 ? r.paper.staged : 0);
@@ -259,6 +270,42 @@
       {#if data.may.stop && r.emergencyDelays.length}
         <EmergencyRestart bind:this={emergency} {me} delays={r.emergencyDelays} canRestart={data.may.restart}
           starterActive={r.starter.active} {reason} ondone={emergencyDone} />
+      {/if}
+
+      {#if room}
+        <!-- The waiting room server: the four values that matter, the button on the right -->
+        <section class="card room" class:off={roomTone === 'bad'} class:busy={roomTone === 'info'}>
+          <div class="room-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true"><path d={ICONS.restore} /></svg>
+            <span>{t('server.room.title')}</span>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <span class="s-label">{t('server.room.state')}</span>
+              <span class="s-value"><span class="dot {roomTone}"></span>{roomState}</span>
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.room.waiting')}</span>
+              <span class="s-value">{room.online ? (room.players ?? 0) : '–'}</span>
+            </div>
+            <div class="stat" title={room.online && room.paper ? 'Paper #' + room.paper : ''}>
+              <span class="s-label">{t('server.uptime')}</span>
+              <span class="s-value">{room.online && room.startedAt ? duration(Math.max(0, now - room.startedAt)) : '–'}</span>
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.next')}</span>
+              <span class="s-value">{room.nextRestart ? when(room.nextRestart) : t('server.nextNone')}</span>
+            </div>
+          </div>
+          {#if data.may.stop}
+            <div class="room-action">
+              <button class="secondary" disabled={busy || !!roomLock} onclick={restartRoom}>{t('server.room.restart')}</button>
+              {#if roomLock}<span class="small muted">{t('server.room.blocked.' + roomLock)}</span>{/if}
+              {#if room.error}<span class="small bad-text">{t('server.room.blocked.' + room.error)}</span>{/if}
+            </div>
+          {/if}
+        </section>
       {/if}
 
       <div class="tiles">
@@ -591,6 +638,43 @@
     gap: 14px;
   }
 
+  .room {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 24px;
+    border-left: 5px solid var(--good);
+  }
+
+  .room.busy {
+    border-left-color: var(--accent);
+  }
+
+  .room.off {
+    border-left-color: var(--bad);
+  }
+
+  .room-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .room-action {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+    max-width: 240px;
+    text-align: right;
+  }
+
+  .bad-text {
+    color: var(--bad);
+  }
+
   .tile {
     display: grid;
     align-content: start;
@@ -699,6 +783,16 @@
     .server,
     .tiles {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .room {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .room-action {
+      justify-items: start;
+      text-align: left;
+      max-width: none;
     }
 
     /* Tabs stay in one row and scroll sideways */

@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { MODULE_ICONS } from './icons.js';
 
-export const PLUGIN_ICONS = { mradmin: 'shield', mrtoolbar: 'hotbar', ...MODULE_ICONS };
+export const PLUGIN_ICONS = { mradmin: 'shield', mrtoolbar: 'hotbar', mrwaitroom: 'restore', ...MODULE_ICONS };
 
 export const pluginIcon = (name) => PLUGIN_ICONS[name.toLowerCase()] ?? 'box';
 
@@ -35,6 +35,12 @@ export function pluginDescription(name) {
  */
 export function pluginState(p) {
   if (p.downloading) return { tone: 'info', text: t('versions.state.downloading') };
+  // On the waiting room server (it reports itself; updates and configuration are orders it picks up).
+  if (p.remote) {
+    if (!p.remote.online) return { tone: 'bad', text: t('plugins.remote.offline') };
+    if (p.remote.ordered) return { tone: 'info', text: t('plugins.remote.ordered', { version: p.remote.ordered }) };
+    if (p.staged) return { tone: 'info', text: t('plugins.remote.staged', { version: p.staged }) };
+  }
   if (!p.installed) {
     if (p.notLoaded) return { tone: 'bad', text: t('plugins.state.notLoaded') };
     if (p.pending) return { tone: 'info', text: t('plugins.state.pending', { version: p.pending }) };

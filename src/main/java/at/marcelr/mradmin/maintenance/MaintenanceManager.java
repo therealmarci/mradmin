@@ -374,8 +374,10 @@ public final class MaintenanceManager {
                     return;
                 }
                 for (Player player : List.copyOf(Npcs.online())) {
+                    // Behind a proxy with a waiting room they wait there (waiting-room.on-maintenance).
                     if (!canJoin(player)) {
-                        player.kick(messages().as(player, this::kickScreen));
+                        plugin.waitingRoom().sendForMaintenance(player,
+                                () -> player.kick(messages().as(player, this::kickScreen)));
                     }
                 }
             }, m.kickDelaySeconds() * 20L);

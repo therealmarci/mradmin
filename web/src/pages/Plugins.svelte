@@ -87,7 +87,8 @@
   const byName = (a, b) => a.name.localeCompare(b.name);
   const installed = $derived(data ? data.plugins.filter((p) => p.installed).sort(byName) : []);
   const others = $derived(data ? data.plugins.filter((p) => !p.installed).sort(byName) : []);
-  const waiting = $derived(data ? data.plugins.filter((p) => p.staged || (p.pending && !p.notLoaded)) : []);
+  // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
+  const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
   // Badge next to the latest version of the channel: the installed one is it, or it is newer (not yet downloaded).
   const latestBadge = (p) => (!p.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : pluginState(p).tone === 'good' ? 'current' : null);
@@ -139,11 +140,14 @@
           stroke-linejoin="round"><path d={ICONS[pluginIcon(p.name)]} /></svg>
       </span>
       <div class="r-name">
-        {#if p.installed}
-          <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
-        {:else}
-          <strong>{p.name}</strong>
-        {/if}
+        <span class="name-line">
+          {#if p.installed}
+            <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
+          {:else}
+            <strong>{p.name}</strong>
+          {/if}
+          {#if p.remote}<span class="remote" class:off={!p.remote.online} title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span>{/if}
+        </span>
         <span class="small muted desc">{pluginDescription(p.name)}</span>
       </div>
     </div>
@@ -194,6 +198,8 @@
 
     {#if p.blocked}<p class="note warn-text">{t('plugins.blocked.' + p.blocked.reason, { name: p.name, version: offeredText(p), have: p.blocked.have, offered: p.blocked.offered })}</p>{/if}
     {#if p.notLoaded}<p class="note bad-text">{t('plugins.notLoadedHint')}</p>{/if}
+    {#if p.remote?.configPending}<p class="note small muted">{t('plugins.remote.configPending')}</p>{/if}
+    {#if p.remote?.error}<p class="note bad-text">{t('plugins.remote.error', { error: p.remote.error })}</p>{/if}
     {#if err}<p class="note bad-text">{err}</p>{/if}
   </li>
 {/snippet}
@@ -879,4 +885,8 @@
       transition: none;
     }
   }
+  .name-line { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+  .remote { font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--edge); color: var(--muted); }
+  .remote.off { color: var(--bad); border-color: var(--bad); }
 </style>

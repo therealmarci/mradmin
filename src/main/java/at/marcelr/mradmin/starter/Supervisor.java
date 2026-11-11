@@ -99,6 +99,9 @@ public final class Supervisor {
             }
             Files.deleteIfExists(files.action());
             Files.deleteIfExists(files.heartbeat());
+            if (files.waitroom()) {
+                removeMradmin();
+            }
 
             List<String> command = new ArrayList<>();
             command.add(local.java());
@@ -201,6 +204,24 @@ public final class Supervisor {
             }
         }
         return null;
+    }
+
+    /**
+     * Waiting room server: MRadmin must not run as plugin there (the first setup ran from plugins/MRadmin*.jar, which
+     * Windows keeps locked while it runs - so it goes now). Only the starter uses MRadmin's JAR (starter.jar).
+     */
+    private void removeMradmin() {
+        try (var list = Files.list(files.server().resolve("plugins"))) {
+            for (Path p : list.toList()) {
+                String name = p.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                if (name.startsWith("mradmin") && name.endsWith(".jar") && Files.isRegularFile(p)) {
+                    Files.deleteIfExists(p);
+                    say("Removed " + p.getFileName() + " from plugins/ - this is a waiting room server (MRwaitroom).");
+                }
+            }
+        } catch (IOException ignored) {
+            // no plugins folder yet
+        }
     }
 
     private long beat() {
