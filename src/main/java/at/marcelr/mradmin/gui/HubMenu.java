@@ -36,7 +36,8 @@ import static at.marcelr.mradmin.Messages.tag;
  *  row 1:  live tiles - players, server, maintenance, tickets (click opens)
  *  row 2:  status bar - under each tile a pane in green / yellow / red, light grey elsewhere
  *  row 3:  tools - announcements and the plugin buttons (MRsleep, MRchunks ...)
- *  row 4:  admin mode switch, close, staff chat switch
+ *  row 4:  empty (black glass)
+ *  row 5:  admin mode switch, in the middle "to the waiting room" (behind a proxy) or close, staff chat switch
  * </pre>
  */
 public final class HubMenu extends Menu {
@@ -63,7 +64,7 @@ public final class HubMenu extends Menu {
     }
 
     public HubMenu(MRAdmin plugin, Player viewer) {
-        super(plugin, viewer, 5, plugin.messages().get("gui-title-hub"));
+        super(plugin, viewer, 6, plugin.messages().get("gui-title-hub"));
     }
 
     @Override
@@ -79,13 +80,14 @@ public final class HubMenu extends Menu {
         }
 
         place(3, tools());
-        place(4, switches());
+        place(5, switches());
 
         fill(0, Material.BLACK_STAINED_GLASS_PANE);
         fill(1, Material.BLACK_STAINED_GLASS_PANE);
         fill(2, Material.LIGHT_GRAY_STAINED_GLASS_PANE);
         fill(3, Material.BLACK_STAINED_GLASS_PANE);
         fill(4, Material.BLACK_STAINED_GLASS_PANE);
+        fill(5, Material.BLACK_STAINED_GLASS_PANE);
     }
 
     private void fill(int row, Material pane) {
@@ -219,18 +221,6 @@ public final class HubMenu extends Menu {
                 new AnnounceMenu(plugin, viewer, this::reopen).open();
             }));
         }
-        // Behind a proxy with a waiting room: go there (and back with the item there).
-        if (plugin.waitingRoom().active() && viewer.hasPermission(at.marcelr.mradmin.Perms.WAITROOM_VISIT)) {
-            tools.add(new Button(Items.of(Material.CLOCK).name(messages.item("gui-hub-waitroom-name"))
-                    .lore(messages.lore("gui-hub-waitroom-lore")).build(), click -> {
-                clickSound();
-                viewer.closeInventory();
-                messages.send(viewer, "waitroom-going");
-                // Tell the waiting room it is a visit (no automatic return), then go.
-                plugin.waitingRoom().remote().orderVisit("MRwaitroom", viewer.getUniqueId());
-                plugin.waitingRoom().send(viewer);
-            }));
-        }
         for (Settings.HubButton button : visibleButtons()) {
             String base = "gui-hub-buttons." + button.id();
             Component name = messages.has(base + ".name") ? messages.item(base + ".name")
@@ -295,7 +285,20 @@ public final class HubMenu extends Menu {
                 }
             }));
         }
-        buttons.add(new Button(Items.of(Material.BARRIER).name(messages.item("gui-close")).build(), click -> viewer.closeInventory()));
+        // In the middle: to the waiting room (behind a proxy) - then ESC closes; otherwise the close button.
+        if (plugin.waitingRoom().active() && viewer.hasPermission(at.marcelr.mradmin.Perms.WAITROOM_VISIT)) {
+            buttons.add(new Button(Items.of(Material.CLOCK).name(messages.item("gui-hub-waitroom-name"))
+                    .lore(messages.lore("gui-hub-waitroom-lore")).build(), click -> {
+                clickSound();
+                viewer.closeInventory();
+                messages.send(viewer, "waitroom-going");
+                // Tell the waiting room it is a visit (no automatic return), then go.
+                plugin.waitingRoom().remote().orderVisit("MRwaitroom", viewer.getUniqueId());
+                plugin.waitingRoom().send(viewer);
+            }));
+        } else {
+            buttons.add(new Button(Items.of(Material.BARRIER).name(messages.item("gui-close")).build(), click -> viewer.closeInventory()));
+        }
         if (viewer.hasPermission(StaffChat.PERM) && plugin.feature(Feature.STAFF_CHAT)) {
             boolean on = plugin.staffChat().toggled(viewer);
             buttons.add(new Button(Items.of(on ? Material.LIME_CANDLE : Material.GRAY_CANDLE)
