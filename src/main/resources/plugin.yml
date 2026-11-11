@@ -113,6 +113,7 @@ permissions:
       mradmin.appearance: true
       mradmin.server.restart: true
       mradmin.server.setup: true
+      mradmin.waitroom.visit: true
       mradmin.web.console.execute: true
       mradmin.map.admin: true
       # LibertyBans: ban and unban players (also decide unban requests)
@@ -274,6 +275,9 @@ permissions:
       mradmin.versions.view: true
   mradmin.server.restart:
     description: "Restart or stop the server with a countdown: web interface and /mradmin restart|stop; /mradmin starter shows the starter."
+    default: op
+  mradmin.waitroom.visit:
+    description: "Go to the waiting room server from the admin menu (/mradmin) and back with the item there."
     default: op
   mradmin.server.setup:
     description: "/mradmin starter setup - write the starter files (mrserver.sh, mrserver.cmd) into the server folder."

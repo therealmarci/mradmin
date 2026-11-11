@@ -208,6 +208,24 @@ public final class WaitingRoom implements Listener {
         return lastQuestion == 0 || System.currentTimeMillis() - lastQuestion < 15_000L;
     }
 
+    /**
+     * Whether the waiting room server is restarting right now: it reported so right before going down and has not
+     * reported again since (at most 3 minutes) - meanwhile this server must not restart or stop, players would have nowhere
+     * to go.
+     */
+    public boolean roomRestarting() {
+        if (!active()) {
+            return false;
+        }
+        var report = remote.report("MRwaitroom");
+        if (report == null || !Boolean.TRUE.equals(report.host().get("restarting"))) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        // Until the restarted waiting room sends its first report again (it reports right after starting).
+        return now - report.at() < 180_000L;
+    }
+
     /** Asks the proxy to move the player to the waiting room server. */
     public void send(Player player) {
         try {

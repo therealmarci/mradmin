@@ -50,6 +50,11 @@ If the waiting room runs with the starter (`mrserver setup --role waitroom`, see
 
 If one of these is not met, the tile shows the reason. Planned restarts are set in MRwaitroom's configuration (`server.restart-times`) - they wait in the same way until it fits.
 
+**While the waiting room restarts**, MRadmin refuses restarts and stops of your server (browser, `/mradmin restart|stop`, `mrserver`) - players would have nowhere to wait. That usually takes only a few seconds.
+
+## Going to the waiting room yourself
+In the admin menu (`/mradmin`) **To the waiting room** takes you there at any time (permission `mradmin.waitroom.visit`). There you are not sent back by yourself; the green item **Back to the server** in the hotbar brings you back - also during a maintenance.
+
 > [!TIP]
 > The other way round MRadmin takes care too: if the waiting room is restarting itself when your server's countdown ends, MRadmin waits up to 2 minutes for it before going down.
 

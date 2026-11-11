@@ -50,6 +50,11 @@ Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [S
 
 Ist etwas davon nicht erfüllt, steht der Grund in der Kachel. Geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (`server.restart-times`) - sie warten genauso, bis es passt.
 
+**Solange der Warteraum neu startet**, lehnt MRadmin Neustart und Stopp deines Servers ab (Browser, `/mradmin restart|stop`, `mrserver`) - die Spieler hätten sonst keinen Platz zum Warten. Das dauert meist nur ein paar Sekunden.
+
+## Selbst in den Warteraum
+Im Admin-Menü (`/mradmin`) bringt dich **In den Warteraum** jederzeit hinüber (Permission `mradmin.waitroom.visit`). Dort wirst du nicht automatisch zurückgeschickt; mit dem grünen Item **Zurück zum Server** in der Hotbar kommst du wieder - auch während einer Wartung.
+
 > [!TIP]
 > Umgekehrt passt MRadmin auf: Startet der Warteraum gerade selbst neu, wenn der Countdown deines Servers abläuft, wartet MRadmin bis zu 2 Minuten auf ihn, bevor es herunterfährt.
 

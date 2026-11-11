@@ -65,6 +65,8 @@ public final class Perms {
     public static final String VERSIONS_VIEW = "mradmin.versions.view";
     public static final String VERSIONS_INSTALL = "mradmin.versions.install";
     public static final String SERVER_RESTART = "mradmin.server.restart";
+    /** Go to the waiting room server from the admin menu (behind a proxy, section waiting-room). */
+    public static final String WAITROOM_VISIT = "mradmin.waitroom.visit";
     public static final String SERVER_SETUP = "mradmin.server.setup";
 
     // web map (squaremap)

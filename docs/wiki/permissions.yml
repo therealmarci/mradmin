@@ -107,3 +107,5 @@ mradmin.appearance:
   de: "Weboberfläche: Aussehen ändern - Name, Logo, Browser-Symbol, Akzentfarbe und Fußzeile (Server → Aussehen)"
 mradmin.applications:
   de: "Weboberfläche: Whitelist-Bewerbungen in ihrem Ticket annehmen (setzt den Spieler auf die Whitelist) oder ablehnen"
+mradmin.waitroom.visit:
+  de: "Aus dem Admin-Menü (`/mradmin`) in den Warteraum wechseln - zurück mit dem grünen Item dort"

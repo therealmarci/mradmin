@@ -73,6 +73,12 @@ public final class RestartManager {
         if (task != null || (restart && !enabled())) {
             return false;
         }
+        if (plugin.waitingRoom().roomRestarting()) {
+            // The waiting room restarts right now - players would have nowhere to go (callers say so themselves).
+            plugin.getLogger().info(by + " wanted to " + (restart ? "restart" : "stop")
+                    + " the server - not now, the waiting room is restarting.");
+            return false;
+        }
         this.by = by;
         this.restart = restart;
         this.reason = clean(reason).isEmpty() ? autoReason() : clean(reason);

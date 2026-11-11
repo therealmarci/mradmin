@@ -210,6 +210,8 @@ public final class StarterLink {
                 text = "Invalid time: " + time;
             } else if (restarts.running()) {
                 text = "A countdown is already running - mrserver cancel first.";
+            } else if (plugin.waitingRoom().roomRestarting()) {
+                text = "Not now - the waiting room server is restarting. Try again in a moment.";
             } else if (restarts.start(delay, "console (mrserver)", kind.equals("restart"), reason)) {
                 text = "OK - " + (kind.equals("restart") ? "restart" : "stop")
                         + (delay == 0 ? " now." : " in " + Texts.duration(delay) + " (announced in game).");

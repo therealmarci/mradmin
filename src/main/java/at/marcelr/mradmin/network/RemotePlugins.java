@@ -126,6 +126,11 @@ public final class RemotePlugins {
             Report old = reports.put(name, report);
             changed = old == null || !old.version().equals(report.version()) || !java.util.Objects.equals(old.staged(), report.staged());
             acknowledge(o);
+            // It restarts right now: an open restart order is done (it must not be taken again after the start).
+            if (Boolean.TRUE.equals(report.host().get("restarting"))) {
+                plugin.getLogger().info("The waiting room server (" + name + ") restarts - restarts of this server wait until it is back.");
+                orders.values().removeIf(order -> order.plugin().equals(name) && "restart".equals(order.json().get("type")));
+            }
             if (!report.config().isEmpty() && openOrder(name, "config") == null) {
                 mirror(report);
             }
@@ -289,6 +294,24 @@ public final class RemotePlugins {
         orders.put(id, new Order(id, name, json));
         plugin.getLogger().info((by == null ? "MRadmin" : by) + " asked the waiting room server (" + name + ") to restart.");
         return null;
+    }
+
+    /**
+     * A team member goes to the waiting room on purpose (admin menu): it must not send them back by itself. Expires
+     * after a minute if the waiting room does not pick it up.
+     */
+    public synchronized void orderVisit(String name, java.util.UUID player) {
+        long now = System.currentTimeMillis();
+        orders.values().removeIf(o -> "visit".equals(o.json().get("type"))
+                && (now - ((Number) o.json().get("at")).longValue() > 60_000L || player.toString().equals(o.json().get("player"))));
+        Map<String, Object> json = new LinkedHashMap<>();
+        String id = UUID.randomUUID().toString();
+        json.put("id", id);
+        json.put("plugin", name);
+        json.put("type", "visit");
+        json.put("player", player.toString());
+        json.put("at", now);
+        orders.put(id, new Order(id, name, json));
     }
 
     // -------------------------------------------------------------------- helpers

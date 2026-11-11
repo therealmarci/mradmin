@@ -219,6 +219,18 @@ public final class HubMenu extends Menu {
                 new AnnounceMenu(plugin, viewer, this::reopen).open();
             }));
         }
+        // Behind a proxy with a waiting room: go there (and back with the item there).
+        if (plugin.waitingRoom().active() && viewer.hasPermission(at.marcelr.mradmin.Perms.WAITROOM_VISIT)) {
+            tools.add(new Button(Items.of(Material.CLOCK).name(messages.item("gui-hub-waitroom-name"))
+                    .lore(messages.lore("gui-hub-waitroom-lore")).build(), click -> {
+                clickSound();
+                viewer.closeInventory();
+                messages.send(viewer, "waitroom-going");
+                // Tell the waiting room it is a visit (no automatic return), then go.
+                plugin.waitingRoom().remote().orderVisit("MRwaitroom", viewer.getUniqueId());
+                plugin.waitingRoom().send(viewer);
+            }));
+        }
         for (Settings.HubButton button : visibleButtons()) {
             String base = "gui-hub-buttons." + button.id();
             Component name = messages.has(base + ".name") ? messages.item(base + ".name")

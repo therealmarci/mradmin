@@ -200,6 +200,7 @@ public final class VersionRoutes {
         if (plugin.waitingRoom().active() && remoteRoom != null) {
             Map<String, Object> room = new LinkedHashMap<>(remoteRoom.host());
             room.put("online", remoteRoom.online() && plugin.waitingRoom().roomUp());
+            room.put("restarting", plugin.waitingRoom().roomRestarting());
             room.put("seen", remoteRoom.at());
             room.put("version", remoteRoom.version());
             room.put("ordered", plugin.waitingRoom().remote().openOrder("MRwaitroom", "restart") != null);
@@ -334,6 +335,9 @@ public final class VersionRoutes {
             }
         }
         String by = http.account().name() + " (web)";
+        if (plugin.waitingRoom().roomRestarting()) {
+            throw new Http.WebException(409, "waitroom-restarting");
+        }
         if (!server.sync(() -> plugin.restarts().start(delay, by, !stop, reason))) {
             throw new Http.WebException(409, "restart-running");
         }

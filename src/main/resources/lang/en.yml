@@ -230,6 +230,10 @@ gui-hub-announce-name: "<light_purple><bold>Announce"
 gui-hub-announce-lore:
   - "<gray>Presets: <white><count></white> or an own text"
   - "<yellow>Click: choose"
+gui-hub-waitroom-name: "<aqua><bold>To the waiting room"
+gui-hub-waitroom-lore:
+  - "<gray>Moves you to the waiting room server."
+  - "<gray>Back with the green item there."
 gui-switch-admin: "<gold><bold>Admin mode: <state>"
 gui-switch-admin-on-lore:
   - "<gray>Inventory and XP saved."
@@ -780,6 +784,8 @@ server-status-paper: "<prefix><hover:show_text:'<gray>server.paper-update: <whit
 server-restart-off: "<prefix><hover:show_text:'<gray>Set up the starter (/mradmin starter setup) or versions.restart-method'><red>Restarts are off on this server</hover>"
 server-countdown-started: "<prefix><green><what> in <time></green> <gray>- cancel with /mradmin <cmd> cancel"
 server-countdown-busy: "<prefix><red>A countdown is already running."
+server-waitroom-restarting: "<prefix><red>Not now - the waiting room is restarting. <hover:show_text:'<gray>While it is away players would have nowhere to wait. Try again in a moment.'><dark_gray>[?]</dark_gray></hover>"
+waitroom-going: "<prefix><gray>Moving you to the waiting room …"
 server-countdown-none: "<prefix><gray>No countdown is running."
 server-invalid-time: "<prefix><hover:show_text:'<gray>e.g. 30s, 5m, 1h or now'><red>Invalid time: <white><time></white></hover>"
 server-what-restart: "Restart"

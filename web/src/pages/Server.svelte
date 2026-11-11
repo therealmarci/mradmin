@@ -106,8 +106,8 @@
 
   // The waiting room server (MRwaitroom reports itself; its restart is an order it carries out when it may).
   const room = $derived(data?.waitroom);
-  const roomTone = $derived(!room ? 'off' : !room.online ? 'bad' : room.ordered || room.pending ? 'info' : 'good');
-  const roomState = $derived(!room ? '' : !room.online ? t('server.room.offline')
+  const roomTone = $derived(!room ? 'off' : room.restarting ? 'info' : !room.online ? 'bad' : room.ordered || room.pending ? 'info' : 'good');
+  const roomState = $derived(!room ? '' : room.restarting ? t('server.room.restarting') : !room.online ? t('server.room.offline')
     : room.ordered || room.pending ? t('server.room.pending') : t('server.room.online'));
   const restartRoom = () => act('/waitroom/restart', {}, t('server.room.ordered'), t('server.room.confirm'));
 
