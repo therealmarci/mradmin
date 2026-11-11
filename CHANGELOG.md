@@ -9,6 +9,14 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Rechte im Warteraum pro Team-Rolle:** Neue Tabelle `waiting-room.rights` (Konfiguration → Warteraum → „Rechte pro Rolle“): Für Admin, Staff und Supporter je **Nein / Ja / Nur im Admin-Modus** bei den Rechten „Bei Wartung auf den Server“, „Warteraum besuchen“, „Im Warteraum bleiben“ und „Admin-Modus im Warteraum“. Standard: Admins nur im Admin-Modus (Admin-Modus im Warteraum immer), Staff und Supporter nichts. Ein Admin ohne Admin-Modus wird damit wie ein Spieler behandelt (bei Wartung in den Warteraum). Gilt nur mit eingeschaltetem Warteraum; der Warteraum bekommt die Tabelle über die Verbindung.
+- **Admin-Modus im ganzen Netzwerk:** Mit Warteraum gilt der Admin-Modus auf beiden Servern - im Warteraum eingeschaltet, kommt man hier im Admin-Modus an; dort ausgeschaltet, gibt MRadmin beim Zurückkommen das Inventar zurück. `admin-mode.end-on-quit` wirkt mit Warteraum nicht mehr (der Wechsel ist kein Verlassen). Wer während einer Wartung hier den Admin-Modus ausschaltet und kein Recht mehr hat, wechselt in den Warteraum.
+- **Tabellen im Konfigurationsformular** können jetzt Auswahlfelder haben (`type: choice` mit `options` in einer Spalte, siehe MODULE-API).
+
+### Entfernt
+- **Permission `mradmin.waitroom.visit`:** Wer über das Admin-Menü in den Warteraum darf, regelt jetzt das Recht „Warteraum besuchen“ der Tabelle `waiting-room.rights`.
+
 ### Behoben & geändert
 - **Warteraum einrichten ohne Schlüssel:** `mrserver setup --role waitroom` brach ab, wenn der Installer keinen Schlüssel für die Warteraum-Verbindung übergab („does not look like waiting-room.link.key“). Ein leerer Schlüssel gilt jetzt als „später eintragen“.
 

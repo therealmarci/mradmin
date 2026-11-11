@@ -274,7 +274,29 @@ sections:
         type: bool
         when: waiting-room.enabled
         name: {de: Bei Wartung, en: During maintenance}
-        help: {de: "Spieler ohne Wartungs-Bypass warten während einer Wartung im Warteraum (mit Ende und Titel der Wartung), statt gekickt zu werden. Wer nicht hinüberwechselt, wird nach 5 Sekunden wie gewohnt gekickt.", en: "During a maintenance players without the maintenance bypass wait in the waiting room (with end and title of the maintenance) instead of being kicked. Whoever does not move over is kicked as usual after 5 seconds."}
+        help: {de: "Wer laut den Rechten unten nicht auf dem Server bleiben darf, wartet während einer Wartung im Warteraum (mit Ende und Titel der Wartung), statt gekickt zu werden. Wer nicht hinüberwechselt, wird nach 5 Sekunden wie gewohnt gekickt.", en: "During a maintenance whoever may not stay on the server (rights below) waits in the waiting room (with end and title of the maintenance) instead of being kicked. Whoever does not move over is kicked as usual after 5 seconds."}
+      - key: waiting-room.rights
+        heading: {de: "Rechte im Warteraum", en: "Rights around the waiting room"}
+        type: table
+        when: waiting-room.enabled
+        name: {de: Rechte pro Rolle, en: Rights per role}
+        help: {de: "Was jede Team-Rolle darf (höchste von mradmin.groups.admin, staff, support). Normale Spieler dürfen nichts davon. „Nur im Admin-Modus“: ein Admin ohne Admin-Modus wird wie ein Spieler behandelt. Bei Neustarts wechseln immer alle hinüber. Der Warteraum bekommt die Tabelle von hier.", en: "What every team role may do (highest of mradmin.groups.admin, staff, support). Normal players may do none of it. “Only in admin mode”: an admin without admin mode is treated like a player. On restarts everyone always moves over. The waiting room gets this table from here."}
+        columns:
+          - key: maintenance
+            type: choice
+            name: {de: Bei Wartung auf den Server, en: On the server during maintenance}
+            default: never
+            options: &rights
+              - {value: never, de: Nein, en: "No"}
+              - {value: always, de: Ja, en: "Yes"}
+              - {value: admin-mode, de: Nur im Admin-Modus, en: Only in admin mode}
+          - {key: visit, type: choice, name: {de: Warteraum besuchen, en: Visit the waiting room}, default: never, options: *rights}
+          - {key: stay, type: choice, name: {de: Im Warteraum bleiben, en: Stay in the waiting room}, default: never, options: *rights}
+          - {key: admin-mode, type: choice, name: {de: Admin-Modus im Warteraum, en: Admin mode in the waiting room}, default: never, options: *rights}
+        rows:
+          admin: {de: Admin, en: Admin}
+          staff: {de: Staff, en: Staff}
+          support: {de: Supporter, en: Supporter}
       - key: waiting-room.link.bind
         heading: {de: "Verbindung zum Warteraum", en: "Connection to the waiting room"}
         type: string

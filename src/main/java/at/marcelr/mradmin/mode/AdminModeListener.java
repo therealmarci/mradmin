@@ -33,6 +33,8 @@ public final class AdminModeListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         mode().resume(event.getPlayer(), true);
+        // Switched on or off in the waiting room meanwhile: take it over now.
+        plugin.waitingRoom().applyAdminModeWish(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

@@ -286,14 +286,14 @@ public final class HubMenu extends Menu {
             }));
         }
         // In the middle: to the waiting room (behind a proxy) - then ESC closes; otherwise the close button.
-        if (plugin.waitingRoom().active() && viewer.hasPermission(at.marcelr.mradmin.Perms.WAITROOM_VISIT)) {
+        // Who may go there is in the table waiting-room.rights (by default admins in admin mode).
+        if (plugin.waitingRoom().active()
+                && plugin.waitingRoom().allows(viewer, at.marcelr.mradmin.network.RoomRights.Right.VISIT)) {
             buttons.add(new Button(Items.of(Material.CLOCK).name(messages.item("gui-hub-waitroom-name"))
                     .lore(messages.lore("gui-hub-waitroom-lore")).build(), click -> {
                 clickSound();
                 viewer.closeInventory();
                 messages.send(viewer, "waitroom-going");
-                // Tell the waiting room it is a visit (no automatic return), then go.
-                plugin.waitingRoom().remote().orderVisit("MRwaitroom", viewer.getUniqueId());
                 plugin.waitingRoom().send(viewer);
             }));
         } else {

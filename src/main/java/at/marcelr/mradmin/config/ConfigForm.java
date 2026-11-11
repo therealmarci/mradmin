@@ -41,8 +41,9 @@ public final class ConfigForm {
     /**
      * A column of a table: one value per row, e.g. "enabled" (bool) and "color" (color) of a Discord event.
      * {@code fallback}: the value while a row does not have the key (e.g. "enabled: true" of ticket categories).
+     * {@code options}: the values of a choice column.
      */
-    public record Column(String key, Type type, Text name, Double min, Double max, Object fallback) {
+    public record Column(String key, Type type, Text name, Double min, Double max, Object fallback, List<Option> options) {
     }
 
     /**
@@ -123,6 +124,23 @@ public final class ConfigForm {
         return new ConfigForm(List.copyOf(sections));
     }
 
+    /** The options of a choice: values, or maps with value and the names per language. */
+    private static List<Option> options(Object raw) {
+        List<Option> options = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> m) {
+                    String value = string(m.get("value"));
+                    options.add(new Option(value, new Text(string(m.containsKey("de") ? m.get("de") : value),
+                            string(m.containsKey("en") ? m.get("en") : value)), string(m.get("plugin"))));
+                } else {
+                    options.add(new Option(string(o), new Text(string(o), string(o)), ""));
+                }
+            }
+        }
+        return options;
+    }
+
     private static Field field(Map<?, ?> f) throws InvalidConfigurationException {
         String key = string(f.get("key"));
         if (key.isEmpty()) {
@@ -134,18 +152,7 @@ public final class ConfigForm {
         } catch (IllegalArgumentException e) {
             throw new InvalidConfigurationException("field " + key + ": unknown type " + f.get("type"));
         }
-        List<Option> options = new ArrayList<>();
-        if (f.get("options") instanceof List<?> list) {
-            for (Object o : list) {
-                if (o instanceof Map<?, ?> m) {
-                    String value = string(m.get("value"));
-                    options.add(new Option(value, new Text(string(m.containsKey("de") ? m.get("de") : value),
-                            string(m.containsKey("en") ? m.get("en") : value)), string(m.get("plugin"))));
-                } else {
-                    options.add(new Option(string(o), new Text(string(o), string(o)), ""));
-                }
-            }
-        }
+        List<Option> options = options(f.get("options"));
         if ((type == Type.CHOICE || type == Type.CHOICES) && options.isEmpty()) {
             throw new InvalidConfigurationException("field " + key + ": choice without options");
         }
@@ -154,11 +161,15 @@ public final class ConfigForm {
             for (Object o : list) {
                 if (o instanceof Map<?, ?> c) {
                     Type ct = Type.valueOf(string(c.get("type")).toUpperCase(Locale.ROOT));
-                    if (ct != Type.BOOL && ct != Type.COLOR && ct != Type.INT && ct != Type.STRING) {
+                    if (ct != Type.BOOL && ct != Type.COLOR && ct != Type.INT && ct != Type.STRING && ct != Type.CHOICE) {
                         throw new InvalidConfigurationException("field " + key + ": column type " + ct + " is not allowed");
                     }
+                    List<Option> colOptions = options(c.get("options"));
+                    if (ct == Type.CHOICE && colOptions.isEmpty()) {
+                        throw new InvalidConfigurationException("field " + key + ": choice column without options");
+                    }
                     columns.add(new Column(string(c.get("key")), ct, text(c.get("name"), string(c.get("key"))),
-                            number(c.get("min")), number(c.get("max")), c.get("default")));
+                            number(c.get("min")), number(c.get("max")), c.get("default"), colOptions));
                 }
             }
         }
@@ -237,6 +248,9 @@ public final class ConfigForm {
                         cm.put("name", c.name().json());
                         cm.put("min", c.min());
                         cm.put("max", c.max());
+                        if (!c.options().isEmpty()) {
+                            cm.put("options", c.options().stream().map(o -> Map.of("value", o.value(), "name", o.name().json())).toList());
+                        }
                         return cm;
                     }).toList());
                     List<Map<String, Object>> rows = new ArrayList<>();
@@ -358,7 +372,7 @@ public final class ConfigForm {
                         Column col = f.columns().stream().filter(c -> c.key().equals(String.valueOf(cell.getKey()))).findFirst()
                                 .orElseThrow(() -> new Invalid(f.key(), "config-invalid"));
                         Field asField = new Field(f.key(), col.type(), col.name(), f.help(), f.unit(), false, "", col.min(), col.max(),
-                                200, 0, "", false, List.of(), List.of(), Map.of(), new Text("", ""), false);
+                                200, 0, "", false, col.options(), List.of(), Map.of(), new Text("", ""), false);
                         checked.put(f.key() + "." + rowKey + "." + col.key(), check(asField, cell.getValue()));
                     }
                 }

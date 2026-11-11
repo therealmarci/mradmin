@@ -523,7 +523,14 @@ public final class MaintenanceManager {
         return kuma;
     }
 
+    /**
+     * Whether the player may be on the server during the maintenance. With the waiting room the table
+     * waiting-room.rights decides (role and admin mode), otherwise the bypass permission.
+     */
     public boolean canJoin(Player player) {
+        if (plugin.waitingRoom().active()) {
+            return plugin.waitingRoom().allows(player, at.marcelr.mradmin.network.RoomRights.Right.MAINTENANCE);
+        }
         return player.hasPermission(PERM_BYPASS);
     }
 

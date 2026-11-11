@@ -44,7 +44,19 @@ public final class MaintenanceListener implements Listener {
         }
         Boolean allowed;
         try {
-            allowed = LuckPermsHook.check(event.getUniqueId(), MaintenanceManager.PERM_BYPASS);
+            if (plugin.waitingRoom().active()) {
+                // With the waiting room: the table waiting-room.rights (role and admin mode) decides.
+                boolean op = Bukkit.getOfflinePlayer(event.getUniqueId()).isOp();
+                java.util.Map<String, Boolean> known = new java.util.HashMap<>();
+                for (var role : at.marcelr.mradmin.network.RoomRights.Role.values()) {
+                    Boolean set = LuckPermsHook.check(event.getUniqueId(), role.permission);
+                    known.put(role.permission, set != null ? set : op);
+                }
+                allowed = plugin.waitingRoom().allows(event.getUniqueId(), known::get,
+                        at.marcelr.mradmin.network.RoomRights.Right.MAINTENANCE);
+            } else {
+                allowed = LuckPermsHook.check(event.getUniqueId(), MaintenanceManager.PERM_BYPASS);
+            }
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Could not check the permissions of " + event.getName()
                     + " with LuckPerms, checking again after joining: " + e.getMessage());

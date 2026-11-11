@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 59
+config-version: 60
 
 
 # ------------------------------------------------------------------------------
@@ -427,7 +427,7 @@ waiting-room:
   server: "waitroom"
   # Send all players there right before a restart or stop.
   on-restart: true
-  # Send players without the maintenance bypass there when a maintenance starts or when they join during one.
+  # Send players there when a maintenance starts or when they join during one (who may stay: rights below).
   on-maintenance: true
   # Connection for the waiting room: it asks MRadmin here what is going on (restart, maintenance, warnings).
   # A small endpoint of its own, independent of the web interface.
@@ -438,6 +438,32 @@ waiting-room:
     port: 8126
     # Shared key - the same value goes into the config.yml of the waiting room. Created on the first start if empty.
     key: ""
+  # Who may do what around the waiting room, per team role (permissions mradmin.groups.admin|staff|support - the
+  # highest one counts; normal players have none of these rights). Only while the waiting room is on - without it
+  # the maintenance keeps its bypass permission (mradmin.maintenance.bypass). Every value is one of:
+  #   "never" | "always" | "admin-mode" (only while in admin mode - an admin without admin mode is a normal player)
+  # The rights:
+  #   maintenance  stay on (or join) this server during a maintenance instead of waiting in the waiting room
+  #   visit        go to the waiting room while nothing is going on (button in the /mradmin menu)
+  #   stay         stay in the waiting room - not sent back here by itself
+  #   admin-mode   switch the admin mode on in the waiting room (item in the hotbar; creative mode there)
+  # Restarts always send everyone over - that is no right. The waiting room gets this table from here.
+  rights:
+    admin:
+      maintenance: "admin-mode"
+      visit: "admin-mode"
+      stay: "admin-mode"
+      admin-mode: "always"
+    staff:
+      maintenance: "never"
+      visit: "never"
+      stay: "never"
+      admin-mode: "never"
+    support:
+      maintenance: "never"
+      visit: "never"
+      stay: "never"
+      admin-mode: "never"
 
 # ------------------------------------------------------------------------------
 #   10) STORAGE

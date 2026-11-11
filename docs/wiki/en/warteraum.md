@@ -6,7 +6,7 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 
 ## What MRadmin does
 - **Before a restart or stop** (countdown from the browser, `/mradmin restart|stop`, planned restarts) MRadmin sends all players to the waiting room right before the server goes down (`waiting-room.on-restart`).
-- **When a maintenance starts** players without the maintenance bypass move to the waiting room instead of being kicked - also whoever joins during a maintenance (`waiting-room.on-maintenance`).
+- **When a maintenance starts** everyone who may not stay by the [rights](#rights-around-the-waiting-room) moves to the waiting room instead of being kicked - also whoever joins during a maintenance (`waiting-room.on-maintenance`).
 - **Info for the waiting room:** through a small endpoint of its own (not the web interface) the waiting room learns the restart countdown and reason, running and planned maintenance and active warnings from **News**. It keeps the last answer, so the info is still there while your server is down.
 
 > [!NOTE]
@@ -52,8 +52,23 @@ If one of these is not met, the tile shows the reason. Planned restarts are set 
 
 **While the waiting room restarts**, MRadmin refuses restarts and stops of your server (browser, `/mradmin restart|stop`, `mrserver`) - players would have nowhere to wait. That usually takes only a few seconds.
 
-## Going to the waiting room yourself
-In the admin menu (`/mradmin`) **To the waiting room** takes you there at any time (permission `mradmin.waitroom.visit`). There you are not sent back by yourself; the green item **Back to the server** in the hotbar brings you back - also during a maintenance.
+## Rights around the waiting room
+What the team may do around the waiting room is set in a **table**: MRadmin's configuration → **Waiting room** → **Rights per role** (`waiting-room.rights`). The rows are the team roles **Admin**, **Staff** and **Supporter** (the highest of `mradmin.groups.admin`, `.staff`, `.support` counts), every cell is **No**, **Yes** or **Only in admin mode**. Normal players have none of the rights.
+
+| Right | Meaning | Admin | Staff | Supporter |
+|---|---|---|---|---|
+| **On the server during maintenance** | Stays on your server during a maintenance or gets in - otherwise you wait in the waiting room | Only in admin mode | No | No |
+| **Visit the waiting room** | Button **To the waiting room** in the admin menu (`/mradmin`), also when nothing is going on | Only in admin mode | No | No |
+| **Stay in the waiting room** | Not sent back by itself; back with the item **Back to the server** | Only in admin mode | No | No |
+| **Admin mode in the waiting room** | Item **Admin mode** in the hotbar of the waiting room | Yes | No | No |
+
+With the defaults an **admin without admin mode is a normal player**: during a maintenance they end up in the waiting room and are sent back like everyone afterwards. **On restarts everyone always moves** to the waiting room - that is no right. The table only applies while the waiting room is on; without it the maintenance keeps its bypass (`mradmin.maintenance.bypass`). The waiting room gets the table from MRadmin, you set none of it there.
+
+### Admin mode across the network
+The admin mode counts on **both** servers: whoever switches it on in the waiting room arrives on your server in admin mode (inventory saved as usual); whoever switches it off there gets their inventory back when coming back. The other way round, whoever is in admin mode on your server is in admin mode in the waiting room too. `admin-mode.end-on-quit` has no effect with the waiting room - moving to the waiting room is not leaving.
+
+> [!TIP]
+> A maintenance is running and you want onto the server? In the waiting room switch the admin mode on with the item on the left of the hotbar, then go over with **Back to the server** (right).
 
 > [!TIP]
 > The other way round MRadmin takes care too: if the waiting room is restarting itself when your server's countdown ends, MRadmin waits up to 2 minutes for it before going down.
@@ -68,6 +83,7 @@ In the admin menu (`/mradmin`) **To the waiting room** takes you there at any ti
 | `waiting-room.link.bind` | `127.0.0.1` | Address of the endpoint (empty = none) |
 | `waiting-room.link.port` | `8126` | Port of the endpoint |
 | `waiting-room.link.key` | (created) | Shared key with the waiting room |
+| `waiting-room.rights` | see above | Rights per team role ([Rights around the waiting room](#rights-around-the-waiting-room)) |
 
 ## FAQ
 **What happens on a crash?** Velocity sends the players to the waiting room by itself when the connection to the main server breaks unexpectedly (`failover-on-unexpected-server-disconnect = true`, the default). The waiting room then shows "Server is restarting · since …".

@@ -409,6 +409,10 @@
                 oninput={(e) => setCell(f, row.key, c.key, e.currentTarget.value.toUpperCase())} />
             {:else if c.type === 'int'}
               <input type="number" class="small-num" value={cell ?? ''} oninput={(e) => e.currentTarget.value !== '' && setCell(f, row.key, c.key, Number(e.currentTarget.value))} />
+            {:else if c.type === 'choice'}
+              <Dropdown width="170px" value={cell} label={tx(row.name) + ' ' + tx(c.name)}
+                options={(c.options ?? []).map((o) => ({ value: o.value, label: tx(o.name) }))}
+                onchange={(x) => setCell(f, row.key, c.key, x)} />
             {:else}
               <input value={cell ?? ''} oninput={(e) => setCell(f, row.key, c.key, e.currentTarget.value)} />
             {/if}

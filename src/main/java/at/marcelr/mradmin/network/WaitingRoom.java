@@ -84,6 +84,14 @@ public final class WaitingRoom implements Listener {
     private volatile long lastQuestion;
     /** Failed key checks per address (simple brake against guessing). */
     private final Map<String, int[]> failures = new ConcurrentHashMap<>();
+    /** Who may do what around the waiting room (waiting-room.rights). */
+    private volatile RoomRights rights = RoomRights.from(new YamlConfiguration());
+    /**
+     * Admin mode switched on or off in the waiting room, not taken over here yet (the player is not on this server):
+     * player -> on. Taken over when the player joins; kept in a file so a restart of this server does not lose it.
+     */
+    private final Map<java.util.UUID, Boolean> wishes = new ConcurrentHashMap<>();
+    private boolean wishesLoaded;
 
     public WaitingRoom(MRAdmin plugin) {
         this.plugin = plugin;
@@ -114,6 +122,11 @@ public final class WaitingRoom implements Listener {
             plugin.getLogger().info("Created waiting-room.link.key - copy it into the config.yml of the waiting room.");
         }
         config = c;
+        rights = RoomRights.from(plugin.getConfig());
+        if (!wishesLoaded) {
+            wishesLoaded = true;
+            loadWishes();
+        }
         var messenger = Bukkit.getMessenger();
         if (c.enabled() && !messenger.isOutgoingChannelRegistered(plugin, CHANNEL)) {
             messenger.registerOutgoingPluginChannel(plugin, CHANNEL);
@@ -239,6 +252,125 @@ public final class WaitingRoom implements Listener {
         }
     }
 
+    // ------------------------------------------------------------------- rights
+
+    public RoomRights rights() {
+        return rights;
+    }
+
+    /**
+     * Whether the player counts as in admin mode for the waiting room rights: in admin mode here (also offline, the
+     * saved state) - or switched it on or off in the waiting room and not here yet.
+     */
+    public boolean inAdminMode(java.util.UUID id) {
+        Boolean wish = wishes.get(id);
+        return wish != null ? wish : plugin.adminMode() != null && plugin.adminMode().saved(id);
+    }
+
+    /** Whether the player has the right (role from the permissions, admin mode as above). */
+    public boolean allows(Player player, RoomRights.Right right) {
+        return rights.allows(RoomRights.role(player), right, inAdminMode(player.getUniqueId()));
+    }
+
+    /** The same for a player that is not online yet (role by a permission check, e.g. LuckPerms before joining). */
+    public boolean allows(java.util.UUID id, java.util.function.Predicate<String> has, RoomRights.Right right) {
+        return rights.allows(RoomRights.role(has), right, inAdminMode(id));
+    }
+
+    /**
+     * On joining: takes over the admin mode the player switched in the waiting room - on (if they may use it here)
+     * or off (everything back).
+     */
+    public void applyAdminModeWish(Player player) {
+        Boolean wish = wishes.remove(player.getUniqueId());
+        if (wish == null) {
+            return;
+        }
+        saveWishes();
+        var mode = plugin.adminMode();
+        if (wish && !mode.active(player)) {
+            if (player.hasPermission(at.marcelr.mradmin.mode.AdminModeManager.PERM_USE)
+                    && plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
+                mode.enable(player);
+            }
+        } else if (!wish && mode.active(player)) {
+            mode.disable(player, false);
+        }
+    }
+
+    /** Admin mode switched in the waiting room ({@code POST /waiting-room/admin-mode}): {"players": {uuid: on}}. */
+    private String receiveAdminMode(String body) {
+        com.google.gson.JsonObject players;
+        try {
+            players = com.google.gson.JsonParser.parseString(body).getAsJsonObject().getAsJsonObject("players");
+        } catch (RuntimeException e) {
+            return "json";
+        }
+        if (players == null || players.size() > 500) {
+            return "json";
+        }
+        Map<java.util.UUID, Boolean> taken = new LinkedHashMap<>();
+        for (var e : players.entrySet()) {
+            try {
+                taken.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsBoolean());
+            } catch (RuntimeException bad) {
+                return "player";
+            }
+        }
+        // Right away, so a player who goes over this very moment already counts (not for players that are here).
+        taken.forEach((id, on) -> {
+            if (Bukkit.getPlayer(id) != null) {
+                return;
+            }
+            // The same as here already: nothing to take over.
+            if (plugin.adminMode() != null && plugin.adminMode().saved(id) == on) {
+                wishes.remove(id);
+            } else {
+                wishes.put(id, on);
+            }
+        });
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            saveWishes();
+            buildSnapshot();
+        });
+        return null;
+    }
+
+    private File wishesFile() {
+        return new File(plugin.getDataFolder(), "waiting-room-admin-mode.yml");
+    }
+
+    private void loadWishes() {
+        File file = wishesFile();
+        if (!file.isFile()) {
+            return;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        for (String key : yaml.getKeys(false)) {
+            try {
+                wishes.put(java.util.UUID.fromString(key), yaml.getBoolean(key));
+            } catch (IllegalArgumentException ignored) {
+                // not a player
+            }
+        }
+    }
+
+    private synchronized void saveWishes() {
+        Map<java.util.UUID, Boolean> copy = new LinkedHashMap<>(wishes);
+        try {
+            if (copy.isEmpty()) {
+                Files.deleteIfExists(wishesFile().toPath());
+                return;
+            }
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.options().setHeader(List.of("Admin mode switched in the waiting room - taken over when the player joins here."));
+            copy.forEach((id, on) -> yaml.set(id.toString(), on));
+            yaml.save(wishesFile());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not save " + wishesFile().getName() + ": " + e.getMessage());
+        }
+    }
+
     // ------------------------------------------------------------------- status
 
     /** What the waiting room gets - built on the server thread once per second. */
@@ -283,6 +415,18 @@ public final class WaitingRoom implements Listener {
             }
         }
         json.put("alerts", alerts);
+        json.put("rights", rights.json());
+        // Everyone in admin mode (also offline) - the waiting room gives them the admin mode there too.
+        java.util.Set<java.util.UUID> admins = plugin.adminMode() == null ? new java.util.HashSet<>()
+                : plugin.adminMode().savedIds();
+        wishes.forEach((id, on) -> {
+            if (on) {
+                admins.add(id);
+            } else {
+                admins.remove(id);
+            }
+        });
+        json.put("adminMode", admins.stream().map(java.util.UUID::toString).sorted().toList());
         snapshot = GSON.toJson(json);
     }
 
@@ -330,7 +474,8 @@ public final class WaitingRoom implements Listener {
                 return;
             }
             String path = exchange.getRequestURI().getPath();
-            boolean report = path.equals("/waiting-room/report");
+            boolean adminMode = path.equals("/waiting-room/admin-mode");
+            boolean report = path.equals("/waiting-room/report") || adminMode;
             if (!(report ? "POST" : "GET").equals(exchange.getRequestMethod())
                     || !(report || path.equals("/waiting-room/status"))) {
                 reply(exchange, 405, "{\"error\":\"method\"}");
@@ -342,6 +487,14 @@ public final class WaitingRoom implements Listener {
                     || config.key().isEmpty()) {
                 failed[0]++;
                 reply(exchange, 401, "{\"error\":\"key\"}");
+                return;
+            }
+            if (adminMode) {
+                byte[] body = exchange.getRequestBody().readNBytes(64 * 1024 + 1);
+                String problem = body.length > 64 * 1024 ? "too-large"
+                        : receiveAdminMode(new String(body, StandardCharsets.UTF_8));
+                reply(exchange, problem == null ? 200 : 400, problem == null ? "{\"ok\":true}"
+                        : "{\"error\":\"" + problem + "\"}");
                 return;
             }
             if (report) {
