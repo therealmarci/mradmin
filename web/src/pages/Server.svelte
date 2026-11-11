@@ -272,32 +272,43 @@
           starterActive={r.starter.active} {reason} ondone={emergencyDone} />
       {/if}
 
-      <div class="tiles" class:three={!!room}>
-        {#if room}
-          <div class="card tile room">
-            <span class="t-head">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true"><path d={ICONS.restore} /></svg>
-              {t('server.room.title')}
-              <span class="pill {roomTone}"><span class="dot {roomTone}"></span>{roomState}</span>
-            </span>
-            {#if room.online}
-              <div class="badges">
-                <span class="badge" title={t('server.room.paperTip')}>Paper #{room.paper ?? '–'}</span>
-                <span class="badge">{t('server.room.since', { time: room.startedAt ? ago(room.startedAt) : '–' })}</span>
-                <span class="badge" class:info={room.players > 0}>{t('server.room.players', { n: room.players ?? 0 })}</span>
-                <span class="badge">{room.nextRestart ? t('server.room.next', { time: when(room.nextRestart) }) : t('server.room.nextNone')}</span>
-                <span class="badge" class:warn={!room.starter}>{t(room.starter ? 'server.room.starterOn' : 'server.room.starterOff')}</span>
-              </div>
-            {/if}
-            {#if roomLock}<span class="lock small muted">{t('server.room.blocked.' + roomLock)}</span>{/if}
-            {#if room.error}<span class="lock small bad">{t('server.room.blocked.' + room.error)}</span>{/if}
-            {#if data.may.stop}
-              <button class="secondary" disabled={busy || !!roomLock} title={roomLock ? t('server.room.blocked.' + roomLock) : ''}
-                onclick={restartRoom}>{t('server.room.restart')}</button>
-            {/if}
+      {#if room}
+        <!-- The waiting room server: the four values that matter, the button on the right -->
+        <section class="card room" class:off={roomTone === 'bad'} class:busy={roomTone === 'info'}>
+          <div class="room-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true"><path d={ICONS.restore} /></svg>
+            <span>{t('server.room.title')}</span>
           </div>
-        {/if}
+          <div class="stats">
+            <div class="stat">
+              <span class="s-label">{t('server.room.state')}</span>
+              <span class="s-value"><span class="dot {roomTone}"></span>{roomState}</span>
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.room.waiting')}</span>
+              <span class="s-value">{room.online ? (room.players ?? 0) : '–'}</span>
+            </div>
+            <div class="stat" title={room.online && room.paper ? 'Paper #' + room.paper : ''}>
+              <span class="s-label">{t('server.uptime')}</span>
+              <span class="s-value">{room.online && room.startedAt ? duration(Math.max(0, now - room.startedAt)) : '–'}</span>
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.next')}</span>
+              <span class="s-value">{room.nextRestart ? when(room.nextRestart) : t('server.nextNone')}</span>
+            </div>
+          </div>
+          {#if data.may.stop}
+            <div class="room-action">
+              <button class="secondary" disabled={busy || !!roomLock} onclick={restartRoom}>{t('server.room.restart')}</button>
+              {#if roomLock}<span class="small muted">{t('server.room.blocked.' + roomLock)}</span>{/if}
+              {#if room.error}<span class="small bad-text">{t('server.room.blocked.' + room.error)}</span>{/if}
+            </div>
+          {/if}
+        </section>
+      {/if}
+
+      <div class="tiles">
         <button class="card tile" onclick={() => open('plugins')}>
           <span class="t-head">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -627,72 +638,41 @@
     gap: 14px;
   }
 
-  .tiles.three {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  .room {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 24px;
+    border-left: 5px solid var(--good);
   }
 
-  .room .t-head {
+  .room.busy {
+    border-left-color: var(--accent);
+  }
+
+  .room.off {
+    border-left-color: var(--bad);
+  }
+
+  .room-title {
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-
-  .pill {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.78rem;
     font-weight: 700;
-    border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
-    background: color-mix(in srgb, var(--good) 12%, transparent);
-  }
-
-  .pill.info {
-    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-
-  .pill.bad {
-    border-color: color-mix(in srgb, var(--bad) 40%, transparent);
-    background: color-mix(in srgb, var(--bad) 12%, transparent);
-  }
-
-  .badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .badge {
-    padding: 2px 9px;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--text) 5%, transparent);
-    color: var(--muted);
     white-space: nowrap;
   }
 
-  .badge.info {
-    color: var(--text);
-    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  .room-action {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+    max-width: 240px;
+    text-align: right;
   }
 
-  .badge.warn {
-    color: var(--warn);
-    border-color: color-mix(in srgb, var(--warn) 45%, transparent);
-  }
-
-  .lock.bad {
+  .bad-text {
     color: var(--bad);
-  }
-
-  .room button {
-    justify-self: start;
-    margin-top: 4px;
   }
 
   .tile {
@@ -801,9 +781,18 @@
     }
 
     .server,
-    .tiles,
-    .tiles.three {
+    .tiles {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .room {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .room-action {
+      justify-items: start;
+      text-align: left;
+      max-width: none;
     }
 
     /* Tabs stay in one row and scroll sideways */
