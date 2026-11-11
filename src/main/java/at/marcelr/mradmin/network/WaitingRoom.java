@@ -134,6 +134,9 @@ public final class WaitingRoom implements Listener {
         if (snapshotTask == null) {
             snapshotTask = Bukkit.getScheduler().runTaskTimer(plugin, this::buildSnapshot, 1L, 20L);
         }
+        // Right away: during the start the scheduler does not run yet - the waiting room must not get an empty answer
+        // (it would show "starting" instead of a running maintenance).
+        buildSnapshot();
         String target = c.enabled() && !c.bind().isEmpty() ? c.bind() + ":" + c.port() : "";
         if (!target.equals(boundTo)) {
             stopLink();
@@ -237,6 +240,15 @@ public final class WaitingRoom implements Listener {
         long now = System.currentTimeMillis();
         // Until the restarted waiting room sends its first report again (it reports right after starting).
         return now - report.at() < 180_000L;
+    }
+
+    /**
+     * {@code <stay>} for restart and maintenance messages: with the waiting room the hint that nobody needs to leave
+     * (they wait over there), otherwise nothing. Built in the language of each reader.
+     */
+    public net.kyori.adventure.text.minimessage.tag.resolver.TagResolver stayHint() {
+        return at.marcelr.mradmin.Messages.lazy("stay", () -> active()
+                ? plugin.messages().get("waiting-room-stay-hint") : net.kyori.adventure.text.Component.empty());
     }
 
     /** Asks the proxy to move the player to the waiting room server. */
@@ -508,6 +520,11 @@ public final class WaitingRoom implements Listener {
             lastQuestion = System.currentTimeMillis();
             // The state plus the open orders for remote plugins (configuration, updates).
             String state = snapshot;
+            if (state.length() <= 2) {
+                // Not built yet: no answer rather than one without maintenance and restart.
+                reply(exchange, 503, "{\"error\":\"starting\"}");
+                return;
+            }
             String orders = "\"orders\":" + remote.ordersJson() + "}";
             reply(exchange, 200, state.length() <= 2 ? "{" + orders : state.substring(0, state.length() - 1) + "," + orders);
         } catch (RuntimeException e) {

@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 21
+lang-version: 22
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -110,22 +110,22 @@ announce-presets:
   restart:
     title: "<red><bold>Restart"
     subtitle: "<gray>The server restarts in <white><args></white>"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts in <white><args></white>. Please find a safe spot!"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts in <white><args></white>. Please find a safe spot!<stay>"
     discord: "🔄 The server restarts in **{args}**."
   restart-now:
     title: "<red><bold>Restart"
     subtitle: "<gray>The server restarts <white>now</white> - see you soon!"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts now - see you soon!"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts now - see you soon!<stay>"
     discord: ""
   stop:
     title: "<red><bold>Server stop"
     subtitle: "<gray>The server shuts down in <white><args></white>"
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down in <white><args></white>."
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down in <white><args></white>.<stay>"
     discord: "🛑 The server shuts down in **{args}**."
   stop-now:
     title: "<red><bold>Server stop"
     subtitle: "<gray>The server shuts down <white>now</white>."
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down now."
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down now.<stay>"
     discord: ""
   update:
     title: "<aqua><bold>Update"
@@ -396,15 +396,15 @@ maintenance-bossbar-active-open: "<light_purple>🔧 Maintenance running <dark_g
 maintenance-announced: |-
   <prefix><yellow><bold>⚠ Maintenance</bold></yellow> <gray>in <white><in></white><title-line>
     <dark_gray>▪</dark_gray> <gray>Start: <white><start></white> <dark_gray>·</dark_gray> <gray>End: <white><end></white>
-    <dark_gray>▪</dark_gray> <gray>After that, only team members can join.
-maintenance-reminder: "<prefix><yellow>⚠ Maintenance starts in <white><in></white>."
+    <dark_gray>▪</dark_gray> <gray>After that, only team members can join.<stay>
+maintenance-reminder: "<prefix><yellow>⚠ Maintenance starts in <white><in></white>.<stay>"
 maintenance-rescheduled: "<prefix><yellow>Maintenance moved: <white><start></white> - <white><end></white>"
 maintenance-cancelled: "<prefix><green>The planned maintenance was cancelled."
 # Big countdown in the last seconds (maintenance.title-countdown-seconds). <seconds> = seconds left
 maintenance-countdown-title: "<red><bold><seconds>"
 maintenance-countdown-subtitle: "<gray>Maintenance is starting"
 maintenance-started: |-
-  <prefix><red><bold>🔧 Maintenance has started</bold></red><title-line>
+  <prefix><red><bold>🔧 Maintenance has started</bold></red><stay><title-line>
     <dark_gray>▪</dark_gray> <gray>Estimated end: <white><end></white>
 maintenance-start-title: "<red><bold>Maintenance"
 maintenance-start-subtitle: "<gray>See you later - expected until <white><end>"
@@ -786,6 +786,7 @@ server-countdown-started: "<prefix><green><what> in <time></green> <gray>- cance
 server-countdown-busy: "<prefix><red>A countdown is already running."
 server-waitroom-restarting: "<prefix><red>Not now - the waiting room is restarting. <hover:show_text:'<gray>While it is away players would have nowhere to wait. Try again in a moment.'><dark_gray>[?]</dark_gray></hover>"
 waitroom-going: "<prefix><gray>Moving you to the waiting room …"
+waiting-room-stay-hint: " <hover:show_text:'<gray>You move to the waiting room by yourself<newline><gray>and come back afterwards'><green>No need to leave.</green></hover>"
 server-countdown-none: "<prefix><gray>No countdown is running."
 server-invalid-time: "<prefix><hover:show_text:'<gray>e.g. 30s, 5m, 1h or now'><red>Invalid time: <white><time></white></hover>"
 server-what-restart: "Restart"

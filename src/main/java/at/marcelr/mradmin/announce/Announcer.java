@@ -445,12 +445,14 @@ public final class Announcer {
 
     /**
      * {@code <args>} = all values, {@code <arg1>} ... {@code <arg9>} = single values (empty if not given), plus the
-     * named values ({@code <time>} ...).
+     * named values ({@code <time>} ...) and {@code <stay>} (waiting room hint, see WaitingRoom#stayHint).
      */
-    private static TagResolver[] argResolvers(List<String> args, Map<String, String> named) {
+    private TagResolver[] argResolvers(List<String> args, Map<String, String> named) {
         List<TagResolver> list = new ArrayList<>();
         named.forEach((name, value) -> list.add(tag(name, value)));
         list.add(tag("args", String.join(" ", args)));
+        // Behind a proxy with the waiting room: "you need not leave" (empty otherwise), in the language of each reader.
+        list.add(plugin.waitingRoom().stayHint());
         for (int i = 1; i <= 9; i++) {
             list.add(tag("arg" + i, i <= args.size() ? args.get(i - 1) : ""));
         }

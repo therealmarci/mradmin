@@ -550,7 +550,8 @@ public final class MaintenanceManager {
         if (window == null) {
             return new TagResolver[]{tag("title", ""), Messages.lazy("start", open), Messages.lazy("end", open),
                     tag("in", "0s"), tag("countdown", "0:00:00"), tag("remaining", "0s"),
-                    tag("title-line", Component.empty()), tag("kick-title-line", Component.empty())};
+                    tag("title-line", Component.empty()), tag("kick-title-line", Component.empty()),
+                    plugin.waitingRoom().stayHint()};
         }
         long untilStart = window.start() == null ? 0 : Math.max(0, window.start().toEpochMilli() - now.toEpochMilli());
         long untilEnd = window.end() == null ? 0 : Math.max(0, window.end().toEpochMilli() - now.toEpochMilli());
@@ -567,7 +568,8 @@ public final class MaintenanceManager {
                 Messages.lazy("end", () -> Texts.at(plugin, window.end())),
                 tag("in", Texts.duration(untilStart)),
                 Messages.lazy("countdown", () -> running && openEnd ? open.get() : Texts.clock(running ? untilEnd : untilStart)),
-                Messages.lazy("remaining", () -> openEnd ? open.get() : Texts.duration(untilEnd))};
+                Messages.lazy("remaining", () -> openEnd ? open.get() : Texts.duration(untilEnd)),
+                plugin.waitingRoom().stayHint()};
     }
 
     /** Whether the running maintenance has no known end (manual one without duration, Kuma "manual" strategy). */

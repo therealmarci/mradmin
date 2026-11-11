@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 21
+lang-version: 22
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -110,22 +110,22 @@ announce-presets:
   restart:
     title: "<red><bold>Neustart"
     subtitle: "<gray>Der Server startet in <white><args></white> neu"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet in <white><args></white> neu. Bitte sucht euch einen sicheren Ort!"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet in <white><args></white> neu. Bitte sucht euch einen sicheren Ort!<stay>"
     discord: "🔄 Der Server startet in **{args}** neu."
   restart-now:
     title: "<red><bold>Neustart"
     subtitle: "<gray>Der Server startet <white>jetzt</white> neu - bis gleich!"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet jetzt neu - bis gleich!"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet jetzt neu - bis gleich!<stay>"
     discord: ""
   stop:
     title: "<red><bold>Server-Stopp"
     subtitle: "<gray>Der Server fährt in <white><args></white> herunter"
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt in <white><args></white> herunter."
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt in <white><args></white> herunter.<stay>"
     discord: "🛑 Der Server fährt in **{args}** herunter."
   stop-now:
     title: "<red><bold>Server-Stopp"
     subtitle: "<gray>Der Server fährt <white>jetzt</white> herunter."
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt jetzt herunter."
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt jetzt herunter.<stay>"
     discord: ""
   update:
     title: "<aqua><bold>Update"
@@ -396,15 +396,15 @@ maintenance-bossbar-active-open: "<light_purple>🔧 Wartung läuft <dark_gray>-
 maintenance-announced: |-
   <prefix><yellow><bold>⚠ Wartungsarbeiten</bold></yellow> <gray>in <white><in></white><title-line>
     <dark_gray>▪</dark_gray> <gray>Beginn: <white><start></white> <dark_gray>·</dark_gray> <gray>Ende: <white><end></white>
-    <dark_gray>▪</dark_gray> <gray>Danach können nur Teammitglieder joinen.
-maintenance-reminder: "<prefix><yellow>⚠ Die Wartungsarbeiten beginnen in <white><in></white>."
+    <dark_gray>▪</dark_gray> <gray>Danach können nur Teammitglieder joinen.<stay>
+maintenance-reminder: "<prefix><yellow>⚠ Die Wartungsarbeiten beginnen in <white><in></white>.<stay>"
 maintenance-rescheduled: "<prefix><yellow>Wartung verschoben: <white><start></white> - <white><end></white>"
 maintenance-cancelled: "<prefix><green>Die geplanten Wartungsarbeiten wurden abgesagt."
 # Großer Countdown in den letzten Sekunden (maintenance.title-countdown-seconds). <seconds> = verbleibende Sekunden
 maintenance-countdown-title: "<red><bold><seconds>"
 maintenance-countdown-subtitle: "<gray>Wartungsarbeiten beginnen"
 maintenance-started: |-
-  <prefix><red><bold>🔧 Wartungsarbeiten haben begonnen</bold></red><title-line>
+  <prefix><red><bold>🔧 Wartungsarbeiten haben begonnen</bold></red><stay><title-line>
     <dark_gray>▪</dark_gray> <gray>Geschätztes Ende: <white><end></white>
 maintenance-start-title: "<red><bold>Wartungsarbeiten"
 maintenance-start-subtitle: "<gray>Bis später - voraussichtlich bis <white><end>"
@@ -786,6 +786,7 @@ server-countdown-started: "<prefix><green><what> in <time></green> <gray>- abbre
 server-countdown-busy: "<prefix><red>Es läuft schon ein Countdown."
 server-waitroom-restarting: "<prefix><red>Gerade nicht - der Warteraum startet neu. <hover:show_text:'<gray>Solange er weg ist, hätten die Spieler keinen Platz zum Warten. Gleich nochmal versuchen.'><dark_gray>[?]</dark_gray></hover>"
 waitroom-going: "<prefix><gray>Du wechselst in den Warteraum …"
+waiting-room-stay-hint: " <hover:show_text:'<gray>Du wechselst automatisch in den Warteraum<newline><gray>und kommst danach von selbst zurück'><green>Du musst nicht rausgehen.</green></hover>"
 server-countdown-none: "<prefix><gray>Es läuft kein Countdown."
 server-invalid-time: "<prefix><hover:show_text:'<gray>z.B. 30s, 5m, 1h oder now'><red>Ungültige Zeit: <white><time></white></hover>"
 server-what-restart: "Neustart"
