@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [STA-1.5.2-bu001] - 2026-11-11
+
 ### Neu
 - **Warteraum hinter einem Proxy:** Mit Velocity und einem zweiten Server mit [MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/) fliegen Spieler bei Neustart, Stopp und Wartung nicht mehr raus: MRadmin schickt sie kurz vor dem Herunterfahren bzw. beim Wartungsbeginn in den Warteraum (Spieler ohne Wartungs-Bypass auch, wenn sie während einer Wartung joinen). Dort sehen sie Grund und Restzeit und kommen von selbst zurück. Dafür meldet MRadmin über eine eigene kleine Schnittstelle (nicht die Weboberfläche, mit Schlüssel geschützt) Neustart-Countdown, Wartung und Warnungen. Neuer Abschnitt `waiting-room` (standardmäßig aus; `server`, `on-restart`, `on-maintenance`, `link.bind`/`port`/`key` - der Schlüssel wird beim ersten Start erzeugt), `config-version` 59. Anleitung: [Warteraum (Proxy)](https://mrtechnology.marcelr.at/wiki/mradmin/warteraum/).
 - **Warteraum-Server mit dem Starter:** `mrserver setup --role waitroom` (bzw. die Frage im Installer) richtet einen Warteraum-Server ein - Paper und MRwaitroom statt MRadmin, Neustart nach Absturz und Hänger, Paper-Updates, Autostart wie beim Hauptserver. Die Verbindung zum Hauptserver gibt man mit `--main-server`, `--main-address`, `--link-url` und dem Schlüssel in `MRSERVER_LINK_KEY` gleich mit.
