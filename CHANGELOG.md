@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [STA-1.5.3-bu001] - 2026-11-11
+
 ### Neu
 - **Rechte im Warteraum pro Team-Rolle:** Neue Tabelle `waiting-room.rights` (Konfiguration → Warteraum → „Rechte pro Rolle“): Für Admin, Staff und Supporter je **Nein / Ja / Nur im Admin-Modus** bei den Rechten „Bei Wartung auf den Server“, „Warteraum besuchen“, „Im Warteraum bleiben“ und „Admin-Modus im Warteraum“. Standard: Admins nur im Admin-Modus (Admin-Modus im Warteraum immer), Staff und Supporter nichts. Ein Admin ohne Admin-Modus wird damit wie ein Spieler behandelt (bei Wartung in den Warteraum). Gilt nur mit eingeschaltetem Warteraum; der Warteraum bekommt die Tabelle über die Verbindung.
 - **Admin-Modus im ganzen Netzwerk:** Mit Warteraum gilt der Admin-Modus auf beiden Servern - im Warteraum eingeschaltet, kommt man hier im Admin-Modus an; dort ausgeschaltet, gibt MRadmin beim Zurückkommen das Inventar zurück. `admin-mode.end-on-quit` wirkt mit Warteraum nicht mehr (der Wechsel ist kein Verlassen). Wer während einer Wartung hier den Admin-Modus ausschaltet und kein Recht mehr hat, wechselt in den Warteraum.
