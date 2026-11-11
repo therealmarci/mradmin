@@ -160,16 +160,35 @@ public final class WaitingRoom implements Listener {
     }
 
     /**
-     * During maintenance: sends the player to the waiting room instead of kicking them.
+     * During maintenance: sends the player to the waiting room instead of kicking them. Right after joining the proxy
+     * may not take the message yet (it registers its channel for the player a moment later), so it is sent again
+     * after a second - and whoever is still here after 5 seconds is kicked as without a waiting room. Without the
+     * waiting room ({@code waiting-room.on-maintenance} off) {@code kick} runs at once.
      *
-     * @return false if the waiting room is off for maintenance - then the caller kicks as before
+     * @param kick kicks the player (the maintenance screen)
      */
-    public boolean sendForMaintenance(Player player) {
+    public void sendForMaintenance(Player player, Runnable kick) {
         if (!active() || !config.onMaintenance()) {
-            return false;
+            kick.run();
+            return;
         }
         send(player);
-        return true;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && stillOut(player)) {
+                send(player);
+            }
+        }, 20L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && stillOut(player)) {
+                plugin.getLogger().info(player.getName() + " did not move to the waiting room - kicking as usual.");
+                kick.run();
+            }
+        }, 100L);
+    }
+
+    /** Still kept out by the maintenance (it may have ended or the player got the bypass meanwhile). */
+    private boolean stillOut(Player player) {
+        return plugin.maintenance().active() && !plugin.maintenance().canJoin(player);
     }
 
     /** Asks the proxy to move the player to the waiting room server. */
