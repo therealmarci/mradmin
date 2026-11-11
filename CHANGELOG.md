@@ -20,6 +20,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 ### Behoben & geändert
 - **Neustart- und Wartungsmeldungen mit Warteraum:** Im Chat steht jetzt „Du musst nicht rausgehen.“ (Einzelheiten im Hover) - nur wenn der Warteraum an ist (Platzhalter `<stay>` in den Vorlagen restart, restart-now, stop, stop-now und den Wartungsmeldungen).
 - **Warteraum zeigte beim Start des Hauptservers „startet“ statt der Wartung:** MRadmin antwortete dem Warteraum während des Starts mit einem leeren Zustand. Jetzt steht der Zustand ab dem ersten Moment fest, vorher kommt keine Antwort.
+- **Keine doppelten Chatzeilen rund um den Warteraum:** Wer aus dem Warteraum zurückkommt (bis 12 Stunden), gilt nicht als neu angekommen - die Beitritts-Hinweise (noch im Admin-Modus, Team-Meldungen, Tickets, Wartung nur Team, Update-Hinweise aller MR-Plugins) kommen nicht noch einmal. „Wartung hat begonnen“ bekommen mit Warteraum nur noch die, die bleiben dürfen (die anderen erfahren es im Warteraum), und bei „startet jetzt neu“ / „fährt jetzt herunter“ steht kein „Du musst nicht rausgehen“ mehr (der Warteraum begrüßt gleich danach).
 - **Warteraum einrichten ohne Schlüssel:** `mrserver setup --role waitroom` brach ab, wenn der Installer keinen Schlüssel für die Warteraum-Verbindung übergab („does not look like waiting-room.link.key“). Ein leerer Schlüssel gilt jetzt als „später eintragen“.
 
 ## [STA-1.5.2-bu001] - 2026-11-11

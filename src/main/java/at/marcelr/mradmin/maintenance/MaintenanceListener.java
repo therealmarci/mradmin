@@ -82,7 +82,7 @@ public final class MaintenanceListener implements Listener {
             Player player = event.getPlayer();
             plugin.waitingRoom().sendForMaintenance(player,
                     () -> player.kick(plugin.messages().as(player, manager()::kickScreen)));
-        } else if (manager().active()) {
+        } else if (manager().active() && !plugin.waitingRoom().quiet(event.getPlayer().getUniqueId())) {
             plugin.messages().send(event.getPlayer(), "maintenance-join-staff",
                     manager().resolvers(manager().current(), Instant.now()));
         }

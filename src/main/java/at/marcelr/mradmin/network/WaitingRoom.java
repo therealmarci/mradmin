@@ -127,6 +127,10 @@ public final class WaitingRoom implements Listener {
             wishesLoaded = true;
             loadWishes();
         }
+        if (!sentLoaded) {
+            sentLoaded = true;
+            loadSent();
+        }
         var messenger = Bukkit.getMessenger();
         if (c.enabled() && !messenger.isOutgoingChannelRegistered(plugin, CHANNEL)) {
             messenger.registerOutgoingPluginChannel(plugin, CHANNEL);
@@ -178,6 +182,8 @@ public final class WaitingRoom implements Listener {
         for (Player player : players) {
             send(player);
         }
+        // Right now: the server goes down in a moment.
+        saveSent();
         if (!players.isEmpty()) {
             plugin.getLogger().info("Sent " + players.size() + " players to the waiting room '" + config.server() + "'.");
         }
@@ -253,6 +259,10 @@ public final class WaitingRoom implements Listener {
 
     /** Asks the proxy to move the player to the waiting room server. */
     public void send(Player player) {
+        sentAt.put(player.getUniqueId(), System.currentTimeMillis());
+        if (!stopping) {
+            saveSent();
+        }
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(bytes);
@@ -380,6 +390,86 @@ public final class WaitingRoom implements Listener {
             yaml.save(wishesFile());
         } catch (IOException e) {
             plugin.getLogger().warning("Could not save " + wishesFile().getName() + ": " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------ quiet return
+
+    /** Whoever comes back from the waiting room within this time is no new arrival (no join notices again). */
+    private static final long BACK_WITHIN = 12 * 3_600_000L;
+    /** How long after coming back the join notices stay quiet (some plugins send them a little later). */
+    private static final long QUIET_MILLIS = 60_000L;
+
+    /** Sent to the waiting room: player -> when. Kept in a file, a restart of this server is the usual case. */
+    private final Map<java.util.UUID, Long> sentAt = new ConcurrentHashMap<>();
+    private final Map<java.util.UUID, Long> quietUntil = new ConcurrentHashMap<>();
+    private boolean sentLoaded;
+
+    /**
+     * Whether the player just came back from the waiting room: for the network it is no new arrival, so the join
+     * notices (admin mode, team notices, tickets, updates, maintenance) are not shown again.
+     */
+    public boolean quiet(java.util.UUID id) {
+        long now = System.currentTimeMillis();
+        Long until = quietUntil.get(id);
+        if (until != null && until > now) {
+            return true;
+        }
+        Long at = sentAt.get(id);
+        return active() && at != null && now - at < BACK_WITHIN;
+    }
+
+    /** After all join handlers: a return from the waiting room stays quiet a moment longer, then counts as done. */
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        java.util.UUID id = event.getPlayer().getUniqueId();
+        long now = System.currentTimeMillis();
+        Long at = sentAt.remove(id);
+        quietUntil.entrySet().removeIf(e -> e.getValue() < now);
+        if (at != null && now - at < BACK_WITHIN && active()) {
+            quietUntil.put(id, now + QUIET_MILLIS);
+        }
+        if (at != null) {
+            saveSent();
+        }
+    }
+
+    private File sentFile() {
+        return new File(plugin.getDataFolder(), "waiting-room-sent.yml");
+    }
+
+    private void loadSent() {
+        File file = sentFile();
+        if (!file.isFile()) {
+            return;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        long now = System.currentTimeMillis();
+        for (String key : yaml.getKeys(false)) {
+            try {
+                long at = yaml.getLong(key);
+                if (now - at < BACK_WITHIN) {
+                    sentAt.put(java.util.UUID.fromString(key), at);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // not a player
+            }
+        }
+    }
+
+    private synchronized void saveSent() {
+        Map<java.util.UUID, Long> copy = new LinkedHashMap<>(sentAt);
+        try {
+            if (copy.isEmpty()) {
+                Files.deleteIfExists(sentFile().toPath());
+                return;
+            }
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.options().setHeader(List.of("Players sent to the waiting room - coming back is no new arrival (no join notices)."));
+            copy.forEach((id, at) -> yaml.set(id.toString(), at));
+            yaml.save(sentFile());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not save " + sentFile().getName() + ": " + e.getMessage());
         }
     }
 

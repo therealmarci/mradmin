@@ -361,8 +361,17 @@ public final class MaintenanceManager {
         plugin.push("maintenance", "maintenance", "maintenance-start", "/admin/server/maintenance", null, "title", title(window),
                 "end", window.end() == null ? messages().plain("push-open-end") : Texts.at(plugin, window.end()));
         Settings.MaintenanceSettings m = plugin.settings().maintenance();
-        messages().broadcast("maintenance-started", resolvers(window, now));
         TagResolver[] tags = resolvers(window, now);
+        if (plugin.waitingRoom().active()) {
+            // The others move to the waiting room, which tells them the same right away - only those who stay get it here.
+            for (Player player : List.copyOf(Npcs.online())) {
+                if (canJoin(player)) {
+                    messages().send(player, "maintenance-started", tags);
+                }
+            }
+        } else {
+            messages().broadcast("maintenance-started", tags);
+        }
         messages().each(Npcs.online(), p -> ((Player) p).showTitle(Title.title(
                 messages().get("maintenance-start-title", tags), messages().get("maintenance-start-subtitle", tags))));
         playSound(m);

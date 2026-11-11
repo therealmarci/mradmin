@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 22
+lang-version: 23
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -115,7 +115,7 @@ announce-presets:
   restart-now:
     title: "<red><bold>Neustart"
     subtitle: "<gray>Der Server startet <white>jetzt</white> neu - bis gleich!"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet jetzt neu - bis gleich!<stay>"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>Der Server startet jetzt neu - bis gleich!"
     discord: ""
   stop:
     title: "<red><bold>Server-Stopp"
@@ -125,7 +125,7 @@ announce-presets:
   stop-now:
     title: "<red><bold>Server-Stopp"
     subtitle: "<gray>Der Server fährt <white>jetzt</white> herunter."
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt jetzt herunter.<stay>"
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>Der Server fährt jetzt herunter."
     discord: ""
   update:
     title: "<aqua><bold>Update"

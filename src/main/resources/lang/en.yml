@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 22
+lang-version: 23
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -115,7 +115,7 @@ announce-presets:
   restart-now:
     title: "<red><bold>Restart"
     subtitle: "<gray>The server restarts <white>now</white> - see you soon!"
-    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts now - see you soon!<stay>"
+    chat: "<dark_gray>[<red>⟳</red>]</dark_gray> <gray>The server restarts now - see you soon!"
     discord: ""
   stop:
     title: "<red><bold>Server stop"
@@ -125,7 +125,7 @@ announce-presets:
   stop-now:
     title: "<red><bold>Server stop"
     subtitle: "<gray>The server shuts down <white>now</white>."
-    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down now.<stay>"
+    chat: "<dark_gray>[<red>■</red>]</dark_gray> <gray>The server shuts down now."
     discord: ""
   update:
     title: "<aqua><bold>Update"

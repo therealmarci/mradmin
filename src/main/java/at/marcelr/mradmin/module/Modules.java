@@ -165,6 +165,10 @@ public final class Modules implements MRadminService {
 
     @Override
     public boolean teamNoticeInGame(java.util.UUID player, String kind) {
+        // Back from the waiting room: the update notices of the plugins came at the first arrival already.
+        if ("update-available".equals(kind) && plugin.waitingRoom().quiet(player)) {
+            return false;
+        }
         return plugin.notices() == null || plugin.notices().wantsGame(player, kind);
     }
 

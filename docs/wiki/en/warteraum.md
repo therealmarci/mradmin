@@ -7,7 +7,8 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 ## What MRadmin does
 - **Before a restart or stop** (countdown from the browser, `/mradmin restart|stop`, planned restarts) MRadmin sends all players to the waiting room right before the server goes down (`waiting-room.on-restart`).
 - **When a maintenance starts** everyone who may not stay by the [rights](#rights-around-the-waiting-room) moves to the waiting room instead of being kicked - also whoever joins during a maintenance (`waiting-room.on-maintenance`).
-- **The announcements say so:** restart, stop and maintenance messages in the chat end with "No need to leave." (placeholder `<stay>`, only with the waiting room) - so nobody leaves the server beforehand.
+- **The announcements say so:** the countdown to a restart or stop and the maintenance announcements in the chat end with "No need to leave." (placeholder `<stay>`, only with the waiting room) - so nobody leaves the server beforehand.
+- **No second welcome:** whoever comes back from the waiting room is no new arrival - notices like "still in admin mode", team notices, tickets and update notices do not come again.
 - **Info for the waiting room:** through a small endpoint of its own (not the web interface) the waiting room learns the restart countdown and reason, running and planned maintenance and active warnings from **News**. It keeps the last answer, so the info is still there while your server is down.
 
 > [!NOTE]

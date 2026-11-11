@@ -247,7 +247,8 @@ public final class AdminModeManager {
             player.setGameMode(settings().gameMode());
         }
         ensureCompass(player);
-        if (!joined) {
+        // Back from the waiting room it simply goes on - no "still in admin mode".
+        if (!joined || plugin.waitingRoom().quiet(player.getUniqueId())) {
             return;
         }
         messages().send(player, "mode-resumed", tag("duration",
