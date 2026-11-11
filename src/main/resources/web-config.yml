@@ -258,23 +258,23 @@ sections:
       - key: waiting-room.enabled
         type: bool
         name: {de: Warteraum nutzen, en: Use the waiting room}
-        help: {de: "Braucht einen Proxy mit bungee-plugin-message-channel = true und den Warteraum als Server dort.", en: "Needs a proxy with bungee-plugin-message-channel = true and the waiting room as a server there."}
+        help: {de: "Schickt Spieler bei Neustart, Stopp und Wartung in den Warteraum, statt sie zu kicken. Braucht Velocity mit bungee-plugin-message-channel = true und einen zweiten Server mit MRwaitroom.", en: "Sends players to the waiting room on restarts, stops and maintenance instead of kicking them. Needs Velocity with bungee-plugin-message-channel = true and a second server with MRwaitroom."}
       - key: waiting-room.server
         type: string
         when: waiting-room.enabled
         max-length: 64
         name: {de: Name im Proxy, en: Name in the proxy}
-        help: {de: "Name des Warteraums im Abschnitt [servers] der velocity.toml.", en: "Name of the waiting room in the section [servers] of velocity.toml."}
+        help: {de: "Genau der Name, unter dem der Warteraum im Abschnitt [servers] der velocity.toml steht (z.B. waitroom). Dorthin schickt MRadmin die Spieler.", en: "Exactly the name the waiting room has in the section [servers] of velocity.toml (e.g. waitroom). MRadmin sends the players there."}
       - key: waiting-room.on-restart
         type: bool
         when: waiting-room.enabled
         name: {de: Bei Neustart und Stopp, en: On restart and stop}
-        help: {de: Alle Spieler wechseln kurz vor dem Herunterfahren in den Warteraum., en: All players move to the waiting room right before the server goes down.}
+        help: {de: "Am Ende jedes Countdowns (Browser, /mradmin restart|stop, geplante Neustarts) wechseln alle Spieler kurz vor dem Herunterfahren in den Warteraum und kommen danach von selbst zurück.", en: "At the end of every countdown (browser, /mradmin restart|stop, planned restarts) all players move to the waiting room right before the server goes down and come back by themselves afterwards."}
       - key: waiting-room.on-maintenance
         type: bool
         when: waiting-room.enabled
         name: {de: Bei Wartung, en: During maintenance}
-        help: {de: "Spieler ohne Wartungs-Bypass warten im Warteraum, statt gekickt zu werden.", en: "Players without the maintenance bypass wait in the waiting room instead of being kicked."}
+        help: {de: "Spieler ohne Wartungs-Bypass warten während einer Wartung im Warteraum (mit Ende und Titel der Wartung), statt gekickt zu werden. Wer nicht hinüberwechselt, wird nach 5 Sekunden wie gewohnt gekickt.", en: "During a maintenance players without the maintenance bypass wait in the waiting room (with end and title of the maintenance) instead of being kicked. Whoever does not move over is kicked as usual after 5 seconds."}
       - key: waiting-room.link.bind
         heading: {de: "Verbindung zum Warteraum", en: "Connection to the waiting room"}
         type: string
@@ -282,7 +282,7 @@ sections:
         advanced: true
         max-length: 100
         name: {de: Adresse, en: Address}
-        help: {de: "Interne Adresse dieses Rechners, über die der Warteraum fragt (nie eine öffentliche). Leer = keine Verbindung.", en: "Internal address of this machine the waiting room asks (never a public one). Empty = no connection."}
+        help: {de: "Interne Adresse dieses Rechners im LAN, z.B. 10.0.0.5 - nie eine öffentliche. Darüber fragt der Warteraum nach Neustart, Wartung und Warnungen und holt Konfiguration und Updates ab. Leer = keine Verbindung (der Warteraum sieht dann nur, ob der Server läuft).", en: "Internal address of this machine in the LAN, e.g. 10.0.0.5 - never a public one. The waiting room asks about restarts, maintenance and warnings there and picks up configuration and updates. Empty = no connection (the waiting room then only sees whether the server is up)."}
       - key: waiting-room.link.port
         type: int
         when: waiting-room.enabled
@@ -290,13 +290,14 @@ sections:
         min: 1
         max: 65535
         name: {de: Port, en: Port}
+        help: {de: "Eigener Port der Warteraum-Verbindung, nicht der der Weboberfläche. Muss vom Warteraum aus erreichbar sein (Firewall).", en: "Own port of the waiting room connection, not the one of the web interface. Must be reachable from the waiting room (firewall)."}
       - key: waiting-room.link.key
         type: secret
         when: waiting-room.enabled
         advanced: true
         max-length: 200
         name: {de: Schlüssel, en: Key}
-        help: {de: "Derselbe Wert steht in der config.yml des Warteraums. Wird beim ersten Start erzeugt.", en: "The same value goes into the config.yml of the waiting room. Created on the first start."}
+        help: {de: "Gemeinsamer Schlüssel - derselbe Wert gehört in die config.yml des Warteraums (main.link-key). Wird beim ersten Start erzeugt. Nach 10 falschen Versuchen pro Minute blockt MRadmin.", en: "Shared key - the same value goes into the config.yml of the waiting room (main.link-key). Created on the first start. After 10 wrong tries per minute MRadmin blocks."}
 
   - id: versions
     name: {de: Plugins & Neustart, en: Plugins & restart}

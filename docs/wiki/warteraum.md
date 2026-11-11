@@ -31,7 +31,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 > `link.bind` gehört auf die **interne** Adresse (LAN), nie auf eine öffentliche. Die Schnittstelle verrät zwar nur, was die Spieler im Warteraum ohnehin sehen, aber sie gehört nicht ins Internet. Falsche Schlüssel werden nach 10 Versuchen pro Minute abgewiesen.
 
 ## Warteraum aus MRadmin verwalten
-Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** - mit dem Hinweis „auf dem Warteraum-Server“:
+Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** - gekennzeichnet mit „Warteraum-Server“:
 
 - **Konfiguration:** wie bei jedem Plugin über **Konfiguration** (Permission `mradmin.config`). Beim Speichern holt sich der Warteraum die neue `config.yml` bei seiner nächsten Abfrage (wenige Sekunden), legt eine Sicherung an (`config.backup-remote.yml`) und lädt neu.
 - **Updates:** „Aktualisieren“ (Permission `mradmin.versions.install`, oder automatisch nach `versions.auto-download`) bestellt die neue Version. Der Warteraum lädt sie **selbst** - nur aus den offiziellen Releases und nur mit passender Prüfsumme - und startet neu, sobald niemand wartet und dein Server bereit ist.

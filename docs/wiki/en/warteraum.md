@@ -31,7 +31,7 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 > `link.bind` belongs on the **internal** address (LAN), never on a public one. The endpoint only tells what players in the waiting room see anyway, but it does not belong on the internet. Wrong keys are refused after 10 tries per minute.
 
 ## Managing the waiting room from MRadmin
-Once the waiting room is connected, **MRwaitroom** shows up under **Server → Plugins** - marked "on the waiting room server":
+Once the waiting room is connected, **MRwaitroom** shows up under **Server → Plugins** - marked "waiting room server":
 
 - **Configuration:** like every plugin via **Configuration** (permission `mradmin.config`). On saving, the waiting room picks up the new `config.yml` on its next question (a few seconds), keeps a backup (`config.backup-remote.yml`) and reloads.
 - **Updates:** "Update" (permission `mradmin.versions.install`, or automatically according to `versions.auto-download`) orders the new version. The waiting room downloads it **itself** - only from the official releases and only with the right checksum - and restarts as soon as nobody waits and your server is ready.

@@ -140,13 +140,15 @@
           stroke-linejoin="round"><path d={ICONS[pluginIcon(p.name)]} /></svg>
       </span>
       <div class="r-name">
-        {#if p.installed}
-          <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
-        {:else}
-          <strong>{p.name}</strong>
-        {/if}
+        <span class="name-line">
+          {#if p.installed}
+            <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
+          {:else}
+            <strong>{p.name}</strong>
+          {/if}
+          {#if p.remote}<span class="remote" class:off={!p.remote.online} title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span>{/if}
+        </span>
         <span class="small muted desc">{pluginDescription(p.name)}</span>
-        {#if p.remote}<span class="remote small" class:off={!p.remote.online} title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span>{/if}
       </div>
     </div>
 
@@ -883,7 +885,8 @@
       transition: none;
     }
   }
-  .remote { display: inline-block; margin-top: 0.15rem; padding: 0 0.4rem; border-radius: 999px;
-    border: 1px solid var(--edge); color: var(--muted); width: fit-content; }
+  .name-line { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+  .remote { font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--edge); color: var(--muted); }
   .remote.off { color: var(--bad); border-color: var(--bad); }
 </style>
