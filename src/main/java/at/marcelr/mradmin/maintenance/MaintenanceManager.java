@@ -361,8 +361,17 @@ public final class MaintenanceManager {
         plugin.push("maintenance", "maintenance", "maintenance-start", "/admin/server/maintenance", null, "title", title(window),
                 "end", window.end() == null ? messages().plain("push-open-end") : Texts.at(plugin, window.end()));
         Settings.MaintenanceSettings m = plugin.settings().maintenance();
-        messages().broadcast("maintenance-started", resolvers(window, now));
         TagResolver[] tags = resolvers(window, now);
+        if (plugin.waitingRoom().active()) {
+            // The others move to the waiting room, which tells them the same right away - only those who stay get it here.
+            for (Player player : List.copyOf(Npcs.online())) {
+                if (canJoin(player)) {
+                    messages().send(player, "maintenance-started", tags);
+                }
+            }
+        } else {
+            messages().broadcast("maintenance-started", tags);
+        }
         messages().each(Npcs.online(), p -> ((Player) p).showTitle(Title.title(
                 messages().get("maintenance-start-title", tags), messages().get("maintenance-start-subtitle", tags))));
         playSound(m);
@@ -523,7 +532,14 @@ public final class MaintenanceManager {
         return kuma;
     }
 
+    /**
+     * Whether the player may be on the server during the maintenance. With the waiting room the table
+     * waiting-room.rights decides (role and admin mode), otherwise the bypass permission.
+     */
     public boolean canJoin(Player player) {
+        if (plugin.waitingRoom().active()) {
+            return plugin.waitingRoom().allows(player, at.marcelr.mradmin.network.RoomRights.Right.MAINTENANCE);
+        }
         return player.hasPermission(PERM_BYPASS);
     }
 
@@ -543,7 +559,8 @@ public final class MaintenanceManager {
         if (window == null) {
             return new TagResolver[]{tag("title", ""), Messages.lazy("start", open), Messages.lazy("end", open),
                     tag("in", "0s"), tag("countdown", "0:00:00"), tag("remaining", "0s"),
-                    tag("title-line", Component.empty()), tag("kick-title-line", Component.empty())};
+                    tag("title-line", Component.empty()), tag("kick-title-line", Component.empty()),
+                    plugin.waitingRoom().stayHint()};
         }
         long untilStart = window.start() == null ? 0 : Math.max(0, window.start().toEpochMilli() - now.toEpochMilli());
         long untilEnd = window.end() == null ? 0 : Math.max(0, window.end().toEpochMilli() - now.toEpochMilli());
@@ -560,7 +577,8 @@ public final class MaintenanceManager {
                 Messages.lazy("end", () -> Texts.at(plugin, window.end())),
                 tag("in", Texts.duration(untilStart)),
                 Messages.lazy("countdown", () -> running && openEnd ? open.get() : Texts.clock(running ? untilEnd : untilStart)),
-                Messages.lazy("remaining", () -> openEnd ? open.get() : Texts.duration(untilEnd))};
+                Messages.lazy("remaining", () -> openEnd ? open.get() : Texts.duration(untilEnd)),
+                plugin.waitingRoom().stayHint()};
     }
 
     /** Whether the running maintenance has no known end (manual one without duration, Kuma "manual" strategy). */

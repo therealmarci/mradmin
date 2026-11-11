@@ -9,6 +9,20 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Rechte im Warteraum pro Team-Rolle:** Neue Tabelle `waiting-room.rights` (Konfiguration → Warteraum → „Rechte pro Rolle“): Für Admin, Staff und Supporter je **Nein / Ja / Nur im Admin-Modus** bei den Rechten „Bei Wartung auf den Server“, „Warteraum besuchen“, „Im Warteraum bleiben“ und „Admin-Modus im Warteraum“. Standard: Admins nur im Admin-Modus (Admin-Modus im Warteraum immer), Staff und Supporter nichts. Ein Admin ohne Admin-Modus wird damit wie ein Spieler behandelt (bei Wartung in den Warteraum). Gilt nur mit eingeschaltetem Warteraum; der Warteraum bekommt die Tabelle über die Verbindung.
+- **Admin-Modus im ganzen Netzwerk:** Mit Warteraum gilt der Admin-Modus auf beiden Servern - im Warteraum eingeschaltet, kommt man hier im Admin-Modus an; dort ausgeschaltet, gibt MRadmin beim Zurückkommen das Inventar zurück. `admin-mode.end-on-quit` wirkt mit Warteraum nicht mehr (der Wechsel ist kein Verlassen). Wer während einer Wartung hier den Admin-Modus ausschaltet und kein Recht mehr hat, wechselt in den Warteraum.
+- **Tabellen im Konfigurationsformular** können jetzt Auswahlfelder haben (`type: choice` mit `options` in einer Spalte, siehe MODULE-API).
+
+### Entfernt
+- **Permission `mradmin.waitroom.visit`:** Wer über das Admin-Menü in den Warteraum darf, regelt jetzt das Recht „Warteraum besuchen“ der Tabelle `waiting-room.rights`.
+
+### Behoben & geändert
+- **Neustart- und Wartungsmeldungen mit Warteraum:** Im Chat steht jetzt „Du musst nicht rausgehen.“ (Einzelheiten im Hover) - nur wenn der Warteraum an ist (Platzhalter `<stay>` in den Vorlagen restart, restart-now, stop, stop-now und den Wartungsmeldungen).
+- **Warteraum zeigte beim Start des Hauptservers „startet“ statt der Wartung:** MRadmin antwortete dem Warteraum während des Starts mit einem leeren Zustand. Jetzt steht der Zustand ab dem ersten Moment fest, vorher kommt keine Antwort.
+- **Keine doppelten Chatzeilen rund um den Warteraum:** Wer aus dem Warteraum zurückkommt (bis 12 Stunden), gilt nicht als neu angekommen - die Beitritts-Hinweise (noch im Admin-Modus, Team-Meldungen, Tickets, Wartung nur Team, Update-Hinweise aller MR-Plugins) kommen nicht noch einmal. „Wartung hat begonnen“ bekommen mit Warteraum nur noch die, die bleiben dürfen (die anderen erfahren es im Warteraum), und bei „startet jetzt neu“ / „fährt jetzt herunter“ steht kein „Du musst nicht rausgehen“ mehr (der Warteraum begrüßt gleich danach).
+- **Warteraum einrichten ohne Schlüssel:** `mrserver setup --role waitroom` brach ab, wenn der Installer keinen Schlüssel für die Warteraum-Verbindung übergab („does not look like waiting-room.link.key“). Ein leerer Schlüssel gilt jetzt als „später eintragen“.
+
 ## [STA-1.5.2-bu001] - 2026-11-11
 
 ### Neu

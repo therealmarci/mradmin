@@ -416,7 +416,8 @@ public final class TeamNotices implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
-        if (Npcs.is(player) || muted(id)) {
+        // Back from the waiting room: no new arrival, the line came already.
+        if (Npcs.is(player) || muted(id) || plugin.waitingRoom().quiet(id)) {
             return;
         }
         // A little later, after the other join lines (tickets, news) - and the inbox may look things up.

@@ -296,24 +296,6 @@ public final class RemotePlugins {
         return null;
     }
 
-    /**
-     * A team member goes to the waiting room on purpose (admin menu): it must not send them back by itself. Expires
-     * after a minute if the waiting room does not pick it up.
-     */
-    public synchronized void orderVisit(String name, java.util.UUID player) {
-        long now = System.currentTimeMillis();
-        orders.values().removeIf(o -> "visit".equals(o.json().get("type"))
-                && (now - ((Number) o.json().get("at")).longValue() > 60_000L || player.toString().equals(o.json().get("player"))));
-        Map<String, Object> json = new LinkedHashMap<>();
-        String id = UUID.randomUUID().toString();
-        json.put("id", id);
-        json.put("plugin", name);
-        json.put("type", "visit");
-        json.put("player", player.toString());
-        json.put("at", now);
-        orders.put(id, new Order(id, name, json));
-    }
-
     // -------------------------------------------------------------------- helpers
 
     /** The block "host" of a report as plain values (numbers, texts, booleans). */

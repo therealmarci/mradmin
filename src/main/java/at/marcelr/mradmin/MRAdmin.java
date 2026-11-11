@@ -55,7 +55,13 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(21, Map.ofEntries(
+    private final Messages messages = new Messages(23, Map.ofEntries(
+            // 23: "now" needs no waiting room hint - the waiting room greets right after.
+            Map.entry(23, Set.of("announce-presets.restart-now.chat", "announce-presets.stop-now.chat")),
+            // 22: restart and maintenance messages say that nobody needs to leave (waiting room, <stay>).
+            Map.entry(22, Set.of("announce-presets.restart.chat", "announce-presets.restart-now.chat",
+                    "announce-presets.stop.chat", "announce-presets.stop-now.chat", "maintenance-announced",
+                    "maintenance-reminder", "maintenance-started")),
             // 20: restarts and stops name their reason.
             Map.entry(20, Set.of("discord.server-restart", "discord.server-stop", "server-usage")),
             // 21: one sign-in for everyone - no setup links, /mradmin web reset.
@@ -355,7 +361,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
-        if (Npcs.is(event.getPlayer())) {
+        // Back from the waiting room: no new arrival - the notices came already.
+        if (Npcs.is(event.getPlayer()) || waitingRoom.quiet(event.getPlayer().getUniqueId())) {
             return;
         }
         updateChecker.notifyIfOutdated(event.getPlayer());

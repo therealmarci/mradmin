@@ -6,7 +6,9 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 
 ## Was MRadmin dabei macht
 - **Vor einem Neustart oder Stopp** (Countdown aus dem Browser, `/mradmin restart|stop`, geplante Neustarts) schickt MRadmin alle Spieler kurz vor dem Herunterfahren in den Warteraum (`waiting-room.on-restart`).
-- **Bei Wartungsbeginn** wechseln Spieler ohne Wartungs-Bypass in den Warteraum, statt gekickt zu werden - auch wer während einer Wartung joint (`waiting-room.on-maintenance`).
+- **Bei Wartungsbeginn** wechseln alle, die laut [Rechten](#rechte-im-warteraum) nicht bleiben dürfen, in den Warteraum, statt gekickt zu werden - auch wer während einer Wartung joint (`waiting-room.on-maintenance`).
+- **Die Ankündigungen sagen es dazu:** Der Countdown zu Neustart und Stopp und die Wartungsankündigungen im Chat enden mit „Du musst nicht rausgehen.“ (Platzhalter `<stay>`, nur mit Warteraum) - so verlässt niemand vorher den Server.
+- **Kein doppeltes Willkommen:** Wer aus dem Warteraum zurückkommt, gilt nicht als neu angekommen - Hinweise wie „Noch im Admin-Modus“, Team-Meldungen, Tickets und Update-Hinweise kommen nicht noch einmal.
 - **Infos für den Warteraum:** Über eine eigene kleine Schnittstelle (nicht die Weboberfläche) erfährt der Warteraum Neustart-Countdown und Grund, laufende und geplante Wartung und aktive Warnungen aus **Neuigkeiten**. Er merkt sich die letzte Antwort, damit die Infos auch dann noch da sind, wenn dein Server aus ist.
 
 > [!NOTE]
@@ -52,8 +54,23 @@ Ist etwas davon nicht erfüllt, steht der Grund in der Kachel. Geplante Neustart
 
 **Solange der Warteraum neu startet**, lehnt MRadmin Neustart und Stopp deines Servers ab (Browser, `/mradmin restart|stop`, `mrserver`) - die Spieler hätten sonst keinen Platz zum Warten. Das dauert meist nur ein paar Sekunden.
 
-## Selbst in den Warteraum
-Im Admin-Menü (`/mradmin`) bringt dich **In den Warteraum** jederzeit hinüber (Permission `mradmin.waitroom.visit`). Dort wirst du nicht automatisch zurückgeschickt; mit dem grünen Item **Zurück zum Server** in der Hotbar kommst du wieder - auch während einer Wartung.
+## Rechte im Warteraum
+Was das Team rund um den Warteraum darf, legst du in einer **Tabelle** fest: Konfiguration von MRadmin → **Warteraum** → **Rechte pro Rolle** (`waiting-room.rights`). Zeilen sind die Team-Rollen **Admin**, **Staff** und **Supporter** (es zählt die höchste von `mradmin.groups.admin`, `.staff`, `.support`), jede Zelle ist **Nein**, **Ja** oder **Nur im Admin-Modus**. Normale Spieler haben keines der Rechte.
+
+| Recht | Bedeutung | Admin | Staff | Supporter |
+|---|---|---|---|---|
+| **Bei Wartung auf den Server** | Bleibt bei einer Wartung auf deinem Server bzw. kommt hinein - sonst wartet man im Warteraum | Nur im Admin-Modus | Nein | Nein |
+| **Warteraum besuchen** | Knopf **In den Warteraum** im Admin-Menü (`/mradmin`), auch wenn nichts los ist | Nur im Admin-Modus | Nein | Nein |
+| **Im Warteraum bleiben** | Wird nicht automatisch zurückgeschickt; zurück mit dem Item **Zurück zum Server** | Nur im Admin-Modus | Nein | Nein |
+| **Admin-Modus im Warteraum** | Item **Admin-Modus** in der Hotbar des Warteraums | Ja | Nein | Nein |
+
+Mit den Standardwerten ist ein **Admin ohne Admin-Modus ein normaler Spieler**: Bei einer Wartung landet er im Warteraum und wird danach wie alle zurückgeschickt. **Bei Neustarts wechseln immer alle** in den Warteraum - das ist kein Recht. Die Tabelle gilt nur mit eingeschaltetem Warteraum; ohne ihn bleibt bei der Wartung alles beim Wartungs-Bypass (`mradmin.maintenance.bypass`). Der Warteraum bekommt die Tabelle von MRadmin, dort stellst du nichts davon ein.
+
+### Admin-Modus im ganzen Netzwerk
+Der Admin-Modus gilt auf **beiden** Servern: Wer ihn im Warteraum einschaltet, kommt auf deinem Server im Admin-Modus an (Inventar gesichert wie gewohnt); wer ihn dort ausschaltet, bekommt beim Zurückkommen sein Inventar wieder. Umgekehrt ist, wer bei dir im Admin-Modus ist, auch im Warteraum im Admin-Modus. `admin-mode.end-on-quit` wirkt mit Warteraum nicht - der Wechsel in den Warteraum ist kein Verlassen.
+
+> [!TIP]
+> Wartung läuft und du willst auf den Server? Im Warteraum mit dem Item links in der Hotbar den Admin-Modus einschalten, dann mit **Zurück zum Server** (rechts) hinüber.
 
 > [!TIP]
 > Umgekehrt passt MRadmin auf: Startet der Warteraum gerade selbst neu, wenn der Countdown deines Servers abläuft, wartet MRadmin bis zu 2 Minuten auf ihn, bevor es herunterfährt.
@@ -68,6 +85,7 @@ Im Admin-Menü (`/mradmin`) bringt dich **In den Warteraum** jederzeit hinüber 
 | `waiting-room.link.bind` | `127.0.0.1` | Adresse der Schnittstelle (leer = keine) |
 | `waiting-room.link.port` | `8126` | Port der Schnittstelle |
 | `waiting-room.link.key` | (erzeugt) | Gemeinsamer Schlüssel mit dem Warteraum |
+| `waiting-room.rights` | siehe oben | Rechte pro Team-Rolle ([Rechte im Warteraum](#rechte-im-warteraum)) |
 
 ## Häufige Fragen
 **Was passiert bei einem Absturz?** Velocity schickt die Spieler von selbst in den Warteraum, wenn die Verbindung zum Hauptserver unerwartet abbricht (`failover-on-unexpected-server-disconnect = true`, Standard). Der Warteraum zeigt dann „Server startet neu · seit …“.

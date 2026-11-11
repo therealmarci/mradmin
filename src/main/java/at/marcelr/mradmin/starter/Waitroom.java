@@ -46,6 +46,9 @@ final class Waitroom {
         String mainAddress = Setup.option(args, "--main-address");
         String linkUrl = Setup.option(args, "--link-url");
         String linkKey = System.getenv(ENV_LINK_KEY);
+        if (linkKey != null && linkKey.isBlank()) {
+            linkKey = null; // the installer always sets the variable - empty = no key yet
+        }
         if (mainServer != null && !mainServer.matches("[A-Za-z0-9_.-]{1,64}")) {
             System.out.println("'" + mainServer + "' is not a server name like main.");
             return 2;

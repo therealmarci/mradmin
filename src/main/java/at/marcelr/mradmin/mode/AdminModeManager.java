@@ -102,6 +102,27 @@ public final class AdminModeManager {
         return new File(folder, id + ".yml");
     }
 
+    /** Whether the player is in admin mode - also offline (their saved state is waiting for them). */
+    public boolean saved(UUID id) {
+        return states.containsKey(id) || file(id).isFile();
+    }
+
+    /** Everyone in admin mode, online or not (the saved states). */
+    public Set<UUID> savedIds() {
+        Set<UUID> ids = new java.util.HashSet<>(states.keySet());
+        String[] names = folder.list((dir, name) -> name.endsWith(".yml"));
+        if (names != null) {
+            for (String name : names) {
+                try {
+                    ids.add(UUID.fromString(name.substring(0, name.length() - 4)));
+                } catch (IllegalArgumentException ignored) {
+                    // not a state file
+                }
+            }
+        }
+        return ids;
+    }
+
     // ------------------------------------------------------------------- on/off
 
     public void enable(Player player) {
@@ -189,6 +210,13 @@ public final class AdminModeManager {
         }
         plugin.discord().log("admin-mode-off", "player", player.getName(), "duration", duration);
         plugin.getLogger().info(player.getName() + " left admin mode (" + duration + ").");
+        // With the waiting room an admin without admin mode is a normal player: during a maintenance over there.
+        var maintenance = plugin.maintenance();
+        if (!quitting && plugin.waitingRoom().active() && maintenance != null && maintenance.active()
+                && !maintenance.canJoin(player)) {
+            plugin.waitingRoom().sendForMaintenance(player,
+                    () -> player.kick(messages().as(player, maintenance::kickScreen)));
+        }
     }
 
     // --------------------------------------------------------------- join/quit
@@ -208,7 +236,8 @@ public final class AdminModeManager {
             messages().send(player, "mode-load-failed");
             return;
         }
-        if ((joined && settings().endOnQuit()) || !plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
+        if ((joined && settings().endOnQuit() && !plugin.waitingRoom().active())
+                || !plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
             // Should already have ended on quit (the server probably crashed), or the admin mode was switched off
             // in the config: restore now.
             disable(player, false);
@@ -218,7 +247,8 @@ public final class AdminModeManager {
             player.setGameMode(settings().gameMode());
         }
         ensureCompass(player);
-        if (!joined) {
+        // Back from the waiting room it simply goes on - no "still in admin mode".
+        if (!joined || plugin.waitingRoom().quiet(player.getUniqueId())) {
             return;
         }
         messages().send(player, "mode-resumed", tag("duration",
@@ -226,7 +256,8 @@ public final class AdminModeManager {
     }
 
     public void quit(Player player) {
-        if (active(player) && settings().endOnQuit()) {
+        // With the waiting room the admin mode counts for the whole network: leaving may just be the move over there.
+        if (active(player) && settings().endOnQuit() && !plugin.waitingRoom().active()) {
             disable(player, true);
         } else {
             states.remove(player.getUniqueId());

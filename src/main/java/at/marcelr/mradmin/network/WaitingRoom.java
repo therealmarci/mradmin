@@ -84,6 +84,14 @@ public final class WaitingRoom implements Listener {
     private volatile long lastQuestion;
     /** Failed key checks per address (simple brake against guessing). */
     private final Map<String, int[]> failures = new ConcurrentHashMap<>();
+    /** Who may do what around the waiting room (waiting-room.rights). */
+    private volatile RoomRights rights = RoomRights.from(new YamlConfiguration());
+    /**
+     * Admin mode switched on or off in the waiting room, not taken over here yet (the player is not on this server):
+     * player -> on. Taken over when the player joins; kept in a file so a restart of this server does not lose it.
+     */
+    private final Map<java.util.UUID, Boolean> wishes = new ConcurrentHashMap<>();
+    private boolean wishesLoaded;
 
     public WaitingRoom(MRAdmin plugin) {
         this.plugin = plugin;
@@ -114,6 +122,15 @@ public final class WaitingRoom implements Listener {
             plugin.getLogger().info("Created waiting-room.link.key - copy it into the config.yml of the waiting room.");
         }
         config = c;
+        rights = RoomRights.from(plugin.getConfig());
+        if (!wishesLoaded) {
+            wishesLoaded = true;
+            loadWishes();
+        }
+        if (!sentLoaded) {
+            sentLoaded = true;
+            loadSent();
+        }
         var messenger = Bukkit.getMessenger();
         if (c.enabled() && !messenger.isOutgoingChannelRegistered(plugin, CHANNEL)) {
             messenger.registerOutgoingPluginChannel(plugin, CHANNEL);
@@ -121,6 +138,9 @@ public final class WaitingRoom implements Listener {
         if (snapshotTask == null) {
             snapshotTask = Bukkit.getScheduler().runTaskTimer(plugin, this::buildSnapshot, 1L, 20L);
         }
+        // Right away: during the start the scheduler does not run yet - the waiting room must not get an empty answer
+        // (it would show "starting" instead of a running maintenance).
+        buildSnapshot();
         String target = c.enabled() && !c.bind().isEmpty() ? c.bind() + ":" + c.port() : "";
         if (!target.equals(boundTo)) {
             stopLink();
@@ -162,6 +182,8 @@ public final class WaitingRoom implements Listener {
         for (Player player : players) {
             send(player);
         }
+        // Right now: the server goes down in a moment.
+        saveSent();
         if (!players.isEmpty()) {
             plugin.getLogger().info("Sent " + players.size() + " players to the waiting room '" + config.server() + "'.");
         }
@@ -226,8 +248,21 @@ public final class WaitingRoom implements Listener {
         return now - report.at() < 180_000L;
     }
 
+    /**
+     * {@code <stay>} for restart and maintenance messages: with the waiting room the hint that nobody needs to leave
+     * (they wait over there), otherwise nothing. Built in the language of each reader.
+     */
+    public net.kyori.adventure.text.minimessage.tag.resolver.TagResolver stayHint() {
+        return at.marcelr.mradmin.Messages.lazy("stay", () -> active()
+                ? plugin.messages().get("waiting-room-stay-hint") : net.kyori.adventure.text.Component.empty());
+    }
+
     /** Asks the proxy to move the player to the waiting room server. */
     public void send(Player player) {
+        sentAt.put(player.getUniqueId(), System.currentTimeMillis());
+        if (!stopping) {
+            saveSent();
+        }
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(bytes);
@@ -236,6 +271,205 @@ public final class WaitingRoom implements Listener {
             player.sendPluginMessage(plugin, CHANNEL, bytes.toByteArray());
         } catch (IOException | RuntimeException e) {
             plugin.getLogger().warning("Could not send " + player.getName() + " to the waiting room: " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------- rights
+
+    public RoomRights rights() {
+        return rights;
+    }
+
+    /**
+     * Whether the player counts as in admin mode for the waiting room rights: in admin mode here (also offline, the
+     * saved state) - or switched it on or off in the waiting room and not here yet.
+     */
+    public boolean inAdminMode(java.util.UUID id) {
+        Boolean wish = wishes.get(id);
+        return wish != null ? wish : plugin.adminMode() != null && plugin.adminMode().saved(id);
+    }
+
+    /** Whether the player has the right (role from the permissions, admin mode as above). */
+    public boolean allows(Player player, RoomRights.Right right) {
+        return rights.allows(RoomRights.role(player), right, inAdminMode(player.getUniqueId()));
+    }
+
+    /** The same for a player that is not online yet (role by a permission check, e.g. LuckPerms before joining). */
+    public boolean allows(java.util.UUID id, java.util.function.Predicate<String> has, RoomRights.Right right) {
+        return rights.allows(RoomRights.role(has), right, inAdminMode(id));
+    }
+
+    /**
+     * On joining: takes over the admin mode the player switched in the waiting room - on (if they may use it here)
+     * or off (everything back).
+     */
+    public void applyAdminModeWish(Player player) {
+        Boolean wish = wishes.remove(player.getUniqueId());
+        if (wish == null) {
+            return;
+        }
+        saveWishes();
+        var mode = plugin.adminMode();
+        if (wish && !mode.active(player)) {
+            if (player.hasPermission(at.marcelr.mradmin.mode.AdminModeManager.PERM_USE)
+                    && plugin.feature(at.marcelr.mradmin.Feature.ADMIN_MODE)) {
+                mode.enable(player);
+            }
+        } else if (!wish && mode.active(player)) {
+            mode.disable(player, false);
+        }
+    }
+
+    /** Admin mode switched in the waiting room ({@code POST /waiting-room/admin-mode}): {"players": {uuid: on}}. */
+    private String receiveAdminMode(String body) {
+        com.google.gson.JsonObject players;
+        try {
+            players = com.google.gson.JsonParser.parseString(body).getAsJsonObject().getAsJsonObject("players");
+        } catch (RuntimeException e) {
+            return "json";
+        }
+        if (players == null || players.size() > 500) {
+            return "json";
+        }
+        Map<java.util.UUID, Boolean> taken = new LinkedHashMap<>();
+        for (var e : players.entrySet()) {
+            try {
+                taken.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsBoolean());
+            } catch (RuntimeException bad) {
+                return "player";
+            }
+        }
+        // Right away, so a player who goes over this very moment already counts (not for players that are here).
+        taken.forEach((id, on) -> {
+            if (Bukkit.getPlayer(id) != null) {
+                return;
+            }
+            // The same as here already: nothing to take over.
+            if (plugin.adminMode() != null && plugin.adminMode().saved(id) == on) {
+                wishes.remove(id);
+            } else {
+                wishes.put(id, on);
+            }
+        });
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            saveWishes();
+            buildSnapshot();
+        });
+        return null;
+    }
+
+    private File wishesFile() {
+        return new File(plugin.getDataFolder(), "waiting-room-admin-mode.yml");
+    }
+
+    private void loadWishes() {
+        File file = wishesFile();
+        if (!file.isFile()) {
+            return;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        for (String key : yaml.getKeys(false)) {
+            try {
+                wishes.put(java.util.UUID.fromString(key), yaml.getBoolean(key));
+            } catch (IllegalArgumentException ignored) {
+                // not a player
+            }
+        }
+    }
+
+    private synchronized void saveWishes() {
+        Map<java.util.UUID, Boolean> copy = new LinkedHashMap<>(wishes);
+        try {
+            if (copy.isEmpty()) {
+                Files.deleteIfExists(wishesFile().toPath());
+                return;
+            }
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.options().setHeader(List.of("Admin mode switched in the waiting room - taken over when the player joins here."));
+            copy.forEach((id, on) -> yaml.set(id.toString(), on));
+            yaml.save(wishesFile());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not save " + wishesFile().getName() + ": " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------ quiet return
+
+    /** Whoever comes back from the waiting room within this time is no new arrival (no join notices again). */
+    private static final long BACK_WITHIN = 12 * 3_600_000L;
+    /** How long after coming back the join notices stay quiet (some plugins send them a little later). */
+    private static final long QUIET_MILLIS = 60_000L;
+
+    /** Sent to the waiting room: player -> when. Kept in a file, a restart of this server is the usual case. */
+    private final Map<java.util.UUID, Long> sentAt = new ConcurrentHashMap<>();
+    private final Map<java.util.UUID, Long> quietUntil = new ConcurrentHashMap<>();
+    private boolean sentLoaded;
+
+    /**
+     * Whether the player just came back from the waiting room: for the network it is no new arrival, so the join
+     * notices (admin mode, team notices, tickets, updates, maintenance) are not shown again.
+     */
+    public boolean quiet(java.util.UUID id) {
+        long now = System.currentTimeMillis();
+        Long until = quietUntil.get(id);
+        if (until != null && until > now) {
+            return true;
+        }
+        Long at = sentAt.get(id);
+        return active() && at != null && now - at < BACK_WITHIN;
+    }
+
+    /** After all join handlers: a return from the waiting room stays quiet a moment longer, then counts as done. */
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        java.util.UUID id = event.getPlayer().getUniqueId();
+        long now = System.currentTimeMillis();
+        Long at = sentAt.remove(id);
+        quietUntil.entrySet().removeIf(e -> e.getValue() < now);
+        if (at != null && now - at < BACK_WITHIN && active()) {
+            quietUntil.put(id, now + QUIET_MILLIS);
+        }
+        if (at != null) {
+            saveSent();
+        }
+    }
+
+    private File sentFile() {
+        return new File(plugin.getDataFolder(), "waiting-room-sent.yml");
+    }
+
+    private void loadSent() {
+        File file = sentFile();
+        if (!file.isFile()) {
+            return;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        long now = System.currentTimeMillis();
+        for (String key : yaml.getKeys(false)) {
+            try {
+                long at = yaml.getLong(key);
+                if (now - at < BACK_WITHIN) {
+                    sentAt.put(java.util.UUID.fromString(key), at);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // not a player
+            }
+        }
+    }
+
+    private synchronized void saveSent() {
+        Map<java.util.UUID, Long> copy = new LinkedHashMap<>(sentAt);
+        try {
+            if (copy.isEmpty()) {
+                Files.deleteIfExists(sentFile().toPath());
+                return;
+            }
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.options().setHeader(List.of("Players sent to the waiting room - coming back is no new arrival (no join notices)."));
+            copy.forEach((id, at) -> yaml.set(id.toString(), at));
+            yaml.save(sentFile());
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not save " + sentFile().getName() + ": " + e.getMessage());
         }
     }
 
@@ -283,6 +517,18 @@ public final class WaitingRoom implements Listener {
             }
         }
         json.put("alerts", alerts);
+        json.put("rights", rights.json());
+        // Everyone in admin mode (also offline) - the waiting room gives them the admin mode there too.
+        java.util.Set<java.util.UUID> admins = plugin.adminMode() == null ? new java.util.HashSet<>()
+                : plugin.adminMode().savedIds();
+        wishes.forEach((id, on) -> {
+            if (on) {
+                admins.add(id);
+            } else {
+                admins.remove(id);
+            }
+        });
+        json.put("adminMode", admins.stream().map(java.util.UUID::toString).sorted().toList());
         snapshot = GSON.toJson(json);
     }
 
@@ -330,7 +576,8 @@ public final class WaitingRoom implements Listener {
                 return;
             }
             String path = exchange.getRequestURI().getPath();
-            boolean report = path.equals("/waiting-room/report");
+            boolean adminMode = path.equals("/waiting-room/admin-mode");
+            boolean report = path.equals("/waiting-room/report") || adminMode;
             if (!(report ? "POST" : "GET").equals(exchange.getRequestMethod())
                     || !(report || path.equals("/waiting-room/status"))) {
                 reply(exchange, 405, "{\"error\":\"method\"}");
@@ -344,6 +591,14 @@ public final class WaitingRoom implements Listener {
                 reply(exchange, 401, "{\"error\":\"key\"}");
                 return;
             }
+            if (adminMode) {
+                byte[] body = exchange.getRequestBody().readNBytes(64 * 1024 + 1);
+                String problem = body.length > 64 * 1024 ? "too-large"
+                        : receiveAdminMode(new String(body, StandardCharsets.UTF_8));
+                reply(exchange, problem == null ? 200 : 400, problem == null ? "{\"ok\":true}"
+                        : "{\"error\":\"" + problem + "\"}");
+                return;
+            }
             if (report) {
                 byte[] body = exchange.getRequestBody().readNBytes(600 * 1024 + 1);
                 String problem = body.length > 600 * 1024 ? "too-large"
@@ -355,6 +610,11 @@ public final class WaitingRoom implements Listener {
             lastQuestion = System.currentTimeMillis();
             // The state plus the open orders for remote plugins (configuration, updates).
             String state = snapshot;
+            if (state.length() <= 2) {
+                // Not built yet: no answer rather than one without maintenance and restart.
+                reply(exchange, 503, "{\"error\":\"starting\"}");
+                return;
+            }
             String orders = "\"orders\":" + remote.ordersJson() + "}";
             reply(exchange, 200, state.length() <= 2 ? "{" + orders : state.substring(0, state.length() - 1) + "," + orders);
         } catch (RuntimeException e) {
