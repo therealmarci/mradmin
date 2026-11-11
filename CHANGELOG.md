@@ -9,6 +9,9 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Behoben & geändert
+- **Warteraum einrichten ohne Schlüssel:** `mrserver setup --role waitroom` brach ab, wenn der Installer keinen Schlüssel für die Warteraum-Verbindung übergab („does not look like waiting-room.link.key“). Ein leerer Schlüssel gilt jetzt als „später eintragen“.
+
 ## [STA-1.5.2-bu001] - 2026-11-11
 
 ### Neu
