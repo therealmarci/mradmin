@@ -402,7 +402,7 @@
         {:else if area === 'plugins' && sub[0] === 'mrsleep' && may.mrsleep}
           <Sleep {me} />
         {:else if area === 'plugins' && sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
-          <Waypoints {me} />
+          <Waypoints {me} tab={sub[1] ?? null} />
         {:else if area === 'server' && sub[0] === 'room' && may.versions}
           <PageHead title={t('nav.serverRoom')} />
           {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}

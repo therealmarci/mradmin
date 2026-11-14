@@ -10,6 +10,7 @@
   import BansPart from '../components/BansPart.svelte';
   import PartTile from '../components/PartTile.svelte';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
 
   // Without a section: preview of the player and one tile per section; a tile opens /players/<uuid>/<section>.
   let { uuid, me, section = null } = $props();
@@ -81,6 +82,8 @@
     ...Object.keys(PARTS).filter((id) => player.parts[id]),
   ] : []);
   const open = (id) => go(`/players/${uuid}/${id}`);
+  const sectionTitle = (id) => ({ tickets: t('player.tickets'), mrsleep: t('nav.sleep'), mrchunks: t('nav.chunks'),
+    mrpvp: t('nav.pvp'), libertybans: t('punish.title') })[id] ?? id;
   const openTickets = $derived(player?.tickets?.filter((tk) => tk.open).length ?? 0);
 
   // An unknown or unavailable section (old link, plugin removed) shows the overview.
@@ -96,11 +99,10 @@
 </script>
 
 <div class="page">
-  {#if section && player}
-    <button class="back" onclick={() => go(`/players/${uuid}`)}>← {t('player.backTo', { name: player.name })}</button>
-  {:else}
-    <button class="back" onclick={() => go('/players')}>← {t('player.back')}</button>
-  {/if}
+  <!-- Breadcrumbs: Players › name (› section) -->
+  <PageHead title={section && player ? sectionTitle(section) : (player?.name ?? '…')}
+    crumbs={[{ label: t('players.title'), path: '/admin/community/players' },
+      ...(section && player ? [{ label: player.name, path: '/admin/community/players/' + uuid }] : [])]} />
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 
@@ -220,13 +222,6 @@
     --pl: var(--accent);
     display: grid;
     gap: 16px;
-  }
-
-  .back {
-    justify-self: start;
-    background: transparent;
-    color: var(--pl);
-    padding: 4px 0;
   }
 
   /* Head of the player: big head, name and state, the facts and the actions. */

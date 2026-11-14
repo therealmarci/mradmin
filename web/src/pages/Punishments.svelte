@@ -8,6 +8,8 @@
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
+  import FilterChips from '../components/FilterChips.svelte';
 
   let filter = $state('active');
   let type = $state('');
@@ -59,45 +61,14 @@
 </script>
 
 <div class="page">
-  <header class="head card">
-    <span class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round"><path d={ICONS.shield} /></svg>
-    </span>
-    <div class="title">
-      <h1>{t('punish.title')}</h1>
-      <p class="muted small">{t('punish.subtitle')}</p>
-    </div>
-    {#if data && filter === 'active'}
-      <div class="numbers">
-        {#each ['ban', 'mute', 'warn'] as k (k)}
-          <span class="num t-{k}"><b>{counts[k]}</b> {t('lb.type.' + k)}</span>
-        {/each}
-      </div>
-    {/if}
-  </header>
+  <PageHead title={t('punish.title')}
+    stats={data && filter === 'active' ? ['ban', 'mute', 'warn'].map((k) => ({ label: t('lb.type.' + k), value: counts[k], tone: counts[k] ? (k === 'ban' ? 'bad' : 'warn') : '' })) : []} />
 
-  <div class="bar card">
-    <div class="seg" role="radiogroup">
-      <button role="radio" aria-checked={filter === 'active'} class:on={filter === 'active'} onclick={() => (filter = 'active')}>
-        {t('punish.active')}
-      </button>
-      {#if data?.history}
-        <button role="radio" aria-checked={filter === 'all'} class:on={filter === 'all'} onclick={() => (filter = 'all')}>
-          {t('punish.all')}
-        </button>
-      {/if}
-    </div>
-    <div class="chips">
-      <button class="chip" class:on={!type} onclick={() => (type = '')}>{t('punish.allTypes')}</button>
-      {#each TYPES as k (k)}
-        {#if filter === 'all' || k !== 'kick'}
-          <button class="chip t-{k}" class:on={type === k} onclick={() => (type = type === k ? '' : k)}>{t('lb.type.' + k)}</button>
-        {/if}
-      {/each}
-    </div>
-    <input type="search" bind:value={search} placeholder={t('punish.search')} />
-  </div>
+  <FilterChips value={filter} onchange={(f) => (filter = f)}
+    options={[{ id: 'active', label: t('punish.active') }, ...(data?.history ? [{ id: 'all', label: t('punish.all') }] : [])]}
+    search={search} onsearch={(v) => (search = v)} placeholder={t('punish.search')} />
+  <FilterChips value={type} onchange={(k) => (type = k === type ? '' : k)}
+    options={[{ id: '', label: t('punish.allTypes') }, ...TYPES.filter((k) => filter === 'all' || k !== 'kick').map((k) => ({ id: k, label: t('lb.type.' + k) }))]} />
 
   <Toast text={message} />
   {#if error}<div class="error">{error}</div>{/if}
@@ -145,46 +116,9 @@
     gap: 14px;
   }
 
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 20px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-  }
-
   .title {
     flex: 1;
     min-width: 200px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.35rem;
-  }
-
-  .title p {
-    margin: 2px 0 0;
-  }
-
-  .numbers {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-
-  .num b {
-    font-size: 1.2rem;
   }
 
   .bar {
@@ -193,12 +127,6 @@
     align-items: center;
     gap: 10px 14px;
     padding: 12px 14px;
-  }
-
-  .bar input {
-    flex: 1 1 200px;
-    width: auto;
-    padding: 7px 10px;
   }
 
   .seg {
@@ -218,12 +146,6 @@
     background: transparent;
     color: var(--muted);
     border: 0;
-  }
-
-  .seg button.on {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
   }
 
   .chips {
@@ -310,18 +232,15 @@
     background: var(--surface-2);
   }
 
-  .type.t-ban,
-  .num.t-ban b {
+  .type.t-ban {
     color: var(--bad);
   }
 
-  .type.t-mute,
-  .num.t-mute b {
+  .type.t-mute {
     color: var(--warn);
   }
 
-  .type.t-warn,
-  .num.t-warn b {
+  .type.t-warn {
     color: #eab308;
   }
 

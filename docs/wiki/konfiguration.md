@@ -1,6 +1,6 @@
 # Konfiguration
 
-Am einfachsten im Browser: Weboberfläche → **Plugins → MRadmin → Konfiguration** - jede Einstellung mit Erklärung, Speichern lädt MRadmin sofort neu (Permission `mradmin.config`). Alles steht außerdem kommentiert in `plugins/MRadmin/config.yml`, im selben Aufbau wie bei allen MRtechnology-Plugins; Änderungen von Hand übernimmst du mit `/mradmin reload`. Nur in der Datei: eigene Dashboard-Knöpfe (`admin-mode.menu.buttons`), `web.roles` / `web.players` und neue Ticket-Kategorien.
+Am einfachsten im Browser: Weboberfläche → **Einstellungen → Konfiguration → MRadmin** - jede Einstellung mit Erklärung, Speichern lädt MRadmin sofort neu (Permission `mradmin.config`). Alles steht außerdem kommentiert in `plugins/MRadmin/config.yml`, im selben Aufbau wie bei allen MRtechnology-Plugins; Änderungen von Hand übernimmst du mit `/mradmin reload`. Nur in der Datei: eigene Dashboard-Knöpfe (`admin-mode.menu.buttons`), `web.roles` / `web.players` und neue Ticket-Kategorien.
 
 | Abschnitt | Wofür | Mehr dazu |
 |---|---|---|

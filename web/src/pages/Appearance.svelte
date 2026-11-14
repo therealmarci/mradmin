@@ -8,6 +8,7 @@
   import { brand, load as loadBrand } from '../lib/branding.svelte.js';
   import Toast from '../components/Toast.svelte';
   import { go } from '../lib/router.svelte.js';
+  import PageHead from '../components/PageHead.svelte';
 
 
   let form = $state(null);
@@ -105,10 +106,8 @@
   <Toast text={message} />
   {#if error}<div class="error">{error}</div>{/if}
   {#if form}
-    <header class="head">
-      <h1>{t('appearance.title')}</h1>
-      <p class="muted">{t('appearance.intro')}</p>
-    </header>
+    <PageHead title={t('appearance.title')} />
+    <p class="muted intro-line">{t('appearance.intro')}</p>
     <div class="layout">
       <div class="parts">
         <!-- Brand -->
@@ -276,20 +275,6 @@
   .page {
     display: grid;
     gap: 14px;
-  }
-
-  .head {
-    display: grid;
-    gap: 4px;
-  }
-
-  .head h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .head p {
-    margin: 0;
   }
 
   .layout {

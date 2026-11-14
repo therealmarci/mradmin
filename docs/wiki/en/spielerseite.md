@@ -52,4 +52,4 @@ The player page is off by default.
 
 - Banned players (LibertyBans) do not get in.
 - **For the team:** whoever is signed in to the team area gets to their own player page without a code via **To the player page** in the menu behind their own name at the top right (or on their own entry under Players). This also needs `mradmin.web.self` and is recorded in the log.
-- The team writes **news, changelogs and warnings** under **Communication** - see [Web interface](/docs/WEBOBERFLAECHE.md#communication-mradminnews-mradminannounce).
+- The team writes **news, changelogs and warnings** under **Content** - see [Web interface](/docs/WEBOBERFLAECHE.md#content-mradminnews-mradminannounce).

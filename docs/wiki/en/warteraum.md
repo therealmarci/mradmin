@@ -16,7 +16,7 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 
 ## Setting up
 1. **Proxy:** in `velocity.toml` add the main server and the waiting room under `[servers]`, set `try = ["main", "waitroom"]` (main server first) and `bungee-plugin-message-channel = true`. Switch on Velocity forwarding on both Paper servers - details in the [guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/).
-2. **MRadmin:** in `config.yml` (or in the browser under **Server → Plugins → MRadmin → Configuration → Waiting room**):
+2. **MRadmin:** in `config.yml` (or in the browser under **Settings → Configuration → MRadmin → Waiting room**):
    ```yaml
    waiting-room:
      enabled: true
@@ -33,7 +33,7 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 > `link.bind` belongs on the **internal** address (LAN), never on a public one. The endpoint only tells what players in the waiting room see anyway, but it does not belong on the internet. Wrong keys are refused after 10 tries per minute.
 
 ## Managing the waiting room from MRadmin
-Once the waiting room is connected, **MRwaitroom** shows up under **Server → Plugins** - marked "waiting room server":
+Once the waiting room is connected, **MRwaitroom** shows up under **Server → Waiting room → Plugins** - marked "waiting room server":
 
 - **Configuration:** like every plugin via **Configuration** (permission `mradmin.config`). On saving, the waiting room picks up the new `config.yml` on its next question (a few seconds), keeps a backup (`config.backup-remote.yml`) and reloads.
 - **Updates:** "Update" (permission `mradmin.versions.install`, or automatically according to `versions.auto-download`) orders the new version. The waiting room downloads it **itself** - only from the official releases and only with the right checksum - and restarts as soon as nobody waits and your server is ready.
@@ -58,7 +58,7 @@ Under **Server → Waiting room → Performance** you see the waiting room serve
 - In the waiting room, commands from MRadmin can be switched off completely with `agent.console-commands: false` - the console then only shows the output.
 
 ## Restarting the waiting room server
-If the waiting room runs with the starter (`mrserver setup --role waitroom`, see [Starter](starter.md#setting-up-a-waiting-room-server)), **Server → Overview** shows the tile **Waiting room server**: running, since when, Paper build, waiting players, next planned restart. **Restart** (permission `mradmin.server.restart`) restarts it **as soon as it may**:
+If the waiting room runs with the starter (`mrserver setup --role waitroom`, see [Starter](starter.md#setting-up-a-waiting-room-server)), **Server → Waiting room → Control** shows the tile **Waiting room server**: running, since when, Paper build, waiting players, next planned restart. **Restart** (permission `mradmin.server.restart`) restarts it **as soon as it may**:
 
 - your server runs and is ready,
 - **no maintenance** runs,

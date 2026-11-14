@@ -11,6 +11,7 @@
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import ValueTile from '../components/ValueTile.svelte';
   import TimeNavigator from '../components/TimeNavigator.svelte';
+  import PageHead from '../components/PageHead.svelte';
 
   let { id, me } = $props();
 
@@ -333,7 +334,7 @@
 </script>
 
 <div class="page">
-  <button class="back" onclick={() => go('/chunks')}>← {t('chunks.back')}</button>
+  <PageHead title={loader?.name ?? '#' + id} crumbs={[{ label: t('chunks.title'), path: '/admin/plugins/mrchunks' }]} />
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 

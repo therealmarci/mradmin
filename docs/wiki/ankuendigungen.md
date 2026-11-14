@@ -7,7 +7,7 @@
 ```
 
 - **Eigener Text** erscheint als Titel auf dem Bildschirm. Mit `|` trennst du **Titel | Untertitel**. Farben im [MiniMessage-Format](https://docs.advntr.dev/minimessage/format.html) sind erlaubt.
-- **Eigene Vorlagen** legst du in der Weboberfläche unter **Kommunikation → Ankündigungen** an (`mradmin.announce.templates`): Titel, Untertitel, Chat und Actionbar je Deutsch und Englisch mit Vorschau, optional ein Discord-Text, Anzeigedauer des Titels, Ton und **Zielgruppe** (Spieler, Bots, Support, Staff, Admin - jede Gruppe bekommt auch, was für die darunter gedacht ist; „Spieler“ = alle). Sie gehen im Web, im Ankündigungs-Menü und mit `/mradmin announce <name>`. Werte nach dem Namen füllen `<arg1>`, `<arg2>` … bzw. `<args>`.
+- **Eigene Vorlagen** legst du in der Weboberfläche unter **Inhalte → Ankündigungen** an (`mradmin.announce.templates`): Titel, Untertitel, Chat und Actionbar je Deutsch und Englisch mit Vorschau, optional ein Discord-Text, Anzeigedauer des Titels, Ton und **Zielgruppe** (Spieler, Bots, Support, Staff, Admin - jede Gruppe bekommt auch, was für die darunter gedacht ist; „Spieler“ = alle). Sie gehen im Web, im Ankündigungs-Menü und mit `/mradmin announce <name>`. Werte nach dem Namen füllen `<arg1>`, `<arg2>` … bzw. `<args>`.
 - **Eingebaute Vorlagen** (`restart`, `restart-now`, `update`, `event`) stehen in der Sprachdatei unter `announce-presets`. MRadmin nutzt `restart` selbst (Neustart-Countdown); in den Menüs stehen sie nicht, mit dem Befehl und in Skripten gehen sie weiter.
 - Jeder Spieler sieht die Ankündigung in seiner Sprache. `-q` spielt keinen Ton.
 

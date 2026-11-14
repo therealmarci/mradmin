@@ -16,7 +16,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 
 ## Einrichten
 1. **Proxy:** In der `velocity.toml` den Hauptserver und den Warteraum unter `[servers]` eintragen, `try = ["main", "waitroom"]` (Hauptserver zuerst) und `bungee-plugin-message-channel = true` setzen. Auf beiden Paper-Servern Velocity-Weiterleitung einschalten - Einzelheiten in der [Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/).
-2. **MRadmin:** in der `config.yml` (oder im Browser unter **Server → Plugins → MRadmin → Konfiguration → Warteraum**):
+2. **MRadmin:** in der `config.yml` (oder im Browser unter **Einstellungen → Konfiguration → MRadmin → Warteraum**):
    ```yaml
    waiting-room:
      enabled: true
@@ -33,7 +33,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 > `link.bind` gehört auf die **interne** Adresse (LAN), nie auf eine öffentliche. Die Schnittstelle verrät zwar nur, was die Spieler im Warteraum ohnehin sehen, aber sie gehört nicht ins Internet. Falsche Schlüssel werden nach 10 Versuchen pro Minute abgewiesen.
 
 ## Warteraum aus MRadmin verwalten
-Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** - gekennzeichnet mit „Warteraum-Server“:
+Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Warteraum → Plugins** - gekennzeichnet mit „Warteraum-Server“:
 
 - **Konfiguration:** wie bei jedem Plugin über **Konfiguration** (Permission `mradmin.config`). Beim Speichern holt sich der Warteraum die neue `config.yml` bei seiner nächsten Abfrage (wenige Sekunden), legt eine Sicherung an (`config.backup-remote.yml`) und lädt neu.
 - **Updates:** „Aktualisieren“ (Permission `mradmin.versions.install`, oder automatisch nach `versions.auto-download`) bestellt die neue Version. Der Warteraum lädt sie **selbst** - nur aus den offiziellen Releases und nur mit passender Prüfsumme - und startet neu, sobald niemand wartet und dein Server bereit ist.
@@ -58,7 +58,7 @@ Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau
 - Im Warteraum lassen sich Befehle aus MRadmin mit `agent.console-commands: false` ganz abschalten - die Konsole zeigt dann nur die Ausgabe.
 
 ## Warteraum-Server neu starten
-Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Übersicht** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
+Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Warteraum → Steuerung** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
 
 - dein Server läuft und ist bereit,
 - **keine Wartung** läuft,

@@ -52,4 +52,4 @@ Standardmäßig ist die Spielerseite aus.
 
 - Gesperrte Spieler (LibertyBans) kommen nicht hinein.
 - **Für das Team:** Wer im Team-Bereich angemeldet ist, kommt über **Zur Spielerseite** im Menü hinter dem eigenen Namen oben rechts (oder auf dem eigenen Eintrag unter Spieler) ohne Code zur eigenen Spielerseite. Das braucht ebenfalls `mradmin.web.self` und steht im Protokoll.
-- **Neuigkeiten, Changelogs und Warnungen** schreibt das Team unter **Kommunikation** - siehe [Weboberfläche](/docs/WEBOBERFLAECHE.md#kommunikation-mradminnews-mradminannounce).
+- **Neuigkeiten, Changelogs und Warnungen** schreibt das Team unter **Inhalte** - siehe [Weboberfläche](/docs/WEBOBERFLAECHE.md#inhalte-mradminnews-mradminannounce).

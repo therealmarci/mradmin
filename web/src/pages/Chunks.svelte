@@ -6,6 +6,8 @@
   import { STATUS } from '../lib/chunks.js';
   import { ICONS } from '../lib/icons.js';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
+  import FilterChips from '../components/FilterChips.svelte';
 
   let { me } = $props();
 
@@ -75,27 +77,11 @@
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.grid} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.grid} /></svg>
-      </span>
-      <div>
-        <h1>{t('chunks.title')}</h1>
-        <p class="muted">{t('chunks.subtitle')}</p>
-      </div>
-    </div>
-    {#if overview}
-      <div class="numbers">
-        <span><b>{overview.loaders}</b> {t('chunks.loaders')}</span>
-        <span><b class="good-text">{overview.active}</b> {t('chunks.active')}</span>
-        {#if overview.locked + overview.warn}<span><b class="bad-text">{overview.locked + overview.warn}</b> {t('chunks.problems')}</span>{/if}
-      </div>
-    {/if}
-  </header>
+  <PageHead title={t('chunks.title')} stats={!overview ? [] : [
+    { label: t('chunks.loaders'), value: overview.loaders },
+    { label: t('chunks.active'), value: overview.active, tone: 'good' },
+    ...(overview.locked + overview.warn ? [{ label: t('chunks.problems'), value: overview.locked + overview.warn, tone: 'bad' }] : []),
+  ]} />
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -166,22 +152,12 @@
     </div>
   {/if}
 
+  <FilterChips value={filter} onchange={setFilter}
+    options={[{ id: 'all', label: t('tickets.all'), n: loaders?.length },
+      ...Object.keys(STATUS).filter((s) => counts[s]).map((s) => ({ id: s, label: t('chunks.status.' + s), n: counts[s], tone: STATUS[s].tone }))]}
+    search={search} onsearch={(v) => (search = v)} placeholder={t('chunks.search')} />
+
   <section class="card tile">
-    <div class="tile-head">
-      <div class="switch" role="tablist">
-        <button role="tab" aria-selected={filter === 'all'} class:active={filter === 'all'} onclick={() => setFilter('all')}>
-          {t('tickets.all')}{#if loaders}<span class="n">{loaders.length}</span>{/if}
-        </button>
-        {#each Object.keys(STATUS) as s}
-          {#if counts[s]}
-            <button role="tab" aria-selected={filter === s} class:active={filter === s} onclick={() => setFilter(s)}>
-              <span class="dot {STATUS[s].tone}"></span>{t('chunks.status.' + s)}<span class="n">{counts[s]}</span>
-            </button>
-          {/if}
-        {/each}
-      </div>
-      <input class="search" type="search" bind:value={search} placeholder={t('chunks.search')} />
-    </div>
 
     {#if !loaders}
       {#if !error}<p class="muted pad">{t('common.loading')}</p>{/if}
@@ -258,67 +234,6 @@
       radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--cl) 20%, transparent), transparent 60%),
       var(--surface);
     box-shadow: var(--shadow);
-  }
-
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--cl);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    color: var(--cl);
-    background: color-mix(in srgb, var(--cl) 16%, var(--surface-2));
-    border: 1px solid color-mix(in srgb, var(--cl) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
-  }
-
-  .numbers {
-    position: relative;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .numbers span {
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    font-size: 0.88rem;
-  }
-
-  .numbers b {
-    font-size: 1.1rem;
-    margin-right: 2px;
   }
 
   /* Switch in the head of a key-figure tile (team controls) */
@@ -448,14 +363,6 @@
   }
 
   /* The list */
-  .tile-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
   .switch {
     display: inline-flex;
     flex-wrap: wrap;
@@ -464,23 +371,6 @@
     border-radius: 12px;
     background: var(--surface-2);
     border: 1px solid var(--border);
-  }
-
-  .switch button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 9px;
-    font-size: 0.88rem;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
   }
 
   .n {

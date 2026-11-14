@@ -3,17 +3,18 @@
   // actions on the right, below one slim line of key figures. No big head tile any more - the sidebar says where you are.
   //
   // title: text; crumbs: [{label, path}] in front of the title (detail pages: "Duelle › Runde #482");
-  // stats: [{label, value, tone?}] - tone good | warn | bad | info colours the value; actions: snippet (buttons).
+  // stats: [{label, value, tone?}] - tone good | warn | bad | info colours the value; actions: snippet (buttons);
+  // onnav(path): instead of going there at once (e.g. a page with unsaved changes asks first).
   import { go } from '../lib/router.svelte.js';
 
-  let { title, crumbs = [], stats = [], actions = null } = $props();
+  let { title, crumbs = [], stats = [], actions = null, onnav = null } = $props();
 </script>
 
 <header class="page-head">
   <div class="line">
     <h1>
       {#each crumbs as c (c.path)}
-        <a class="crumb" href={c.path} onclick={(e) => { e.preventDefault(); go(c.path); }}>{c.label}</a>
+        <a class="crumb" href={c.path} onclick={(e) => { e.preventDefault(); (onnav ?? go)(c.path); }}>{c.label}</a>
         <span class="sep" aria-hidden="true">›</span>
       {/each}
       <span class="title">{title}</span>

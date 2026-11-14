@@ -1,6 +1,6 @@
 # Plugins & Updates
 
-In der Weboberfläche unter **Server → Plugins** siehst du **alle MRtechnology-Plugins** als Tabelle: oben die auf deinem Server mit installierter Version, Kanal, **neuester Version im Kanal** (Badge **Aktuell**, wenn sie installiert ist, **Neu**, wenn nicht) und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
+In der Weboberfläche unter **Server → Hauptserver → Plugins** siehst du **alle MRtechnology-Plugins** als Tabelle: oben die auf deinem Server mit installierter Version, Kanal, **neuester Version im Kanal** (Badge **Aktuell**, wenn sie installiert ist, **Neu**, wenn nicht) und ob ein Update wartet, darunter die übrigen. Ein Klick auf ein installiertes Plugin öffnet seine Seite mit „Was ist neu“.
 
 ## Kanäle: Stable, Beta, Dev
 Jedes Plugin folgt einem **Kanal** - in der Spalte **Kanal** umschaltbar (`mradmin.versions.install`):
@@ -28,7 +28,7 @@ Auf der Seite eines installierten Plugins gibt es den Reiter **Konfiguration** (
 
 ## Updates
 - **Herunterladen** (`mradmin.versions.install`) holt die neue Version aus dem offiziellen Release auf GitHub - nur für deine Minecraft-Version und nur, wenn die Prüfsumme (SHA-256) stimmt. Sie landet in `plugins/update/`, **installiert wird beim nächsten Neustart** (das macht Paper selbst). Im laufenden Betrieb wird nichts ausgetauscht.
-- Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt **Server → Plugins** bzw. `/<plugin> version`.
+- Der Dateiname bleibt dabei der alte (z.B. `MRsleep-mc26.3-v1.1.5.jar` mit Version 1.2.0 darin) - nur so weiß Paper, welches Plugin ersetzt wird. Welche Version läuft, zeigt **Server → Hauptserver → Plugins** bzw. `/<plugin> version`.
 - **Automatisch:** `versions.auto-download: patch` lädt z.B. Hotfixes (1.2.x) von selbst, `minor` auch neue Funktionen, `all` alles. Standard ist `off`.
 - Geprüft wird alle `versions.check-interval-hours` und mit **Jetzt prüfen** (`mradmin.versions.install`).
 - Downloads und Neustarts stehen im Protokoll und im Discord-Log (`plugin-update-downloaded`, `server-restart`).

@@ -9,6 +9,8 @@
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
   import { ICONS } from '../lib/icons.js';
+  import PageHead from '../components/PageHead.svelte';
+  import FilterChips from '../components/FilterChips.svelte';
 
   let { me } = $props();
 
@@ -72,48 +74,22 @@
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.ticket} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.ticket} /></svg>
-      </span>
-      <div>
-        <h1>{t('tickets.title')}</h1>
-        <p class="muted">{t('tickets.subtitle')}</p>
-      </div>
-    </div>
-    {#if counts}
-      <div class="numbers">
-        <span><b class="warn-text">{counts.open}</b> {t('tickets.countOpen')}</span>
-        <span><b class="info-text">{counts.unread}</b> {t('tickets.countUnread')}</span>
-        {#if me.may.ticketsClaim}<span><b class="good-text">{counts.mine}</b> {t('tickets.countMine')}</span>{/if}
-      </div>
-    {/if}
-  </header>
+  <PageHead title={t('tickets.title')} stats={!counts ? [] : [
+    { label: t('tickets.countOpen'), value: counts.open, tone: counts.open ? 'warn' : '' },
+    { label: t('tickets.countUnread'), value: counts.unread, tone: counts.unread ? 'info' : '' },
+    ...(me.may.ticketsClaim ? [{ label: t('tickets.countMine'), value: counts.mine, tone: counts.mine ? 'good' : '' }] : []),
+  ]} />
 
   {#if error}<div class="error">{error}</div>{/if}
 
-  <section class="card tile">
-    <div class="tile-head">
-      <div class="switch" role="tablist">
-        {#each tabs as s}
-          <button role="tab" aria-selected={state === s} class:active={state === s} onclick={() => setState(s)}>{t('tickets.' + s)}</button>
-        {/each}
-      </div>
-      <input class="search" type="search" bind:value={search} placeholder={t('tickets.search')} />
-    </div>
-    {#if usedCategories.length > 1}
-      <div class="chips" role="group" aria-label={t('tickets.categories')}>
-        <button class:active={category === ''} onclick={() => (category = '')}>{t('tickets.all')}</button>
-        {#each usedCategories as c (c.id)}
-          <button class:active={category === c.id} onclick={() => (category = c.id)}>{c.name}</button>
-        {/each}
-      </div>
-    {/if}
+  <FilterChips value={state} onchange={setState} options={tabs.map((s) => ({ id: s, label: t('tickets.' + s) }))}
+    search={search} onsearch={(v) => (search = v)} placeholder={t('tickets.search')} />
+  {#if usedCategories.length > 1}
+    <FilterChips value={category} onchange={(c) => (category = c)}
+      options={[{ id: '', label: t('tickets.all') }, ...usedCategories.map((c) => ({ id: c.id, label: c.name }))]} />
+  {/if}
 
+  <section class="card tile">
     {#if tickets === null}
       <p class="muted pad">{t('common.loading')}</p>
     {:else if shown.length === 0}
@@ -165,116 +141,7 @@
     gap: 16px;
   }
 
-  .head {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 24px;
-    padding: 22px 24px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--tk) 30%, var(--border));
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--tk) 20%, transparent), transparent 60%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--tk);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    color: var(--tk);
-    background: color-mix(in srgb, var(--tk) 16%, var(--surface-2));
-    border: 1px solid color-mix(in srgb, var(--tk) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
-  }
-
-  .numbers {
-    position: relative;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .numbers span {
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    font-size: 0.88rem;
-  }
-
-  .numbers b {
-    font-size: 1.1rem;
-    margin-right: 2px;
-  }
-
   /* The list */
-  .tile-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .switch {
-    display: inline-flex;
-    flex-wrap: wrap;
-    padding: 4px;
-    gap: 4px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .switch button {
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 9px;
-    font-size: 0.88rem;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
-
   .search {
     width: min(100%, 280px);
   }
@@ -284,21 +151,6 @@
     gap: 6px;
     flex-wrap: wrap;
     margin-top: 12px;
-  }
-
-  .chips button {
-    background: var(--surface-2);
-    color: var(--muted);
-    border: 1px solid var(--border);
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 0.82rem;
-  }
-
-  .chips button.active {
-    color: var(--tk);
-    border-color: var(--tk);
-    background: color-mix(in srgb, var(--tk) 12%, var(--surface-2));
   }
 
   .pad {
@@ -465,10 +317,6 @@
   }
 
   @media (max-width: 640px) {
-    .head {
-      padding: 18px 16px;
-    }
-
     .search {
       width: 100%;
     }

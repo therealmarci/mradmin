@@ -265,7 +265,7 @@ public String selfMapAction(SelfViewer viewer, String layer, String action, Map<
 
 ## Konfiguration im Browser (`webConfig`, ab API 12)
 
-Seite **Plugins → <Plugin> → Konfiguration** (Recht `mradmin.config`). Ein Modul gibt seine `config.yml` frei:
+Seite **Einstellungen → Konfiguration → <Plugin>** (Recht `mradmin.config`). Ein Modul gibt seine `config.yml` frei:
 
 ```java
 @Override

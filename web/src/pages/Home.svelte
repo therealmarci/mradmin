@@ -13,6 +13,7 @@
   import ValueTile from '../components/ValueTile.svelte';
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { poll } from '../lib/poll.js';
+  import PageHead from '../components/PageHead.svelte';
 
   let { me } = $props();
 
@@ -254,13 +255,8 @@
 </script>
 
 <div class="page">
-  <section class="card hello">
-    <img src={head(me.uuid)} alt="" width="64" height="64" />
-    <div>
-      <h1>{t('home.hello', { name: me.name })}</h1>
-      <p class="muted"><span class="dot" class:on={live.connected}></span>{t('home.live')}</p>
-    </div>
-  </section>
+  <PageHead title={t('home.hello', { name: me.name })}
+    stats={[{ label: t('home.live'), value: '●', tone: live.connected ? 'good' : '' }]} />
 
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -461,21 +457,9 @@
     align-items: center;
   }
 
-  .hello img {
-    border-radius: 10px;
-    image-rendering: pixelated;
-  }
-
   h1 {
     margin: 0;
     font-size: 1.4rem;
-  }
-
-  .hello p {
-    margin: 4px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .dot {
