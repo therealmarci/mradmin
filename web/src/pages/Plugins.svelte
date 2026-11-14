@@ -88,6 +88,14 @@
   const byName = (a, b) => a.name.localeCompare(b.name);
   const pool = $derived(!data ? [] : data.plugins.filter((p) => (server === 'room' ? !!p.remote : server === 'main' ? !p.remote : true)));
   const installed = $derived(pool.filter((p) => p.installed).sort(byName));
+  // The page of one plugin: under the server it runs on.
+  const detail = (name) => (server === 'room' ? '/admin/server/room/plugins/' : '/admin/server/plugins/') + name;
+  // Every plugin of the waiting room server (read only - MRadmin only manages MRtechnology plugins there).
+  let roomAll = $state(null);
+  $effect(() => {
+    if (server !== 'room') return;
+    api('GET', '/waitroom/plugins').then((d) => (roomAll = d.plugins)).catch(() => (roomAll = null));
+  });
   const others = $derived(server === 'room' ? [] : pool.filter((p) => !p.installed).sort(byName));
   // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
   const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
@@ -144,7 +152,7 @@
       <div class="r-name">
         <span class="name-line">
           {#if p.installed}
-            <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
+            <a href={detail(p.name)} onclick={(e) => { e.preventDefault(); go(detail(p.name)); }}>{p.name}</a>
           {:else}
             <strong>{p.name}</strong>
           {/if}
@@ -242,7 +250,7 @@
 
   {#if data}
     <div class="numbers">
-      <div class="num"><b>{installed.length}</b><span>{t('plugins.installedOf', { total: data.plugins.length })}</span></div>
+      <div class="num"><b>{installed.length}</b><span>{t('plugins.installedOf', { total: pool.length })}</span></div>
       <div class="num" class:warn={updates.length}><b>{updates.length}</b><span>{t('versions.updates')}</span></div>
       <div class="num" class:info={waiting.length}><b>{waiting.length}</b><span>{t('versions.waiting')}</span></div>
     </div>
@@ -292,6 +300,18 @@
       {/if}
     </section>
 
+    {#if server === 'room' && roomAll}
+      <section class="group">
+        <h2>{t('plugins.roomAll')}</h2>
+        <p class="muted small hint">{t('plugins.roomAllHint')}</p>
+        <ul class="plain-list">
+          {#each roomAll as p (p.name)}
+            <li><span class="dot" class:on={p.enabled}></span><strong>{p.name}</strong> <span class="muted mono small">{p.version}</span></li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     {#if others.length}
       <section class="group">
         <h2>{t('plugins.more')}</h2>
@@ -314,6 +334,32 @@
 </div>
 
 <style>
+  .plain-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 6px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plain-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .plain-list .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--bad);
+  }
+
+  .plain-list .dot.on {
+    background: var(--good);
+  }
+
   /* Inside the page Server: no card of its own, only the controls (on the right) */
   .head.bare {
     padding: 0;

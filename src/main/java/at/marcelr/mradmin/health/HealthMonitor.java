@@ -335,6 +335,9 @@ public final class HealthMonitor {
                     plugin.getLogger().warning("Waiting room: TPS has been below " + s.alertTps() + " for " + s.alertMinutes() + " minutes (now " + value + ").");
                     gameLine("waitroom-health-alert", tag("tps", value), tag("minutes", s.alertMinutes()));
                     plugin.push("lag", "lag-room", "lag-room", "/admin/server/room/performance", null, "tps", value, "minutes", s.alertMinutes());
+                    Point last = latest();
+                    plugin.discord().log("waitroom-health-alert", "tps", value, "minutes", s.alertMinutes(),
+                            "mspt", String.format(Locale.ROOT, "%.1f", last == null ? 0 : last.mspt()));
                     return;
                 }
                 plugin.getLogger().warning("TPS has been below " + s.alertTps() + " for " + s.alertMinutes() + " minutes (now " + value + ").");
@@ -351,6 +354,7 @@ public final class HealthMonitor {
                 if (plugin.notices() != null) {
                     plugin.notices().resolve("lag-room");
                 }
+                plugin.discord().log("waitroom-health-recovered", "tps", value);
             } else if (alerted) {
                 String value = String.format(Locale.ROOT, "%.1f", tps);
                 plugin.getLogger().info("TPS has recovered (" + value + ").");

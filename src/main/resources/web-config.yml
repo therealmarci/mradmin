@@ -1615,6 +1615,8 @@ sections:
           web-console: {de: Befehl in der Web-Konsole, en: Command in the web console}
           health-alert: {de: Server laggt, en: Server lags}
           health-recovered: {de: Server erholt, en: Server recovered}
+          waitroom-health-alert: {de: Warteraum laggt, en: Waiting room lags}
+          waitroom-health-recovered: {de: Warteraum erholt, en: Waiting room recovered}
           plugin-update-downloaded: {de: Update heruntergeladen, en: Update downloaded}
           server-restart: {de: Neustart geplant, en: Restart planned}
           server-restart-cancelled: {de: Neustart abgebrochen, en: Restart cancelled}

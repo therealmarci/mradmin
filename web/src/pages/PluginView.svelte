@@ -10,7 +10,8 @@
   import { pluginIcon, pluginDescription, pluginState, pluginError } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
 
-  let { name } = $props();
+  // back: the list this page was opened from (the plugins of the main server or of the waiting room)
+  let { name, back = '/admin/server/plugins' } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -58,7 +59,7 @@
 </script>
 
 <div class="page">
-  <a class="back" href="/server/plugins" onclick={(e) => { e.preventDefault(); go('/server/plugins'); }}>← {t('plugins.back')}</a>
+  <a class="back" href={back} onclick={(e) => { e.preventDefault(); go(back); }}>← {t('plugins.back')}</a>
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />

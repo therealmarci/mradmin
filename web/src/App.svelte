@@ -235,6 +235,11 @@
     const list = (overview?.alerts ?? []).filter((a) => a.module === id);
     return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : 'warn' };
   };
+  // The waiting room's hints (gone, lagging, countdown): their number, red if it is gone.
+  const roomCount = () => {
+    const list = (overview?.alerts ?? []).filter((a) => a.key?.startsWith('room'));
+    return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : list.some((a) => a.tone === 'warn') ? 'warn' : 'info' };
+  };
   const adminGroups = $derived(!me ? [] : [
     { id: 'community', label: t('nav.community'), items: [
       ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players', icon: 'users' }] : []),
@@ -258,7 +263,7 @@
         n: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? '!' : overview?.versions?.updates || undefined,
         tone: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? 'warn' : 'info' }] : []),
       ...(may.versions && overview?.network?.room ? [{ id: 'room', label: t('nav.serverRoom'), path: '/admin/server/room', icon: 'restore',
-        n: overview.network.room.online ? undefined : '!', tone: 'bad' }] : []),
+        ...roomCount() }] : []),
     ] },
     { id: 'settings', label: t('nav.group.settings'), items: [
       ...(may.config && may.versions ? [{ id: 'config', label: t('nav.config'), path: '/admin/settings/config', icon: 'gear' }] : []),
@@ -407,7 +412,9 @@
           <PageHead title={t('nav.serverRoom')} />
           {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}
           <PageTabs tabs={roomTabs} current={roomTab} />
-          {#if roomTab === 'plugins'}
+          {#if roomTab === 'plugins' && sub[2]}
+            {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
+          {:else if roomTab === 'plugins'}
             <Plugins embedded server="room" />
           {:else if roomTab === 'performance'}
             {#key 'room'}<Health server="room" />{/key}

@@ -53,6 +53,8 @@
     'tickets-mine': () => me.may.tickets && '/tickets',
     maintenance: () => me.may.maintenance && '/maintenance',
     versions: () => me.may.versions && '/plugins',
+    room: () => me.may.versions && '/admin/server/room',
+    'room-health': () => me.may.health && '/admin/server/room/performance',
   };
   // Hints of modules (MRchunks, MRsleep ...) name the page themselves - linked if the member may see the module.
   const target = (a) => (a.module ? (me.may[a.module] && a.page) : a.page && pages[a.page]?.()) || null;
@@ -74,7 +76,8 @@
     if (a.key === 'disk') v.free = mb(v.free);
     if (a.key === 'maintenanceSoon') v.start = v.start ? dateTime(v.start) : '–';
     if (a.key === 'restartSoon') v.time = dateTime(v.time);
-    if (a.key === 'tps' || a.key === 'mspt') v.value = Number(v.value).toFixed(1);
+    if (a.key === 'tps' || a.key === 'mspt' || a.key === 'roomTps') v.value = Number(v.value).toFixed(1);
+    if (a.key === 'roomRestart' || a.key === 'roomStop') v.time = dateTime(v.time);
     return t('alert.' + a.key, v);
   }
 
@@ -181,7 +184,7 @@
   // The slides: the health monitor first (with its own warnings), then one slide per area that has something to do -
   // all warnings of an area (e.g. unanswered and own tickets) together. The alerts come most serious first.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
-  const areaKey = (a) => (a.module ? 'module:' + a.module : a.key.startsWith('tickets') ? 'tickets'
+  const areaKey = (a) => (a.module ? 'module:' + a.module : a.key.startsWith('room') ? 'room' : a.key.startsWith('tickets') ? 'tickets'
     : a.key.startsWith('maintenance') ? 'maintenance' : a.key.startsWith('versions') || a.key === 'restartSoon' ? 'versions' : 'health');
   const slides = $derived.by(() => {
     const areas = new Map();
@@ -205,6 +208,7 @@
   // Which part of the server a warning is about.
   function areaOf(a) {
     if (a.module) return (data?.tiles ?? []).find((m) => m.id === a.module)?.label ?? a.module;
+    if (a.key.startsWith('room')) return t('nav.serverRoom');
     if (a.key.startsWith('tickets')) return t('nav.tickets');
     if (a.key.startsWith('maintenance')) return t('nav.maintenance');
     if (a.key.startsWith('versions') || a.key === 'restartSoon') return t('nav.versions');

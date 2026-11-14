@@ -57,17 +57,30 @@ Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau
 - **Server → Warteraum → Konsole** zeigt die Ausgabe live und nimmt Befehle an - mit denselben Regeln wie beim Hauptserver: Permission `mradmin.web.console.execute`, Entsperren mit 2FA-Code oder Passkey (gilt für beide Konsolen), Sperrliste `web.console.blocked`, jeder Befehl im Web-Protokoll (mit „[waitroom]“). Links und IP-Adressen werden wie beim Hauptserver ausgeblendet.
 - Im Warteraum lassen sich Befehle aus MRadmin mit `agent.console-commands: false` ganz abschalten - die Konsole zeigt dann nur die Ausgabe.
 
-## Warteraum-Server neu starten
-Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Warteraum → Steuerung** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
+## Warteraum-Server steuern
+**Server → Warteraum → Steuerung** steuert den Warteraum-Server wie den Hauptserver (Permission `mradmin.server.restart`):
+
+- **Werte:** Zustand (mit wartenden Spielern), läuft seit, Paper-Build (gelb, wenn ein neuerer Build für dieselbe Minecraft-Version da ist - der Starter spielt ihn beim nächsten Start ein), Starter, nächster geplanter Neustart.
+- **Neu starten** und **Stoppen** in 15, 30 oder 60 Minuten (`versions.restart-delays`), optional mit **Grund**. Kürzere Zeiten über **Notfall** - erst neu bestätigen (2FA-Code oder Passkey), dann Pflicht-Grund (`versions.emergency-delays`).
+- Ein laufender Countdown steht mit Uhr, Auslöser und Grund in der Kachel, **Abbrechen** beendet ihn.
+- Mit geplanten Neustarts (`server.restart-times` in MRwaitroom): **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**.
+- Darunter die Plugins des Warteraums und seine letzten Ereignisse.
+
+Ein **Neustart** wartet zur Zeit noch, bis er darf:
 
 - dein Server läuft und ist bereit,
 - **keine Wartung** läuft,
 - **kein Neustart deines Servers** in den nächsten 15 Minuten ansteht,
-- **niemand im Warteraum** wartet.
+- **niemand im Warteraum** wartet (höchstens 10 Minuten, dann wird er aufgegeben).
 
-Ist etwas davon nicht erfüllt, steht der Grund in der Kachel. Geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (`server.restart-times`) - sie warten genauso, bis es passt.
+Ist etwas davon schon beim Klick nicht erfüllt, ist der Knopf gesperrt und der Grund steht darunter. Ein **Stopp** und ein **Notfall-Neustart** warten nicht - Wartende kommen dann über den Proxy auf deinen Server. Ohne Starter bleibt der Warteraum nach einem Stopp aus.
 
 **Solange der Warteraum neu startet**, lehnt MRadmin Neustart und Stopp deines Servers ab (Browser, `/mradmin restart|stop`, `mrserver`) - die Spieler hätten sonst keinen Platz zum Warten. Das dauert meist nur ein paar Sekunden.
+
+## Hinweise und Warnungen
+- Die **Übersicht** (Dashboard) und die Zähler in der Seitenleiste zeigen den Warteraum mit: meldet er sich nicht (rot), laggt er, läuft ein Countdown.
+- Die Lag-Warnung kommt im Spiel, als Push (Art „Lag“) und in den Discord-Log (Ereignisse `waitroom-health-alert` und `waitroom-health-recovered` in `discord.events`).
+- Unter **Server → Warteraum → Plugins** steht MRwaitroom zum Verwalten und darunter - nur zur Ansicht - **alle Plugins** des Warteraum-Servers mit Version.
 
 ## Rechte im Warteraum
 Was das Team rund um den Warteraum darf, legst du in einer **Tabelle** fest: Konfiguration von MRadmin → **Warteraum** → **Rechte pro Rolle** (`waiting-room.rights`). Zeilen sind die Team-Rollen **Admin**, **Staff** und **Supporter** (es zählt die höchste von `mradmin.groups.admin`, `.staff`, `.support`), jede Zelle ist **Nein**, **Ja** oder **Nur im Admin-Modus**. Normale Spieler haben keines der Rechte.

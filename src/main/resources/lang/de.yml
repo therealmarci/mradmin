@@ -701,6 +701,8 @@ discord:
   web-console: "⌨️ **{player}** hat in der Web-Konsole ausgeführt: `{command}`"
   health-alert: "🐢 Der Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
   health-recovered: "✅ Der Server läuft wieder flüssig: **{tps} TPS**."
+  waitroom-health-alert: "🐢 Der Warteraum-Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
+  waitroom-health-recovered: "✅ Der Warteraum-Server läuft wieder flüssig: **{tps} TPS**."
   plugin-update-downloaded: "⬇️ **{plugin} {version}** heruntergeladen (installiert: {installed}) - wird beim nächsten Neustart aktiv. Von: {admin}"
   server-restart: "🔄 **{admin}** startet den Server neu (Countdown: {time}, Grund: {reason})."
   server-restart-cancelled: "❎ **{admin}** hat den Neustart abgebrochen."

@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 61
+config-version: 62
 
 
 # ------------------------------------------------------------------------------
@@ -915,6 +915,13 @@ discord:
       enabled: true
       color: "#E74C3C"
     health-recovered:
+      enabled: true
+      color: "#2ECC71"
+    # The same for the waiting room server (read through its agent).
+    waitroom-health-alert:
+      enabled: true
+      color: "#E74C3C"
+    waitroom-health-recovered:
       enabled: true
       color: "#2ECC71"
     plugin-update-downloaded:

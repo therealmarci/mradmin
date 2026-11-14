@@ -701,6 +701,8 @@ discord:
   web-console: "⌨️ **{player}** ran in the web console: `{command}`"
   health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
   health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
+  waitroom-health-alert: "🐢 The waiting room server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
+  waitroom-health-recovered: "✅ The waiting room server runs smoothly again: **{tps} TPS**."
   plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
   server-restart: "🔄 **{admin}** restarts the server (countdown: {time}, reason: {reason})."
   server-restart-cancelled: "❎ **{admin}** cancelled the restart."

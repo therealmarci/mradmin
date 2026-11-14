@@ -7,7 +7,8 @@
   import { duration } from '../lib/format.js';
   import * as passkeys from '../lib/passkeys.js';
 
-  let { me, delays, canRestart, starterActive, reason: startReason = '', onclose, ondone } = $props();
+  // room: the waiting room server (POST /api/waitroom/control) instead of this server (POST /api/restart)
+  let { me, delays, canRestart, starterActive, reason: startReason = '', onclose, ondone, room = false } = $props();
 
   let dialog = $state();
   let step = $state('auth');
@@ -55,7 +56,8 @@
     busy = true;
     error = '';
     try {
-      await api('POST', '/restart', { delay: String(delay), kind, reason: reason.trim() });
+      if (room) await api('POST', '/waitroom/control', { action: kind, delay: String(delay), reason: reason.trim() });
+      else await api('POST', '/restart', { delay: String(delay), kind, reason: reason.trim() });
       close();
       ondone?.(t(kind === 'stop' ? 'server.stopStarted' : 'versions.restartStarted'));
     } catch (e) {

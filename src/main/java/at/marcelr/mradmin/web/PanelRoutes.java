@@ -90,8 +90,20 @@ public final class PanelRoutes {
             });
             var room = plugin.waitingRoom().remote().report("MRwaitroom");
             if (plugin.waitingRoom().active() && room != null) {
-                network.put("room", Map.of("online", room.online() && plugin.waitingRoom().roomUp(),
-                        "restarting", plugin.waitingRoom().roomRestarting()));
+                boolean online = room.online() && plugin.waitingRoom().roomUp();
+                boolean restarting = plugin.waitingRoom().roomRestarting();
+                network.put("room", Map.of("online", online, "restarting", restarting));
+                // Hints of the waiting room for the dashboard and the sidebar: gone, lagging, a countdown.
+                var control = plugin.roomAgent().control();
+                if (!online && !restarting) {
+                    alerts.add(alert("bad", "roomOffline", "room", Map.of()));
+                } else if (plugin.roomAgent().online() && plugin.roomAgent().tps() < plugin.settings().health().alertTps()) {
+                    alerts.add(alert("warn", "roomTps", "room-health", Map.of("value", plugin.roomAgent().tps())));
+                }
+                if (control.get("dueAt") instanceof Number due && due.longValue() > 0) {
+                    alerts.add(alert("info", "stop".equals(control.get("dueKind")) ? "roomStop" : "roomRestart", "room",
+                            Map.of("time", due.longValue())));
+                }
             }
             result.put("network", network);
         }

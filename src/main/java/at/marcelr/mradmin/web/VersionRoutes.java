@@ -56,6 +56,8 @@ public final class VersionRoutes {
         server.route("POST", "/api/restart/schedule", r::schedule);
         server.route("POST", "/api/restart/confirm", r::confirmEmergency);
         server.route("POST", "/api/waitroom/restart", r::waitroomRestart);
+        server.route("POST", "/api/waitroom/control", r::waitroomControl);
+        server.route("GET", "/api/waitroom/plugins", r::waitroomPlugins);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -205,12 +207,100 @@ public final class VersionRoutes {
             room.put("version", remoteRoom.version());
             room.put("ordered", plugin.waitingRoom().remote().openOrder("MRwaitroom", "restart") != null);
             room.put("error", plugin.waitingRoom().remote().error("MRwaitroom"));
+            // Live from its agent (every second): countdown, pause, planned restarts, starter, Paper - overrides the report.
+            var live = plugin.roomAgent().control();
+            room.putAll(live);
+            room.put("agent", !live.isEmpty());
+            // A newer Paper build for the same Minecraft version (MRadmin knows the newest one; the starter there puts it
+            // in on the next start of the waiting room).
+            room.put("paperNewest", plugin.starter().paperLatestBuild());
             result.put("waitroom", room);
         }
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /**
+     * POST /api/waitroom/control {action, delay, reason} - like the main server: restart | stop after one of the
+     * configured delays (shorter = emergency: reason required and a fresh sign-in, POST /api/restart/confirm), cancel,
+     * pause | resume the planned restarts. Carried out by the waiting room's agent; it answers with the reason if not.
+     */
+    private void waitroomControl(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        String action = String.valueOf(http.string("action"));
+        com.google.gson.JsonObject body = new com.google.gson.JsonObject();
+        body.addProperty("action", action);
+        body.addProperty("by", http.account().name() + " (web)");
+        boolean emergency = false;
+        long delay = 0;
+        if (action.equals("restart") || action.equals("stop")) {
+            try {
+                delay = Long.parseLong(String.valueOf(http.string("delay")).trim());
+            } catch (NumberFormatException ex) {
+                throw new Http.WebException(400, "invalid-duration");
+            }
+            String reason = http.string("reason");
+            emergency = !plugin.settings().versions().restartDelays().contains(delay);
+            if (emergency && !plugin.settings().versions().emergencyDelays().contains(delay)) {
+                throw new Http.WebException(400, "invalid-duration");
+            }
+            if (emergency && (reason == null || reason.isBlank())) {
+                throw new Http.WebException(400, "restart-reason-required");
+            }
+            if (emergency) {
+                Long until = emergencyOk.remove(http.session().id());
+                if (until == null || until < System.currentTimeMillis()) {
+                    throw new Http.WebException(403, "restart-confirm-required");
+                }
+            }
+            body.addProperty("delay", delay);
+            body.addProperty("reason", reason == null ? "" : reason.strip());
+            body.addProperty("force", emergency);
+        } else if (!java.util.Set.of("cancel", "pause", "resume").contains(action)) {
+            throw new Http.WebException(400, "bad-request");
+        }
+        int status;
+        String answer;
+        try {
+            var reply = plugin.roomAgent().postFull("/agent/control", body.toString());
+            status = reply.getKey();
+            answer = reply.getValue();
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        if (status == 409) {
+            String code = "unknown";
+            try {
+                code = com.google.gson.JsonParser.parseString(answer).getAsJsonObject().get("error").getAsString();
+            } catch (RuntimeException ignored) {
+                // keep unknown
+            }
+            throw new Http.WebException(409, "waitroom-" + code);
+        }
+        if (status != 200) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        audit(http, "waitroom-" + action, action.equals("restart") || action.equals("stop")
+                ? delay / 1000 + " s" + (emergency ? " (emergency)" : "") : "");
+        http.json(200, Map.of());
+    }
+
+    /** GET /api/waitroom/plugins - all plugins of the waiting room server (name, version, enabled), read only. */
+    private void waitroomPlugins(Http http) throws Exception {
+        require(http, mayView(server, http.account().id()));
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        try {
+            http.json(200, new com.google.gson.Gson().fromJson(plugin.roomAgent().get("/agent/plugins"), Map.class));
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
     }
 
     /** POST /api/waitroom/restart - the waiting room restarts as soon as it may (it checks the rules itself). */

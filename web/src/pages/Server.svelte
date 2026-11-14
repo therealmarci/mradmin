@@ -26,7 +26,7 @@
     ...(me.may.consoleExecute ? ['console'] : []),
   ]);
   const current = $derived(tabs.includes(tab ?? 'overview') ? (tab ?? 'overview') : tabs[0]);
-  const open = (id) => go(id === 'overview' ? '/server' : '/server/' + id, true);
+  const open = (id) => go(id === 'overview' ? '/admin/server' : '/admin/server/' + id);
 
   let data = $state(null);
   let events = $state(null);
@@ -50,13 +50,13 @@
   async function loadEvents() {
     if (!me.may.audit) return;
     try {
-      events = (await api('GET', '/logs?events=1&limit=6')).entries;
+      events = (await api('GET', '/logs?events=1&limit=6' + (part === 'room' ? '&server=room' : ''))).entries;
     } catch {
       events = [];
     }
   }
 
-  const counting = $derived(!!data && data.restart.endsAt > 0);
+  const counting = $derived(!!data && (data.restart.endsAt > 0 || data.waitroom?.dueAt > 0));
   $effect(() => {
     if (current !== 'overview') return;
     load();
@@ -117,6 +117,45 @@
     : r?.endsAt > 0 ? 'main-restart-soon' : null);
   const restartRoom = () => act('/waitroom/restart', {}, t('server.room.ordered'), t('server.room.confirm'));
 
+  // The full control of the waiting room (part room, since 1.6): like the main server, carried out by its agent.
+  let roomReason = $state('');
+  let roomEmergency = $state();
+  let roomPlugins = $state(null);
+  const roomLeft = $derived(room && room.dueAt > 0 ? Math.max(0, room.dueAt - now) : 0);
+  const roomPaused = $derived(room?.pausedUntil > now ? room.pausedUntil : 0);
+  const roomPaperNew = $derived(room && room.paperNewest > 0 && room.paper > 0 && room.paperNewest > room.paper ? room.paperNewest : 0);
+  // A restart (not a stop) is refused at once for these reasons; waiting players only delay it.
+  const roomRestartLock = $derived(!room ? null : !room.starter ? 'no-starter'
+    : room.blocked && room.blocked !== 'players-waiting' ? room.blocked : null);
+  /** A refusal of the waiting room: its own text (Neustart gesperrt: ...) if there is one. */
+  function roomError(e) {
+    const code = e?.key?.startsWith('waitroom-') ? e.key.slice(9) : null;
+    const text = code ? t('server.room.blocked.' + code) : '';
+    return code && !text.startsWith('server.room.') ? text : errorText(e);
+  }
+  async function roomAct(action, delay, done, question) {
+    if (question && !confirm(question)) return;
+    busy = true;
+    error = '';
+    message = '';
+    try {
+      await api('POST', '/waitroom/control', { action, delay: String(delay ?? 0), reason: roomReason.trim() });
+      if (action === 'restart' || action === 'stop') roomReason = '';
+      message = done;
+      await load();
+    } catch (e) {
+      error = roomError(e);
+    } finally {
+      busy = false;
+    }
+  }
+  const roomRestart = (d) => roomAct('restart', d, t('server.room.ordered'), t('server.room.confirmIn', { time: delayText(d) }));
+  const roomStop = (d) => roomAct('stop', d, t('server.room.stopOrdered'), t('server.room.stopConfirm', { time: delayText(d) }));
+  $effect(() => {
+    if (part !== 'room' || !me.may.versions) return;
+    api('GET', '/waitroom/plugins').then((d) => (roomPlugins = d.plugins)).catch(() => (roomPlugins = null));
+  });
+
   // The values of the server card: one word each, the rest in the tooltip.
   const pausedUntil = $derived(r?.schedule?.pausedUntil > now ? r.schedule.pausedUntil : 0);
   const paperStaged = $derived(r && r.paper.staged >= 0 ? r.paper.staged : 0);
@@ -142,30 +181,6 @@
 </script>
 
 <div class="page">
-  {#if !bare}
-  <header class="head">
-    <span class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round"><path d={ICONS.server} /></svg>
-    </span>
-    <div class="title">
-      <h1>{t('server.title')}</h1>
-      <p class="muted">{t('server.subtitle')}</p>
-    </div>
-  </header>
-
-  {/if}
-
-  {#if tabs.length > 1 && !bare}
-    <div class="switch" role="tablist">
-      {#each tabs as id (id)}
-        <button role="tab" aria-selected={current === id} class:active={current === id} onclick={() => open(id)}>
-          {t('server.tab.' + id)}
-          {#if id === 'plugins' && updates.length}<span class="n">{updates.length}</span>{/if}
-        </button>
-      {/each}
-    </div>
-  {/if}
 
   {#if current === 'overview'}
     {#if error}<div class="error">{error}</div>{/if}
@@ -280,7 +295,143 @@
       {#if part === 'room' && !room}
         <p class="muted">{t('server.room.none')}</p>
       {/if}
-      {#if room && part !== 'main'}
+      {#if room && part === 'room'}
+        <!-- The waiting room server: the same control as the main server (values, restart / stop, emergency, pause) -->
+        <section class="card server" class:counting={room.dueAt > 0}>
+          <div class="stats">
+            <div class="stat" title={room.error ? t('server.room.blocked.' + room.error) : ''}>
+              <span class="s-label">{t('server.room.state')}</span>
+              <span class="s-value"><span class="dot {roomTone}"></span>{roomState}</span>
+              <span class="s-sub">{t('server.room.players', { n: room.online ? (room.players ?? 0) : 0 })}</span>
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.uptime')}</span>
+              <span class="s-value">{room.online && room.startedAt ? duration(Math.max(0, now - room.startedAt)) : '–'}</span>
+            </div>
+            <div class="stat" title={roomPaperNew ? t('server.room.paperNew', { build: roomPaperNew }) : t('server.room.paperTip')}>
+              <span class="s-label">{t('server.paper')}</span>
+              <span class="s-value"><span class="dot {roomPaperNew ? 'warn' : room.paper ? '' : 'off'}"></span>{room.minecraft ?? ''} · #{room.paper || '–'}</span>
+              {#if roomPaperNew}<span class="s-sub warn">{t('server.paperLatestShort', { build: roomPaperNew })}</span>{/if}
+            </div>
+            <div class="stat">
+              <span class="s-label">{t('server.starter')}</span>
+              <span class="s-value"><span class="dot {room.starter ? '' : 'off'}"></span>{t(room.starter ? 'server.starterOn' : 'server.starterOff')}</span>
+            </div>
+            <div class="stat" title={roomPaused ? t('server.pausedBy', { name: room.pausedBy, time: when(roomPaused) }) : ''}>
+              <span class="s-label">{t('server.next')}</span>
+              {#if roomPaused}
+                <span class="s-value"><span class="dot warn"></span>{t('server.nextPaused')}</span>
+                <span class="s-sub">{t('server.pausedUntil', { time: when(roomPaused) })}</span>
+              {:else}
+                {@const next = room.nextPlanned || room.nextRestart}
+                <span class="s-value"><span class="dot" class:info={!!next} class:off={!next}></span>{next ? when(next) : t('server.nextNone')}</span>
+              {/if}
+            </div>
+          </div>
+
+          <div class="control">
+            {#if room.dueAt > 0}
+              <div class="countdown">
+                <span class="status">{t('server.countdown.' + room.dueKind)}{#if room.dueForce} · {t('server.emergencyRow')}{/if}</span>
+                <span class="clock mono">{roomLeft > 0 ? clock(roomLeft) : t('server.room.dueWaiting')}</span>
+                <span class="muted small">{t('versions.restartBy', { name: room.dueBy })}</span>
+                {#if room.dueReason}<span class="reason small">{t('server.reasonShown', { reason: room.dueReason })}</span>{/if}
+              </div>
+              {#if data.may.stop}
+                <div class="actions">
+                  <button class="ghost" disabled={busy} onclick={() => roomAct('cancel', 0, t('server.cancelled'))}>{t('versions.restartCancel')}</button>
+                </div>
+              {/if}
+            {:else if data.may.stop}
+              <label class="row">
+                <span class="label">{t('server.reason')}</span>
+                <input class="reason-input" type="text" maxlength="200" bind:value={roomReason} placeholder={t('server.reasonPlaceholder')} />
+              </label>
+              <div class="row">
+                <span class="label">{t('server.restart')}</span>
+                <div class="choices">
+                  {#each r.delays as d (d)}
+                    <button class="secondary" disabled={busy || !room.online || !!roomRestartLock} onclick={() => roomRestart(d)}>{delayText(d)}</button>
+                  {/each}
+                </div>
+              </div>
+              {#if roomRestartLock}<p class="muted small">{t('server.room.blocked.' + roomRestartLock)}</p>
+              {:else if room.blocked === 'players-waiting'}<p class="muted small">{t('server.room.blocked.players-waiting')}</p>{/if}
+              <div class="row">
+                <span class="label">{t('server.stop')}</span>
+                <div class="choices">
+                  {#each r.delays as d (d)}
+                    <button class="danger-ghost" disabled={busy || !room.online} onclick={() => roomStop(d)}>{delayText(d)}</button>
+                  {/each}
+                </div>
+              </div>
+              {#if r.emergencyDelays.length}
+                <div class="row">
+                  <span class="label">{t('server.emergencyRow')}</span>
+                  <div class="choices">
+                    <button class="danger" disabled={busy || !room.online} title={t('server.emergencyTip')}
+                      onclick={() => roomEmergency.open()}>{t('server.emergencyButton')}</button>
+                  </div>
+                </div>
+              {/if}
+              {#if !room.online}<p class="muted small">{t('server.room.blocked.remote-offline')}</p>{/if}
+            {/if}
+
+            {#if data.may.stop && room.restartTimes > 0}
+              <div class="schedule">
+                {#if roomPaused}
+                  <span class="small">{t('server.paused', { time: when(roomPaused) })}</span>
+                  <button class="ghost" disabled={busy} onclick={() => roomAct('resume', 0, t('server.resumeDone'))}>{t('server.resume')}</button>
+                {:else}
+                  <button class="ghost" disabled={busy}
+                    onclick={() => roomAct('pause', 0, t('server.pauseDone'), t('server.room.pauseConfirm'))}>{t('server.pause')}</button>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        </section>
+
+        {#if data.may.stop && r.emergencyDelays.length}
+          <EmergencyRestart bind:this={roomEmergency} {me} delays={r.emergencyDelays} canRestart={room.starter}
+            starterActive={room.starter} reason={roomReason} room ondone={(text) => { roomReason = ''; message = text; load(); }} />
+        {/if}
+
+        <div class="tiles">
+          <button class="card tile" onclick={() => go('/admin/server/room/plugins')}>
+            <span class="t-head">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true"><path d={ICONS.box} /></svg>
+              {t('server.plugins')}
+              <span class="go">→</span>
+            </span>
+            <span class="big">{roomPlugins ? t('server.pluginsInstalled', { n: roomPlugins.length }) : '–'}</span>
+            {#if roomPlugins}<span class="line muted">{roomPlugins.map((p) => p.name).join(', ')}</span>{/if}
+          </button>
+          {#if me.may.audit}
+            <div class="card tile events">
+              <span class="t-head">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" aria-hidden="true"><path d={ICONS.news} /></svg>
+                {t('server.events')}
+                <button class="link" onclick={() => go('/admin/server/room/logs')}>{t('server.all')} →</button>
+              </span>
+              {#if events && events.length}
+                <ul>
+                  {#each events as e (e.time + e.event + e.text)}
+                    <li>
+                      <span class="bar" style="background: {e.color}"></span>
+                      <span class="when muted">{ago(e.time)}</span>
+                      <span class="what" title={e.text}>{e.text}</span>
+                    </li>
+                  {/each}
+                </ul>
+              {:else if events}
+                <p class="muted small">{t('server.eventsNone')}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {:else if room && part !== 'main'}
         <!-- The waiting room server: the four values that matter, the button on the right -->
         <section class="card room" class:off={roomTone === 'bad'} class:busy={roomTone === 'info'}>
           <div class="room-title">
@@ -387,56 +538,7 @@
     box-shadow: var(--shadow);
   }
 
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 52px;
-    height: 52px;
-    flex: none;
-    border-radius: 14px;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-
-  .title p {
-    margin: 2px 0 0;
-  }
-
   /* Tabs: same look as on the duels page */
-  .switch {
-    display: flex;
-    flex-wrap: wrap;
-    justify-self: start;
-    padding: 4px;
-    gap: 4px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .switch button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    background: transparent;
-    color: var(--muted);
-    padding: 7px 14px;
-    border-radius: 9px;
-    font-size: 0.9rem;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
-
   .n {
     font-size: 0.72rem;
     font-weight: 700;
@@ -806,18 +908,6 @@
     }
 
     /* Tabs stay in one row and scroll sideways */
-    .switch {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      justify-self: stretch;
-      scrollbar-width: none;
-    }
-
-    .switch button {
-      flex: none;
-      padding: 7px 12px;
-    }
-
     .head {
       padding: 18px;
     }

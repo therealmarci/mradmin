@@ -40,6 +40,9 @@ public final class RoomAgent {
     /** Time of the newest event of the waiting room already in the log (0 = look it up in the log first). */
     private long lastEvent = -1;
     private int round;
+    /** The newest control state of the waiting room (countdown, pause, starter, Paper ...) and its 1-minute TPS. */
+    private volatile java.util.Map<String, Object> control = java.util.Map.of();
+    private volatile double tps1m = 20;
     /** Source of the waiting room's events in MRadmin's log. */
     public static final String SOURCE = "waitroom";
 
@@ -51,6 +54,16 @@ public final class RoomAgent {
     /** The recorded health of the waiting room server. */
     public HealthMonitor health() {
         return health;
+    }
+
+    /** Countdown, pause and server values of the waiting room as of its last answer (empty while it does not answer). */
+    public java.util.Map<String, Object> control() {
+        return online() ? control : java.util.Map.of();
+    }
+
+    /** The waiting room's 1-minute TPS as of its last answer. */
+    public double tps() {
+        return tps1m;
     }
 
     /** Whether the agent answered within the last few seconds. */
@@ -101,6 +114,10 @@ public final class RoomAgent {
             List<HealthMonitor.Point> points = GSON.fromJson(o.get("points"), new TypeToken<List<HealthMonitor.Point>>() { }.getType());
             List<HealthMonitor.WorldInfo> worlds = GSON.fromJson(o.get("worlds"), new TypeToken<List<HealthMonitor.WorldInfo>>() { }.getType());
             double tps1m = o.has("tps1m") ? o.get("tps1m").getAsDouble() : 20;
+            this.tps1m = tps1m;
+            if (o.has("control") && o.get("control").isJsonObject()) {
+                control = GSON.fromJson(o.get("control"), new TypeToken<java.util.Map<String, Object>>() { }.getType());
+            }
             for (HealthMonitor.Point p : points) {
                 health.accept(p, worlds == null ? List.of() : worlds, tps1m);
             }
@@ -144,6 +161,11 @@ public final class RoomAgent {
 
     /** A POST with a JSON body to the agent (a console command); returns the status code. */
     public int post(String path, String json) throws IOException, InterruptedException {
+        return postFull(path, json).getKey();
+    }
+
+    /** A POST with a JSON body to the agent: status code and answer. */
+    public java.util.Map.Entry<Integer, String> postFull(String path, String json) throws IOException, InterruptedException {
         String url = plugin.waitingRoom().agentUrl();
         if (url == null) {
             throw new IOException("no waiting room agent");
@@ -152,7 +174,8 @@ public final class RoomAgent {
                 .header("Authorization", "Bearer " + plugin.waitingRoom().config().key())
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json)).build();
-        return http.send(request, HttpResponse.BodyHandlers.ofString()).statusCode();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        return java.util.Map.entry(response.statusCode(), response.body());
     }
 
     /**
