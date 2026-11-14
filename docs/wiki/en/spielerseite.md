@@ -9,7 +9,7 @@ The page always has the same address (`<address of the server>/me`) - best save 
 2. The chat shows the link to the page and the code - a click on the code copies it.
 3. Enter the code on the page. It is valid for 2 minutes and only once.
 
-After that the device stays signed in for **at most 14 days** and is signed out after **7 days without a visit** - then the page simply asks for a code again. `/web devices` shows on how many devices you are signed in, `/web logout` signs out all of them. Single devices can also be signed out on the page under **Sign-ins & devices** (click your name at the top right), which also shows how long the sign-in is still valid.
+After that the device stays signed in for **at most 14 days** and is signed out after **7 days without a visit** - then the page simply asks for a code again. `/web status` shows your account (own sign-ins, devices), `/web devices` on how many devices you are signed in, `/web logout` signs out all of them. `/web reset` removes your own sign-ins (password, 2FA, passkeys, Discord, e-mail) after asking - e.g. when your phone is gone; afterwards `/web` gets you in again. Single devices can also be signed out on the page under **Sign-ins & devices** (click your name at the top right), which also shows how long the sign-in is still valid.
 
 **Sign in without the game:** under **Sign-ins & devices** you can set up an own sign-in - a **password** (sign in with your player name or your confirmed e-mail address), a **passkey** (fingerprint, Face ID, Windows Hello) or **Discord**. Then you also get in from your phone without typing `/web` first. Optional on top: **2FA** with an authenticator app. With an e-mail address, "Forgot password?" on the sign-in page helps.
 

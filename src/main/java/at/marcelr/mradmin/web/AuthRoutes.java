@@ -45,7 +45,6 @@ import java.util.Map;
  */
 public final class AuthRoutes {
 
-    public static final String PERM_MANAGE = at.marcelr.mradmin.Perms.WEB_MANAGE;
 
     private final WebServer server;
     private final MRAdmin plugin;

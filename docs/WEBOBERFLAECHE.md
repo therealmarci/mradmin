@@ -38,11 +38,12 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 | Befehl | Was er tut | Permission |
 |---|---|---|
 | `/web` | Code für die Anmeldung (für Spieler und Team) | `mradmin.web.self` oder `mradmin.web` |
-| `/mradmin web` | Status (läuft, Adresse, Konten mit eigener Anmeldung, Geräte) | `mradmin.web` |
-| `/mradmin web sessions [spieler]` | Angemeldete Geräte | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web logout [spieler]` | Alle Geräte abmelden | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web reset <spieler>` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy | `mradmin.web.manage` |
-| `/mradmin web remove <spieler>` | Konto löschen | `mradmin.web.manage` |
+| `/web status` | Eigenes Konto: Adresse, eigene Anmeldungen (Passwort, Passkeys, Discord, 2FA), angemeldete Geräte | wie `/web` |
+| `/web devices` | Wie viele Geräte angemeldet sind, mit Knopf zum Abmelden | wie `/web` |
+| `/web logout` | Alle eigenen Geräte abmelden | wie `/web` |
+| `/web reset` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy; fragt per Klick nach | wie `/web` |
+
+`/web` verwaltet nur das **eigene** Konto - auch das Team ändert keine fremden Konten aus dem Spiel. `/mradmin web` gibt es nicht mehr.
 
 **Passwort vergessen?** Mit bestätigter E-Mail-Adresse kommt über „Passwort vergessen?“ ein Link per Mail (braucht `mail.*`). Und `/web` im Spiel geht immer.
 
@@ -60,7 +61,7 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 - Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`; Sitzungs-Cookies, Wiederherstellungscodes und Mail-Links nur als Hash. Änderungen nur mit eigenem Header und passender Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
 - Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über `web.roles` und `web.players`. Wer `mradmin.web` verliert, sieht die Verwaltung sofort nicht mehr (bleibt aber als Spieler angemeldet).
 - Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen auch im Discord-Log (`web-login`).
-- **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks (`/mradmin web setup`, `invite`) gibt es nicht mehr.
+- **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks gibt es nicht mehr.
 
 ## Aussehen (Einstellungen, `mradmin.appearance`)
 Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler taucht „MRadmin“ nirgends auf.

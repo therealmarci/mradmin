@@ -38,11 +38,12 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 | Command | What it does | Permission |
 |---|---|---|
 | `/web` | Code to sign in (players and team) | `mradmin.web.self` or `mradmin.web` |
-| `/mradmin web` | Status (running, address, accounts with an own sign-in, devices) | `mradmin.web` |
-| `/mradmin web sessions [player]` | Signed-in devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web logout [player]` | Sign out all devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web reset <player>` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone | `mradmin.web.manage` |
-| `/mradmin web remove <player>` | Delete the account | `mradmin.web.manage` |
+| `/web status` | Own account: address, own sign-ins (password, passkeys, Discord, 2FA), signed-in devices | like `/web` |
+| `/web devices` | How many devices are signed in, with a button to sign them out | like `/web` |
+| `/web logout` | Sign out all own devices | like `/web` |
+| `/web reset` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone; asks with a click first | like `/web` |
+
+`/web` only manages the **own** account - the team does not change other players' accounts from the game either. `/mradmin web` is gone.
 
 **Forgot the password?** With a confirmed e-mail address, "Forgot password?" sends a link by mail (needs `mail.*`). And `/web` in game always works.
 
@@ -60,7 +61,7 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 - Cookies: `HttpOnly`, `SameSite=Strict`, over HTTPS `Secure`; session cookies, recovery codes and mail links only as hashes. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
 - The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
 - Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
-- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
+- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links are gone.
 
 ## Appearance (Server, `mradmin.appearance`)
 The web interface carries the name and colours of your server - players never see "MRadmin".

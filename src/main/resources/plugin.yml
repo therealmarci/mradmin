@@ -15,15 +15,15 @@ description: Admin tools - maintenance mode with Uptime Kuma, tickets, announcem
 commands:
   mradmin:
     description: Management of MRadmin (announcements, admin mode, maintenance).
-    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|web|mail|map|mute|discord|storage|reload|restart|stop|starter|version|help]
+    usage: /mradmin [announce|mode|player|tp|status|tickets|maintenance|mail|map|mute|discord|storage|reload|restart|stop|starter|version|help]
     aliases: [mra]
   report:
     description: Ticket menu - report players, report bugs, other requests, own tickets.
     usage: /report [player]
     aliases: [melden, ticket, tickets, support]
   web:
-    description: "Your own page in the web interface: its address and a 6-digit code to sign in, /web devices, /web logout."
-    usage: /web [devices|logout]
+    description: "Your own page and account in the web interface: address and a 6-digit code to sign in, /web status, /web devices, /web logout, /web reset."
+    usage: /web [status|devices|logout|reset]
     aliases: [website, me]
   staffchat:
     description: Chat for the team only (without a message it toggles).
@@ -231,7 +231,7 @@ permissions:
     description: View the log of all web actions.
     default: op
   mradmin.web.manage:
-    description: "Manage other players' web accounts (/mradmin web sessions|logout|reset|remove)."
+    description: "Send a test e-mail (/mradmin mail test)."
     default: op
   mradmin.web.console.view:
     description: Read the console output on the page Log of the web interface (no commands).

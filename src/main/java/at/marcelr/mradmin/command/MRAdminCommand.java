@@ -51,12 +51,10 @@ public final class MRAdminCommand implements TabExecutor {
     public static final String PERM_DISCORD = at.marcelr.mradmin.Perms.ADMIN_DISCORD;
 
     private final MRAdmin plugin;
-    private final WebCommand webCommand;
     private final ServerCommand serverCommand;
 
     public MRAdminCommand(MRAdmin plugin) {
         this.plugin = plugin;
-        this.webCommand = new WebCommand(plugin);
         this.serverCommand = new ServerCommand(plugin);
     }
 
@@ -125,7 +123,8 @@ public final class MRAdminCommand implements TabExecutor {
                     teleport(sender, args);
                 }
             }
-            case "web" -> webCommand.handle(sender, args);
+            // Everything about the own web account is in /web now.
+            case "web" -> messages().send(sender, "web-moved");
             case "mail" -> {
                 if (check(sender, at.marcelr.mradmin.Perms.WEB_MANAGE)) {
                     mailTest(sender, args);
@@ -698,7 +697,6 @@ public final class MRAdminCommand implements TabExecutor {
             addIf(sender, at.marcelr.mradmin.Perms.NOTIFY_MUTE, options, "mute");
             addIf(sender, at.marcelr.mradmin.Perms.SERVER_RESTART, options, "restart", "stop", "starter");
             addIf(sender, at.marcelr.mradmin.Perms.ADMIN_STORAGE, options, "storage");
-            addIf(sender, at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB, options, "web");
             addIf(sender, at.marcelr.mradmin.Perms.WEB_MANAGE, options, "mail");
             options.add("help");
             addIf(sender, at.marcelr.mradmin.Perms.PLAYER_VIEW, options, "player");
@@ -746,7 +744,6 @@ public final class MRAdminCommand implements TabExecutor {
                         Npcs.online().forEach(p -> options.add(p.getName()));
                     }
                 }
-                case "web" -> options.addAll(WebCommand.complete(sender, args));
                 case "mute", "stumm" -> {
                     if (args.length == 2) {
                         options.addAll(List.of("30m", "1h", "2h", "off"));

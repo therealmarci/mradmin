@@ -90,6 +90,18 @@ public final class WebAuth {
             return password != null;
         }
 
+        public int passkeyCount() {
+            return passkeys.size();
+        }
+
+        public boolean hasTotp() {
+            return totp != null;
+        }
+
+        public boolean hasDiscord() {
+            return discordId != null;
+        }
+
         /** Whether the player can sign in without the game: password, passkey or Discord. */
         public boolean ownLogin() {
             return password != null || !passkeys.isEmpty() || discordId != null;

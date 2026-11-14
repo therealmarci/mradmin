@@ -4,7 +4,7 @@
 |---|---|---|
 | `/mradmin` (`/mra`) | Admin dashboard · `/mradmin help` shows all commands | `mradmin.dashboard` |
 | `/report [player]` (`/melden`, `/ticket`, `/support`) | Ticket menu: report players, report bugs, other concerns, own tickets | `mradmin.tickets.create` |
-| `/web [devices\|logout]` (`/me`) | Link and 6-digit code for your own player page · own devices · sign out | `mradmin.web.self` |
+| `/web [status\|devices\|logout\|reset]` (`/me`) | Link and 6-digit code for your own page · own account (sign-ins, devices) · sign out all devices · remove own sign-ins (with confirmation) | `mradmin.web.self` or `mradmin.web` |
 | `/sc [message]` | Staff chat (without a message: on/off) | `mradmin.staffchat` |
 | `/mradmin mode [on\|off\|toggle] [player]` · `mode list` | Admin mode for you · for others · who is in it | `mradmin.mode` · `.mode.others` |
 | `/mradmin announce [-d] [-q] <text\|template> [values]` | Announcement as title, chat and action bar (`-d` also on Discord, `-q` without sound) | `mradmin.announce` |
@@ -12,7 +12,6 @@
 | `/mradmin tickets` | All tickets | `mradmin.tickets.view` |
 | `/mradmin player <player>` · `tp <player>` | Player menu · teleport to a player | `mradmin.player.view` · `.teleport` |
 | `/mradmin status` | Server status | `mradmin.status` |
-| `/mradmin web [setup\|invite\|sessions\|logout\|remove]` | Set up web access, invite the team, view and end sessions, delete accounts | `mradmin.web` · `mradmin.web.manage` |
 | `/mradmin mail test <address>` | Test mail via the configured SMTP server | `mradmin.web.manage` |
 | `/mradmin discord [test]` | Discord status · test message | `mradmin.admin.discord` |
 | `/mradmin storage` | Storage status (yaml, sqlite, mysql) | `mradmin.admin.storage` |

@@ -74,7 +74,7 @@ mradmin.web:
 mradmin.web.audit:
   de: "Protokoll aller Aktionen in der Weboberfläche ansehen"
 mradmin.web.manage:
-  de: "Web-Konten anderer verwalten (`/mradmin web sessions|logout|reset|remove`)"
+  de: "Testmail senden (`/mradmin mail test`)"
 mradmin.web.console.view:
   de: "Konsolenausgabe auf der Seite Protokoll der Weboberfläche mitlesen (keine Befehle)"
 mradmin.web.console.execute:
