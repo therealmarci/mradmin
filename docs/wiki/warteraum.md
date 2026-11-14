@@ -40,7 +40,7 @@ Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** -
 - Meldet sich der Warteraum länger nicht, steht dort „Meldet sich nicht“.
 
 > [!NOTE]
-> Konfiguration und Updates holt sich der Warteraum selbst bei MRadmin ab. Nur für die Leistung (unten) fragt MRadmin den Warteraum jede Sekunde an seinem eigenen Port ab. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+> Konfiguration und Updates holt sich der Warteraum selbst bei MRadmin ab. Für Leistung, Protokoll und Konsole (unten) fragt MRadmin den Warteraum an seinem eigenen Port ab. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
 
 ## Leistung des Warteraums
 Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau wie deinen eigenen unter **Server → Hauptserver → Leistung**: TPS, Millisekunden pro Tick, CPU, Arbeitsspeicher, Spieler, Welten und die Chunks mit den meisten Entities, mit denselben Zeiträumen (1 Minute bis 30 Tage). Permission wie beim Hauptserver (`mradmin.status.health`).
@@ -51,6 +51,11 @@ Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau
 
 > [!TIP]
 > Der Port braucht im Netz zwischen den beiden Servern eine Freigabe (Firewall) vom Hauptserver zum Warteraum. Am besten lauscht er nur auf der internen Adresse (`agent.bind` in MRwaitroom).
+
+## Protokoll und Konsole des Warteraums
+- **Server → Warteraum → Protokoll** zeigt die Ereignisse des Warteraums (gestartet, Neustart, Hauptserver weg und wieder da, Konfiguration und Updates aus MRadmin) und sein Server-Log der letzten 14 Tage - mit Suche, Zeitraum und Diagramm wie beim Hauptserver. Die Ereignisse speichert MRadmin in seinem eigenen Protokoll (`logging.keep-days`), im Protokoll des Hauptservers stehen sie nicht.
+- **Server → Warteraum → Konsole** zeigt die Ausgabe live und nimmt Befehle an - mit denselben Regeln wie beim Hauptserver: Permission `mradmin.web.console.execute`, Entsperren mit 2FA-Code oder Passkey (gilt für beide Konsolen), Sperrliste `web.console.blocked`, jeder Befehl im Web-Protokoll (mit „[waitroom]“). Links und IP-Adressen werden wie beim Hauptserver ausgeblendet.
+- Im Warteraum lassen sich Befehle aus MRadmin mit `agent.console-commands: false` ganz abschalten - die Konsole zeigt dann nur die Ausgabe.
 
 ## Warteraum-Server neu starten
 Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Übersicht** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:

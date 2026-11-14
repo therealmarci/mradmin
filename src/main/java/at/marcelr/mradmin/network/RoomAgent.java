@@ -18,7 +18,8 @@ import java.util.List;
 /**
  * Reads the waiting room server through its agent (MRwaitroom, section agent) - like MRadmin reads its own server:
  * every second the new health points, which go into a second {@link HealthMonitor} (same recording, same charts, same
- * lag alarm). System info and lag chunks are only asked when someone looks (passed through, {@link #get}).
+ * lag alarm). System info, lag chunks, console and the older server log are only asked when someone looks (passed
+ * through, {@link #get} / {@link #post}). Every 3 seconds its events go into MRadmin's own log (source "waitroom").
  * <p>
  * The address comes from {@link WaitingRoom#agentUrl()}; the key is the one of the waiting room link. Runs in a virtual
  * thread, never on the server thread. Without a waiting room (or with the agent switched off there) it just waits.
@@ -36,6 +37,11 @@ public final class RoomAgent {
     /** When the agent last answered (epoch ms), 0 = not since this start. */
     private volatile long lastAnswer;
     private volatile String lastProblem = "";
+    /** Time of the newest event of the waiting room already in the log (0 = look it up in the log first). */
+    private long lastEvent = -1;
+    private int round;
+    /** Source of the waiting room's events in MRadmin's log. */
+    public static final String SOURCE = "waitroom";
 
     public RoomAgent(MRAdmin plugin) {
         this.plugin = plugin;
@@ -76,6 +82,9 @@ public final class RoomAgent {
             String url = plugin.waitingRoom().agentUrl();
             if (url != null) {
                 poll(url);
+                if (round++ % 3 == 0) {
+                    events(url);
+                }
             }
             try {
                 Thread.sleep(Math.max(100, POLL_MILLIS - (System.currentTimeMillis() - started)));
@@ -110,6 +119,40 @@ public final class RoomAgent {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /** The waiting room's events since the last one into the log - once there, they stay there (keep-days). */
+    private void events(String url) {
+        try {
+            if (lastEvent < 0) {
+                var newest = plugin.eventLog().find(java.util.Set.of(SOURCE), null, 0, Long.MAX_VALUE, 1);
+                lastEvent = newest.isEmpty() ? 0 : newest.getFirst().time();
+            }
+            JsonObject o = JsonParser.parseString(request(url, "/agent/events?after=" + lastEvent)).getAsJsonObject();
+            for (var element : o.getAsJsonArray("events")) {
+                JsonObject e = element.getAsJsonObject();
+                long time = e.get("time").getAsLong();
+                plugin.eventLog().add(SOURCE, e.get("event").getAsString(), e.get("text").getAsString(), e.get("color").getAsInt());
+                lastEvent = Math.max(lastEvent, time);
+            }
+        } catch (IOException | RuntimeException e) {
+            // next round
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** A POST with a JSON body to the agent (a console command); returns the status code. */
+    public int post(String path, String json) throws IOException, InterruptedException {
+        String url = plugin.waitingRoom().agentUrl();
+        if (url == null) {
+            throw new IOException("no waiting room agent");
+        }
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url + path)).timeout(Duration.ofSeconds(8))
+                .header("Authorization", "Bearer " + plugin.waitingRoom().config().key())
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json)).build();
+        return http.send(request, HttpResponse.BodyHandlers.ofString()).statusCode();
     }
 
     /**

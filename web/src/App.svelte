@@ -14,6 +14,8 @@
   import AdminSidebar from './components/AdminSidebar.svelte';
   import Settings from './pages/Settings.svelte';
   import Plugins from './pages/Plugins.svelte';
+  import Logs from './pages/Logs.svelte';
+  import Console from './pages/Console.svelte';
   import PageHead from './components/PageHead.svelte';
   import PageTabs from './components/PageTabs.svelte';
   import SignIn from './components/SignIn.svelte';
@@ -276,6 +278,8 @@
     { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
     ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/room/performance' }] : []),
     { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins' },
+    ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/room/logs' }] : []),
+    ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/room/console' }] : []),
   ]);
   // The open page = the entry of the sidebar that is highlighted (the server, not its tab).
   const adminPage = $derived(area === 'overview' ? 'overview' : area === 'server' ? (sub[0] === 'room' ? 'room' : 'main') : (sub[0] ?? ''));
@@ -407,6 +411,10 @@
             <Plugins embedded server="room" />
           {:else if roomTab === 'performance'}
             {#key 'room'}<Health server="room" />{/key}
+          {:else if roomTab === 'logs'}
+            {#key 'room'}<Logs {me} embedded server="room" />{/key}
+          {:else if roomTab === 'console'}
+            {#key 'room'}<Console {me} embedded server="room" />{/key}
           {:else}
             <Server {me} tab="overview" bare part="room" />
           {/if}

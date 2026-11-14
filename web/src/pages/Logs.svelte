@@ -14,7 +14,9 @@
   import SourcePicker from '../components/SourcePicker.svelte';
 
   // embedded: inside a tab of the page Server - without its own title.
-  let { me, embedded = false } = $props();
+  // server: null = this server, 'room' = the waiting room server (its events and its server log, since 1.6)
+  let { me, embedded = false, server = null } = $props();
+  const roomQ = $derived(server === 'room' ? '&server=room' : '');
 
   const SIZE = 50;
   const RANGES = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '14d': 1209600000 };
@@ -44,6 +46,7 @@
 
   function params(extra) {
     const p = new URLSearchParams({ limit: String(SIZE), ...extra });
+    if (server === 'room') p.set('server', 'room');
     if (selected.length) p.set('sources', selected.join(','));
     if (query.trim()) p.set('q', query.trim());
     return p;
@@ -53,7 +56,7 @@
   async function loadAll() {
     loading = true;
     try {
-      if (me?.may?.console) consoleSeq = (await api('GET', '/console/tail?after=9000000000000000')).last;
+      if (me?.may?.console) consoleSeq = (await api('GET', '/console/tail?after=9000000000000000' + roomQ)).last;
       rangeStart = Date.now() - RANGES[range];
       const data = await api('GET', '/logs?' + params({ since: String(rangeStart), buckets: String(BUCKETS[range]) }));
       page = 0;
@@ -154,7 +157,7 @@
   async function pollConsole() {
     if (loading || document.hidden || !me?.may?.console) return;
     try {
-      const result = await api('GET', '/console/tail?after=' + consoleSeq);
+      const result = await api('GET', '/console/tail?after=' + consoleSeq + roomQ);
       if (result.last < consoleSeq) {
         consoleSeq = 0;
         return;
@@ -209,7 +212,7 @@
   });
 
   const label = (s) =>
-    s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : s === 'console' ? t('logs.console') : names[s] ?? s;
+    s === 'web' ? t('logs.web') : s === 'mradmin' ? 'MRadmin' : s === 'console' ? t('logs.console') : s === 'waitroom' ? t('nav.serverRoom') : names[s] ?? s;
   const color = (s) =>
     s === 'web' ? '#3b82f6' : s === 'mradmin' ? 'var(--accent)' : s === 'console' ? '#8b95a5' : `hsl(${moduleHue(s)} 62% 55%)`;
 

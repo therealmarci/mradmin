@@ -8,7 +8,9 @@
   import * as discord from '../lib/discord.js';
 
   // embedded: inside a tab of the page Server - without its own title.
-  let { me, embedded = false } = $props();
+  // server: null = this server, 'room' = the waiting room server (through its agent, since 1.6) - same unlocking
+  let { me, embedded = false, server = null } = $props();
+  const roomQ = $derived(server === 'room' ? '&server=room' : '');
 
   let info = $state(null);
   let error = $state('');
@@ -38,7 +40,7 @@
   async function poll() {
     if (!info?.unlocked) return;
     try {
-      const result = await api('GET', '/console/log?after=' + last);
+      const result = await api('GET', '/console/log?after=' + last + roomQ);
       if (result.lines.length) {
         lines = [...lines, ...result.lines].slice(-KEEP);
         last = result.last;
@@ -110,7 +112,7 @@
     busy = true;
     error = '';
     try {
-      await api('POST', '/console/command', { command: text });
+      await api('POST', '/console/command' + (server === 'room' ? '?server=room' : ''), { command: text });
       history = [text, ...history.filter((h) => h !== text)].slice(0, 50);
       historyIndex = -1;
       command = '';

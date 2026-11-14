@@ -40,7 +40,7 @@ Once the waiting room is connected, **MRwaitroom** shows up under **Server → P
 - If the waiting room has not reported for a while, it says "Does not report".
 
 > [!NOTE]
-> The waiting room fetches configuration and updates from MRadmin itself. Only for the performance (below) MRadmin asks the waiting room every second on a port of its own. You do the first installation by hand ([guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+> The waiting room fetches configuration and updates from MRadmin itself. For performance, log and console (below) MRadmin asks the waiting room on a port of its own. You do the first installation by hand ([guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
 
 ## Performance of the waiting room
 Under **Server → Waiting room → Performance** you see the waiting room server exactly like your own under **Server → Main server → Performance**: TPS, milliseconds per tick, CPU, memory, players, worlds and the chunks with the most entities, with the same ranges (1 minute to 30 days). Permission as for the main server (`mradmin.status.health`).
@@ -51,6 +51,11 @@ Under **Server → Waiting room → Performance** you see the waiting room serve
 
 > [!TIP]
 > The port needs to be allowed in the network between the two servers (firewall) from the main server to the waiting room. Best let it listen only on the internal address (`agent.bind` in MRwaitroom).
+
+## Log and console of the waiting room
+- **Server → Waiting room → Log** shows the events of the waiting room (started, restart, main server gone and back, configuration and updates from MRadmin) and its server log of the last 14 days - with search, range and chart like for the main server. MRadmin keeps the events in its own log (`logging.keep-days`); they do not show in the log of the main server.
+- **Server → Waiting room → Console** shows the output live and takes commands - with the same rules as for the main server: permission `mradmin.web.console.execute`, unlocking with a 2FA code or passkey (counts for both consoles), block list `web.console.blocked`, every command in the web log (with "[waitroom]"). Links and IP addresses are hidden like for the main server.
+- In the waiting room, commands from MRadmin can be switched off completely with `agent.console-commands: false` - the console then only shows the output.
 
 ## Restarting the waiting room server
 If the waiting room runs with the starter (`mrserver setup --role waitroom`, see [Starter](starter.md#setting-up-a-waiting-room-server)), **Server → Overview** shows the tile **Waiting room server**: running, since when, Paper build, waiting players, next planned restart. **Restart** (permission `mradmin.server.restart`) restarts it **as soon as it may**:
