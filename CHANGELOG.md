@@ -24,6 +24,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 - **Duelle mit Reitern in der Adresse:** Live, Spiele, Prüfen, Auffälligkeiten, Arenen und neu **Kits** sind Reiter der Seite Duelle, jeder mit eigener Adresse.
 
 ### Behoben & geändert
+- **Keine Warnung mehr, wenn der Browser geht:** Bricht der Browser eine laufende Anfrage ab (Seitenwechsel, Tab zu), schreibt MRadmin keine Warnung mit Stacktrace mehr in die Konsole.
 - **Warnungen von Uptime Kuma kamen über eine interne Adresse nicht an:** Mit `uptime-kuma.url` ohne HTTPS (z.B. `http://10.0.0.5:3001`) bat MRadmin beim Abruf der Statusseiten um ein HTTP/2-Upgrade, das Kuma abbricht - die Vorfälle blieben leer, ohne Meldung. Jetzt fragt MRadmin mit HTTP/1.1, und eine Statusseite, die sich nicht lesen lässt, steht einmal als Warnung in der Konsole (mit Adresse und Grund), sobald sie wieder geht, eine Zeile dazu.
 
 ## [STA-1.5.3-bu001] - 2026-11-11

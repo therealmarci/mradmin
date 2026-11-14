@@ -307,6 +307,11 @@ public final class WebServer {
         } catch (Http.WebException e) {
             answer(http, e.status, e.key);
         } catch (Exception e) {
+            if (e instanceof java.io.IOException && exchange.getResponseCode() != -1) {
+                // The answer was already on its way: the browser went away (page changed, tab closed) - nothing to report.
+                plugin.getLogger().fine("Web request " + http.method() + " " + http.path() + " - the browser went away: " + e.getMessage());
+                return;
+            }
             plugin.getLogger().log(Level.WARNING, "Web request " + http.method() + " " + http.path() + " failed", e);
             answer(http, 500, "server");
         } finally {
