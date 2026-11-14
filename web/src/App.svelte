@@ -13,6 +13,9 @@
   import AreaTabs from './components/AreaTabs.svelte';
   import AdminSidebar from './components/AdminSidebar.svelte';
   import Settings from './pages/Settings.svelte';
+  import Plugins from './pages/Plugins.svelte';
+  import PageHead from './components/PageHead.svelte';
+  import PageTabs from './components/PageTabs.svelte';
   import SignIn from './components/SignIn.svelte';
   import LoginsCard from './components/LoginsCard.svelte';
   import Footer from './components/Footer.svelte';
@@ -231,7 +234,6 @@
     return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : 'warn' };
   };
   const adminGroups = $derived(!me ? [] : [
-    { id: 'start', label: '', items: [{ id: 'overview', label: t('nav.home'), path: '/admin', icon: 'home' }] },
     { id: 'community', label: t('nav.community'), items: [
       ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players', icon: 'users' }] : []),
       ...(may.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/admin/community/tickets', icon: 'ticket',
@@ -248,24 +250,37 @@
       ...(may.mrsleep ? [{ id: 'mrsleep', label: t('nav.sleep'), path: '/admin/plugins/mrsleep', icon: 'moon', ...moduleCount('mrsleep') }] : []),
       ...(may.mrwaypoints || may.mapAdmin ? [{ id: 'map', label: t('nav.waypoints'), path: '/admin/plugins/map', icon: 'pin', ...moduleCount('mrwaypoints') }] : []),
     ] },
+    // The servers themselves; each one has its tabs on its page (mainTabs, roomTabs).
     { id: 'server', label: t('nav.server'), items: [
-      ...(may.versions ? [{ id: 'control', label: t('server.tab.control'), path: '/admin/server', icon: 'power',
-        n: overview?.network?.endsAt > 0 ? '!' : undefined, tone: 'warn' }] : []),
-      ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/performance', icon: 'pulse' }] : []),
-      ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/maintenance', icon: 'tool',
-        n: overview?.maintenance?.phase === 'active' ? '!' : undefined, tone: 'warn' }] : []),
-      ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins', icon: 'box',
-        n: overview?.versions?.updates || undefined, tone: 'info' }] : []),
-      ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs', icon: 'logs' }] : []),
-      ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console', icon: 'terminal' }] : []),
+      ...(mainTabs.length ? [{ id: 'main', label: t('nav.serverMain'), path: mainTabs[0].path, icon: 'server',
+        n: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? '!' : overview?.versions?.updates || undefined,
+        tone: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? 'warn' : 'info' }] : []),
+      ...(may.versions && overview?.network?.room ? [{ id: 'room', label: t('nav.serverRoom'), path: '/admin/server/room', icon: 'restore',
+        n: overview.network.room.online ? undefined : '!', tone: 'bad' }] : []),
     ] },
     { id: 'settings', label: t('nav.group.settings'), items: [
       ...(may.config && may.versions ? [{ id: 'config', label: t('nav.config'), path: '/admin/settings/config', icon: 'gear' }] : []),
       ...(may.appearance ? [{ id: 'appearance', label: t('server.tab.appearance'), path: '/admin/settings/appearance', icon: 'image' }] : []),
     ] },
   ]);
-  // The open page = the entry of the sidebar that is highlighted.
-  const adminPage = $derived(area === 'overview' ? 'overview' : area === 'server' ? (sub[0] ?? 'control') : (sub[0] ?? ''));
+  // The tabs of the main server (address /admin/server[/tab]) and of the waiting room (/admin/server/room[/tab]).
+  const mainTabs = $derived([
+    ...(may.versions ? [{ id: 'control', label: t('server.tab.control'), path: '/admin/server' }] : []),
+    ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/performance' }] : []),
+    ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/maintenance' }] : []),
+    ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins', n: overview?.versions?.updates || undefined }] : []),
+    ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs' }] : []),
+    ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console' }] : []),
+  ]);
+  const roomTabs = $derived([
+    { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
+    { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins' },
+  ]);
+  // The open page = the entry of the sidebar that is highlighted (the server, not its tab).
+  const adminPage = $derived(area === 'overview' ? 'overview' : area === 'server' ? (sub[0] === 'room' ? 'room' : 'main') : (sub[0] ?? ''));
+  // The head tile of the sidebar: the overview with what is open (the hints of the dashboard).
+  const homeEntry = $derived({ path: '/admin', label: t('nav.home'), n: overview?.alerts?.length || 0,
+    tone: overview?.alerts?.some((a) => a.tone === 'bad') ? 'bad' : 'warn' });
 
   // Main server and waiting room at the bottom of the sidebar.
   let clockNow = $state(Date.now());
@@ -357,7 +372,7 @@
   {:else if admin && me.team && me.teamReady}
     <!-- The administration: the sidebar on the left, the page next to it (Seitenkopf -> Reiter -> Filter -> Inhalt). -->
     <div class="admin-shell">
-      <AdminSidebar groups={adminGroups} current={adminPage} {servers} bind:open={sidebarOpen} />
+      <AdminSidebar groups={adminGroups} current={adminPage} home={homeEntry} {servers} bind:open={sidebarOpen} />
       <main class="admin-main">
         {#if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
           {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
@@ -383,16 +398,27 @@
           <Sleep {me} />
         {:else if area === 'plugins' && sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
           <Waypoints {me} />
-        {:else if area === 'server' && sub[0] === 'performance' && may.health}
-          <Health />
-        {:else if area === 'server' && sub[0] === 'maintenance' && may.maintenance}
-          <Maintenance {me} />
-        {:else if area === 'server' && sub[0] === 'plugins' && sub[1] && may.versions}
-          {#key sub[1]}<PluginView name={sub[1]} />{/key}
-        {:else if area === 'server' && !sub[0] && may.versions}
-          <Server {me} tab="overview" bare />
-        {:else if area === 'server' && ['plugins', 'logs', 'console'].includes(sub[0])}
-          <Server {me} tab={sub[0]} bare />
+        {:else if area === 'server' && sub[0] === 'room' && may.versions}
+          <PageHead title={t('nav.serverRoom')} />
+          <PageTabs tabs={roomTabs} current={sub[1] === 'plugins' ? 'plugins' : 'control'} />
+          {#if sub[1] === 'plugins'}<Plugins embedded server="room" />{:else}<Server {me} tab="overview" bare part="room" />{/if}
+        {:else if area === 'server' && mainTabs.length}
+          {@const tab = mainTabs.some((x) => x.id === (sub[0] ?? 'control')) ? (sub[0] ?? 'control') : mainTabs[0].id}
+          <PageHead title={t('nav.serverMain')} />
+          <PageTabs tabs={mainTabs} current={tab} />
+          {#if tab === 'performance'}
+            <Health />
+          {:else if tab === 'maintenance'}
+            <Maintenance {me} />
+          {:else if tab === 'plugins' && sub[1]}
+            {#key sub[1]}<PluginView name={sub[1]} />{/key}
+          {:else if tab === 'plugins'}
+            <Plugins embedded server="main" />
+          {:else if tab === 'control'}
+            <Server {me} tab="overview" bare part="main" />
+          {:else}
+            <Server {me} tab={tab} bare />
+          {/if}
         {:else if area === 'settings' && sub[0] === 'appearance' && may.appearance}
           <Appearance />
         {:else if area === 'settings' && sub[0] === 'config' && may.config}

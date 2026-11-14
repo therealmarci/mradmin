@@ -3,14 +3,15 @@
   // of the main server and the waiting room at the bottom. On a PC it folds to a slim row of symbols, every group folds
   // on its own (both remembered in the browser). Phone: hidden, the menu button in the bar opens it as a drawer.
   //
-  // groups: [{id, label, items: [{id, label, path, icon, n?, tone?}]}] - a group without a label is not foldable
-  // (overview); current: id of the open page; servers: [{label, tone, text}] - tone good | warn | bad | info | off;
-  // open (bindable): drawer on the phone.
+  // groups: [{id, label, items: [{id, label, path, icon, n?, tone?}]}]; current: id of the open page ('overview' =
+  // the dashboard); home: {label, path, n, tone} - the head tile with the server's logo and name and the overview,
+  // n = what is open; servers: [{label, tone, text}] - tone good | warn | bad | info | off; open (bindable): drawer.
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
   import { t } from '../lib/i18n.js';
+  import { brand, picture } from '../lib/branding.svelte.js';
 
-  let { groups, current, servers = [], open = $bindable(false) } = $props();
+  let { groups, current, home = null, servers = [], open = $bindable(false) } = $props();
 
   const read = (key, fallback) => {
     try {
@@ -60,6 +61,20 @@
 {#if open}<button class="scrim" aria-label={t('nav.closeMenu')} onclick={() => (open = false)}></button>{/if}
 
 <aside class="sidebar" class:slim class:open aria-label={t('nav.admin')}>
+  {#if home}
+    <div class="head-tile">
+      <div class="brand">
+        <img src={picture('icon')} alt="" width="30" height="30" />
+        <span class="label"><strong>{brand.name}</strong><small>{t('nav.admin')}</small></span>
+      </div>
+      <a class="home" class:on={current === 'overview'} href={home.path} title={slim ? home.label : undefined}
+        aria-current={current === 'overview' ? 'page' : undefined} onclick={(e) => { e.preventDefault(); nav(home.path); }}>
+        <span class="ico">{@render glyph('home')}{#if slim && home.n}<span class="pip {home.tone}"></span>{/if}</span>
+        <span class="label">{home.label}</span>
+        {#if home.n}<span class="open-n {home.tone}">{t('nav.openCount', { n: home.n })}</span>{/if}
+      </a>
+    </div>
+  {/if}
   <nav class="groups">
     {#each groups as g (g.id)}
       {#if g.items.length}
@@ -106,13 +121,13 @@
 <style>
   .sidebar {
     position: sticky;
-    top: var(--topbar-h, 61px);
+    top: var(--topbar-h, 57px);
     align-self: start;
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 232px;
-    height: calc(100dvh - var(--topbar-h, 61px));
+    height: calc(100dvh - var(--topbar-h, 57px));
     padding: 10px 10px 8px;
     border-right: 1px solid var(--border);
     background: var(--surface);
@@ -122,6 +137,110 @@
 
   .sidebar.slim {
     width: 60px;
+  }
+
+  /* Head tile: the server's logo and name, the overview below as the first stop */
+  .head-tile {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 2px;
+  }
+
+  .brand img {
+    flex: none;
+    border-radius: 8px;
+  }
+
+  .brand .label {
+    display: grid;
+    line-height: 1.25;
+  }
+
+  .brand strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.95rem;
+  }
+
+  .brand small {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .home {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .home:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
+
+  .home.on {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  }
+
+  .home.on .ico {
+    color: var(--accent);
+  }
+
+  .open-n {
+    flex: none;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 18px;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+
+  .open-n.bad {
+    color: #fff;
+    background: var(--bad);
+  }
+
+  .slim .head-tile {
+    padding: 6px 0;
+    justify-items: center;
+    border: 0;
+    background: none;
+  }
+
+  .slim .brand {
+    padding: 0;
+  }
+
+  .slim .brand .label,
+  .slim .open-n {
+    display: none;
+  }
+
+  .slim .home {
+    justify-content: center;
+    padding: 8px 0;
+    width: 100%;
   }
 
   .groups {
@@ -383,8 +502,25 @@
       display: flex;
     }
 
-    .slim .server .label {
+    .slim .server .label,
+    .slim .brand .label {
       display: grid;
+    }
+
+    .slim .open-n {
+      display: inline-block;
+    }
+
+    .slim .head-tile {
+      padding: 10px;
+      justify-items: stretch;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    .slim .home {
+      justify-content: flex-start;
+      padding: 7px 10px;
     }
 
     .slim .item {

@@ -25,6 +25,12 @@
     loginLabel = '', inbox = null, onmenu = null, menuLabel = '' } = $props();
 
   let menuOpen = $state(false);
+
+  // The height of the bar for everything that sticks below it (the sidebar of the administration): --topbar-h.
+  let barHeight = $state(0);
+  $effect(() => {
+    if (barHeight) document.documentElement.style.setProperty('--topbar-h', barHeight + 'px');
+  });
   let moreOpen = $state(false);
 
   const MAX_TABS = 5;
@@ -49,7 +55,7 @@
   {/if}
 {/snippet}
 
-<header class="top mr-topbar">
+<header class="top mr-topbar" bind:offsetHeight={barHeight}>
   {#if onmenu}
     <button class="icon-btn burger" aria-label={menuLabel} title={menuLabel} onclick={onmenu}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"

@@ -11,7 +11,8 @@
   import Toast from '../components/Toast.svelte';
 
   // embedded: inside the tab Plugins of the page Server - without its own title.
-  let { embedded = false } = $props();
+  // server: 'main' = only plugins of this server, 'room' = only those of the waiting room server, null = all
+  let { embedded = false, server = null } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -85,8 +86,9 @@
   const buildText = (build) => t('plugins.build', { build: String(build).padStart(3, '0') });
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
   const byName = (a, b) => a.name.localeCompare(b.name);
-  const installed = $derived(data ? data.plugins.filter((p) => p.installed).sort(byName) : []);
-  const others = $derived(data ? data.plugins.filter((p) => !p.installed).sort(byName) : []);
+  const pool = $derived(!data ? [] : data.plugins.filter((p) => (server === 'room' ? !!p.remote : server === 'main' ? !p.remote : true)));
+  const installed = $derived(pool.filter((p) => p.installed).sort(byName));
+  const others = $derived(server === 'room' ? [] : pool.filter((p) => !p.installed).sort(byName));
   // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
   const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
