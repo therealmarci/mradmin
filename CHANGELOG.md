@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [STA-1.6.0-bu001] - 2026-11-15
+
 ### Neu
 - **Gruppe Bots für Zweitaccounts:** `mradmin.groups.bots` (nicht für OPs, in keiner Team-Gruppe) - keine Rechte in MRadmin, im Warteraum wie normale Spieler; Ankündigungs-Vorlagen mit Zielgruppe „Bots“ erreichen auch sie. Fertige LuckPerms-Gruppe „bots“ im MRadmin-Wiki unter Permissions.
 - **`/web` für das eigene Konto:** `/web status` (eigene Anmeldungen und Geräte), `/web devices`, `/web logout` und neu `/web reset` (eigene Anmeldungen entfernen, mit Bestätigung per Klick).
