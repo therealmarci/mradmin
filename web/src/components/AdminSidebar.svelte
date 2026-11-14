@@ -139,6 +139,17 @@
     width: 60px;
   }
 
+  /* Expanded on a PC: from the very top, over the bar - its head tile shows the server's name already. Folded it
+     stays below the bar (the bar keeps the logo and name then). */
+  @media (min-width: 861px) {
+    .sidebar:not(.slim) {
+      top: 0;
+      z-index: 20;
+      margin-top: calc(-1 * var(--topbar-h, 57px));
+      height: 100dvh;
+    }
+  }
+
   /* Head tile: the server's logo and name, the overview below as the first stop */
   .head-tile {
     display: grid;
