@@ -1,6 +1,6 @@
 # Plugins & updates
 
-In the web interface under **Server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, **latest version in the channel** (badge **Up to date** when it is installed, **New** when not) and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
+In the web interface under **Server → Main server → Plugins** you see **all MRtechnology plugins** as a table: at the top the ones on your server with installed version, channel, **latest version in the channel** (badge **Up to date** when it is installed, **New** when not) and whether an update is waiting, below that the rest. A click on an installed plugin opens its page with "What's new".
 
 ## Channels: stable, beta, dev
 Every plugin follows a **channel** - switch it in the column **Channel** (`mradmin.versions.install`):
@@ -24,11 +24,25 @@ Every plugin follows a **channel** - switch it in the column **Channel** (`mradm
 You install plugins that are not installed yet with one click (`mradmin.versions.install`). MRadmin downloads the official release for your Minecraft version (only with a matching checksum) into `plugins/` - **it is loaded on the next restart**. What gets installed is what the channel of the plugin offers (see above); if there are only pre-releases so far (e.g. MRpvp 0.x), the newest of them.
 
 ## Configure in the browser
-The page of an installed plugin has the tab **Configuration** (`mradmin.config`, in `mradmin.groups.admin`): all settings of `config.yml` as a form with explanations (German/English). Saving checks every value, writes the file (comments stay, the old file is kept next to it as `config.backup-web.yml`) and reloads the plugin right away - without a command, without a restart. Editing by hand still works. Available for MRadmin and all MRtechnology plugins in a current version.
+Every server has the tab **Configuration** (**Server → Main server → Configuration** or **Server → Waiting room → Configuration**, `mradmin.config`, in `mradmin.groups.admin`), with one tab per plugin of that server: all settings of `config.yml` as a form with explanations (German/English). Saving checks every value, writes the file (comments stay, the old file is kept next to it as `config.backup-web.yml`) and reloads the plugin right away - without a command, without a restart. Editing by hand still works. Available for MRadmin and all MRtechnology plugins in a current version.
+
+## Watching other plugins
+Under **Plugins** every server has two tiles: **MRtechnology plugins** (managed as above) and **Other plugins** - all remaining plugins of the server (e.g. LuckPerms, LibertyBans), for the main server and the waiting room each on its own. MRadmin does not update them, but can **watch** them:
+
+- **Automatically:** MRadmin asks Modrinth with the fingerprint (SHA-1) of every plugin JAR. If Modrinth knows the file, the project shows with "auto" in the column **Source** - and MRadmin knows exactly which version is installed.
+- **By hand:** A click on the source opens a window (permission `mradmin.versions.install`): tab **Modrinth** with a search (results show whether there are versions for your Minecraft version) or **GitHub** (`owner/repo` or the github.com address). Below it shows before saving which version MRadmin would compare with. **Find automatically** goes back to the fingerprint, **Do not watch** switches the lookup off for the plugin.
+- **Matching the Minecraft version:** On Modrinth the newest version is the newest one for the server's Minecraft version and a Paper-compatible loader (Paper, Spigot, Bukkit, Purpur, Folia). On GitHub the newest release that names the Minecraft version (name, text or file names) - if none names it, the newest release with the hint **Minecraft version not stated**. If there is nothing for the version at all, it says **No version for Minecraft …**.
+
+- **Channel Stable | Beta:** In the window you choose per plugin whether only releases count (**Stable**, default) or betas too (**Beta**) - also for plugins found automatically, which stay "auto". If there are only betas for the Minecraft version, Stable says **Only betas for Minecraft …**. In the table a small **Beta** next to the source shows the channel.
+
+MRadmin checks every 6 hours (after 15 minutes again on errors) and shows **Current** or **New**. Plugins with a newer version are at the top.
+
+## Order
+The MRtechnology plugins are sorted by urgency: errors and updates at the top, then what waits for a restart, current plugins at the bottom.
 
 ## Updates
 - **Download** (`mradmin.versions.install`) gets the new version from the official release on GitHub - only for your Minecraft version and only if the checksum (SHA-256) matches. It goes to `plugins/update/`, **it is installed on the next restart** (Paper does that itself). Nothing is swapped while the server runs.
-- The file name stays the old one (e.g. `MRsleep-mc26.3-v1.1.5.jar` with version 1.2.0 inside) - only this way Paper knows which plugin is replaced. Which version runs is shown under **Server → Plugins** or with `/<plugin> version`.
+- The file name stays the old one (e.g. `MRsleep-mc26.3-v1.1.5.jar` with version 1.2.0 inside) - only this way Paper knows which plugin is replaced. Which version runs is shown under **Server → Main server → Plugins** or with `/<plugin> version`.
 - **Automatically:** `versions.auto-download: patch` downloads e.g. hotfixes (1.2.x) by itself, `minor` also new features, `all` everything. The default is `off`.
 - It is checked every `versions.check-interval-hours` and with **Check now** (`mradmin.versions.install`).
 - Downloads and restarts are recorded in the log and the Discord log (`plugin-update-downloaded`, `server-restart`).

@@ -1,6 +1,7 @@
 <script>
   // The one web interface (since 1.5): the player area without a prefix and the administration under /admin, one bar
-  // with a switch between them for the team. Areas have tabs (AreaTabs); the pages inside are the same as before.
+  // with a switch between them for the team. The player area has areas with tabs (AreaTabs); the administration a
+  // sidebar with all its pages in groups (AdminSidebar, since 1.6).
   // Old addresses are translated by the router (lib/router.svelte.js, canonical).
   import { untrack } from 'svelte';
   import { api, whenSignedOut } from './lib/api.js';
@@ -10,6 +11,13 @@
   import { MODULE_ICONS } from './lib/icons.js';
   import TopBar from './components/TopBar.svelte';
   import AreaTabs from './components/AreaTabs.svelte';
+  import AdminSidebar from './components/AdminSidebar.svelte';
+  import Settings from './pages/Settings.svelte';
+  import Plugins from './pages/Plugins.svelte';
+  import Logs from './pages/Logs.svelte';
+  import Console from './pages/Console.svelte';
+  import PageHead from './components/PageHead.svelte';
+  import PageTabs from './components/PageTabs.svelte';
   import SignIn from './components/SignIn.svelte';
   import LoginsCard from './components/LoginsCard.svelte';
   import Footer from './components/Footer.svelte';
@@ -205,55 +213,135 @@
   // ------------------------------------------------------------------ administration
 
   const may = $derived(me?.may ?? {});
-  const communityTabs = $derived([
-    ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players' }] : []),
-    ...(may.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/admin/community/tickets' }] : []),
-    ...(may.punishments ? [{ id: 'punishments', label: t('punish.title'), path: '/admin/community/punishments' }] : []),
-    ...(may.news ? [{ id: 'news', label: t('news.area.posts'), path: '/admin/community/news' }] : []),
-    ...(may.announce ? [{ id: 'announce', label: t('news.area.announce'), path: '/admin/community/announce' }] : []),
+  // The sidebar (since 1.6): every page of the administration in groups; plugin pages only with their plugin.
+  // Counters from /api/overview (what waits), the state of the network at the bottom.
+  let overview = $state(null);
+  async function loadOverview() {
+    try {
+      overview = await api('GET', '/overview');
+    } catch {
+      // keeps the last state (e.g. briefly offline)
+    }
+  }
+  $effect(() => {
+    if (!(me?.team && me.teamReady && admin)) return;
+    untrack(loadOverview);
+    return poll(loadOverview, 10000);
+  });
+  // The counters right away after a page change and whenever the server reports something (ticket, plugin, log).
+  $effect(() => {
+    p;
+    live.ticket.tick;
+    live.plugin.tick;
+    live.log.tick;
+    if (me?.team && me.teamReady && admin) untrack(loadOverview);
+  });
+  let sidebarOpen = $state(false);
+
+  // Hints of a plugin (e.g. locked chunk loaders, rounds to review): their number at the plugin, red if one is bad.
+  const moduleCount = (id) => {
+    const list = (overview?.alerts ?? []).filter((a) => a.module === id);
+    return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : 'warn' };
+  };
+  // The waiting room's hints (gone, lagging, countdown): their number, red if it is gone.
+  const roomUpdates = () => overview?.network?.room?.updates ?? 0;
+  const roomCount = () => {
+    const list = (overview?.alerts ?? []).filter((a) => a.key?.startsWith('room'));
+    const n = list.length + roomUpdates();
+    return { n: n || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : list.some((a) => a.tone === 'warn') ? 'warn' : 'info' };
+  };
+  const adminGroups = $derived(!me ? [] : [
+    { id: 'community', label: t('nav.community'), items: [
+      ...(may.players ? [{ id: 'players', label: t('nav.players'), path: '/admin/community/players', icon: 'users' }] : []),
+      ...(may.tickets ? [{ id: 'tickets', label: t('nav.tickets'), path: '/admin/community/tickets', icon: 'ticket',
+        n: overview?.tickets?.unread || undefined }] : []),
+      ...(may.punishments ? [{ id: 'punishments', label: t('punish.title'), path: '/admin/community/punishments', icon: 'ban' }] : []),
+    ] },
+    { id: 'content', label: t('nav.group.content'), items: [
+      ...(may.news ? [{ id: 'news', label: t('news.area.posts'), path: '/admin/content/news', icon: 'news' }] : []),
+      ...(may.announce ? [{ id: 'announce', label: t('news.area.announce'), path: '/admin/content/announce', icon: 'megaphone' }] : []),
+    ] },
+    { id: 'plugins', label: t('nav.group.plugins'), items: [
+      ...(may.mrchunks ? [{ id: 'mrchunks', label: t('nav.chunks'), path: '/admin/plugins/mrchunks', icon: 'grid', ...moduleCount('mrchunks') }] : []),
+      ...(may.mrpvp ? [{ id: 'mrpvp', label: t('nav.pvp'), path: '/admin/plugins/mrpvp', icon: 'swords', ...moduleCount('mrpvp') }] : []),
+      ...(may.mrsleep ? [{ id: 'mrsleep', label: t('nav.sleep'), path: '/admin/plugins/mrsleep', icon: 'moon', ...moduleCount('mrsleep') }] : []),
+      ...(may.mrwaypoints || may.mapAdmin ? [{ id: 'map', label: t('nav.waypoints'), path: '/admin/plugins/map', icon: 'pin', ...moduleCount('mrwaypoints') }] : []),
+    ] },
+    // The servers themselves; each one has its tabs on its page (mainTabs, roomTabs).
+    { id: 'server', label: t('nav.server'), items: [
+      ...(mainTabs.length ? [{ id: 'main', label: t('nav.serverMain'), path: serverTabNow ? tabPath(mainTabs, serverTabNow) : mainTabs[0].path, icon: 'server',
+        n: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? '!' : overview?.versions?.updates || undefined,
+        tone: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? 'warn' : 'info' }] : []),
+      ...(may.versions && overview?.network?.room ? [{ id: 'room', label: t('nav.serverRoom'), path: serverTabNow ? tabPath(roomTabs, serverTabNow) : '/admin/server/room', icon: 'restore',
+        ...roomCount() }] : []),
+    ] },
+    { id: 'settings', label: t('nav.group.settings'), items: [
+      ...(may.appearance ? [{ id: 'appearance', label: t('server.tab.appearance'), path: '/admin/settings/appearance', icon: 'image' }] : []),
+    ] },
   ]);
-  const featureTabs = $derived([
-    ...(may.mrchunks ? [{ id: 'mrchunks', label: t('nav.chunks'), path: '/admin/features/mrchunks' }] : []),
-    ...(may.mrpvp ? [{ id: 'mrpvp', label: t('nav.pvp'), path: '/admin/features/mrpvp' }] : []),
-    ...(may.mrsleep ? [{ id: 'mrsleep', label: t('nav.sleep'), path: '/admin/features/mrsleep' }] : []),
-    ...(may.mrwaypoints || may.mapAdmin ? [{ id: 'map', label: t('nav.waypoints'), path: '/admin/features/map' }] : []),
-  ]);
-  const serverAdminTabs = $derived([
+  // The tabs of the main server (address /admin/server[/tab]) and of the waiting room (/admin/server/room[/tab]).
+  const mainTabs = $derived([
     ...(may.versions ? [{ id: 'control', label: t('server.tab.control'), path: '/admin/server' }] : []),
     ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/performance' }] : []),
     ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/maintenance' }] : []),
-    ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins' }] : []),
+    ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins', n: overview?.versions?.updates || undefined }] : []),
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console' }] : []),
-    ...(may.appearance ? [{ id: 'appearance', label: t('server.tab.appearance'), path: '/admin/server/appearance' }] : []),
+    ...(may.config && may.versions ? [{ id: 'config', label: t('nav.config'), path: '/admin/server/config' }] : []),
   ]);
-  const adminNav = $derived(me ? [
-    { path: '/admin', area: 'overview', label: t('nav.home'), icon: 'home' },
-    ...(communityTabs.length ? [{ path: communityTabs[0].path, area: 'community', label: t('nav.community'), icon: 'users' }] : []),
-    ...(featureTabs.length ? [{ path: featureTabs[0].path, area: 'features', label: t('nav.features'), icon: 'grid' }] : []),
-    ...(serverAdminTabs.length ? [{ path: serverAdminTabs[0].path, area: 'server', label: t('nav.server'), icon: 'server' }] : []),
-  ] : []);
+  const roomTabs = $derived([
+    { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
+    ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/room/performance' }] : []),
+    { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins', n: roomUpdates() || undefined },
+    ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/room/logs' }] : []),
+    ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/room/console' }] : []),
+    ...(may.config ? [{ id: 'config', label: t('nav.config'), path: '/admin/server/room/config' }] : []),
+  ]);
+  // Switching between the servers keeps the open tab (if the other one has it): the entries point there.
+  const serverTabNow = $derived(area !== 'server' ? null : sub[0] === 'room' ? (sub[1] ?? 'control') : (sub[0] ?? 'control'));
+  const tabPath = (tabs, id) => tabs.find((x) => x.id === id)?.path ?? tabs[0]?.path;
+  // The open page = the entry of the sidebar that is highlighted (the server, not its tab).
+  const adminPage = $derived(area === 'overview' ? 'overview' : area === 'server' ? (sub[0] === 'room' ? 'room' : 'main') : (sub[0] ?? ''));
+  // The head tile of the sidebar: the overview with what is open (the hints of the dashboard).
+  const homeEntry = $derived({ path: '/admin', label: t('nav.home'), n: overview?.alerts?.length || 0,
+    tone: overview?.alerts?.some((a) => a.tone === 'bad') ? 'bad' : 'warn' });
 
-  // An area without a tab in the address: to its first tab.
+  // Main server and waiting room at the bottom of the sidebar.
+  let clockNow = $state(Date.now());
   $effect(() => {
-    const first = (tabs) => tabs[0]?.path;
+    const timer = setInterval(() => (clockNow = Date.now()), 1000);
+    return () => clearInterval(timer);
+  });
+  const servers = $derived.by(() => {
+    const net = overview?.network;
+    if (!net) return [];
+    const left = net.endsAt > 0 ? Math.max(0, Math.round((net.endsAt - clockNow) / 1000)) : 0;
+    const mmss = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    const list = [{ label: t('nav.serverMain'), tone: net.endsAt > 0 ? 'warn' : 'good',
+      text: net.endsAt > 0 ? t(net.kind === 'stop' ? 'nav.state.stopIn' : 'nav.state.restartIn', { time: mmss }) : t('nav.state.online') }];
+    if (net.room) list.push({ label: t('nav.serverRoom'), tone: net.room.restarting ? 'info' : net.room.online ? 'good' : 'bad',
+      text: t(net.room.restarting ? 'nav.state.restarting' : net.room.online ? 'nav.state.online' : 'nav.state.offline') });
+    return list;
+  });
+
+  // An area without a page in the address: to its first page.
+  $effect(() => {
     let to = null;
-    if (admin && area === 'community' && !sub.length) to = first(communityTabs);
-    else if (admin && area === 'features' && !sub.length) to = first(featureTabs);
-    else if (!admin && area === 'game' && sub.length < 2) to = first(gameTabs);
-    else if (!admin && area === 'news' && !sub.length && player && !player.news) to = first(newsTabs);
+    const group = adminGroups.find((g) => g.id === area);
+    if (admin && group && area !== 'server' && !sub.length) to = group.items[0]?.path ?? '/admin';
+    else if (!admin && area === 'game' && sub.length < 2) to = gameTabs[0]?.path;
+    else if (!admin && area === 'news' && !sub.length && player && !player.news) to = newsTabs[0]?.path;
     if (to && to !== p) untrack(() => go(to, true));
   });
 
-  const nav = $derived(admin ? adminNav : playerNav);
-  const current = $derived(nav.find((i) => i.area === area)?.path ?? null);
+  const nav = $derived(admin ? [] : playerNav);
+  const current = $derived(admin ? null : (nav.find((i) => i.area === area)?.path ?? null));
   const modes = $derived(me?.team ? {
     current: admin ? 'admin' : 'player', player: t('nav.player'), admin: t('nav.admin'),
     onswitch: (m) => go(m === 'admin' ? '/admin' : '/'),
   } : null);
 
-  // admin/server: [] = control, [performance], [maintenance], [plugins], [plugins, name, config?], [logs], [console]
-  const serverTab = $derived(sub[0] ?? 'control');
+
 </script>
 
 {#if route.path === '/impressum' || route.path === '/datenschutz'}
@@ -295,6 +383,7 @@
   {/if}
 {:else}
   <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
+    onmenu={admin && me.team && me.teamReady ? () => (sidebarOpen = !sidebarOpen) : null} menuLabel={t('nav.menu')}
     inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
     live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
       { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
@@ -304,6 +393,81 @@
   {#if !admin && area === 'map' && player?.map}
     <!-- The map fills the screen below the bar. -->
     <SelfMap />
+  {:else if admin && me.team && me.teamReady}
+    <!-- The administration: the sidebar on the left, the page next to it (Seitenkopf -> Reiter -> Filter -> Inhalt). -->
+    <div class="admin-shell">
+      <AdminSidebar groups={adminGroups} current={adminPage} home={homeEntry} {servers} bind:open={sidebarOpen} />
+      <main class="admin-main">
+        {#if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
+          {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
+        {:else if area === 'community' && sub[0] === 'tickets' && may.tickets}
+          <Tickets {me} />
+        {:else if area === 'community' && sub[0] === 'players' && sub[1] && may.players}
+          {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
+        {:else if area === 'community' && sub[0] === 'players' && may.players}
+          <Players />
+        {:else if area === 'community' && sub[0] === 'punishments' && may.punishments}
+          <Punishments />
+        {:else if area === 'content' && ((sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce))}
+          {#key sub[0]}<News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />{/key}
+        {:else if area === 'plugins' && sub[0] === 'mrchunks' && may.mrchunks}
+          {#if sub[1]}{#key sub[1]}<ChunkView id={sub[1]} {me} />{/key}{:else}<Chunks {me} />{/if}
+        {:else if area === 'plugins' && sub[0] === 'mrpvp' && ((sub[1] === 'kits' && sub[2]) || sub[1] === 'new-kit') && may.mrpvpKits}
+          {#key p}<PvpKit id={sub[1] === 'kits' ? sub[2] : null} copyFrom={sub[1] === 'new-kit' ? (sub[2] ?? null) : null} />{/key}
+        {:else if area === 'plugins' && sub[0] === 'mrpvp' && /^\d+$/.test(sub[1] ?? '') && may.mrpvp}
+          {#key sub[1]}<PvpGame id={sub[1]} {me} />{/key}
+        {:else if area === 'plugins' && sub[0] === 'mrpvp' && may.mrpvp}
+          <Pvp {me} tab={sub[1] ?? 'live'} />
+        {:else if area === 'plugins' && sub[0] === 'mrsleep' && may.mrsleep}
+          <Sleep {me} />
+        {:else if area === 'plugins' && sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
+          <Waypoints {me} tab={sub[1] ?? null} />
+        {:else if area === 'server' && sub[0] === 'room' && may.versions}
+          <PageHead title={t('nav.serverRoom')} />
+          {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}
+          <PageTabs tabs={roomTabs} current={roomTab} />
+          {#if roomTab === 'plugins' && sub[2]}
+            {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
+          {:else if roomTab === 'plugins'}
+            <Plugins embedded server="room" />
+          {:else if roomTab === 'config'}
+            {#key 'room'}<Settings embedded server="room" plugin={sub[2] ?? null} />{/key}
+          {:else if roomTab === 'performance'}
+            {#key 'room'}<Health server="room" />{/key}
+          {:else if roomTab === 'logs'}
+            {#key 'room'}<Logs {me} embedded server="room" />{/key}
+          {:else if roomTab === 'console'}
+            {#key 'room'}<Console {me} embedded server="room" />{/key}
+          {:else}
+            <Server {me} tab="overview" bare part="room" />
+          {/if}
+        {:else if area === 'server' && mainTabs.length}
+          {@const tab = mainTabs.some((x) => x.id === (sub[0] ?? 'control')) ? (sub[0] ?? 'control') : mainTabs[0].id}
+          <PageHead title={t('nav.serverMain')} />
+          <PageTabs tabs={mainTabs} current={tab} />
+          {#if tab === 'performance'}
+            <Health />
+          {:else if tab === 'maintenance'}
+            <Maintenance {me} />
+          {:else if tab === 'plugins' && sub[1]}
+            {#key sub[1]}<PluginView name={sub[1]} />{/key}
+          {:else if tab === 'plugins'}
+            <Plugins embedded server="main" />
+          {:else if tab === 'config'}
+            {#key 'main'}<Settings embedded server="main" plugin={sub[1] ?? null} />{/key}
+          {:else if tab === 'control'}
+            <Server {me} tab="overview" bare part="main" />
+          {:else}
+            <Server {me} tab={tab} bare />
+          {/if}
+        {:else if area === 'settings' && sub[0] === 'appearance' && may.appearance}
+          <Appearance />
+        {:else}
+          <Home {me} />
+        {/if}
+        <Footer />
+      </main>
+    </div>
   {:else}
     <main>
       {#if route.path === '/account'}
@@ -320,59 +484,6 @@
           <p class="muted">{t(me.require2fa ? 'signin.teamSetupText2fa' : 'signin.teamSetupText')}</p>
           <LoginsCard team require2fa={me.require2fa} onchange={(d) => { if (d.ownLogin) loadMe(); }} />
         </div>
-      {:else if admin}
-        {#if area === 'community'}
-          <AreaTabs tabs={communityTabs} current={sub[0]} />
-          {#if sub[0] === 'tickets' && sub[1] && may.tickets}
-            {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
-          {:else if sub[0] === 'tickets' && may.tickets}
-            <Tickets {me} />
-          {:else if sub[0] === 'players' && sub[1] && may.players}
-            {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
-          {:else if sub[0] === 'players' && may.players}
-            <Players />
-          {:else if sub[0] === 'punishments' && may.punishments}
-            <Punishments />
-          {:else if (sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce)}
-            <News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />
-          {/if}
-        {:else if area === 'features'}
-          <AreaTabs tabs={featureTabs} current={sub[0]} />
-          {#if sub[0] === 'mrchunks' && may.mrchunks}
-            {#if sub[1]}{#key sub[1]}<ChunkView id={sub[1]} {me} />{/key}{:else}<Chunks {me} />{/if}
-          {:else if sub[0] === 'mrpvp' && (sub[1] === 'kits' || sub[1] === 'new-kit') && may.mrpvpKits}
-            {#if sub[1] === 'kits' && !sub[2]}
-              <PvpKits />
-            {:else}
-              {#key p}<PvpKit id={sub[1] === 'kits' ? sub[2] : null} copyFrom={sub[1] === 'new-kit' ? (sub[2] ?? null) : null} />{/key}
-            {/if}
-          {:else if sub[0] === 'mrpvp' && sub[1] && may.mrpvp}
-            {#key sub[1]}<PvpGame id={sub[1]} {me} />{/key}
-          {:else if sub[0] === 'mrpvp' && may.mrpvp}
-            <Pvp {me} />
-          {:else if sub[0] === 'mrsleep' && may.mrsleep}
-            <Sleep {me} />
-          {:else if sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
-            <Waypoints {me} />
-          {/if}
-        {:else if area === 'server'}
-          <AreaTabs tabs={serverAdminTabs} current={serverTab} />
-          {#if serverTab === 'performance' && may.health}
-            <Health />
-          {:else if serverTab === 'maintenance' && may.maintenance}
-            <Maintenance {me} />
-          {:else if serverTab === 'appearance' && may.appearance}
-            <Appearance />
-          {:else if serverTab === 'plugins' && sub[1] && may.versions}
-            {#key sub[1]}<PluginView name={sub[1]} tab={sub[2] ?? null} />{/key}
-          {:else if serverTab === 'control'}
-            <Server {me} tab="overview" bare />
-          {:else if ['plugins', 'logs', 'console'].includes(serverTab)}
-            <Server {me} tab={serverTab} bare />
-          {/if}
-        {:else}
-          <Home {me} />
-        {/if}
       {:else if !player && area !== 'start'}
         <!-- No player area (switched off, no permission, banned) -->
         <div class="gate">
@@ -410,6 +521,19 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
+  }
+
+  /* The administration: sidebar + page. The page gets the rest of the width (tables, charts, the map). */
+  .admin-shell {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .admin-main {
+    flex: 1;
+    min-width: 0;
+    max-width: 1240px;
+    margin: 0 auto;
   }
 
   main {

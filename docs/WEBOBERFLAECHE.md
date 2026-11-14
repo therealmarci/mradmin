@@ -3,7 +3,7 @@
 MRadmin vom Handy, Tablet oder PC bedienen: Tickets beantworten, Spieler verwalten, Wartungen planen, den Serverzustand im Blick behalten - mit denselben Rechten wie im Spiel. Diese Seite beschreibt die Weboberfläche im Detail. Was Spieler auf ihrer eigenen Seite sehen, steht unter [Spielerseite](wiki/spielerseite.md), Updates und Neustart unter [Plugins & Updates](wiki/plugins.md).
 
 ## Aufbau
-Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit dem **Schild-Knopf** zwischen Spielerbereich und Verwaltung (in der Verwaltung ist er farbig gefüllt). Die Sprache stellt man im Menü unter dem eigenen Namen um. Jeder Bereich hat oben Reiter.
+Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist, wechselt oben rechts mit dem **Schild-Knopf** zwischen Spielerbereich und Verwaltung (in der Verwaltung ist er farbig gefüllt). Die Sprache stellt man im Menü unter dem eigenen Namen um. Der Spielerbereich hat oben Bereiche mit Reitern, die Verwaltung eine **Seitenleiste** (seit 1.6).
 
 | Spielerbereich | Inhalt |
 |---|---|
@@ -15,12 +15,18 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Fürs Team kommen hier auch die **Team-Meldungen** dazu (siehe [Team-Meldungen](#team-meldungen)), Umschalter **Alles / Team**. Aktive Warnungen stehen oben |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
-| Verwaltung | Reiter |
+**Verwaltung:** links eine Seitenleiste mit allen Seiten in Gruppen. Oben eine Kachel mit Logo und Name des Servers und der **Übersicht** (Dashboard) samt Zahl offener Hinweise. Kleine Zähler zeigen, wo etwas wartet (ungelesene Tickets, Hinweise der Plugins, Plugin-Updates, laufender Neustart), unten stehen Hauptserver und Warteraum mit ihrem Zustand. Am PC lässt sich die Leiste zu Symbolen einklappen und jede Gruppe zuklappen (merkt sich der Browser), am Handy öffnet sie der Menü-Knopf oben links.
+
+| Gruppe | Seiten |
 |---|---|
-| **Übersicht** (`/admin`) | Dashboard |
-| **Community** (`/admin/community/…`) | Spieler · Tickets · Strafen · Beiträge · Ankündigungen |
-| **Funktionen** (`/admin/features/…`) | ein Reiter pro Plugin: Chunkloader · Duelle · Schlaf · Karte |
-| **Server** (`/admin/server/…`) | Steuerung · Leistung · Wartung · Plugins · Protokoll · Konsole · Aussehen (MRadmins Konfiguration: Plugins → MRadmin) |
+| (oben) | **Übersicht** (`/admin`) |
+| **Community** | Spieler · Tickets · Strafen (`/admin/community/…`) |
+| **Inhalte** | Beiträge · Ankündigungen (`/admin/content/…`) |
+| **Plugins** | eine Seite pro installiertem Plugin: Chunkloader · Duelle · Schlaf · Karte (`/admin/plugins/…`) |
+| **Server** | **Hauptserver** (`/admin/server/…`) und **Warteraum** (`/admin/server/room/…`, nur wenn verbunden) - jeder mit seinen Reitern, siehe [Server](#server) |
+| **Einstellungen** | Aussehen (`/admin/settings/appearance`) |
+
+Jede Seite ist gleich aufgebaut: oben Titel (bei Unterseiten mit Brotkrumen, z.B. „Duelle › #482“) mit den wichtigsten Knöpfen und einer schmalen Zeile mit Kennzahlen, darunter Reiter (jeder mit eigener Adresse), darunter Filter als runde Chips mit Suche, dann der Inhalt.
 
 Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
 
@@ -32,11 +38,12 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 | Befehl | Was er tut | Permission |
 |---|---|---|
 | `/web` | Code für die Anmeldung (für Spieler und Team) | `mradmin.web.self` oder `mradmin.web` |
-| `/mradmin web` | Status (läuft, Adresse, Konten mit eigener Anmeldung, Geräte) | `mradmin.web` |
-| `/mradmin web sessions [spieler]` | Angemeldete Geräte | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web logout [spieler]` | Alle Geräte abmelden | `mradmin.web` (andere: `.manage`) |
-| `/mradmin web reset <spieler>` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy | `mradmin.web.manage` |
-| `/mradmin web remove <spieler>` | Konto löschen | `mradmin.web.manage` |
+| `/web status` | Eigenes Konto: Adresse, eigene Anmeldungen (Passwort, Passkeys, Discord, 2FA), angemeldete Geräte | wie `/web` |
+| `/web devices` | Wie viele Geräte angemeldet sind, mit Knopf zum Abmelden | wie `/web` |
+| `/web logout` | Alle eigenen Geräte abmelden | wie `/web` |
+| `/web reset` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy; fragt per Klick nach | wie `/web` |
+
+`/web` verwaltet nur das **eigene** Konto - auch das Team ändert keine fremden Konten aus dem Spiel. `/mradmin web` gibt es nicht mehr.
 
 **Passwort vergessen?** Mit bestätigter E-Mail-Adresse kommt über „Passwort vergessen?“ ein Link per Mail (braucht `mail.*`). Und `/web` im Spiel geht immer.
 
@@ -54,9 +61,9 @@ Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`,
 - Cookies: `HttpOnly`, `SameSite=Strict`, über HTTPS `Secure`; Sitzungs-Cookies, Wiederherstellungscodes und Mail-Links nur als Hash. Änderungen nur mit eigenem Header und passender Herkunft (kein Auslösen über fremde Seiten), strenge Sicherheits-Header.
 - Im Web gelten dieselben Rechte wie ingame. Mit LuckPerms auch für Offline-Spieler, ohne LuckPerms über `web.roles` und `web.players`. Wer `mradmin.web` verliert, sieht die Verwaltung sofort nicht mehr (bleibt aber als Spieler angemeldet).
 - Jede Anmeldung und Aktion landet im Protokoll (Web: **Protokoll**, mit `mradmin.web.audit`), Anmeldungen auch im Discord-Log (`web-login`).
-- **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks (`/mradmin web setup`, `invite`) gibt es nicht mehr.
+- **Nach dem Update auf 1.5:** Bestehende Team-Konten bleiben mit Passwort, 2FA, Passkeys und Discord erhalten, angemeldete Geräte bleiben angemeldet. Einrichtungslinks gibt es nicht mehr.
 
-## Aussehen (Server, `mradmin.appearance`)
+## Aussehen (Einstellungen, `mradmin.appearance`)
 Die Weboberfläche trägt den Namen und die Farben deines Servers - für Spieler taucht „MRadmin“ nirgends auf.
 - **Name** und **Spruch** (Anmeldeseite), **Akzentfarbe** (Knöpfe, Hervorhebungen; die Schriftfarbe darauf wählt die Seite selbst), **Text und bis zu 4 Links** in der Fußzeile (z.B. Discord, Website, Regeln).
 - **Logo** (Anmeldeseite, Mails) und **Browser-Symbol** (Tab, Leiste, „Zum Startbildschirm hinzufügen“): PNG, WebP oder SVG, höchstens 512 KB. Ohne eigenes Symbol gilt das Logo. SVGs mit Skripten oder eingebetteten Inhalten werden abgelehnt.
@@ -80,7 +87,7 @@ Es gibt **zwei Startseiten** (`/`): eine für **Gäste** (nicht angemeldet) und 
 | Persönlich (nur angemeldet) | **Begrüßung**, **Meine Bereiche** (eine Kachel pro Bereich der Plugins), **Meine Statistik** |
 | Inhalte | **Neuigkeiten**, **Text** (mit Formatierung), **Bild** (PNG, WebP, SVG bis 512 KB), **Links**, **Discord** (Einladung), **Log-In-Aufforderung** |
 
-Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch auf beide Seiten aufgeteilt (für alle → beide, nur Gäste → Gäste, nur Angemeldete → Angemeldete). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Server → Aussehen ein.
+Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Bearbeitens unsichtbar. **Log In** steht oben rechts in der Leiste und öffnet ein Fenster über der Seite (direkt: `/login`). Die bisherige Startseite wird beim Update automatisch auf beide Seiten aufgeteilt (für alle → beide, nur Gäste → Gäste, nur Angemeldete → Angemeldete). Gespeichert wird im Speicher von MRadmin (`landing`), die Bilder unter `plugins/MRadmin/branding/landing/`. Name, Logo, Farbe und Fußzeile stellst du unter Einstellungen → Aussehen ein.
 
 ## Strafen (Community, mit LibertyBans)
 - Alle Strafen aller Spieler auf einen Blick, neueste zuerst (höchstens 300): **Aktiv** zeigt, was gerade gilt - wie `/banlist` und `/mutelist` von LibertyBans -, **Alle** auch abgelaufene, aufgehobene Strafen und Kicks.
@@ -95,6 +102,7 @@ Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Be
   Wartung. Läuft
   alles rund, stehen dort die wichtigsten aktuellen Werte. Aktualisiert sich alle 2 Sekunden.
 - Darunter Kacheln für Server, Spieler, Tickets, Chunkloader, Schlaf und Wartung mit Klick zur jeweiligen Seite.
+- **Mit Warteraum** zeigt die Übersicht nur, was das ganze Netzwerk betrifft: Die Folie **Serverzustand** zeigt erst den Hauptserver und wechselt nach der halben Anzeigezeit zum Warteraum (oben lässt sich auch von Hand umschalten), die Plugin-Kachel zählt die Updates beider Server, und **Spieler online** listet alle Spieler beider Server (Spieler im Warteraum mit Kennzeichen). Einzelheiten eines Servers stehen unter **Server → Hauptserver** bzw. **Warteraum**. Ohne Warteraum bleibt alles wie gehabt.
 - Jede Meldung und jede Kachel erscheint nur mit der Permission für ihren Bereich: Server und Spieler mit
   `mradmin.status`, CPU mit `mradmin.status.health`, Tickets mit `mradmin.tickets.view` (zugewiesene mit
   `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Schlaf mit `mrsleep.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
@@ -206,7 +214,7 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
   baut MRadmin das echte Item und prüft alle Werte; was der Editor nicht anzeigt, bleibt am Item erhalten.
 
 ## Wartung
-`mradmin.maintenance.view` ansehen, `.manage` ändern. Ankündigungen stehen unter [Kommunikation](#kommunikation-mradminnews-mradminannounce).
+`mradmin.maintenance.view` ansehen, `.manage` ändern. Ankündigungen stehen unter [Inhalte](#inhalte-mradminnews-mradminannounce).
 
 - Oben steht die **aktuelle Wartung** groß: läuft sie, mit Restzeit und Fortschrittsbalken, ist sie geplant, mit dem
   Countdown bis zum Start; darunter verlängern/kürzen und beenden bzw. absagen.
@@ -223,7 +231,7 @@ Tooltip mit Name, Verzauberungen, Trank-Effekten und Beschreibung - in der Sprac
 - **Letzte Wartungen**: die drei zuletzt beendeten oder abgesagten Wartungen, egal ob aus Uptime Kuma oder lokal
   (die Herkunft steht dabei), mit Zeitraum und Dauer. MRadmin merkt sich die letzten zehn.
 
-## Kommunikation (`mradmin.news`, `mradmin.announce`)
+## Inhalte (`mradmin.news`, `mradmin.announce`)
 Zwei Bereiche: **Beiträge** für die Spielerseite (`mradmin.news`) und **Ankündigungen** auf dem Bildschirm im Spiel
 (`mradmin.announce`, siehe unten). Wer nur eins der beiden Rechte hat, sieht nur diesen Bereich.
 
@@ -251,14 +259,11 @@ Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`play
 
 **Warnungen aus Uptime Kuma:** Vorfälle, die auf einer Kuma-Statusseite angeheftet sind (`uptime-kuma.status-pages`,
 dafür reicht `uptime-kuma.url`; gelesen alle `uptime-kuma.incident-seconds`, Standard 15), erscheinen auf der
-Spielerseite, im Karussell und oben auf dieser Seite. Der Link im Chat führt zur Spielerseite. Was im Spiel
-passiert, hängt vom Stil in Kuma ab:
-
-| Stil in Kuma | Farbe | Im Spiel |
-|---|---|---|
-| danger | rot | neu: Chat an alle, dazu groß „ACHTUNG / Kritische Warnung“; beim Join im Chat, solange angeheftet |
-| warning | gelb | neu: Chat an alle (kein Titel); beim Join im Chat, solange angeheftet |
-| info, primary, light, dark | blau | einmal pro Spieler im Chat, wie eine Neuigkeit |
+Spielerseite (in der Farbe ihres Stils in Kuma), im Karussell und oben auf dieser Seite. Der Link im Chat führt zur
+Spielerseite. **Im Spiel behandelt MRadmin jeden Vorfall wie eine hier angelegte Warnung**, egal welcher Stil: neu
+Chat an alle und groß „ACHTUNG / Kritische Warnung“, beim Join im Chat, solange er angeheftet ist. Hängt ein
+Warteraum dran, zeigt auch er die Vorfälle (Anzeigetafel und Chat beim Betreten) - wie die Warnungen von hier. Wartungen
+aus Uptime Kuma gelten auf beiden Servern ohnehin wie die in MRadmin angelegten.
 
 Was beim Serverstart schon angeheftet ist, wird nicht noch einmal an alle angekündigt. Geändert und beendet werden die
 Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce.kuma`) wird jeder Vorfall einmal gepostet
@@ -291,16 +296,21 @@ nicht - MRadmin nutzt `restart` selbst. Mit `/mradmin announce` und in Skripten 
 Speicher von MRadmin unter `announce-templates`.
 
 ## Server
-Alles rund um den laufenden Server steht unter einem Eintrag in der Leiste: **Server**. Oben Reiter, die jeder nur mit dem passenden Recht sieht:
+Unter **Server** stehen die Server selbst: der **Hauptserver** und - wenn einer verbunden ist - der **Warteraum** ([Warteraum (Proxy)](wiki/warteraum.md)). Jeder hat oben dieselben Reiter, die jeder nur mit dem passenden Recht sieht:
 
 | Reiter | Was dort ist | Recht |
 |---|---|---|
-| **Übersicht** | Vier Werte nebeneinander (Einzelheiten beim Drüberfahren): läuft seit, Paper-Build mit Farbpunkt (grün aktuell, gelb neuer Build verfügbar - geprüft alle 15 Minuten, auch ohne Starter), [Starter](wiki/starter.md) aktiv oder nicht, nächster geplanter Neustart. Darunter **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`, Standard 15/30/60 Minuten), kürzere Zeiten über den roten Knopf **Notfall** (Fenster: erst 2FA-Code oder Passkey, dann Neustart/Stopp, Zeit aus `versions.emergency-delays` und Pflicht-Grund), bzw. der laufende Countdown (mit Grund) und **Abbrechen** (bei einem geplanten Neustart: **Diesen Neustart überspringen**); optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Mit geplanten Neustarts zusätzlich **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
-| **Plugins** | Versionen, Updates, Installieren, Konfiguration im Browser - siehe [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
-| **Protokoll** | Ereignisse und Konsolenausgabe - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
+| **Steuerung** | Vier Werte nebeneinander (Einzelheiten beim Drüberfahren): läuft seit, Paper-Build mit Farbpunkt (grün aktuell, gelb neuer Build verfügbar - geprüft alle 15 Minuten, auch ohne Starter), [Starter](wiki/starter.md) aktiv oder nicht, nächster geplanter Neustart. Darunter **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`, Standard 15/30/60 Minuten), kürzere Zeiten über den roten Knopf **Notfall** (Fenster: erst 2FA-Code oder Passkey, dann Neustart/Stopp, Zeit aus `versions.emergency-delays` und Pflicht-Grund), bzw. der laufende Countdown (mit Grund) und **Abbrechen** (bei einem geplanten Neustart: **Diesen Neustart überspringen**); optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Mit geplanten Neustarts zusätzlich **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. Beim Warteraum dieselbe Steuerung mit seinen Werten (ein Neustart wartet dort, bis niemand mehr wartet und dein Server bereit ist - siehe [Warteraum](wiki/warteraum.md#warteraum-server-steuern)). | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
+| **Leistung** | siehe [Health-Dashboard](#health-dashboard-mradminstatushealth) - beim Warteraum dieselbe Seite mit seinen Werten | `mradmin.status.health` |
+| **Wartung** | siehe [Wartung](#wartung) (nur beim Hauptserver - die Wartung gilt fürs ganze Netzwerk) | `mradmin.maintenance.view` |
+| **Plugins** | Versionen, Updates, Installieren - siehe [Plugins](#plugins-mradminversionsview); in derselben Tabelle auch alle anderen Plugins des Servers: mit hinterlegtem GitHub-Link prüft MRadmin alle 6 Stunden, ob es ein neueres Release gibt (nur Anzeige, keine Updates) | `mradmin.versions.view` |
+| **Protokoll** | Ereignisse, Web-Aktionen und Konsolenausgabe dieses Servers (Web-Aktionen zum Warteraum - Neustart, Stopp, Befehle - stehen in seinem Protokoll) - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
 | **Konsole** | Befehle ausführen - siehe [Konsole](#konsole-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+| **Konfiguration** | die `config.yml` der Plugins dieses Servers im Browser, ein Reiter pro Plugin (beim Hauptserver MRadmin und seine Plugins, beim Warteraum MRwaitroom) | `mradmin.config` |
 
-Neu starten geht nur, wenn etwas den Server zurückbringt: der Starter oder `versions.restart-method`. Stoppen geht immer - ohne Starter bleibt der Server dann aus, bis ihn jemand startet. Alte Adressen (`/plugins`, `/logs`, `/console`) leiten auf den passenden Reiter weiter.
+Wechselt man über die Seitenleiste zwischen Hauptserver und Warteraum, bleibt der offene Reiter (z.B. Konsole → Konsole), solange der andere Server ihn hat. Die Seitenleiste aktualisiert ihre Zähler bei jedem Seitenwechsel, sobald der Server etwas meldet, und sonst alle 10 Sekunden.
+
+Neu starten geht nur, wenn etwas den Server zurückbringt: der Starter oder `versions.restart-method`. Stoppen geht immer - ohne Starter bleibt der Server dann aus, bis ihn jemand startet. Die Konfiguration von MRadmin und allen Plugins steht unter **Server → Hauptserver → Konfiguration**. Alte Adressen (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) leiten auf die neuen weiter.
 
 ## Plugins (`mradmin.versions.view`)
 Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` leitet weiter).

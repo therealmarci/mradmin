@@ -20,10 +20,17 @@
   // user null = visitor: instead of the name menu a sign-in button (onlogin)
   // inbox: null (no letter) or {count, alarm, active, label} - the letter opens /inbox, the number = what is new,
   // alarm = an unread team alarm (crash): the letter turns red
+  // onmenu: null or a function - the administration: a menu button on the left (phone) opens its sidebar
   let { items, current, onnav, user, menu, moreLabel, live = null, liveTitle = '', modes = null, onlogin = null,
-    loginLabel = '', inbox = null } = $props();
+    loginLabel = '', inbox = null, onmenu = null, menuLabel = '' } = $props();
 
   let menuOpen = $state(false);
+
+  // The height of the bar for everything that sticks below it (the sidebar of the administration): --topbar-h.
+  let barHeight = $state(0);
+  $effect(() => {
+    if (barHeight) document.documentElement.style.setProperty('--topbar-h', barHeight + 'px');
+  });
   let moreOpen = $state(false);
 
   const MAX_TABS = 5;
@@ -48,7 +55,13 @@
   {/if}
 {/snippet}
 
-<header class="top mr-topbar">
+<header class="top mr-topbar" bind:offsetHeight={barHeight}>
+  {#if onmenu}
+    <button class="icon-btn burger" aria-label={menuLabel} title={menuLabel} onclick={onmenu}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" aria-hidden="true"><path d={ICONS.more} /></svg>
+    </button>
+  {/if}
   <!-- The server: logo and name (Server -> Appearance) -->
   <span class="brand"><img src={picture('icon')} alt="" width="24" height="24" /><span class="brand-name">{brand.name}</span></span>
   <nav class="desktop">
@@ -118,6 +131,7 @@
     {/each}
   </div>
 {/if}
+{#if items.length}
 <nav class="tabs mr-tabbar">
   {#each tabs as item (item.path)}
     <button class:active={current === item.path} aria-current={current === item.path ? 'page' : undefined}
@@ -134,6 +148,7 @@
     </button>
   {/if}
 </nav>
+{/if}
 
 <style>
   /* Small square buttons on the right: the switch to the administration and the letter of the inbox */
@@ -378,6 +393,17 @@
   .scrim,
   .more-sheet {
     display: none;
+  }
+
+  .burger {
+    display: none;
+  }
+
+  @media (max-width: 860px) {
+    .burger {
+      display: grid;
+      margin-right: -4px;
+    }
   }
 
   /* Phone: flags and name on top, the places in a bar at the bottom (the rest behind the menu button). */

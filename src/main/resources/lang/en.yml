@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 23
+lang-version: 24
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -40,21 +40,11 @@ storage-status: "<prefix><gray>Storage: <white><type></white> <dark_gray>(<targe
 storage-pending: "<prefix><hover:show_text:'<gray>Or the database was not reachable at start (console).'><yellow><white><type></white> applies after a restart.</hover>"
 health-alert: "<prefix><hover:show_text:'<gray>Details on the web under Health.'><red>🐢 Server lagging for <minutes> min <gray>(<tps> TPS)</hover>"
 health-recovered: "<prefix><green>✅ Server runs smoothly again <gray>(<tps> TPS)"
+waitroom-health-alert: "<prefix><hover:show_text:'<gray>Details on the web under Server - Waiting room - Performance.'><red>🐢 Waiting room lagging for <minutes> min <gray>(<tps> TPS)</hover>"
+waitroom-health-recovered: "<prefix><green>✅ Waiting room runs smoothly again <gray>(<tps> TPS)"
 
 # --- Web interface (/mradmin web) ----------------------------------------------
-help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>web interface: set up your account, signed-in devices"
-web-usage: |-
-  <gray>/mradmin web sessions [player] <dark_gray>- <gray>signed-in devices
-  <gray>/mradmin web logout [player] <dark_gray>- <gray>sign out all devices
-  <gray>/mradmin web reset <player> <dark_gray>- <gray>remove own sign-ins, e.g. lost phone (admins, console)
-  <gray>/mradmin web remove <player> <dark_gray>- <gray>delete the account (admins)
-web-status: "<prefix><hover:show_text:'<gray><address><newline>Accounts with an own sign-in: <accounts> · devices: <sessions>'><gray>Web interface: <state></hover>"
-web-setup-moved: "<prefix><hover:show_text:'<gray>Sign in with /web and set up a password, a passkey or Discord under Sign-ins.'><yellow>There are no setup links any more - everything goes through /web.</hover>"
-web-reset-done: "<prefix><hover:show_text:'<gray>Password, 2FA, passkeys, Discord and e-mail removed, all devices signed out. They get in again with /web.'><green>Sign-ins of <white><player></white> reset.</hover>"
-web-reset-none: "<prefix><red><white><player></white> has no account in the web interface."
-web-state-on: "<green>running"
-web-state-off: "<red>off</red> <gray>(web.enabled in the config)"
-web-off: "<prefix><hover:show_text:'<gray>Set web.enabled: true, then /mradmin reload'><red>The web interface is off.</hover>"
+help-web: "<gold>/web [status|devices|logout|reset]</gold> <dark_gray>- <gray>your page on the web and your account"
 # The player's own page in the web interface (/web). Placeholders: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Your page: <link> <gray>· code: <code> <hover:show_text:'<gray>Works <seconds> seconds and only once.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -65,6 +55,17 @@ web-self-no-url: "<prefix><hover:show_text:'<gray>web.public-url is missing'><re
 web-self-devices: "<prefix><gray>Signed in on <white><count></white> devices. <button>"
 web-self-logout-button: "<red><u>[Sign out everywhere]</u></red>"
 web-self-logout: "<prefix><green>All devices signed out <gray>(<count>). Use /web to sign in again."
+web-self-status: "<prefix><hover:show_text:'<gray><address><newline>Sign-ins: <logins><newline>Signed-in devices: <count>'><gray>Your web account: <white><logins></white></hover>"
+web-self-login-password: "password"
+web-self-login-passkeys: "<count> passkey(s)"
+web-self-login-discord: "Discord"
+web-self-login-totp: "2FA"
+web-self-login-none: "only /web"
+web-self-reset-ask: "<prefix><hover:show_text:'<gray>Removes password, 2FA, passkeys, Discord and e-mail and signs out every device. Afterwards only /web gets you in.'><yellow>Really remove your own sign-ins?</hover> <button>"
+web-self-reset-button: "<red><u>[Yes, remove]</u></red>"
+web-self-reset-done: "<prefix><hover:show_text:'<gray>Get back in with /web. Set up new sign-ins on the page under Sign-ins.'><green>Your sign-ins are removed, every device is signed out.</hover>"
+web-self-reset-none: "<prefix><gray>You have no web account yet."
+web-moved: "<prefix><hover:show_text:'<gray>/web status, /web devices, /web logout, /web reset'><gray>You manage your web account with <white>/web</white> now.</hover>"
 news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"
 news-preview-changelog: "<prefix><green>📝 <b><title></b></green> <gray><preview></gray> <link>"
 news-preview-more: "<prefix><gray>... and <white><count></white> more news. <link>"
@@ -73,14 +74,6 @@ news-preview-hover: "<gray>Opens the whole post in the browser"
 alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
 alert-title: "<red><b>ATTENTION"
 alert-subtitle: "<white>Critical warning"
-warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
-incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-sessions-header: "<prefix><gray>Signed-in devices of <white><player></white>:"
-web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, last <seen>)"
-web-sessions-none: "<prefix><gray><player> is not signed in anywhere."
-web-logout-done: "<prefix><green>Signed out <white><count></white> device(s) of <white><player></white>."
-web-remove-done: "<prefix><green>Web account of <white><player></white> deleted."
-web-no-account: "<prefix><gray><player> has no web account."
 help-version: "<gold>/mradmin version</gold> <dark_gray>- <gray>version and updates"
 help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>admin dashboard, <gold>/mradmin player <player></gold> <dark_gray>- <gray>player menu, <gold>/mradmin help</gold> <dark_gray>- <gray>this list"
 help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>server health: TPS, RAM, chunks with the most entities"
@@ -175,6 +168,8 @@ push-report-title: "New ticket: <subject>"
 push-report-body: "<player> (<plugin>)"
 push-lag-title: "The server is lagging"
 push-lag-body: "Only <tps> TPS for <minutes> minutes."
+push-lag-room-title: "The waiting room is lagging"
+push-lag-room-body: "Only <tps> TPS for <minutes> minutes."
 push-maintenance-soon-title: "Maintenance announced"
 push-maintenance-soon-body: "<title> - from <start>"
 push-maintenance-start-title: "Maintenance running"
@@ -697,6 +692,8 @@ discord:
   web-console: "⌨️ **{player}** ran in the web console: `{command}`"
   health-alert: "🐢 The server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
   health-recovered: "✅ The server runs smoothly again: **{tps} TPS**."
+  waitroom-health-alert: "🐢 The waiting room server has been lagging for {minutes} minutes: **{tps} TPS** ({mspt} ms per tick)."
+  waitroom-health-recovered: "✅ The waiting room server runs smoothly again: **{tps} TPS**."
   plugin-update-downloaded: "⬇️ Downloaded **{plugin} {version}** (installed: {installed}) - active after the next restart. By: {admin}"
   server-restart: "🔄 **{admin}** restarts the server (countdown: {time}, reason: {reason})."
   server-restart-cancelled: "❎ **{admin}** cancelled the restart."

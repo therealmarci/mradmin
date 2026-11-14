@@ -9,9 +9,9 @@
   import { ICONS } from '../lib/icons.js';
   import { pluginIcon, pluginDescription, pluginState, pluginError } from '../lib/plugins.js';
   import Toast from '../components/Toast.svelte';
-  import ConfigEditor from '../components/ConfigEditor.svelte';
 
-  let { name, tab = null } = $props();
+  // back: the list this page was opened from (the plugins of the main server or of the waiting room)
+  let { name, back = '/admin/server/plugins' } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -52,15 +52,16 @@
   }
 
   const st = $derived(p ? pluginState(p) : null);
+  // The configuration tab of the server this plugin runs on.
+  const configPath = $derived(p ? (p.remote ? '/admin/server/room/config/' : '/admin/server/config/') + p.name : '');
   // What the channel offers: release version, or "Dev abc1234" on the dev channel.
   const offered = $derived(!p ? '' : p.channel === 'dev' ? (p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–') : p.latest ? p.latest.version : '–');
   const published = $derived(!p ? null : p.channel === 'dev' ? p.dev?.date : p.latest?.published);
   const badge = $derived(!p?.installed || p.staged || p.downloading || p.blocked ? null : p.update ? 'newer' : st?.tone === 'good' ? 'current' : null);
-  const showConfig = $derived(tab === 'config' && !!p?.config);
 </script>
 
 <div class="page">
-  <a class="back" href="/server/plugins" onclick={(e) => { e.preventDefault(); go('/server/plugins'); }}>← {t('plugins.back')}</a>
+  <a class="back" href={back} onclick={(e) => { e.preventDefault(); go(back); }}>← {t('plugins.back')}</a>
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -78,20 +79,12 @@
         </div>
       </div>
       <span class="state"><span class="dot"></span>{st.text}</span>
+      {#if p.config}
+        <a class="to-config" href={configPath}
+          onclick={(e) => { e.preventDefault(); go(configPath); }}>{t('nav.config')} →</a>
+      {/if}
     </header>
 
-    {#if p.config}
-      <div class="tabs" role="tablist">
-        <a role="tab" href={'/plugins/' + p.name} aria-selected={!showConfig} class:on={!showConfig}
-          onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name, true); }}>{t('plugins.tab.overview')}</a>
-        <a role="tab" href={'/plugins/' + p.name + '/config'} aria-selected={showConfig} class:on={showConfig}
-          onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name + '/config', true); }}>{t('plugins.tab.config')}</a>
-      </div>
-    {/if}
-
-    {#if showConfig}
-      <ConfigEditor plugin={p.name} />
-    {:else}
       <section class="box">
         <h2>{t('plugins.tab.version')}</h2>
         <div class="facts">
@@ -134,7 +127,6 @@
           </details>
         {/if}
       </section>
-    {/if}
   {:else if data}
     <p class="muted">{t('plugins.notFound')}</p>
   {:else if !error}
@@ -228,6 +220,11 @@
     font-size: 0.84rem;
   }
 
+  .to-config {
+    font-weight: 600;
+    text-decoration: none;
+  }
+
   .state {
     display: inline-flex;
     align-items: center;
@@ -245,30 +242,6 @@
     height: 8px;
     border-radius: 50%;
     background: var(--tn, var(--muted));
-  }
-
-  .tabs {
-    display: flex;
-    gap: 4px;
-    padding: 4px;
-    justify-self: start;
-    border-radius: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-
-  .tabs a {
-    padding: 7px 16px;
-    border-radius: 9px;
-    color: var(--muted);
-    font-weight: 600;
-    font-size: 0.92rem;
-    text-decoration: none;
-  }
-
-  .tabs a.on {
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .box {

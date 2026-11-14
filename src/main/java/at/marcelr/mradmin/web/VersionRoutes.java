@@ -4,7 +4,10 @@ import at.marcelr.mradmin.MRAdmin;
 import at.marcelr.mradmin.Perms;
 import at.marcelr.mradmin.storage.Storage;
 import at.marcelr.mradmin.versions.ReleasePicker;
+import at.marcelr.mradmin.versions.ForeignPlugins;
 import at.marcelr.mradmin.versions.VersionManager;
+
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -56,6 +59,12 @@ public final class VersionRoutes {
         server.route("POST", "/api/restart/schedule", r::schedule);
         server.route("POST", "/api/restart/confirm", r::confirmEmergency);
         server.route("POST", "/api/waitroom/restart", r::waitroomRestart);
+        server.route("POST", "/api/waitroom/control", r::waitroomControl);
+        server.route("GET", "/api/waitroom/plugins", r::waitroomPlugins);
+        server.route("GET", "/api/plugins/foreign", r::foreign);
+        server.route("POST", "/api/plugins/foreign", r::foreignLink);
+        server.route("GET", "/api/plugins/foreign/search", r::foreignSearch);
+        server.route("GET", "/api/plugins/foreign/preview", r::foreignPreview);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -205,12 +214,208 @@ public final class VersionRoutes {
             room.put("version", remoteRoom.version());
             room.put("ordered", plugin.waitingRoom().remote().openOrder("MRwaitroom", "restart") != null);
             room.put("error", plugin.waitingRoom().remote().error("MRwaitroom"));
+            // Live from its agent (every second): countdown, pause, planned restarts, starter, Paper - overrides the report.
+            var live = plugin.roomAgent().control();
+            room.putAll(live);
+            room.put("agent", !live.isEmpty());
+            // A newer Paper build for the same Minecraft version (MRadmin knows the newest one; the starter there puts it
+            // in on the next start of the waiting room).
+            room.put("paperNewest", plugin.starter().paperLatestBuild());
             result.put("waitroom", room);
         }
         result.put("may", Map.of("install", may(http, Perms.VERSIONS_INSTALL),
                 "restart", plugin.restarts().enabled() && may(http, Perms.SERVER_RESTART),
                 "stop", may(http, Perms.SERVER_RESTART)));
         http.json(200, result);
+    }
+
+    /**
+     * POST /api/waitroom/control {action, delay, reason} - like the main server: restart | stop after one of the
+     * configured delays (shorter = emergency: reason required and a fresh sign-in, POST /api/restart/confirm), cancel,
+     * pause | resume the planned restarts. Carried out by the waiting room's agent; it answers with the reason if not.
+     */
+    private void waitroomControl(Http http) throws Exception {
+        require(http, may(http, Perms.SERVER_RESTART));
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        String action = String.valueOf(http.string("action"));
+        com.google.gson.JsonObject body = new com.google.gson.JsonObject();
+        body.addProperty("action", action);
+        body.addProperty("by", http.account().name() + " (web)");
+        boolean emergency = false;
+        long delay = 0;
+        if (action.equals("restart") || action.equals("stop")) {
+            try {
+                delay = Long.parseLong(String.valueOf(http.string("delay")).trim());
+            } catch (NumberFormatException ex) {
+                throw new Http.WebException(400, "invalid-duration");
+            }
+            String reason = http.string("reason");
+            emergency = !plugin.settings().versions().restartDelays().contains(delay);
+            if (emergency && !plugin.settings().versions().emergencyDelays().contains(delay)) {
+                throw new Http.WebException(400, "invalid-duration");
+            }
+            if (emergency && (reason == null || reason.isBlank())) {
+                throw new Http.WebException(400, "restart-reason-required");
+            }
+            if (emergency) {
+                Long until = emergencyOk.remove(http.session().id());
+                if (until == null || until < System.currentTimeMillis()) {
+                    throw new Http.WebException(403, "restart-confirm-required");
+                }
+            }
+            body.addProperty("delay", delay);
+            body.addProperty("reason", reason == null ? "" : reason.strip());
+            body.addProperty("force", emergency);
+        } else if (!java.util.Set.of("cancel", "pause", "resume").contains(action)) {
+            throw new Http.WebException(400, "bad-request");
+        }
+        int status;
+        String answer;
+        try {
+            var reply = plugin.roomAgent().postFull("/agent/control", body.toString());
+            status = reply.getKey();
+            answer = reply.getValue();
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        if (status == 409) {
+            String code = "unknown";
+            try {
+                code = com.google.gson.JsonParser.parseString(answer).getAsJsonObject().get("error").getAsString();
+            } catch (RuntimeException ignored) {
+                // keep unknown
+            }
+            throw new Http.WebException(409, "waitroom-" + code);
+        }
+        if (status != 200) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        audit(http, "waitroom-" + action, action.equals("restart") || action.equals("stop")
+                ? delay / 1000 + " s" + (emergency ? " (emergency)" : "") : "");
+        http.json(200, Map.of());
+    }
+
+    /**
+     * GET /api/plugins/foreign?server=main|room - the plugins of that server MRadmin does not manage, with their source
+     * (Modrinth found by the JAR's fingerprint, or chosen by hand) and the newest version for the server's Minecraft
+     * version (watching only, no updates).
+     */
+    private void foreign(Http http) throws Exception {
+        require(http, mayView(server, http.account().id()));
+        boolean room = "room".equals(http.query().get("server"));
+        String[] minecraft = new String[1];
+        Map<String, ForeignPlugins.Info> plugins = foreignOf(room, minecraft);
+        http.json(200, Map.of("plugins", plugin.foreignPlugins().view(room ? "room" : "main", plugins, minecraft[0]),
+                "minecraft", minecraft[0]));
+    }
+
+    /** The foreign plugins of a server and (in minecraft[0]) its Minecraft version. */
+    @SuppressWarnings("unchecked")
+    private Map<String, ForeignPlugins.Info> foreignOf(boolean room, String[] minecraft) throws Exception {
+        if (!room) {
+            Map<String, Object[]> local = server.sync(() -> plugin.foreignPlugins().local());
+            minecraft[0] = Bukkit.getMinecraftVersion();
+            return plugin.foreignPlugins().withHashes(local);
+        }
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        java.util.Set<String> managed = new java.util.HashSet<>(plugin.versions().list().stream()
+                .filter(e -> e.remote && e.isInstalled()).map(e -> e.name).toList());
+        Map<String, ForeignPlugins.Info> plugins = new LinkedHashMap<>();
+        try {
+            Map<String, Object> answer = new com.google.gson.Gson().fromJson(plugin.roomAgent().get("/agent/plugins"), Map.class);
+            minecraft[0] = answer.get("minecraft") instanceof String v ? v : Bukkit.getMinecraftVersion();
+            for (Object o : (List<Object>) answer.getOrDefault("plugins", List.of())) {
+                Map<String, Object> p = (Map<String, Object>) o;
+                String name = String.valueOf(p.get("name"));
+                if (!managed.contains(name)) {
+                    plugins.put(name, new ForeignPlugins.Info(String.valueOf(p.get("version")), Boolean.TRUE.equals(p.get("enabled")),
+                            p.get("sha1") instanceof String h ? h : null));
+                }
+            }
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        return plugins;
+    }
+
+    /**
+     * POST /api/plugins/foreign {server, name, type: modrinth|github|off|auto, source, channel: stable|beta} - chooses
+     * where a plugin comes from (auto = back to the lookup by the JAR's fingerprint) and whether betas count.
+     */
+    private void foreignLink(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        String target = "room".equals(http.string("server")) ? "room" : "main";
+        String name = http.string("name");
+        if (name == null || name.isBlank() || name.length() > 64) {
+            throw new Http.WebException(400, "bad-request");
+        }
+        String type = http.string("type");
+        ForeignPlugins.Source source = null;
+        if (!"auto".equals(type)) {
+            // older pages send only {repo}
+            source = ForeignPlugins.parse(type == null ? "github" : type, http.string(type == null ? "repo" : "source"));
+            if (source == null) {
+                throw new Http.WebException(400, "foreign-repo-invalid");
+            }
+        }
+        String channel = http.string("channel");
+        Boolean beta = "beta".equals(channel) ? Boolean.TRUE : "stable".equals(channel) ? Boolean.FALSE : null;
+        plugin.foreignPlugins().link(target, name.strip(), source, beta);
+        audit(http, "foreign-plugin-link", target + " " + name + " " + (source == null ? "auto" : source.type() + ":" + source.id())
+                + (beta == null ? "" : " " + channel));
+        http.json(200, Map.of("ok", true));
+    }
+
+    /** GET /api/plugins/foreign/search?q=&server= - Modrinth projects for the dialog. */
+    private void foreignSearch(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        String q = http.query().getOrDefault("q", "").strip();
+        if (q.isEmpty() || q.length() > 80) {
+            http.json(200, Map.of("hits", List.of()));
+            return;
+        }
+        String minecraft = minecraftOf("room".equals(http.query().get("server")));
+        try {
+            http.json(200, Map.of("hits", plugin.foreignPlugins().search(q, minecraft), "minecraft", minecraft));
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(502, "foreign-search-failed");
+        }
+    }
+
+    /** GET /api/plugins/foreign/preview?server=&type=&source=&channel= - the newest fitting version of a source before saving. */
+    private void foreignPreview(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        ForeignPlugins.Source source = ForeignPlugins.parse(http.query().get("type"), http.query().get("source"));
+        if (source == null || source.type().equals("off")) {
+            throw new Http.WebException(400, "foreign-repo-invalid");
+        }
+        http.json(200, plugin.foreignPlugins().preview(source, minecraftOf("room".equals(http.query().get("server"))),
+                "beta".equals(http.query().get("channel"))));
+    }
+
+    /** The Minecraft version of a server (the waiting room reports its own; it falls back to this one's). */
+    private String minecraftOf(boolean room) {
+        if (room && plugin.roomAgent().control().get("minecraft") instanceof String v && !v.isEmpty()) {
+            return v;
+        }
+        return Bukkit.getMinecraftVersion();
+    }
+
+    /** GET /api/waitroom/plugins - all plugins of the waiting room server (name, version, enabled), read only. */
+    private void waitroomPlugins(Http http) throws Exception {
+        require(http, mayView(server, http.account().id()));
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        try {
+            http.json(200, new com.google.gson.Gson().fromJson(plugin.roomAgent().get("/agent/plugins"), Map.class));
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
     }
 
     /** POST /api/waitroom/restart - the waiting room restarts as soon as it may (it checks the rules itself). */

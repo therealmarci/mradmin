@@ -13,6 +13,7 @@
   import ValueTile from '../components/ValueTile.svelte';
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { poll } from '../lib/poll.js';
+  import PageHead from '../components/PageHead.svelte';
 
   let { me } = $props();
 
@@ -52,6 +53,8 @@
     'tickets-mine': () => me.may.tickets && '/tickets',
     maintenance: () => me.may.maintenance && '/maintenance',
     versions: () => me.may.versions && '/plugins',
+    room: () => me.may.versions && '/admin/server/room',
+    'room-health': () => me.may.health && '/admin/server/room/performance',
   };
   // Hints of modules (MRchunks, MRsleep ...) name the page themselves - linked if the member may see the module.
   const target = (a) => (a.module ? (me.may[a.module] && a.page) : a.page && pages[a.page]?.()) || null;
@@ -73,7 +76,8 @@
     if (a.key === 'disk') v.free = mb(v.free);
     if (a.key === 'maintenanceSoon') v.start = v.start ? dateTime(v.start) : '–';
     if (a.key === 'restartSoon') v.time = dateTime(v.time);
-    if (a.key === 'tps' || a.key === 'mspt') v.value = Number(v.value).toFixed(1);
+    if (a.key === 'tps' || a.key === 'mspt' || a.key === 'roomTps') v.value = Number(v.value).toFixed(1);
+    if (a.key === 'roomRestart' || a.key === 'roomStop') v.time = dateTime(v.time);
     return t('alert.' + a.key, v);
   }
 
@@ -89,26 +93,55 @@
   const icon = { bad: '✕', warn: '!', info: 'i', good: '✓' };
   const alerts = $derived(data?.alerts ?? []);
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
-  const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
   // The health monitor's last minute for the first slide (only with the right to see it): every second while the
   // tab is visible. The line reaches up to now and new values glide in, see lib/liveclock.svelte.js.
   const MINUTE = 60_000;
   const clock = new LiveClock();
-  let health = $state(null);
+  // Both servers are measured (the waiting room only when it is connected); the slide shows one of them and switches
+  // to the other at half its time on screen. Without a waiting room it is the main server only - as before.
+  let mainHealth = $state(null);
+  let roomHealth = $state(null);
+  let healthServer = $state('main');
+  const roomShown = $derived(!!data?.room);
+  const health = $derived(healthServer === 'room' && roomHealth ? roomHealth : mainHealth);
+  $effect(() => {
+    if (!roomShown && healthServer === 'room') healthServer = 'main';
+  });
+  let lastShown = null;
   async function loadHealth() {
     try {
-      const result = await api('GET', '/health?range=1m');
-      const last = health?.points.at(-1);
-      const next = result.points.at(-1);
-      clock.sync(result.to);
-      health = result;
-      if (last && next && last.time !== next.time) clock.glideFrom(last);
+      const [main, room] = await Promise.all([
+        api('GET', '/health?range=1m'),
+        roomShown ? api('GET', '/health?range=1m&server=room').catch(() => null) : Promise.resolve(null),
+      ]);
+      const before = lastShown;
+      clock.sync(main.to);
+      mainHealth = main;
+      roomHealth = room;
+      const next = health?.points.at(-1);
+      // new values glide in - only within the same server, not when the slide just switched
+      if (before && next && before.server === healthServer && before.point.time !== next.time) clock.glideFrom(before.point);
+      lastShown = next ? { server: healthServer, point: next } : null;
     } catch {
       // the slide just stays as it is
     }
   }
+  // The switch: at half of the slide's time (it moves on after SLIDE_SECONDS), while it is on screen and not held.
+  const SLIDE_SECONDS = 8;
+  let slideIndex = $state(0);
+  let held = $state(false);
+  $effect(() => {
+    if (!roomShown || slideIndex !== 0 || held) return;
+    const timer = setInterval(() => (healthServer = healthServer === 'main' ? 'room' : 'main'), (SLIDE_SECONDS / 2) * 1000);
+    return () => clearInterval(timer);
+  });
+  // Every time the slide comes back it starts with the main server.
+  $effect(() => {
+    if (slideIndex !== 0) healthServer = 'main';
+  });
+  const pickHealth = (which) => (healthServer = which);
   $effect(() => {
     if (!me.may.health) return;
     loadHealth();
@@ -134,16 +167,25 @@
       tone: (p) => toneBy(p.heapUsed >= p.heapMax * 0.95, p.heapUsed >= p.heapMax * 0.85),
       share: (p) => (p.heapMax > 0 ? (p.heapUsed / p.heapMax) * 100 : 0), tick: 85,
       note: (p) => t('health.max') + ' ' + mb(p.heapMax) },
-    { key: 'players', label: t('health.players'), format: (v) => String(Math.round(v ?? 0)), suffix: data?.server ? '/ ' + data.server.max : '',
-      tone: () => 'good', share: (p) => (data?.server?.max > 0 ? ((p.players ?? 0) / data.server.max) * 100 : 0), note: () => t('home.h.playersNote') },
+    { key: 'players', label: t('health.players'), format: (v) => String(Math.round(v ?? 0)), suffix: slots ? '/ ' + slots : '',
+      tone: () => 'good', share: (p) => (slots > 0 ? ((p.players ?? 0) / slots) * 100 : 0), note: () => t('home.h.playersNote') },
   ]);
+  const slots = $derived(healthServer === 'room' ? data?.room?.max ?? 0 : data?.server?.max ?? 0);
+  const healthPage = $derived(healthServer === 'room' ? '/admin/server/room/performance' : '/health');
   const linePoint = (p, c) => ({ time: p.time, value: p[c.key], color: LINE[c.tone(p)] });
   // The latest values: the newest point of the monitor, TPS/MSPT/RAM from the overview (every 2 seconds).
   const now = $derived({
     ...(health?.points?.at(-1) ?? {}),
-    ...(data?.server ? { tps: data.server.tps[0], mspt: data.server.mspt } : {}),
+    ...(healthServer === 'main' && data?.server ? { tps: data.server.tps[0], mspt: data.server.mspt } : {}),
   });
   const healthTone = $derived(tpsTone(now.tps ?? 20));
+
+  // Everyone online in the network: the main server's players and those in the waiting room, each with its server.
+  const everyone = $derived([
+    ...(data?.server?.players ?? []).map((p) => ({ ...p, where: 'main' })),
+    ...(data?.room?.players ?? []).map((p) => ({ ...p, where: 'room' })),
+  ]);
+  const allUpdates = $derived((data?.versions?.updates ?? 0) + (data?.versions?.roomUpdates ?? 0));
 
   // Beside the health tiles: what else the team wants to know at a glance. Only what this person may see, each
   // line leads to its page.
@@ -155,7 +197,9 @@
   }
   const glance = $derived.by(() => {
     const rows = [];
-    if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
+    if (healthServer === 'room' && data?.room) {
+      if (data.room.startedAt) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(Date.now() - data.room.startedAt), page: healthPage });
+    } else if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
     if (data?.tickets) {
       const { open, unread } = data.tickets;
       rows.push({ key: 'tickets', label: t('overview.tickets'), value: unread ? t('home.g.ticketsNew', { open, unread }) : t('home.g.tickets', { open }),
@@ -170,7 +214,8 @@
         tone: phase === 'none' ? '' : phaseTone[phase], page: '/maintenance' });
     }
     if (data?.versions) {
-      const { updates, staged, restartAt } = data.versions;
+      const { staged, restartAt } = data.versions;
+      const updates = allUpdates;
       rows.push({ key: 'versions', label: t('nav.versions'), value: restartAt ? t('home.versionsRestart') : staged ? t('home.versionsStaged') : updates ? t('home.versionsUpdates', { n: updates }) : t('home.g.current'),
         tone: restartAt ? 'bad' : updates ? 'warn' : '', page: '/plugins' });
     }
@@ -180,7 +225,7 @@
   // The slides: the health monitor first (with its own warnings), then one slide per area that has something to do -
   // all warnings of an area (e.g. unanswered and own tickets) together. The alerts come most serious first.
   const slideTone = (tone) => (tone === 'info' ? 'accent' : tone);
-  const areaKey = (a) => (a.module ? 'module:' + a.module : a.key.startsWith('tickets') ? 'tickets'
+  const areaKey = (a) => (a.module ? 'module:' + a.module : a.key.startsWith('room') ? 'room' : a.key.startsWith('tickets') ? 'tickets'
     : a.key.startsWith('maintenance') ? 'maintenance' : a.key.startsWith('versions') || a.key === 'restartSoon' ? 'versions' : 'health');
   const slides = $derived.by(() => {
     const areas = new Map();
@@ -204,6 +249,7 @@
   // Which part of the server a warning is about.
   function areaOf(a) {
     if (a.module) return (data?.tiles ?? []).find((m) => m.id === a.module)?.label ?? a.module;
+    if (a.key.startsWith('room')) return t('nav.serverRoom');
     if (a.key.startsWith('tickets')) return t('nav.tickets');
     if (a.key.startsWith('maintenance')) return t('nav.maintenance');
     if (a.key.startsWith('versions') || a.key === 'restartSoon') return t('nav.versions');
@@ -254,25 +300,26 @@
 </script>
 
 <div class="page">
-  <section class="card hello">
-    <img src={head(me.uuid)} alt="" width="64" height="64" />
-    <div>
-      <h1>{t('home.hello', { name: me.name })}</h1>
-      <p class="muted"><span class="dot" class:on={live.connected}></span>{t('home.live')}</p>
-    </div>
-  </section>
+  <PageHead title={t('home.hello', { name: me.name })}
+    stats={[{ label: t('home.live'), value: '●', tone: live.connected ? 'good' : '' }]} />
 
   {#if error}<div class="error">{error}</div>{/if}
 
   {#if data}
     <!-- The slideshow: the health monitor first (TPS with the key figures and its last minute), then one banner
          per area that has something to do (each warning with its details). -->
-    <Carousel {slides} seconds={8} label={t('home.slides')}>
+    <Carousel {slides} seconds={SLIDE_SECONDS} label={t('home.slides')} bind:index={slideIndex} bind:paused={held}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'health'}
           <div class="kind">
             <span class="badge small {healthTone}">{healthTone === 'good' ? '✓' : healthTone === 'warn' ? '!' : '✕'}</span>
             {t('health.title')} · {t('health.' + (healthTone === 'good' ? 'good' : healthTone === 'warn' ? 'strained' : 'lagging'))}
+            {#if roomShown}
+              <span class="which" role="group" aria-label={t('home.h.which')}>
+                <button class:on={healthServer === 'main'} tabindex={active ? 0 : -1} onclick={() => pickHealth('main')}>{t('nav.serverMain')}</button>
+                <button class:on={healthServer === 'room'} tabindex={active ? 0 : -1} onclick={() => pickHealth('room')}>{t('nav.serverRoom')}</button>
+              </span>
+            {/if}
             <span class="when">{t('home.h.lastMinute')}</span>
           </div>
           <div class="h-body">
@@ -292,7 +339,7 @@
                   <ValueTile label={c.label} value={c.format(point[c.key])} suffix={c.suffix} tone={c.tone(point)} share={c.share(point)}
                     tick={c.tick ?? null} note={c.note(point)} lineHeight={30} line={inMinute.length > 1} points={inMinute.map((x) => linePoint(x, c))}
                     live={shownLatest && clock.now > shownLatest.time ? linePoint({ ...shownLatest, time: clock.now }, c) : null}
-                    from={clock.now - MINUTE} to={clock.now} tabindex={active ? 0 : -1} onclick={() => go('/health')} />
+                    from={clock.now - MINUTE} to={clock.now} tabindex={active ? 0 : -1} onclick={() => go(healthPage)} />
                 {/each}
               </div>
             </div>
@@ -305,7 +352,7 @@
               {/each}
             </ul>
           {/if}
-          <button class="more" tabindex={active ? 0 : -1} onclick={() => go('/health')}>{t('home.toHealth')} →</button>
+          <button class="more" tabindex={active ? 0 : -1} onclick={() => go(healthPage)}>{t('home.toHealth')} →</button>
         {:else}
           <!-- One slide per area: its first (most serious) warning as the heading, further ones as lines. -->
           {@const a = s.alerts[0]}
@@ -337,20 +384,6 @@
     </Carousel>
 
     <div class="tiles">
-      {#if data.server}
-        {@const s = data.server}
-        <!-- Live from the health monitor, every second; without the right to see it from the overview. -->
-        {@const l = shownLatest ?? { tps: s.tps[0], mspt: s.mspt, heapUsed: s.ramUsed, heapMax: s.ramMax }}
-        <DashTile icon="pulse" hue={210} title={t('overview.server')} value={l.tps.toFixed(1)} unit="TPS" tone={tpsTone(l.tps)}
-          rows={[
-            { label: t('overview.tps'), value: s.tps.map((v) => v.toFixed(1)).join(' / ') },
-            { label: t('overview.mspt'), value: l.mspt.toFixed(1) + ' ms', tone: msptTone(l.mspt), fill: l.mspt / 50 },
-            { label: t('overview.ram'), value: `${mb(l.heapUsed)} / ${mb(l.heapMax)}`, fill: share(l.heapUsed, l.heapMax),
-              tone: share(l.heapUsed, l.heapMax) > 0.9 ? 'warn' : '' },
-          ]}
-          link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
-      {/if}
-
       {#if data.tickets}
         {@const tk = data.tickets}
         <DashTile icon="ticket" hue={210} title={t('overview.tickets')} value={tk.open} unit={t('overview.openTickets')}
@@ -397,11 +430,11 @@
       {#if data.versions}
         {@const v = data.versions}
         <DashTile icon="box" hue={210} title={t('nav.versions')} small
-          value={v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : v.updates ? t('home.versionsUpdates', { n: v.updates }) : t('home.versionsCurrent')}
-          tone={v.restartAt ? 'bad' : v.staged ? 'info' : v.updates ? 'warn' : 'good'}
+          value={v.restartAt ? t('home.versionsRestart') : v.staged ? t('home.versionsStaged') : allUpdates ? t('home.versionsUpdates', { n: allUpdates }) : t('home.versionsCurrent')}
+          tone={v.restartAt ? 'bad' : v.staged ? 'info' : allUpdates ? 'warn' : 'good'}
           rows={[
-            { label: t('home.versionsPlugins'), value: v.plugins },
-            { label: t('home.versionsAvailable'), value: v.updates, tone: v.updates ? 'warn' : '' },
+            { label: data.room ? t('home.versionsMain') : t('home.versionsPlugins'), value: v.updates ? t('home.versionsOf', { n: v.updates, of: v.plugins }) : v.plugins, tone: v.updates ? 'warn' : '' },
+            ...(data.room ? [{ label: t('home.versionsRoom'), value: v.roomUpdates ? t('home.versionsOf', { n: v.roomUpdates, of: v.roomPlugins }) : v.roomPlugins, tone: v.roomUpdates ? 'warn' : '' }] : []),
             { label: t('home.versionsWaiting'), value: v.staged },
           ]}
           link={t('home.toVersions')} onclick={() => go('/server/plugins')} />
@@ -416,13 +449,16 @@
               stroke-linejoin="round"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9c0-3.3 3.1-6 7-6s7 2.7 7 6M16 3.5a4 4 0 0 1 0 7M18 14c2.4.6 4 2.6 4 5" /></svg>
           </span>
           <h2>{t('overview.players')}</h2>
-          <span class="count">{data.server.online} / {data.server.max}</span>
+          <span class="count">{everyone.length} / {data.server.max}</span>
+          {#if data.room}
+            <span class="muted small split">{t('home.playersSplit', { main: data.server.players.length, room: data.room.players.length })}</span>
+          {/if}
         </div>
-        {#if data.server.players.length === 0}
+        {#if everyone.length === 0}
           <p class="muted small">{t('overview.nobody')}</p>
         {:else}
           <div class="players">
-            {#each data.server.players as p (p.uuid)}
+            {#each everyone as p (p.uuid + p.where)}
               <svelte:element this={me.may.players ? 'button' : 'div'} class="player" onclick={me.may.players ? () => go('/players/' + p.uuid) : undefined}
                 role={me.may.players ? undefined : 'group'}>
                 <img src={head(p.uuid)} alt="" width="36" height="36" />
@@ -430,6 +466,7 @@
                   <span class="pname">{p.name}</span>
                   <span class="muted small">{p.world} · {p.ping} ms</span>
                 </span>
+                {#if p.where === 'room'}<span class="tag info">{t('nav.serverRoom')}</span>{/if}
                 {#if p.admin}<span class="tag warn">{t('overview.admin')}</span>{/if}
                 {#if p.frozen}<span class="tag bad">{t('overview.frozen')}</span>{/if}
               </svelte:element>
@@ -450,6 +487,36 @@
 </div>
 
 <style>
+  .which {
+    display: inline-flex;
+    gap: 2px;
+    margin-left: 6px;
+    padding: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  .which button {
+    padding: 1px 10px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: inherit;
+    background: transparent;
+    opacity: 0.7;
+  }
+
+  .which button.on {
+    opacity: 1;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .split {
+    margin-left: auto;
+  }
+
   .page {
     display: grid;
     gap: 16px;
@@ -461,21 +528,9 @@
     align-items: center;
   }
 
-  .hello img {
-    border-radius: 10px;
-    image-rendering: pixelated;
-  }
-
   h1 {
     margin: 0;
     font-size: 1.4rem;
-  }
-
-  .hello p {
-    margin: 4px 0 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .dot {
@@ -757,6 +812,11 @@
   .tag.bad {
     color: var(--bad);
     background: color-mix(in srgb, var(--bad) 15%, transparent);
+  }
+
+  .tag.info {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
   .notice {

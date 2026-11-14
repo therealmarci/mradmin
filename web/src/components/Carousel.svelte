@@ -9,9 +9,8 @@
    * slides: [{key, tone, plain?, ...}] - plain: the page draws the whole slide itself (no padding, no colour);
    * seconds: 0 = no moving on; index can be bound (to jump to a slide from outside).
    */
-  let { slides, seconds = 0, label = '', index = $bindable(0), slide } = $props();
+  let { slides, seconds = 0, label = '', index = $bindable(0), paused = $bindable(false), slide } = $props();
 
-  let paused = $state(false);
   let drag = $state(0);
   let startX = $state(null);
 

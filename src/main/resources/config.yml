@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 60
+config-version: 62
 
 
 # ------------------------------------------------------------------------------
@@ -438,6 +438,9 @@ waiting-room:
     port: 8126
     # Shared key - the same value goes into the config.yml of the waiting room. Created on the first start if empty.
     key: ""
+  # Where MRadmin reads performance, console and log of the waiting room server (its section agent), e.g.
+  # "http://10.0.0.6:8127". "" = found by itself: the address its reports come from with the port it reports.
+  agent-url: ""
   # Who may do what around the waiting room, per team role (permissions mradmin.groups.admin|staff|support - the
   # highest one counts; normal players have none of these rights). Only while the waiting room is on - without it
   # the maintenance keeps its bypass permission (mradmin.maintenance.bypass). Every value is one of:
@@ -912,6 +915,13 @@ discord:
       enabled: true
       color: "#E74C3C"
     health-recovered:
+      enabled: true
+      color: "#2ECC71"
+    # The same for the waiting room server (read through its agent).
+    waitroom-health-alert:
+      enabled: true
+      color: "#E74C3C"
+    waitroom-health-recovered:
       enabled: true
       color: "#2ECC71"
     plugin-update-downloaded:

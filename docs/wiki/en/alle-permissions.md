@@ -8,6 +8,7 @@
 | `<plugin>.groups.support` | Support - view and help |
 | `<plugin>.groups.staff` | Staff - step in |
 | `<plugin>.groups.admin` | Admins - everything, including settings |
+| `<plugin>.groups.bots` | Second accounts (bots) - see [Group bots](#group-bots-second-accounts) |
 
 The single permissions stay usable next to them. Use them to give single people something extra or to take something out of a group (examples below). What exactly a plugin puts into its groups is described in its guide.
 
@@ -74,6 +75,32 @@ You set the durations of MRsleep under `team-limits` in its `config.yml`. The MR
 > [!WARNING]
 > `mradmin.groups.admin` includes running commands in the web console - as powerful as the server console.
 > Only give the admin group to people you trust with the server.
+
+## Group bots (second accounts)
+For second accounts (e.g. an account that keeps a farm running while AFK). Bots **may do nothing** - no `/web`, no
+`/report`, no duels, no tool belt, no waypoints. Only two things apply:
+
+- **Sleeping:** they do not count for sleeping (`mrsleep.exempt`).
+- **Chunk loaders:** if the bot is linked with a main account (`/chunkloader` → link accounts, by the main account),
+  it manages chunk loaders like that account - its loaders and those it is invited to (`mrchunks.linked`). Unlinked
+  nothing.
+
+In the waiting room bots are treated like normal players. Important: the group does **not** inherit from `default` -
+otherwise the bot would get the player permissions through `<plugin>.player` after all.
+
+```text
+/lp creategroup bots
+/lp group bots permission set mradmin.groups.bots true
+/lp group bots permission set mrchunks.groups.bots true
+/lp group bots permission set mrpvp.groups.bots true
+/lp group bots permission set mrsleep.groups.bots true
+/lp group bots permission set mrtoolbar.groups.bots true
+/lp group bots permission set mrwaypoints.groups.bots true
+/lp group bots permission set mrwaitroom.groups.bots true
+
+# Make a second account a bot (replaces its groups, so default as well)
+/lp user Steve_AFK parent set bots
+```
 
 ## In no group - single on purpose
 These permissions change how a player is treated and therefore belong in no group:

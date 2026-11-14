@@ -10,6 +10,7 @@ Du entscheidest selbst, wer was bekommt.
 | `<plugin>.groups.support` | Support - ansehen und helfen |
 | `<plugin>.groups.staff` | Staff - eingreifen |
 | `<plugin>.groups.admin` | Admins - alles, auch Einstellungen |
+| `<plugin>.groups.bots` | Zweitaccounts (Bots) - siehe [Gruppe Bots](#gruppe-bots-zweitaccounts) |
 
 Die einzelnen Permissions bleiben daneben bestehen. Damit gibst du einzelnen Leuten etwas dazu oder nimmst aus einer
 Gruppe etwas heraus (Beispiele unten). Was ein Plugin genau in seine Gruppen packt, steht in seiner Anleitung.
@@ -78,6 +79,32 @@ Die Zeiten bei MRsleep stellst du unter `team-limits` in dessen `config.yml` ein
 > [!WARNING]
 > `mradmin.groups.admin` enthält das Ausführen von Befehlen in der Web-Konsole - so mächtig wie die Server-Konsole.
 > Gib die Admin-Gruppe nur Leuten, denen du den Server anvertraust.
+
+## Gruppe Bots (Zweitaccounts)
+Für Zweitaccounts (z.B. ein Account, der AFK eine Farm am Laufen hält). Bots **dürfen nichts** - kein `/web`, kein
+`/report`, keine Duelle, kein Werkzeuggürtel, keine Wegpunkte. Nur zwei Dinge gelten:
+
+- **Schlafen:** Sie zählen beim Schlafen nicht mit (`mrsleep.exempt`).
+- **Chunkloader:** Ist der Bot mit einem Hauptaccount verknüpft (`/chunkloader` → Accounts verknüpfen, beim
+  Hauptaccount), verwaltet er Chunkloader wie dieser - dessen Loader und die, zu denen er eingeladen ist
+  (`mrchunks.linked`). Ohne Verknüpfung nichts.
+
+Im Warteraum werden Bots wie normale Spieler behandelt. Wichtig: Die Gruppe **erbt nicht** von `default` - sonst
+bekäme der Bot über `<plugin>.player` doch die Spieler-Rechte.
+
+```text
+/lp creategroup bots
+/lp group bots permission set mradmin.groups.bots true
+/lp group bots permission set mrchunks.groups.bots true
+/lp group bots permission set mrpvp.groups.bots true
+/lp group bots permission set mrsleep.groups.bots true
+/lp group bots permission set mrtoolbar.groups.bots true
+/lp group bots permission set mrwaypoints.groups.bots true
+/lp group bots permission set mrwaitroom.groups.bots true
+
+# Einen Zweitaccount zum Bot machen (ersetzt seine Gruppen, also auch default)
+/lp user Steve_AFK parent set bots
+```
 
 ## In keiner Gruppe - bewusst einzeln
 Diese Rechte verändern, wie ein Spieler behandelt wird, und gehören deshalb in keine Gruppe:

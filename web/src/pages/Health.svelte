@@ -5,6 +5,11 @@
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { ICONS } from '../lib/icons.js';
 
+  // server: null = this server, 'room' = the waiting room server (read through its agent, since 1.6) - same page
+  let { server = null } = $props();
+  const q = $derived(server === 'room' ? 'server=room' : '');
+  const withQ = (path) => (q ? path + (path.includes('?') ? '&' : '?') + q : path);
+
   const RANGES = [
     { key: '1m', ms: 60e3 },
     { key: '1h', ms: 3600e3 },
@@ -41,7 +46,7 @@
     const asked = range;
     if (first) loading = true;
     try {
-      const result = await api('GET', '/health?range=' + asked);
+      const result = await api('GET', withQ('/health?range=' + asked));
       if (asked === range) take(result);
       error = '';
     } catch (e) {
@@ -53,7 +58,7 @@
 
   async function loadLatest() {
     try {
-      const point = await api('GET', '/health/latest');
+      const point = await api('GET', withQ('/health/latest'));
       if (point && point.time) live = point;
     } catch {
       // the charts show the error
@@ -62,7 +67,7 @@
 
   async function loadSystem() {
     try {
-      system = await api('GET', '/health/system');
+      system = await api('GET', withQ('/health/system'));
     } catch {
       // the charts show the error
     }
@@ -71,7 +76,7 @@
   async function loadLag() {
     lagBusy = true;
     try {
-      lag = await api('GET', '/health/lag');
+      lag = await api('GET', withQ('/health/lag'));
     } catch (e) {
       error = errorText(e);
     } finally {
@@ -155,21 +160,7 @@
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.pulse} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.pulse} /></svg>
-      </span>
-      <div>
-        <h1>{t('health.title')}</h1>
-        <p class="muted">{t('health.subtitle')}</p>
-      </div>
-    </div>
-    {#if state}<span class="state {state.tone}"><b>{state.icon}</b> {state.label}</span>{/if}
-  </header>
+  {#if state}<div class="tab-state"><span class="state {state.tone}"><b>{state.icon}</b> {state.label}</span></div>{/if}
 
   <div class="switch" role="group" aria-label={t('health.range')}>
     {#each RANGES as r}
@@ -219,11 +210,14 @@
           <div class="value">{system.serverSize >= 0 ? mb(system.serverSize) : '…'}</div>
           <div class="sub">{t('health.serverSizeHint')}</div>
         </div>
-        <div class="kpi">
-          <div class="label">{t('health.dbSize')}</div>
-          <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
-          <div class="sub">{t('health.storage.' + system.storage)}</div>
-        </div>
+        {#if server !== 'room'}
+          <!-- MRadmin's own data - the waiting room server has none -->
+          <div class="kpi">
+            <div class="label">{t('health.dbSize')}</div>
+            <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
+            <div class="sub">{t('health.storage.' + system.storage)}</div>
+          </div>
+        {/if}
       {/if}
     </div>
   {/if}
@@ -337,6 +331,11 @@
 </div>
 
 <style>
+  .tab-state {
+    display: flex;
+    justify-content: flex-end;
+  }
+
   .page {
     --hm: var(--accent);
     display: grid;
@@ -360,26 +359,6 @@
     box-shadow: var(--shadow);
   }
 
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--hm);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
   .icon {
     display: grid;
     place-items: center;
@@ -390,15 +369,6 @@
     color: var(--hm);
     background: color-mix(in srgb, var(--hm) 16%, var(--surface-2));
     border: 1px solid color-mix(in srgb, var(--hm) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
   }
 
   .state {

@@ -22,6 +22,8 @@ import java.util.Map;
  *  GET /api/health/system                   uptime, Java, CPU cores, disk, server and database size, worlds, latest point
  *  GET /api/health/lag                      the 5 chunks with the most entities (counted at most every 30 s)
  * </pre>
+ * With {@code server=room} each answers for the waiting room server (read through its agent, see RoomAgent) - the
+ * same shapes, so the page is the same.
  */
 public final class HealthRoutes {
 
@@ -64,10 +66,43 @@ public final class HealthRoutes {
         }
     }
 
+    /** Whether the request is about the waiting room server (?server=room). */
+    private static boolean room(Http http) {
+        String query = http.exchange().getRequestURI().getQuery();
+        return query != null && java.util.Arrays.asList(query.split("&")).contains("server=room");
+    }
+
+    private at.marcelr.mradmin.health.HealthMonitor monitor(Http http) throws Http.WebException {
+        if (!room(http)) {
+            return plugin.health();
+        }
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        return plugin.roomAgent().health();
+    }
+
+    /** An answer of the waiting room's agent, passed through. */
+    private void fromRoom(Http http, String path) throws Exception {
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        try {
+            http.json(200, new com.google.gson.Gson().fromJson(plugin.roomAgent().get(path), Map.class));
+        } catch (java.io.IOException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+    }
+
     private void history(Http http) throws Exception {
         require(http);
         String query = http.exchange().getRequestURI().getQuery();
-        String range = query != null && query.startsWith("range=") ? query.substring(6) : "1h";
+        String range = "1h";
+        for (String part : query == null ? new String[0] : query.split("&")) {
+            if (part.startsWith("range=")) {
+                range = part.substring(6);
+            }
+        }
         long millis = RANGES.getOrDefault(range, RANGES.get("1h"));
         // Never more than is kept (health.history).
         millis = Math.min(millis, Math.max(24 * 3_600_000L, plugin.settings().health().history()));
@@ -75,18 +110,22 @@ public final class HealthRoutes {
         // are no points (server offline, history not reaching back that far).
         long now = System.currentTimeMillis();
         http.json(200, Map.of("range", range, "history", plugin.settings().health().history(),
-                "from", now - millis, "to", now, "points", plugin.health().range(millis, MAX_POINTS)));
+                "from", now - millis, "to", now, "points", monitor(http).range(millis, MAX_POINTS)));
     }
 
     /** The newest point (every second) - the key figures stay live even when a long range is shown. */
     private void latest(Http http) throws Exception {
         require(http);
-        var latest = plugin.health().latest();
+        var latest = monitor(http).latest();
         http.json(200, latest == null ? Map.of() : latest);
     }
 
     private void system(Http http) throws Exception {
         require(http);
+        if (room(http)) {
+            fromRoom(http, "/agent/system");
+            return;
+        }
         Map<String, Object> info = new LinkedHashMap<>();
         var runtime = ManagementFactory.getRuntimeMXBean();
         info.put("uptime", runtime.getUptime());
@@ -151,6 +190,10 @@ public final class HealthRoutes {
     /** The chunk count goes through every entity - only when someone looks, and at most every 30 seconds. */
     private void lag(Http http) throws Exception {
         require(http);
+        if (room(http)) {
+            fromRoom(http, "/agent/lag");
+            return;
+        }
         if (System.currentTimeMillis() - lagTime > LAG_CACHE_MILLIS) {
             lag = server.sync(() -> {
                 List<Map<String, Object>> list = new ArrayList<>();

@@ -12,8 +12,9 @@
   import { ENTRY_TYPES, HEADINGS, isHeading, levelOf, sections, entryCount } from '../lib/changelog.js';
   import Toast from '../components/Toast.svelte';
   import AnnouncePanel from '../components/AnnouncePanel.svelte';
+  import PageHead from '../components/PageHead.svelte';
 
-  // section: posts | announce from the tabs of the area Communication (then without the own switch)
+  // section: posts | announce - since the sidebar (1.6) two pages of their own (Contents -> Posts / Announcements)
   let { me, section = null } = $props();
 
   const KINDS = ['news', 'changelog', 'alert'];
@@ -151,27 +152,9 @@
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.news} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.news} /></svg>
-      </span>
-      <div>
-        <h1>{t('news.title')}</h1>
-        <p class="muted">{t('news.subtitle')}</p>
-      </div>
-    </div>
-    {#if data}
-      <div class="numbers">
-        <span><b>{data.posts.length}</b> {t('news.postsCount')}</span>
-        {#if activeAlerts}<span class="bad-text"><b>{activeAlerts}</b> {t('news.alertsActive')}</span>{/if}
-      </div>
-    {/if}
-  </header>
-
+  <PageHead title={t(area === 'announce' ? 'news.area.announce' : 'news.area.posts')}
+    stats={area === 'posts' && data ? [{ label: t('news.postsCount'), value: data.posts.length },
+      ...(activeAlerts ? [{ label: t('news.alertsActive'), value: activeAlerts, tone: 'bad' }] : [])] : []} />
   {#if me.may.news && me.may.announce && !section}
     <div class="seg areas" role="tablist">
       <button role="tab" aria-selected={area === 'posts'} class:active={area === 'posts'} onclick={() => (area = 'posts')}>{t('news.area.posts')}</button>
@@ -415,26 +398,6 @@
     box-shadow: var(--shadow);
   }
 
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--cm);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
   .icon {
     display: grid;
     place-items: center;
@@ -445,35 +408,6 @@
     color: var(--cm);
     background: color-mix(in srgb, var(--cm) 16%, var(--surface-2));
     border: 1px solid color-mix(in srgb, var(--cm) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
-  }
-
-  .numbers {
-    position: relative;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .numbers span {
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    font-size: 0.88rem;
-  }
-
-  .numbers b {
-    font-size: 1.1rem;
-    margin-right: 2px;
   }
 
   .bad-text {

@@ -7,7 +7,7 @@
 ```
 
 - **Own text** appears as a title on the screen. With `|` you separate **title | subtitle**. Colors in [MiniMessage format](https://docs.advntr.dev/minimessage/format.html) are allowed.
-- You create **your own templates** in the web interface under **Communication → Announcements** (`mradmin.announce.templates`): title, subtitle, chat and action bar each in German and English with a preview, optionally a Discord text, display time of the title, sound and **audience** (players, bots, support, staff, admin - every group also gets what is meant for the ones below; "players" = everyone). They work in the web, in the announcement menu and with `/mradmin announce <name>`. Values after the name fill `<arg1>`, `<arg2>` … or `<args>`.
+- You create **your own templates** in the web interface under **Content → Announcements** (`mradmin.announce.templates`): title, subtitle, chat and action bar each in German and English with a preview, optionally a Discord text, display time of the title, sound and **audience** (players, bots, support, staff, admin - every group also gets what is meant for the ones below; "players" = everyone). They work in the web, in the announcement menu and with `/mradmin announce <name>`. Values after the name fill `<arg1>`, `<arg2>` … or `<args>`.
 - **Built-in templates** (`restart`, `restart-now`, `update`, `event`) are in the language file under `announce-presets`. MRadmin uses `restart` itself (restart countdown); they are not in the menus, but keep working with the command and in scripts.
 - Every player sees the announcement in their language. `-q` plays no sound.
 

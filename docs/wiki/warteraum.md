@@ -16,7 +16,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 
 ## Einrichten
 1. **Proxy:** In der `velocity.toml` den Hauptserver und den Warteraum unter `[servers]` eintragen, `try = ["main", "waitroom"]` (Hauptserver zuerst) und `bungee-plugin-message-channel = true` setzen. Auf beiden Paper-Servern Velocity-Weiterleitung einschalten - Einzelheiten in der [Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/).
-2. **MRadmin:** in der `config.yml` (oder im Browser unter **Server → Plugins → MRadmin → Konfiguration → Warteraum**):
+2. **MRadmin:** in der `config.yml` (oder im Browser unter **Server → Hauptserver → Konfiguration → MRadmin → Warteraum**):
    ```yaml
    waiting-room:
      enabled: true
@@ -33,26 +33,56 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 > `link.bind` gehört auf die **interne** Adresse (LAN), nie auf eine öffentliche. Die Schnittstelle verrät zwar nur, was die Spieler im Warteraum ohnehin sehen, aber sie gehört nicht ins Internet. Falsche Schlüssel werden nach 10 Versuchen pro Minute abgewiesen.
 
 ## Warteraum aus MRadmin verwalten
-Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** - gekennzeichnet mit „Warteraum-Server“:
+Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Warteraum → Plugins** - gekennzeichnet mit „Warteraum-Server“:
 
 - **Konfiguration:** wie bei jedem Plugin über **Konfiguration** (Permission `mradmin.config`). Beim Speichern holt sich der Warteraum die neue `config.yml` bei seiner nächsten Abfrage (wenige Sekunden), legt eine Sicherung an (`config.backup-remote.yml`) und lädt neu.
 - **Updates:** „Aktualisieren“ (Permission `mradmin.versions.install`, oder automatisch nach `versions.auto-download`) bestellt die neue Version. Der Warteraum lädt sie **selbst** - nur aus den offiziellen Releases und nur mit passender Prüfsumme - und startet neu, sobald niemand wartet und dein Server bereit ist.
 - Meldet sich der Warteraum länger nicht, steht dort „Meldet sich nicht“.
 
 > [!NOTE]
-> Die Verbindung geht immer vom Warteraum aus - MRadmin verbindet sich nie zu ihm. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+> Konfiguration und Updates holt sich der Warteraum selbst bei MRadmin ab. Für Leistung, Protokoll und Konsole (unten) fragt MRadmin den Warteraum an seinem eigenen Port ab. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
 
-## Warteraum-Server neu starten
-Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Übersicht** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
+## Leistung des Warteraums
+Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau wie deinen eigenen unter **Server → Hauptserver → Leistung**: TPS, Millisekunden pro Tick, CPU, Arbeitsspeicher, Spieler, Welten und die Chunks mit den meisten Entities, mit denselben Zeiträumen (1 Minute bis 30 Tage). Permission wie beim Hauptserver (`mradmin.status.health`).
+
+- MRadmin fragt den Warteraum **jede Sekunde** ab und zeichnet genauso auf wie beim Hauptserver: die letzte Stunde pro Sekunde, 24 Stunden als 10-Sekunden-Punkte, länger als 5-Minuten-Punkte, die gespeichert werden (`health.history`).
+- Laggt der Warteraum länger, kommt dieselbe Lag-Warnung wie beim Hauptserver, nur mit „Warteraum“ im Text (im Spiel und als Push, Art „Lag“).
+- Die Adresse findet MRadmin selbst: der Warteraum meldet seinen Port (`agent.port`, Standard 8127) und MRadmin nimmt die Adresse, von der seine Berichte kommen. Fest einstellen geht mit `waiting-room.agent-url` (z.B. `http://10.0.0.6:8127`).
+
+> [!TIP]
+> Der Port braucht im Netz zwischen den beiden Servern eine Freigabe (Firewall) vom Hauptserver zum Warteraum. Am besten lauscht er nur auf der internen Adresse (`agent.bind` in MRwaitroom).
+
+## Protokoll und Konsole des Warteraums
+- **Server → Warteraum → Protokoll** zeigt die Ereignisse des Warteraums (gestartet, Neustart, Hauptserver weg und wieder da, Konfiguration und Updates aus MRadmin) und sein Server-Log der letzten 14 Tage - mit Suche, Zeitraum und Diagramm wie beim Hauptserver. Die Ereignisse speichert MRadmin in seinem eigenen Protokoll (`logging.keep-days`), im Protokoll des Hauptservers stehen sie nicht.
+- **Server → Warteraum → Konsole** zeigt die Ausgabe live und nimmt Befehle an - mit denselben Regeln wie beim Hauptserver: Permission `mradmin.web.console.execute`, Entsperren mit 2FA-Code oder Passkey (gilt für beide Konsolen), Sperrliste `web.console.blocked`, jeder Befehl im Web-Protokoll (mit „[waitroom]“). Links und IP-Adressen werden wie beim Hauptserver ausgeblendet.
+- Im Warteraum lassen sich Befehle aus MRadmin mit `agent.console-commands: false` ganz abschalten - die Konsole zeigt dann nur die Ausgabe.
+
+## Warteraum-Server steuern
+**Server → Warteraum → Steuerung** steuert den Warteraum-Server wie den Hauptserver (Permission `mradmin.server.restart`):
+
+- **Werte:** Zustand (mit wartenden Spielern), läuft seit, Paper-Build (gelb, wenn ein neuerer Build für dieselbe Minecraft-Version da ist - der Starter spielt ihn beim nächsten Start ein), Starter, nächster geplanter Neustart.
+- **Neu starten** und **Stoppen** in 15, 30 oder 60 Minuten (`versions.restart-delays`), optional mit **Grund**. Kürzere Zeiten über **Notfall** - erst neu bestätigen (2FA-Code oder Passkey), dann Pflicht-Grund (`versions.emergency-delays`).
+- Ein laufender Countdown steht mit Uhr, Auslöser und Grund in der Kachel, **Abbrechen** beendet ihn.
+- Mit geplanten Neustarts (`server.restart-times` in MRwaitroom): **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**.
+- Darunter die Plugins des Warteraums und seine letzten Ereignisse.
+
+Ein **Neustart** wartet zur Zeit noch, bis er darf:
 
 - dein Server läuft und ist bereit,
 - **keine Wartung** läuft,
 - **kein Neustart deines Servers** in den nächsten 15 Minuten ansteht,
-- **niemand im Warteraum** wartet.
+- **niemand im Warteraum** wartet (höchstens 10 Minuten, dann wird er aufgegeben).
 
-Ist etwas davon nicht erfüllt, steht der Grund in der Kachel. Geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (`server.restart-times`) - sie warten genauso, bis es passt.
+Ist etwas davon schon beim Klick nicht erfüllt, ist der Knopf gesperrt und der Grund steht darunter. Ein **Stopp** und ein **Notfall-Neustart** warten nicht - Wartende kommen dann über den Proxy auf deinen Server. Ohne Starter bleibt der Warteraum nach einem Stopp aus.
 
 **Solange der Warteraum neu startet**, lehnt MRadmin Neustart und Stopp deines Servers ab (Browser, `/mradmin restart|stop`, `mrserver`) - die Spieler hätten sonst keinen Platz zum Warten. Das dauert meist nur ein paar Sekunden.
+
+## Hinweise und Warnungen
+- Die **Übersicht** (Dashboard) und die Zähler in der Seitenleiste zeigen den Warteraum mit: meldet er sich nicht (rot), laggt er, läuft ein Countdown.
+- Die Lag-Warnung kommt im Spiel, als Push (Art „Lag“) und in den Discord-Log (Ereignisse `waitroom-health-alert` und `waitroom-health-recovered` in `discord.events`).
+- Unter **Server → Warteraum → Plugins** stehen in derselben Tabelle wie beim Hauptserver MRwaitroom (verwaltbar) und alle anderen Plugins des Warteraum-Servers. Für fremde Plugins lässt sich ein **GitHub-Link** hinterlegen - MRadmin zeigt dann das neueste Release und ob die installierte Version aktuell ist (nur Anzeige, keine Updates).
+- Seine Konfiguration steht unter **Server → Warteraum → Konfiguration**. Eine eigene Wartung hat der Warteraum nicht - die Wartung gilt fürs ganze Netzwerk und steht beim Hauptserver.
+- Im **Protokoll** des Warteraums stehen auch die Web-Aktionen zu ihm (Neustart, Stopp, Aussetzen, Befehle in seiner Konsole) - im Protokoll des Hauptservers nicht.
 
 ## Rechte im Warteraum
 Was das Team rund um den Warteraum darf, legst du in einer **Tabelle** fest: Konfiguration von MRadmin → **Warteraum** → **Rechte pro Rolle** (`waiting-room.rights`). Zeilen sind die Team-Rollen **Admin**, **Staff** und **Supporter** (es zählt die höchste von `mradmin.groups.admin`, `.staff`, `.support`), jede Zelle ist **Nein**, **Ja** oder **Nur im Admin-Modus**. Normale Spieler haben keines der Rechte.

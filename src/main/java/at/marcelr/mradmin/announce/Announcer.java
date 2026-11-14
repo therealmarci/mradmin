@@ -263,7 +263,8 @@ public final class Announcer {
         if (player.hasPermission("mradmin.groups.support")) {
             return 2;
         }
-        return Npcs.is(player) ? 1 : 0;
+        // Bots: second accounts in the group bots, and NPCs (dummies of MRchunks, Citizens ...)
+        return player.hasPermission("mradmin.groups.bots") || Npcs.is(player) ? 1 : 0;
     }
 
     /**

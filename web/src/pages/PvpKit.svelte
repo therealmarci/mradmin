@@ -13,6 +13,7 @@
   import ItemIcon from '../components/ItemIcon.svelte';
   import ItemEditor from '../components/ItemEditor.svelte';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
 
   let { id = null, copyFrom = null } = $props();
 
@@ -225,9 +226,9 @@
     }
   }
 
-  function back() {
+  function back(path = '/pvp/kits') {
     if (dirty && !confirm(t('pvp.kits.leaveConfirm'))) return;
-    go('/pvp/kits');
+    go(path);
   }
 
   function toggleArena(arena) {
@@ -299,7 +300,8 @@
 {/snippet}
 
 <div class="page">
-  <button class="back" onclick={back}>← {t('pvp.kits.back')}</button>
+  <PageHead title={kit && (id || title) ? title || kit.id : t('pvp.kits.newTitle')} onnav={back}
+    crumbs={[{ label: t('pvp.title'), path: '/admin/plugins/mrpvp' }, { label: t('pvp.tab.kits'), path: '/admin/plugins/mrpvp/kits' }]} />
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -560,13 +562,6 @@
     --pv: var(--accent);
     display: grid;
     gap: 16px;
-  }
-
-  .back {
-    justify-self: start;
-    background: transparent;
-    color: var(--pv);
-    padding: 4px 0;
   }
 
   /* Head: icon (click = change), name in its colours, facts, buttons */

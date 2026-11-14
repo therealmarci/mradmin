@@ -26,6 +26,10 @@ import java.util.Set;
  * One pass over the range [since, until) gives one page (offset, limit), the number of matches (total), the matches per
  * source regardless of the chosen sources (counts, for the source menu) and - with buckets - the activity chart:
  * {start, step, bars: [[events, info, warn, error], ...]} (console lines by level, everything else as events).
+ * <p>
+ * With {@code server=room} the page is about the waiting room server: its events (source "waitroom", brought in by
+ * RoomAgent) and its server log - counted and paged on the waiting room itself (agent /agent/logscan). Without it the
+ * events of the waiting room are left out, so each server has its own log.
  */
 public final class LogRoutes {
 
@@ -85,6 +89,11 @@ public final class LogRoutes {
             throw new Http.WebException(403, "no-permission");
         }
         Map<String, String> query = http.query();
+        boolean room = "room".equals(query.get("server"));
+        if (room && !plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        String roomSource = at.marcelr.mradmin.network.RoomAgent.SOURCE;
         Set<String> chosen = new LinkedHashSet<>();
         for (String s : query.getOrDefault("sources", "").split(",")) {
             if (!s.isBlank()) {
@@ -105,7 +114,10 @@ public final class LogRoutes {
         List<EventLog.Entry> top = new ArrayList<>();
         if (events) {
             int kept = 0;
-            for (EventLog.Entry e : plugin.eventLog().find(null, q, since, until, Integer.MAX_VALUE)) {
+            for (EventLog.Entry e : plugin.eventLog().find(room ? Set.of(roomSource) : null, q, since, until, Integer.MAX_VALUE)) {
+                if (!room && e.source().equals(roomSource)) {
+                    continue;
+                }
                 tally.count(e.source());
                 if (all || chosen.contains(e.source())) {
                     tally.chosen(e.time(), 0);
@@ -117,6 +129,10 @@ public final class LogRoutes {
             String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
             kept = 0;
             for (Storage.AuditRow row : plugin.storage().recentAudit(2000)) {
+                // Web actions about the waiting room (its restarts, its console) belong to its log, the rest to this one.
+                if (aboutRoom(row) != room) {
+                    continue;
+                }
                 String text = webText(row);
                 if (row.time() < since || row.time() >= until || (!needle.isEmpty() && !text.toLowerCase(Locale.ROOT).contains(needle))) {
                     continue;
@@ -130,7 +146,9 @@ public final class LogRoutes {
                 }
             }
         }
-        if (console) {
+        if (console && room) {
+            roomConsole(tally, top, all || chosen.contains("console"), since, until, q, keep);
+        } else if (console) {
             java.time.ZoneId zone = java.time.ZoneId.systemDefault();
             ServerLogFiles files = new ServerLogFiles(plugin.getServer().getWorldContainer().toPath().resolve("logs"), zone);
             boolean wanted = all || chosen.contains("console");
@@ -168,9 +186,12 @@ public final class LogRoutes {
             out.add(m);
         }
         Set<String> sources = new LinkedHashSet<>();
-        if (events) {
+        if (events && room) {
+            sources.addAll(List.of(roomSource, "web"));
+        } else if (events) {
             sources.addAll(List.of("mradmin", "web"));
             sources.addAll(plugin.eventLog().sources());
+            sources.remove(roomSource);
         }
         if (console) {
             sources.add("console");
@@ -192,9 +213,54 @@ public final class LogRoutes {
         http.json(200, result);
     }
 
+    /** The server log of the waiting room: page, number and chart bars come counted from there. */
+    private void roomConsole(Tally tally, List<EventLog.Entry> top, boolean wanted, long since, long until, String q, int keep)
+            throws Http.WebException {
+        String path = "/agent/logscan?since=" + since + "&until=" + until + "&keep=" + (wanted ? keep : 0)
+                + "&buckets=" + tally.bars.length
+                + "&links=" + (plugin.getConfig().getBoolean("web.console.hide-links", true) ? 1 : 0)
+                + "&ips=" + (plugin.getConfig().getBoolean("web.console.hide-ips", true) ? 1 : 0)
+                + (q == null || q.isBlank() ? "" : "&q=" + java.net.URLEncoder.encode(q, java.nio.charset.StandardCharsets.UTF_8));
+        com.google.gson.JsonObject o;
+        try {
+            o = com.google.gson.JsonParser.parseString(plugin.roomAgent().get(path)).getAsJsonObject();
+        } catch (java.io.IOException | RuntimeException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+        int total = o.get("total").getAsInt();
+        tally.counts.merge("console", total, Integer::sum);
+        if (!wanted) {
+            return;
+        }
+        tally.total += total;
+        var bars = o.getAsJsonArray("bars");
+        for (int i = 0; i < Math.min(bars.size(), tally.bars.length); i++) {
+            var row = bars.get(i).getAsJsonArray();
+            for (int c = 1; c < 4; c++) {
+                tally.bars[i][c] += row.get(c).getAsInt();
+            }
+        }
+        for (var element : o.getAsJsonArray("lines")) {
+            var l = element.getAsJsonObject();
+            String level = l.get("level").getAsString();
+            top.add(new EventLog.Entry(l.get("key").getAsLong(), "console", level, l.get("text").getAsString(),
+                    CONSOLE_COLORS.getOrDefault(level, CONSOLE_COLORS.get("info"))));
+        }
+    }
+
     private String name(String source) {
-        return source.equals("web") || source.equals("mradmin") || source.equals("console") ? source
+        return source.equals("web") || source.equals("mradmin") || source.equals("console")
+                || source.equals(at.marcelr.mradmin.network.RoomAgent.SOURCE) ? source
                 : plugin.modules().displayName(source);
+    }
+
+    /** A web action about the waiting room server: waitroom-* (restart, stop, pause ...) or a command in its console. */
+    private static boolean aboutRoom(Storage.AuditRow row) {
+        return row.action() != null && (row.action().startsWith("waitroom-")
+                || (row.action().startsWith("console-") && row.detail() != null && row.detail().startsWith("[waitroom]")));
     }
 
     private static String webText(Storage.AuditRow row) {

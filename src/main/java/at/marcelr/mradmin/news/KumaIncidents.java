@@ -60,11 +60,16 @@ public final class KumaIncidents {
     private final Consumer<Incident> onNew;
     /** After every poll with all pinned incidents (main thread) - e.g. to keep the Discord posts in step. */
     private final Consumer<List<Incident>> onPoll;
-    private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
+    // HTTP/1.1: over plain http the client would ask for an HTTP/2 upgrade (h2c) - Kuma's Socket.IO drops such
+    // connections on other paths, so an internal address like http://10.0.0.5:3001 never answered.
+    private final HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
     private volatile List<Incident> current = List.of();
     private final Set<String> announced = new HashSet<>();
     private boolean first = true;
+    /** Status pages that failed last time - warned once, a line again when they work. */
+    private final Set<String> failing = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private BukkitTask task;
 
     public KumaIncidents(MRAdmin plugin, Consumer<Incident> onNew, Consumer<List<Incident>> onPoll) {
@@ -107,11 +112,14 @@ public final class KumaIncidents {
                         .timeout(Duration.ofSeconds(15)).header("Accept", "application/json").GET().build();
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
-                    plugin.getLogger().fine("Uptime Kuma status page '" + slug + "': HTTP " + response.statusCode());
+                    problem(slug, "HTTP " + response.statusCode());
                     failed = true;
                     continue;
                 }
                 JsonObject page = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (failing.remove(slug)) {
+                    plugin.getLogger().info("Uptime Kuma status page '" + slug + "' is readable again.");
+                }
                 // Newer Kuma: "incidents" (a list), older: "incident" (one or null). Only pinned, active ones.
                 List<JsonElement> list = new ArrayList<>();
                 if (page.get("incidents") instanceof com.google.gson.JsonArray array) {
@@ -133,7 +141,7 @@ public final class KumaIncidents {
                 Thread.currentThread().interrupt();
                 return;
             } catch (Exception e) {
-                plugin.getLogger().fine("Uptime Kuma status page '" + slug + "' not readable: " + e.getMessage());
+                problem(slug, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
                 failed = true;
             }
         }
@@ -152,6 +160,14 @@ public final class KumaIncidents {
                 onPoll.accept(found);
             }
         });
+    }
+
+    /** A status page that cannot be read: a warning the first time, then quiet until it works again. */
+    private void problem(String slug, String why) {
+        if (failing.add(slug)) {
+            plugin.getLogger().warning("Uptime Kuma status page '" + slug + "' (" + plugin.settings().kuma().url()
+                    + "/api/status-page/" + slug + ") not readable: " + why + " - no incidents from it until it works.");
+        }
     }
 
     private static Incident parse(String slug, JsonObject o) {

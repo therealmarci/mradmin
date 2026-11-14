@@ -56,8 +56,9 @@ public final class WaitingRoom implements Listener {
     private static final Gson GSON = new Gson();
 
     /** Settings of the section waiting-room. */
+    /** agentUrl: where the waiting room's agent answers ("" = the address its reports come from + its port). */
     public record Config(boolean enabled, String server, boolean onRestart, boolean onMaintenance, String bind,
-                         int port, String key) {
+                         int port, String key, String agentUrl) {
 
         static Config from(FileConfiguration c) {
             String server = c.getString("waiting-room.server", "waitroom").trim();
@@ -65,13 +66,23 @@ public final class WaitingRoom implements Listener {
                     c.getBoolean("waiting-room.on-restart", true), c.getBoolean("waiting-room.on-maintenance", true),
                     c.getString("waiting-room.link.bind", "127.0.0.1").trim(),
                     Math.clamp(c.getInt("waiting-room.link.port", 8126), 1, 65535),
-                    c.getString("waiting-room.link.key", "").trim());
+                    c.getString("waiting-room.link.key", "").trim(),
+                    trimSlash(c.getString("waiting-room.agent-url", "").trim()));
+        }
+
+        private static String trimSlash(String url) {
+            while (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+            return url.startsWith("http://") || url.startsWith("https://") ? url : "";
         }
     }
 
     private final MRAdmin plugin;
     private final RemotePlugins remote;
-    private volatile Config config = new Config(false, "waitroom", true, true, "", 8126, "");
+    private volatile Config config = new Config(false, "waitroom", true, true, "", 8126, "", "");
+    /** The address the last report of the waiting room came from - its agent answers there (agent port). */
+    private volatile String reportHost = "";
     private HttpServer server;
     private String boundTo = "";
     private BukkitTask snapshotTask;
@@ -107,6 +118,27 @@ public final class WaitingRoom implements Listener {
         return config;
     }
 
+    /**
+     * Where the agent of the waiting room answers (performance, console, log - see RoomAgent): waiting-room.agent-url,
+     * otherwise the address of its last report with the port it reported. null = not known (yet) or switched off there.
+     */
+    public String agentUrl() {
+        Config c = config;
+        if (!c.enabled()) {
+            return null;
+        }
+        if (!c.agentUrl().isEmpty()) {
+            return c.agentUrl();
+        }
+        var report = remote.report("MRwaitroom");
+        Object port = report == null ? null : report.host().get("agentPort");
+        String host = reportHost;
+        if (!(port instanceof Number n) || n.intValue() <= 0 || host.isEmpty()) {
+            return null;
+        }
+        return "http://" + (host.contains(":") ? "[" + host + "]" : host) + ":" + n.intValue();
+    }
+
     /** Whether players are sent to the waiting room (instead of being kicked). */
     public boolean active() {
         return config.enabled();
@@ -118,7 +150,7 @@ public final class WaitingRoom implements Listener {
         if (c.enabled() && c.key().length() < 16) {
             String key = HexFormat.of().formatHex(random(24));
             writeKey(key);
-            c = new Config(c.enabled(), c.server(), c.onRestart(), c.onMaintenance(), c.bind(), c.port(), key);
+            c = new Config(c.enabled(), c.server(), c.onRestart(), c.onMaintenance(), c.bind(), c.port(), key, c.agentUrl());
             plugin.getLogger().info("Created waiting-room.link.key - copy it into the config.yml of the waiting room.");
         }
         config = c;
@@ -515,6 +547,19 @@ public final class WaitingRoom implements Listener {
                     break;
                 }
             }
+            // Uptime Kuma incidents count like warnings written in MRadmin (one text for all languages).
+            if (plugin.newsDelivery() != null) {
+                for (var incident : plugin.newsDelivery().incidents().current()) {
+                    if (alerts.size() >= 5) {
+                        break;
+                    }
+                    Map<String, String> title = new LinkedHashMap<>();
+                    for (String lang : News.LANGS) {
+                        title.put(lang, incident.title());
+                    }
+                    alerts.add(Map.of("id", incident.id(), "title", title));
+                }
+            }
         }
         json.put("alerts", alerts);
         json.put("rights", rights.json());
@@ -603,6 +648,9 @@ public final class WaitingRoom implements Listener {
                 byte[] body = exchange.getRequestBody().readNBytes(600 * 1024 + 1);
                 String problem = body.length > 600 * 1024 ? "too-large"
                         : remote.receive(new String(body, StandardCharsets.UTF_8));
+                if (problem == null) {
+                    reportHost = exchange.getRemoteAddress().getAddress().getHostAddress();
+                }
                 reply(exchange, problem == null ? 200 : 400, problem == null ? "{\"ok\":true}"
                         : "{\"error\":\"" + problem + "\"}");
                 return;

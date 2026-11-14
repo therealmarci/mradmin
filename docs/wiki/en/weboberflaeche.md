@@ -3,7 +3,7 @@
 Use MRadmin from your phone, tablet or PC: answer tickets, manage players, schedule maintenance, keep an eye on the server status - with the same permissions as in game. This page describes the web interface in detail. What players see on their own page is described under [Player page](spielerseite.md), updates and restarts under [Plugins & updates](plugins.md).
 
 ## Layout
-Since 1.5 there is **one** web interface for players and team. Team members switch between the player area and the administration with the **shield button** at the top right (filled in colour while in the administration). The language is changed in the menu under your own name. Every area has tabs at the top.
+Since 1.5 there is **one** web interface for players and team. Team members switch between the player area and the administration with the **shield button** at the top right (filled in colour while in the administration). The language is changed in the menu under your own name. The player area has areas with tabs at the top, the administration a **sidebar** (since 1.6).
 
 | Player area | Content |
 |---|---|
@@ -15,12 +15,18 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). For the team the **team notices** come here too (see [Team notices](#team-notices)), switch **All / Team**. Active warnings are on top |
 | **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
 
-| Administration | Tabs |
+**Administration:** a sidebar on the left with all pages in groups. At the top a tile with the server's logo and name and the **Overview** (dashboard) with the number of open hints. Small counters show where something waits (unread tickets, hints of the plugins, plugin updates, a running restart); at the bottom the main server and the waiting room with their state. On a PC the bar folds to symbols and every group folds (the browser remembers it); on the phone the menu button at the top left opens it.
+
+| Group | Pages |
 |---|---|
-| **Overview** (`/admin`) | dashboard |
-| **Community** (`/admin/community/…`) | players · tickets · punishments · posts · announcements |
-| **Features** (`/admin/features/…`) | one tab per plugin: chunk loaders · duels · sleep · map |
-| **Server** (`/admin/server/…`) | control · performance · maintenance · plugins · log · console · appearance (MRadmin's config: plugins → MRadmin) |
+| (top) | **Overview** (`/admin`) |
+| **Community** | players · tickets · punishments (`/admin/community/…`) |
+| **Content** | posts · announcements (`/admin/content/…`) |
+| **Plugins** | one page per installed plugin: chunk loaders · duels · sleep · map (`/admin/plugins/…`) |
+| **Server** | **Main server** (`/admin/server/…`) and **Waiting room** (`/admin/server/room/…`, only when connected) - each with its tabs, see [Server](#server) |
+| **Settings** | appearance (`/admin/settings/appearance`) |
+
+Every page is built the same way: at the top the title (on sub pages with breadcrumbs, e.g. "Duels › #482") with the main buttons and one slim line of key figures, below tabs (each with its own address), below filters as round chips with a search, then the content.
 
 Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
 
@@ -32,11 +38,12 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 | Command | What it does | Permission |
 |---|---|---|
 | `/web` | Code to sign in (players and team) | `mradmin.web.self` or `mradmin.web` |
-| `/mradmin web` | Status (running, address, accounts with an own sign-in, devices) | `mradmin.web` |
-| `/mradmin web sessions [player]` | Signed-in devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web logout [player]` | Sign out all devices | `mradmin.web` (others: `.manage`) |
-| `/mradmin web reset <player>` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone | `mradmin.web.manage` |
-| `/mradmin web remove <player>` | Delete the account | `mradmin.web.manage` |
+| `/web status` | Own account: address, own sign-ins (password, passkeys, Discord, 2FA), signed-in devices | like `/web` |
+| `/web devices` | How many devices are signed in, with a button to sign them out | like `/web` |
+| `/web logout` | Sign out all own devices | like `/web` |
+| `/web reset` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone; asks with a click first | like `/web` |
+
+`/web` only manages the **own** account - the team does not change other players' accounts from the game either. `/mradmin web` is gone.
 
 **Forgot the password?** With a confirmed e-mail address, "Forgot password?" sends a link by mail (needs `mail.*`). And `/web` in game always works.
 
@@ -54,7 +61,7 @@ Everyone sees only what they have the permissions for. Old addresses (`/me/…`,
 - Cookies: `HttpOnly`, `SameSite=Strict`, over HTTPS `Secure`; session cookies, recovery codes and mail links only as hashes. Changes only with an own header and a matching origin (no triggering from other sites), strict security headers.
 - The web has the same permissions as in game. With LuckPerms also for offline players, without LuckPerms via `web.roles` and `web.players`. Whoever loses `mradmin.web` no longer sees the administration (but stays signed in as a player).
 - Every sign-in and action goes into the log (web: **Log**, with `mradmin.web.audit`), sign-ins also into the Discord log (`web-login`).
-- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links (`/mradmin web setup`, `invite`) are gone.
+- **After the update to 1.5:** existing team accounts keep their password, 2FA, passkeys and Discord, signed-in devices stay signed in. Setup links are gone.
 
 ## Appearance (Server, `mradmin.appearance`)
 The web interface carries the name and colours of your server - players never see "MRadmin".
@@ -80,7 +87,7 @@ There are **two start pages** (`/`): one for **visitors** (not signed in) and on
 | Personal (signed-in only) | **Greeting**, **My areas** (one tile per area of the plugins), **My statistics** |
 | Content | **News**, **Text** (with formatting), **Picture** (PNG, WebP, SVG up to 512 KB), **Links**, **Discord** (invite), **Log-in call** |
 
-Widgets without content (empty text, no picture, no links) stay hidden outside the edit mode. **Log in** is at the top right of the bar and opens a window over the page (directly: `/login`). The earlier start page is split onto both pages by itself on the update (everyone → both, visitors only → visitors, signed-in only → signed in). Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`. Name, logo, colour and footer are set under Server → Appearance.
+Widgets without content (empty text, no picture, no links) stay hidden outside the edit mode. **Log in** is at the top right of the bar and opens a window over the page (directly: `/login`). The earlier start page is split onto both pages by itself on the update (everyone → both, visitors only → visitors, signed-in only → signed in). Saved in MRadmin's storage (`landing`), the pictures under `plugins/MRadmin/branding/landing/`. Name, logo, colour and footer are set under Settings → Appearance.
 
 ## Punishments (Community, with LibertyBans)
 - All punishments of all players at a glance, newest first (at most 300): **Active** shows what is in force right now - like LibertyBans' `/banlist` and `/mutelist` -, **All** also expired, lifted punishments and kicks.
@@ -91,6 +98,7 @@ Widgets without content (empty text, no picture, no links) stay hidden outside t
 ## Overview (dashboard)
 - At the top the **situation**: if something gets out of hand, every message is listed here with an icon and a word, the most urgent first: low TPS, high tick time, full memory, little disk space, high CPU load, high ping, unanswered tickets and tickets assigned to you, locked, conspicuous or paused chunk loaders, /nosleep blocks, maintenance. If everything runs smoothly, the most important current values are shown there. Updates every 2 seconds.
 - Below that tiles for server, players, tickets, chunk loaders, sleep and maintenance with a click to the page in question.
+- **With a waiting room** the overview shows only what concerns the whole network: the slide **Server state** first shows the main server and switches to the waiting room after half its time on screen (you can also switch by hand at the top), the plugins tile counts the updates of both servers, and **Players online** lists all players of both servers (players in the waiting room with a tag). The details of one server are under **Server → Main server** or **Waiting room**. Without a waiting room everything stays as before.
 - Every message and every tile only appears with the permission for its section: server and players with `mradmin.status`, CPU with `mradmin.status.health`, tickets with `mradmin.tickets.view` (assigned ones with `mradmin.tickets.claim`), chunk loaders with `mrchunks.admin.gui`, sleep with `mrsleep.admin.gui`, maintenance with `mradmin.maintenance.view`. If a plugin or feature is not there, the part is simply missing.
 - A click on your head or name at the top right opens the **account** (devices, recovery codes).
 
@@ -140,7 +148,7 @@ Wherever the web interface shows items (inventories in duels, kits), they look l
 - **Item editor** (e.g. in MRpvp's kit editor): search for an item (name or ID, with picture), amount, own name and lore (MiniMessage: colors and style like `<red>`, `<#ff8800>`, `<b>`, `<gradient:red:gold>`), enchantments (fitting ones first, all on request, level 1-255, a note for combinations that do not exist in game), glint on/off, unbreakable, durability, potion (base potion, color, own effects with level and duration), color of leather armor, armor trim and flight duration of rockets. The tooltip is shown live on the right. When applying, MRadmin builds the real item and checks all values; what the editor does not show stays on the item.
 
 ## Maintenance
-`mradmin.maintenance.view` to view, `.manage` to change. Announcements are under [Communication](#communication-mradminnews-mradminannounce).
+`mradmin.maintenance.view` to view, `.manage` to change. Announcements are under [Content](#content-mradminnews-mradminannounce).
 
 - The **current maintenance** is shown big at the top: if it runs, with remaining time and a progress bar, if it is scheduled, with the countdown to the start; below that extend/shorten and end or cancel.
 - **With Uptime Kuma** (`uptime-kuma` set up): maintenance is managed directly in Kuma - create new ones (now until ended, now with a duration or scheduled), extend the current one, pause/resume, delete. MRadmin attaches new maintenance to `uptime-kuma.monitor-ids`, so it applies to this server (and appears on their status pages); only maintenance of this server can be changed. Recurring maintenance is edited in Kuma (link "Open in Uptime Kuma").
@@ -148,7 +156,7 @@ Wherever the web interface shows items (inventories in duels, kits), they look l
 - **Upcoming maintenance**: the next three after the current one, also mixed from Uptime Kuma and local with origin, start, end and duration.
 - **Last maintenance**: the three most recently ended or cancelled maintenance windows, no matter whether from Uptime Kuma or local (the origin is shown), with time range and duration. MRadmin remembers the last ten.
 
-## Communication (`mradmin.news`, `mradmin.announce`)
+## Content (`mradmin.news`, `mradmin.announce`)
 Two sections: **Posts** for the player page (`mradmin.news`) and **Announcements** on the screen in game (`mradmin.announce`, see below). Whoever has only one of the two permissions sees only that section.
 
 ### Posts
@@ -162,13 +170,7 @@ Three kinds of posts for the players, texts separately in German and English (ev
 
 Every player with `mradmin.web.self` gets new news and changelogs **once as a preview in chat** with a link "[Read]": right away if they are online, otherwise at the next join (`player-web.news.chat-preview`).
 
-**Warnings from Uptime Kuma:** incidents pinned on a Kuma status page (`uptime-kuma.status-pages`, `uptime-kuma.url` is enough for this; read every `uptime-kuma.incident-seconds`, default 15) appear on the player page, in the carousel and at the top of this page. The link in chat leads to the player page. What happens in game depends on the style in Kuma:
-
-| Style in Kuma | Color | In game |
-|---|---|---|
-| danger | red | new: chat to everyone, plus a big "ATTENTION / Critical warning"; on join in chat as long as it is pinned |
-| warning | yellow | new: chat to everyone (no title); on join in chat as long as it is pinned |
-| info, primary, light, dark | blue | once per player in chat, like a news post |
+**Warnings from Uptime Kuma:** incidents pinned on a Kuma status page (`uptime-kuma.status-pages`, `uptime-kuma.url` is enough for this; read every `uptime-kuma.incident-seconds`, default 15) appear on the player page (in the colour of their style in Kuma), in the carousel and at the top of this page. The link in chat leads to the player page. **In game MRadmin treats every incident like a warning created here**, whatever its style: when new a chat line to everyone and a big "ATTENTION / Critical warning", on join in chat as long as it is pinned. With a waiting room it shows the incidents as well (board and chat on joining) - like the warnings from here. Maintenances from Uptime Kuma count on both servers like those created in MRadmin anyway.
 
 What is already pinned at server start is not announced to everyone again. Incidents are changed and ended in Uptime Kuma. In the Discord channel of the announcements (`discord-announce.kuma`) every incident is posted once (red pings the role), with a link "More" to the news page of the player page (not to Kuma), edited when it changes in Kuma and set to "✅ Resolved" at the end.
 
@@ -187,16 +189,21 @@ What is already pinned at server start is not announced to everyone again. Incid
 The built-in templates of the language file (`restart`, `restart-now`, `update`, `event`) are not listed here and in the game menu - MRadmin uses `restart` itself. They keep working with `/mradmin announce` and in scripts. They are stored in MRadmin's storage under `announce-templates`.
 
 ## Server
-Everything around the running server is under one entry in the bar: **Server**. At the top tabs, each only with its permission:
+Under **Server** are the servers themselves: the **main server** and - if one is connected - the **waiting room** ([Waiting room (proxy)](warteraum.md)). Each has the same tabs at the top, each only with its permission:
 
 | Tab | What is there | Permission |
 |---|---|---|
-| **Overview** | Four values side by side (details on hover): up for, Paper build with a coloured dot (green up to date, yellow newer build available - checked every 15 minutes, also without the starter), [starter](starter.md) active or not, next planned restart. Below **Restart** and **Stop** with a countdown (`versions.restart-delays`, default 15/30/60 minutes), shorter times through the red **Emergency** button (window: first 2FA code or passkey, then restart/stop, a time from `versions.emergency-delays` and a required reason), or the running countdown (with its reason) and **Cancel** (for a planned restart: **Skip this restart**); optionally an own **Reason**, otherwise MRadmin names one. With planned restarts also **Pause planned restarts for 24 h** / **Switch on again**. Below a short view of the plugins and the latest events. | `mradmin.versions.view`, buttons `mradmin.server.restart` |
-| **Plugins** | Versions, updates, installing, configuration in the browser - see [Plugins](#plugins-mradminversionsview) | `mradmin.versions.view` |
-| **Log** | Events and console output - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
-| **Console** | Run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+| **Control** | Four values side by side (details on hover): up for, Paper build with a coloured dot (green up to date, yellow newer build available - checked every 15 minutes, also without the starter), [starter](starter.md) active or not, next planned restart. Below **Restart** and **Stop** with a countdown (`versions.restart-delays`, default 15/30/60 minutes), shorter times through the red **Emergency** button (window: first 2FA code or passkey, then restart/stop, a time from `versions.emergency-delays` and a required reason), or the running countdown (with its reason) and **Cancel** (for a planned restart: **Skip this restart**); optionally an own **Reason**, otherwise MRadmin names one. With planned restarts also **Pause planned restarts for 24 h** / **Switch on again**. Below a short view of the plugins and the latest events. For the waiting room the same control with its values (a restart waits there until nobody waits and your server is ready - see [Waiting room](warteraum.md#controlling-the-waiting-room-server)). | `mradmin.versions.view`, buttons `mradmin.server.restart` |
+| **Performance** | see [Health dashboard](#health-dashboard-mradminstatushealth) - for the waiting room the same page with its values | `mradmin.status.health` |
+| **Maintenance** | see [Maintenance](#maintenance) (main server only - the maintenance is for the whole network) | `mradmin.maintenance.view` |
+| **Plugins** | versions, updates, installing - see [Plugins](#plugins-mradminversionsview); in the same table also all other plugins of the server: with a GitHub link stored, MRadmin checks every 6 hours whether there is a newer release (view only, no updates) | `mradmin.versions.view` |
+| **Log** | events, web actions and console output of this server (web actions about the waiting room - restart, stop, commands - are in its log) - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
+| **Console** | run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+| **Configuration** | the `config.yml` of the plugins of this server in the browser, one tab per plugin (main server: MRadmin and its plugins, waiting room: MRwaitroom) | `mradmin.config` |
 
-Restarting only works if something brings the server back: the starter or `versions.restart-method`. Stopping always works - without the starter the server then stays down until someone starts it. Old addresses (`/plugins`, `/logs`, `/console`) lead to the matching tab.
+Switching between main server and waiting room in the sidebar keeps the open tab (e.g. console → console) as long as the other server has it. The sidebar updates its counters on every page change, as soon as the server reports something, and otherwise every 10 seconds.
+
+Restarting only works if something brings the server back: the starter or `versions.restart-method`. Stopping always works - without the starter the server then stays down until someone starts it. The configuration of MRadmin and of all plugins is under **Server → Main server → Configuration**. Old addresses (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) lead to the new ones.
 
 ## Plugins (`mradmin.versions.view`)
 Page "Plugin configuration" under `/plugins` (the old address `/versions` redirects).

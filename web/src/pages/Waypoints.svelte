@@ -11,16 +11,18 @@
   import ItemIcon from '../components/ItemIcon.svelte';
   import Dropdown from '../components/Dropdown.svelte';
   import { ICONS } from '../lib/icons.js';
+  import PageHead from '../components/PageHead.svelte';
+  import PageTabs from '../components/PageTabs.svelte';
 
-  let { me } = $props();
+  // tab: from the address (/admin/plugins/map[/categories], since the sidebar 1.6)
+  let { me, tab: asked = null } = $props();
 
   let overview = $state(null);
   let locks = $state(null);
   let error = $state('');
   let message = $state('');
   let busy = $state(false);
-  let tab = $state(sessionStorage.getItem('mradmin.wp.tab') ?? 'waypoints');
-  $effect(() => sessionStorage.setItem('mradmin.wp.tab', tab));
+  const tab = $derived(asked === 'categories' ? 'categories' : 'waypoints');
 
   // Filters of the list
   let category = $state('');
@@ -223,26 +225,13 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && (editing = null)} />
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.pin} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.pin} /></svg>
-      </span>
-      <div>
-        <h1>{t('wp.title')}</h1>
-        <p class="muted">{t('wp.subtitle')}</p>
-      </div>
-    </div>
-    {#if overview}
-      <div class="numbers">
-        <span><b>{waypoints.length}</b> {t('wp.kpi.waypoints')}</span>
-        <span><b>{categories.length}</b> {t('wp.kpi.categories')}</span>
-      </div>
-    {/if}
-  </header>
+  <PageHead title={t('wp.title')}>
+    {#snippet actions()}
+      {#if tab === 'categories' && admin}
+        <button class="primary" disabled={busy} onclick={newCategory}>{t('wp.newCategory')}</button>
+      {/if}
+    {/snippet}
+  </PageHead>
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -276,19 +265,8 @@
     </div>
 
     {#if overview}
-    <div class="tabs">
-      <div class="switch" role="tablist">
-        <button role="tab" class:active={tab === 'waypoints'} aria-selected={tab === 'waypoints'} onclick={() => (tab = 'waypoints')}>
-          {t('wp.tab.waypoints')} <span class="n">{waypoints.length}</span>
-        </button>
-        <button role="tab" class:active={tab === 'categories'} aria-selected={tab === 'categories'} onclick={() => (tab = 'categories')}>
-          {t('wp.tab.categories')} <span class="n">{categories.length}</span>
-        </button>
-      </div>
-      {#if tab === 'categories' && admin}
-        <button class="primary" disabled={busy} onclick={newCategory}>{t('wp.newCategory')}</button>
-      {/if}
-    </div>
+    <PageTabs current={tab} tabs={[{ id: 'waypoints', label: t('wp.tab.waypoints'), path: '/admin/plugins/map', n: waypoints.length },
+      { id: 'categories', label: t('wp.tab.categories'), path: '/admin/plugins/map/categories', n: categories.length }]} />
 
     {#if tab === 'waypoints'}
       <section class="block">
@@ -389,7 +367,7 @@
                   <span class="chip">{c.worlds?.length ? t('wp.chip.worlds', { worlds: c.worlds.join(', ') }) : t('wp.f.worldsAll')}</span>
                 </div>
                 <div class="cfoot">
-                  <button class="linkish" onclick={() => { category = c.id; tab = 'waypoints'; }}>{t('wp.showWaypoints')} →</button>
+                  <button class="linkish" onclick={() => { category = c.id; go('/admin/plugins/map'); }}>{t('wp.showWaypoints')} →</button>
                   {#if admin}
                     <div class="cactions">
                       <button class="secondary mini" disabled={busy || i === 0} title={t('wp.up')} onclick={() => move(i, -1)}>▲</button>
@@ -575,83 +553,6 @@
     padding-bottom: 70px;
   }
 
-  .head {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 24px;
-    padding: 22px 24px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--cl) 30%, var(--border));
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--cl) 20%, transparent), transparent 60%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--cl);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    color: var(--cl);
-    background: color-mix(in srgb, var(--cl) 16%, var(--surface-2));
-    border: 1px solid color-mix(in srgb, var(--cl) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
-  }
-
-  .numbers {
-    position: relative;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .numbers span {
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    font-size: 0.88rem;
-  }
-
-  .numbers b {
-    font-size: 1.1rem;
-    margin-right: 2px;
-  }
-
   /* key figures and the map switches */
   .kpis {
     display: grid;
@@ -754,48 +655,6 @@
   }
 
   /* tabs */
-  .tabs {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .switch {
-    display: inline-flex;
-    flex-wrap: wrap;
-    padding: 4px;
-    gap: 4px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .switch button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 14px;
-    border-radius: 9px;
-    font-size: 0.9rem;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
-
-  .n {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--muted) 18%, transparent);
-  }
 
   .block {
     display: grid;

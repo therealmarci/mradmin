@@ -200,23 +200,7 @@
 {/snippet}
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.tool} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.tool} /></svg>
-      </span>
-      <div>
-        <h1>{t('mt.title')}</h1>
-        <p class="muted">{t('mt.subtitle')}</p>
-      </div>
-    </div>
-    {#if data}
-      <span class="state {tone}"><span class="dot"></span>{t('overview.phase.' + data.phase)}</span>
-    {/if}
-  </header>
+  {#if data}<div class="tab-state"><span class="state {tone}"><span class="dot"></span>{t('overview.phase.' + data.phase)}</span></div>{/if}
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -421,67 +405,15 @@
 </div>
 
 <style>
+  .tab-state {
+    display: flex;
+    justify-content: flex-end;
+  }
+
   .page {
     --mt: var(--accent);
     display: grid;
     gap: 16px;
-  }
-
-  .head {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 24px;
-    padding: 22px 24px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--mt) 30%, var(--border));
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--mt) 20%, transparent), transparent 60%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--mt);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    color: var(--mt);
-    background: color-mix(in srgb, var(--mt) 16%, var(--surface-2));
-    border: 1px solid color-mix(in srgb, var(--mt) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
   }
 
   /* Colours of the phases: none green, planned blue, countdown yellow, running red */
@@ -853,10 +785,6 @@
   }
 
   @media (max-width: 640px) {
-    .head {
-      padding: 18px 16px;
-    }
-
     .big-clock {
       justify-items: start;
     }

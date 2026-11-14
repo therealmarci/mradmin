@@ -26,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *  GET  /api/console/tail?after=n       page Log: live lines with level (mradmin.web.console.view, no unlocking)
  *  POST /api/console/command {command}  (unlocked, mradmin.web.console.execute)
  * </pre>
+ * With {@code server=room} log, tail and command are about the waiting room server (through its agent, RoomAgent) -
+ * the same permissions, the same unlocking (one per browser session), the same block list; links and IP addresses
+ * are hidden here like for this server. Its own switch agent.console-commands can forbid commands there.
  */
 public final class ConsoleRoutes {
 
@@ -151,8 +154,45 @@ public final class ConsoleRoutes {
 
     // -------------------------------------------------------------------- log
 
+    /** Whether the request is about the waiting room server (?server=room). */
+    private boolean room(Http http) throws Http.WebException {
+        if (!"room".equals(http.query().get("server"))) {
+            return false;
+        }
+        if (!plugin.waitingRoom().active()) {
+            throw new Http.WebException(404, "no-waitroom");
+        }
+        return true;
+    }
+
+    /** Console lines of the waiting room after {@code after}, cleaned like ours: [seq, level, text]. */
+    private Map<String, Object> roomLines(long after, boolean withLevel) throws Http.WebException {
+        try {
+            var o = com.google.gson.JsonParser.parseString(plugin.roomAgent().get("/agent/console?after=" + after)).getAsJsonObject();
+            boolean links = plugin.getConfig().getBoolean("web.console.hide-links", true);
+            boolean ips = plugin.getConfig().getBoolean("web.console.hide-ips", true);
+            List<Map<String, Object>> lines = new ArrayList<>();
+            for (var element : o.getAsJsonArray("lines")) {
+                var l = element.getAsJsonObject();
+                String text = ConsoleLog.clean(l.get("text").getAsString(), links, ips);
+                lines.add(withLevel ? Map.of("seq", l.get("seq").getAsLong(), "level", l.get("level").getAsString(), "text", text)
+                        : Map.of("seq", l.get("seq").getAsLong(), "text", text));
+            }
+            return Map.of("lines", lines, "last", o.get("last").getAsLong());
+        } catch (java.io.IOException | RuntimeException e) {
+            throw new Http.WebException(503, "waitroom-offline");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Http.WebException(503, "waitroom-offline");
+        }
+    }
+
     private void lines(Http http) throws Exception {
         requireUnlocked(http);
+        if (room(http)) {
+            http.json(200, roomLines(number(http.query().get("after")), false));
+            return;
+        }
         String query = http.exchange().getRequestURI().getQuery();
         long after = 0;
         if (query != null && query.startsWith("after=")) {
@@ -175,6 +215,10 @@ public final class ConsoleRoutes {
      */
     private void tail(Http http) throws Exception {
         requireView(http);
+        if (room(http)) {
+            http.json(200, roomLines(number(http.query().get("after")), true));
+            return;
+        }
         long after = number(http.query().get("after"));
         List<Map<String, Object>> lines = new ArrayList<>();
         String level = "info";
@@ -211,11 +255,32 @@ public final class ConsoleRoutes {
         }
         String blockedBy = at.marcelr.mradmin.util.CommandFilter.blocked(command, plugin.getConfig().getStringList("web.console.blocked"));
         if (blockedBy != null) {
-            audit(http, "console-blocked", command);
+            audit(http, "console-blocked", (room(http) ? "[waitroom] " : "") + command);
             throw new Http.WebException(403, "command-blocked");
         }
         String name = http.account().name();
         String run = command;
+        if (room(http)) {
+            com.google.gson.JsonObject body = new com.google.gson.JsonObject();
+            body.addProperty("command", command);
+            body.addProperty("by", name);
+            int status;
+            try {
+                status = plugin.roomAgent().post("/agent/command", body.toString());
+            } catch (java.io.IOException e) {
+                throw new Http.WebException(503, "waitroom-offline");
+            }
+            if (status == 403) {
+                throw new Http.WebException(403, "waitroom-commands-off");
+            }
+            if (status != 200) {
+                throw new Http.WebException(503, "waitroom-offline");
+            }
+            audit(http, "console-command", "[waitroom] " + command);
+            plugin.discord().log("web-console", "player", name, "command", ("[waitroom] " + command).replace('`', '\''));
+            http.json(200, Map.of());
+            return;
+        }
         server.sync(() -> {
             plugin.getLogger().info(name + " (web console): " + run);
             return Bukkit.dispatchCommand(Bukkit.getConsoleSender(), run);

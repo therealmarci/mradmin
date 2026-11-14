@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 23
+lang-version: 24
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -40,21 +40,11 @@ storage-status: "<prefix><gray>Speicher: <white><type></white> <dark_gray>(<targ
 storage-pending: "<prefix><hover:show_text:'<gray>Oder die Datenbank war beim Start nicht erreichbar (Konsole).'><yellow><white><type></white> gilt erst nach einem Neustart.</hover>"
 health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Health.'><red>🐢 Server laggt seit <minutes> min <gray>(<tps> TPS)</hover>"
 health-recovered: "<prefix><green>✅ Server läuft wieder flüssig <gray>(<tps> TPS)"
+waitroom-health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Server - Warteraum - Leistung.'><red>🐢 Warteraum laggt seit <minutes> min <gray>(<tps> TPS)</hover>"
+waitroom-health-recovered: "<prefix><green>✅ Warteraum läuft wieder flüssig <gray>(<tps> TPS)"
 
 # --- Weboberfläche (/mradmin web) ----------------------------------------------
-help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>Weboberfläche: Konto einrichten, angemeldete Geräte"
-web-usage: |-
-  <gray>/mradmin web sessions [spieler] <dark_gray>- <gray>angemeldete Geräte
-  <gray>/mradmin web logout [spieler] <dark_gray>- <gray>alle Geräte abmelden
-  <gray>/mradmin web reset <spieler> <dark_gray>- <gray>eigene Anmeldungen entfernen, z.B. verlorenes Handy (Admins, Konsole)
-  <gray>/mradmin web remove <spieler> <dark_gray>- <gray>Konto löschen (Admins)
-web-status: "<prefix><hover:show_text:'<gray><address><newline>Konten mit eigener Anmeldung: <accounts> · Geräte: <sessions>'><gray>Weboberfläche: <state></hover>"
-web-setup-moved: "<prefix><hover:show_text:'<gray>Melde dich mit /web an und richte unter Anmeldungen ein Passwort, einen Passkey oder Discord ein.'><yellow>Einrichtungslinks gibt es nicht mehr - alles läuft über /web.</hover>"
-web-reset-done: "<prefix><hover:show_text:'<gray>Passwort, 2FA, Passkeys, Discord und E-Mail entfernt, alle Geräte abgemeldet. Rein geht es wieder mit /web.'><green>Anmeldungen von <white><player></white> zurückgesetzt.</hover>"
-web-reset-none: "<prefix><red><white><player></white> hat kein Konto in der Weboberfläche."
-web-state-on: "<green>läuft"
-web-state-off: "<red>aus</red> <gray>(web.enabled in der Config)"
-web-off: "<prefix><hover:show_text:'<gray>web.enabled: true setzen, dann /mradmin reload'><red>Die Weboberfläche ist aus.</hover>"
+help-web: "<gold>/web [status|devices|logout|reset]</gold> <dark_gray>- <gray>deine Seite im Web und dein Konto"
 # Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Deine Seite: <link> <gray>· Code: <code> <hover:show_text:'<gray>Gilt <seconds> Sekunden und nur einmal.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -65,6 +55,17 @@ web-self-no-url: "<prefix><hover:show_text:'<gray>web.public-url fehlt'><red>Web
 web-self-devices: "<prefix><gray>Auf <white><count></white> Geräten angemeldet. <button>"
 web-self-logout-button: "<red><u>[Alle abmelden]</u></red>"
 web-self-logout: "<prefix><green>Alle Geräte abgemeldet <gray>(<count>). Mit /web meldest du dich wieder an."
+web-self-status: "<prefix><hover:show_text:'<gray><address><newline>Anmeldungen: <logins><newline>Angemeldete Geräte: <count>'><gray>Dein Web-Konto: <white><logins></white></hover>"
+web-self-login-password: "Passwort"
+web-self-login-passkeys: "<count> Passkey(s)"
+web-self-login-discord: "Discord"
+web-self-login-totp: "2FA"
+web-self-login-none: "nur /web"
+web-self-reset-ask: "<prefix><hover:show_text:'<gray>Entfernt Passwort, 2FA, Passkeys, Discord und E-Mail und meldet alle Geräte ab. Danach kommst du nur noch mit /web rein.'><yellow>Eigene Anmeldungen wirklich entfernen?</hover> <button>"
+web-self-reset-button: "<red><u>[Ja, entfernen]</u></red>"
+web-self-reset-done: "<prefix><hover:show_text:'<gray>Rein geht es wieder mit /web. Neue Anmeldungen richtest du auf der Seite unter Anmeldungen ein.'><green>Deine Anmeldungen sind entfernt, alle Geräte abgemeldet.</hover>"
+web-self-reset-none: "<prefix><gray>Du hast noch kein Web-Konto."
+web-moved: "<prefix><hover:show_text:'<gray>/web status, /web devices, /web logout, /web reset'><gray>Dein Web-Konto verwaltest du jetzt mit <white>/web</white>.</hover>"
 news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"
 news-preview-changelog: "<prefix><green>📝 <b><title></b></green> <gray><preview></gray> <link>"
 news-preview-more: "<prefix><gray>... und <white><count></white> weitere Neuigkeiten. <link>"
@@ -73,14 +74,6 @@ news-preview-hover: "<gray>Öffnet die ganze Nachricht im Browser"
 alert-chat: "<prefix><red><b>⚠ <title></b></red> <white><text></white> <link>"
 alert-title: "<red><b>ACHTUNG"
 alert-subtitle: "<white>Kritische Warnung"
-warning-chat: "<prefix><gold><b>⚠ <title></b></gold> <white><text></white> <link>"
-incident-info-chat: "<prefix><aqua>ℹ <b><title></b></aqua> <gray><text></gray> <link>"
-web-sessions-header: "<prefix><gray>Angemeldete Geräte von <white><player></white>:"
-web-sessions-entry: "<dark_gray>- <white><device></white> <gray>(<ip>, zuletzt <seen>)"
-web-sessions-none: "<prefix><gray><player> ist auf keinem Gerät angemeldet."
-web-logout-done: "<prefix><green><white><count></white> Gerät(e) von <white><player></white> abgemeldet."
-web-remove-done: "<prefix><green>Web-Konto von <white><player></white> gelöscht."
-web-no-account: "<prefix><gray><player> hat kein Web-Konto."
 help-version: "<gold>/mradmin version</gold> <dark_gray>- <gray>Version und Updates"
 help-menu: "<gold>/mradmin</gold> <dark_gray>- <gray>Admin-Dashboard, <gold>/mradmin player <spieler></gold> <dark_gray>- <gray>Spieler-Menü, <gold>/mradmin help</gold> <dark_gray>- <gray>diese Liste"
 help-status: "<gold>/mradmin status</gold> <dark_gray>- <gray>Serverzustand: TPS, RAM, Chunks mit den meisten Entities"
@@ -175,6 +168,8 @@ push-report-title: "Neues Ticket: <subject>"
 push-report-body: "<player> (<plugin>)"
 push-lag-title: "Der Server laggt"
 push-lag-body: "Seit <minutes> Minuten nur <tps> TPS."
+push-lag-room-title: "Der Warteraum laggt"
+push-lag-room-body: "Seit <minutes> Minuten nur <tps> TPS."
 push-maintenance-soon-title: "Wartung angekündigt"
 push-maintenance-soon-body: "<title> - ab <start>"
 push-maintenance-start-title: "Wartung läuft"
@@ -697,6 +692,8 @@ discord:
   web-console: "⌨️ **{player}** hat in der Web-Konsole ausgeführt: `{command}`"
   health-alert: "🐢 Der Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
   health-recovered: "✅ Der Server läuft wieder flüssig: **{tps} TPS**."
+  waitroom-health-alert: "🐢 Der Warteraum-Server laggt seit {minutes} Minuten: **{tps} TPS** ({mspt} ms pro Tick)."
+  waitroom-health-recovered: "✅ Der Warteraum-Server läuft wieder flüssig: **{tps} TPS**."
   plugin-update-downloaded: "⬇️ **{plugin} {version}** heruntergeladen (installiert: {installed}) - wird beim nächsten Neustart aktiv. Von: {admin}"
   server-restart: "🔄 **{admin}** startet den Server neu (Countdown: {time}, Grund: {reason})."
   server-restart-cancelled: "❎ **{admin}** hat den Neustart abgebrochen."

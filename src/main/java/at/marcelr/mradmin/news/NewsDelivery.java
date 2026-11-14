@@ -34,10 +34,9 @@ import static at.marcelr.mradmin.Messages.tag;
  *   <li><b>News and changelogs</b> once per player as a short preview in the chat with a link to the player page: to
  *   everyone online when published, otherwise on the next join (at most {@code player-web.news.chat-preview.max},
  *   not older than {@code max-age-days}). Only for players who may open the page (mradmin.web.self).</li>
- *   <li><b>Warnings</b> written in MRadmin, and Uptime Kuma incidents of style danger: to everyone online in the chat
- *   and as a title, in the chat on every join while they are on. Kuma "warning": the same without the title. Kuma
- *   info, primary, light, dark: a note, once per player in the chat like a news (see {@link KumaIncidents}). Kuma
- *   incidents also go to the community Discord (posted, edited, marked resolved - discord-announce.kuma).</li>
+ *   <li><b>Warnings</b> written in MRadmin and Uptime Kuma incidents (all styles, treated alike): to everyone online in
+ *   the chat and as a title, in the chat on every join while they are on (see {@link KumaIncidents}). Kuma incidents
+ *   also go to the community Discord (posted, edited, marked resolved - discord-announce.kuma).</li>
  * </ul>
  * Who saw which post is kept in the storage file "news-seen" (the highest post id per player, and the notes from
  * Uptime Kuma they got).
@@ -196,10 +195,7 @@ public final class NewsDelivery implements Listener {
         }
     }
 
-    /**
-     * A new or changed incident on an Uptime Kuma status page, by its style: critical (danger) chat + title to
-     * everyone, warning only chat, a note (info, primary, light, dark) once per player in the chat like a news.
-     */
+    /** A new or changed incident on an Uptime Kuma status page: like a warning of MRadmin - chat + title to everyone. */
     private void incident(KumaIncidents.Incident incident) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             incidentAlert(player, incident, true);
@@ -291,42 +287,36 @@ public final class NewsDelivery implements Listener {
         plugin.messages().run(player, () -> {
             String lang = plugin.messages().languageOf(player);
             String link = player.hasPermission(Perms.WEB_SELF) ? link(post) : null;
-            show(player, post.heading(lang), post.preview(lang, 160), link, fresh, false);
+            show(player, post.heading(lang), post.preview(lang, 160), link, fresh);
         });
     }
 
     /**
-     * An incident for one player. Critical and warning: in the chat (on every join while pinned), critical also as a
-     * title when it is new. A note: once per player in the chat (remembered in news-seen).
+     * An incident for one player - like a warning written in MRadmin, whatever its style in Kuma: in the chat (on every
+     * join while pinned) and as a title when it is new.
      */
     private void incidentAlert(Player player, KumaIncidents.Incident incident, boolean fresh) {
+        if (!settings().alertChat() && !(fresh && settings().alertTitle())) {
+            return;
+        }
         // To the player page (warnings on top of "News"); who cannot open it gets the Kuma status page.
         String page = pageLink();
         String url = page != null && player.hasPermission(Perms.WEB_SELF) ? page
                 : plugin.settings().kuma().url() + "/status/" + incident.slug();
         String text = incident.content().replace('\n', ' ');
         String shortText = text.length() > 160 ? text.substring(0, 159) + "…" : text;
-        if ("info".equals(incident.level())) {
-            if (!seenIncident(player.getUniqueId(), incident.key())) {
-                plugin.messages().run(player, () -> plugin.messages().send(player, "incident-info-chat",
-                        tag("title", incident.title()), tag("text", shortText), tag("link", linkButton(url))));
-            }
-            return;
-        }
-        boolean title = fresh && "critical".equals(incident.level());
-        plugin.messages().run(player, () -> show(player, incident.title(), shortText, url, title,
-                "warning".equals(incident.level())));
+        plugin.messages().run(player, () -> show(player, incident.title(), shortText, url, fresh));
     }
 
     /**
      * Chat line (if alerts.chat) and, if {@code title}, a short warning on the screen (alerts.title): a long text does
      * not fit there. Its text then always comes in the chat, otherwise the warning would say nothing.
      */
-    private void show(Player player, String title, String text, String link, boolean showTitle, boolean warning) {
+    private void show(Player player, String title, String text, String link, boolean showTitle) {
         Messages m = plugin.messages();
         boolean onScreen = showTitle && settings().alertTitle();
         if (settings().alertChat() || onScreen) {
-            m.send(player, warning ? "warning-chat" : "alert-chat", tag("title", title), tag("text", text),
+            m.send(player, "alert-chat", tag("title", title), tag("text", text),
                     tag("link", linkButton(link)));
         }
         if (onScreen) {
@@ -362,22 +352,6 @@ public final class NewsDelivery implements Listener {
             seen.put(player, id);
             save();
         }
-    }
-
-    /**
-     * Whether the player already got this note from Uptime Kuma; if not, it counts as seen from now on. Notes no longer
-     * pinned are forgotten.
-     */
-    private boolean seenIncident(UUID player, String key) {
-        load();
-        Set<String> current = new HashSet<>();
-        incidents.current().forEach(i -> current.add(i.key()));
-        seenIncidents.values().forEach(keys -> keys.retainAll(current));
-        if (!seenIncidents.computeIfAbsent(player, k -> new HashSet<>()).add(key)) {
-            return true;
-        }
-        save();
-        return false;
     }
 
     private void save() {

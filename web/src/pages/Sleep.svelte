@@ -7,6 +7,7 @@
   import { go } from '../lib/router.svelte.js';
   import Toast from '../components/Toast.svelte';
   import { ICONS } from '../lib/icons.js';
+  import PageHead from '../components/PageHead.svelte';
 
   let { me } = $props();
 
@@ -52,27 +53,10 @@
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.moon} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.moon} /></svg>
-      </span>
-      <div>
-        <h1>{t('sleep.title')}</h1>
-        {#if overview}
-          <p class="muted">{t('sleep.subtitle', { percentage: overview.percentage, minimum: overview.minimum, cooldown: duration(overview.cooldown) })}</p>
-        {/if}
-      </div>
-    </div>
-    {#if overview}
-      <span class="state" class:warn={overview.blocked > 0}>
-        {overview.blocked > 0 ? '⛔ ' + t('home.sleepBlocked', { n: overview.blocked }) : '✓ ' + t('home.sleepFree')}
-      </span>
-    {/if}
-  </header>
+  <PageHead title={t('sleep.title')} stats={!overview ? [] : [
+    { label: t('sleep.subtitle', { percentage: overview.percentage, minimum: overview.minimum, cooldown: duration(overview.cooldown) }), value: '' },
+    { label: '', value: overview.blocked > 0 ? t('home.sleepBlocked', { n: overview.blocked }) : t('home.sleepFree'), tone: overview.blocked > 0 ? 'warn' : 'good' },
+  ]} />
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
@@ -161,26 +145,6 @@
     box-shadow: var(--shadow);
   }
 
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--sl);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
   .icon {
     display: grid;
     place-items: center;
@@ -191,15 +155,6 @@
     color: var(--sl);
     background: color-mix(in srgb, var(--sl) 16%, var(--surface-2));
     border: 1px solid color-mix(in srgb, var(--sl) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
   }
 
   .state {

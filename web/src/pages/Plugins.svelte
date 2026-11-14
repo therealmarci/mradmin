@@ -8,10 +8,12 @@
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
   import { pluginIcon, pluginDescription, pluginState, pluginError, clock, CHANNELS, versionParts } from '../lib/plugins.js';
+  import ForeignSource from '../components/ForeignSource.svelte';
   import Toast from '../components/Toast.svelte';
 
   // embedded: inside the tab Plugins of the page Server - without its own title.
-  let { embedded = false } = $props();
+  // server: 'main' = only plugins of this server, 'room' = only those of the waiting room server, null = all
+  let { embedded = false, server = null } = $props();
 
   let data = $state(null);
   let error = $state('');
@@ -85,8 +87,43 @@
   const buildText = (build) => t('plugins.build', { build: String(build).padStart(3, '0') });
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
   const byName = (a, b) => a.name.localeCompare(b.name);
-  const installed = $derived(data ? data.plugins.filter((p) => p.installed).sort(byName) : []);
-  const others = $derived(data ? data.plugins.filter((p) => !p.installed).sort(byName) : []);
+  const pool = $derived(!data ? [] : data.plugins.filter((p) => (server === 'room' ? !!p.remote : server === 'main' ? !p.remote : true)));
+  // Most to do first: errors, updates (also blocked ones), then waiting for a restart, unknown, current at the bottom.
+  const URGENCY = { bad: 0, warn: 1, info: 2, '': 3, good: 4 };
+  const byUrgency = (a, b) => (URGENCY[pluginState(a).tone] ?? 3) - (URGENCY[pluginState(b).tone] ?? 3) || byName(a, b);
+  const installed = $derived(pool.filter((p) => p.installed).sort(byUrgency));
+  // The page of one plugin: under the server it runs on.
+  const detail = (name) => (server === 'room' ? '/admin/server/room/plugins/' : '/admin/server/plugins/') + name;
+  // The other plugins of this server (not from MRtechnology): only watched - with a GitHub repository stored, MRadmin
+  // compares the installed version with its newest release (GET/POST /api/plugins/foreign).
+  let foreign = $state(null);
+  let minecraft = $state('');
+  // The plugin whose source is being chosen (window ForeignSource).
+  let choosing = $state(null);
+  const foreignServer = $derived(server === 'room' ? 'room' : 'main');
+  async function loadForeign() {
+    if (server !== 'room' && server !== 'main') return;
+    try {
+      const answer = await api('GET', '/plugins/foreign?server=' + foreignServer);
+      foreign = answer.plugins;
+      minecraft = answer.minecraft ?? '';
+    } catch {
+      foreign = null;
+    }
+  }
+  $effect(() => {
+    foreignServer;
+    loadForeign();
+    // a release just asked for at GitHub shows up a moment later
+    const timer = setInterval(() => foreign?.some((f) => f.state === 'checking') && loadForeign(), 3000);
+    return () => clearInterval(timer);
+  });
+  // newer versions first, then the rest by name
+  const FOREIGN_ORDER = { newer: 0, 'no-version': 1, unknown: 1, checking: 2, current: 3, none: 4 };
+  const shownForeign = $derived((foreign ?? []).filter((f) => !installed.some((p) => p.name === f.name))
+    .sort((x, y) => (FOREIGN_ORDER[x.state] ?? 4) - (FOREIGN_ORDER[y.state] ?? 4) || x.name.localeCompare(y.name)));
+  const foreignNewer = $derived(shownForeign.filter((f) => f.state === 'newer').length);
+  const others = $derived(server === 'room' ? [] : pool.filter((p) => !p.installed).sort(byName));
   // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
   const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
@@ -130,6 +167,69 @@
   <span class="small muted">{notes.filter(Boolean).join(' · ')}</span>
 {/snippet}
 
+<!-- A plugin of the waiting room that is not from MRtechnology: the same row, without channel and update -->
+{#snippet srcLabel(p)}
+  {#if p.source?.type === 'modrinth' || p.source?.type === 'github'}
+    <span class="logo" aria-hidden="true"></span>
+    <span class="src-name">{p.source.title}</span>
+    {#if !p.manual}<span class="src-auto">{t('plugins.src.autoShort')}</span>{/if}
+    {#if p.channel === 'beta'}<span class="src-beta">{t('plugins.channel.beta')}</span>{/if}
+  {:else if p.source?.type === 'off'}
+    {t('plugins.src.offShort')}
+  {:else if p.state === 'checking'}
+    {t('plugins.foreignChecking')}
+  {:else}
+    {data.may.install ? '+ ' + t('plugins.src.add') : t('plugins.src.none')}
+  {/if}
+{/snippet}
+
+{#snippet foreignRow(p)}
+  <li class="row {p.state === 'newer' ? 'warn' : p.enabled ? 'good' : 'bad'}">
+    <div class="cell plugin">
+      <span class="r-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round"><path d={ICONS.box} /></svg>
+      </span>
+      <div class="r-name">
+        <span class="name-line"><strong>{p.name}</strong>{#if !p.enabled}<span class="remote off">{t('plugins.foreignOff')}</span>{/if}</span>
+      </div>
+    </div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.installed')}</span>
+      <span class="mono strong">{p.version}</span>
+    </div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.source')}</span>
+      <!-- Where it comes from: found on Modrinth by the JAR's fingerprint, or chosen by hand -->
+      {#if data.may.install}
+        <button class="src {p.source?.type ?? 'none'}" disabled={busy} title={t('plugins.src.change')} onclick={() => (choosing = p)}>{@render srcLabel(p)}</button>
+      {:else}
+        <span class="src {p.source?.type ?? 'none'}">{@render srcLabel(p)}</span>
+      {/if}
+    </div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.latestRelease')}</span>
+      {#if p.latest}
+        <span class="inst"><a class="mono strong" href={p.latest.url} target="_blank" rel="noopener noreferrer">{p.latest.version}</a>
+          {#if p.state === 'current'}<span class="badge current">{t('plugins.badge.current')}</span>{:else if p.state === 'newer'}<span class="badge newer">{t('plugins.badge.newer')}</span>{/if}</span>
+        <span class="small muted">{[p.latest.published ? ago(p.latest.published) : '', p.latest.channel && p.latest.channel !== 'release' ? p.latest.channel : ''].filter(Boolean).join(' · ')}</span>
+        {#if p.latest.mcUnknown}<span class="small warn-text">{t('plugins.src.mcUnknownShort')}</span>{/if}
+      {:else if p.state === 'checking' && p.source}
+        <span class="muted small">{t('plugins.foreignChecking')}</span>
+      {:else if p.state === 'no-version'}
+        <span class="small warn-text">{t(p.error === 'no-stable' ? 'plugins.src.onlyBeta' : 'plugins.src.noVersion', { mc: minecraft })}</span>
+      {:else if p.state === 'unknown'}
+        <span class="small bad-text" title={p.error}>{t(p.error === 'not-found' ? 'plugins.src.notFound' : p.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
+      {:else}
+        <span class="muted">–</span>
+      {/if}
+    </div>
+    <div class="cell action">
+      <span class="state"><span class="dot"></span>{p.state === 'newer' ? t('plugins.foreignNewer') : t(p.enabled ? 'plugins.foreignOn' : 'plugins.foreignOff')}</span>
+    </div>
+  </li>
+{/snippet}
+
 {#snippet row(p)}
   {@const st = pluginState(p)}
   {@const err = pluginError(p)}
@@ -142,7 +242,7 @@
       <div class="r-name">
         <span class="name-line">
           {#if p.installed}
-            <a href={'/plugins/' + p.name} onclick={(e) => { e.preventDefault(); go('/plugins/' + p.name); }}>{p.name}</a>
+            <a href={detail(p.name)} onclick={(e) => { e.preventDefault(); go(detail(p.name)); }}>{p.name}</a>
           {:else}
             <strong>{p.name}</strong>
           {/if}
@@ -240,7 +340,7 @@
 
   {#if data}
     <div class="numbers">
-      <div class="num"><b>{installed.length}</b><span>{t('plugins.installedOf', { total: data.plugins.length })}</span></div>
+      <div class="num"><b>{installed.length + shownForeign.length}</b><span>{t('plugins.installedHere')}</span></div>
       <div class="num" class:warn={updates.length}><b>{updates.length}</b><span>{t('versions.updates')}</span></div>
       <div class="num" class:info={waiting.length}><b>{waiting.length}</b><span>{t('versions.waiting')}</span></div>
     </div>
@@ -275,8 +375,12 @@
       </section>
     {/if}
 
-    <section class="group">
-      <h2>{t('plugins.onServer')}</h2>
+    <!-- Two tiles: the MRtechnology plugins (managed here) and the other plugins of this server (only watched) -->
+    <section class="group tile">
+      <div class="tile-title">
+        <h2>{t('plugins.mrTitle')}</h2>
+        <span class="count">{installed.length}</span>
+      </div>
       {#if installed.length}
         <ul class="table">
           <li class="row headrow" aria-hidden="true">
@@ -288,18 +392,36 @@
       {:else}
         <p class="muted">{t('versions.none')}</p>
       {/if}
-    </section>
-
-    {#if others.length}
-      <section class="group">
-        <h2>{t('plugins.more')}</h2>
+      {#if others.length}
+        <h3>{t('plugins.more')}</h3>
         <p class="muted small hint">{t('plugins.moreHint')}</p>
         <ul class="table">
           {#each others as p (p.name)}{@render row(p)}{/each}
         </ul>
+      {/if}
+    </section>
+
+    {#if foreign !== null}
+      <section class="group tile">
+        <div class="tile-title">
+          <h2>{t('plugins.otherTitle')}</h2>
+          <span class="count">{shownForeign.length}</span>
+          {#if foreignNewer}<span class="count warn">{t('plugins.otherNewer', { n: foreignNewer })}</span>{/if}
+        </div>
+        <p class="muted small hint">{t('plugins.otherHint')}</p>
+        {#if shownForeign.length}
+          <ul class="table">
+            <li class="row headrow" aria-hidden="true">
+              <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.source')}</span>
+              <span>{t('plugins.col.latestRelease')}</span><span></span>
+            </li>
+            {#each shownForeign as f (f.name)}{@render foreignRow(f)}{/each}
+          </ul>
+        {:else}
+          <p class="muted">{t('plugins.otherNone')}</p>
+        {/if}
       </section>
     {/if}
-
     <p class="muted small legend">
       <b>{t('plugins.channel.stable')}</b> {t('plugins.channel.hint.stable')} ·
       <b>{t('plugins.channel.beta')}</b> {t('plugins.channel.hint.beta')}
@@ -311,7 +433,101 @@
   {/if}
 </div>
 
+{#if choosing}
+  <ForeignSource plugin={choosing} server={foreignServer} {minecraft} onclose={() => (choosing = null)} ondone={loadForeign} />
+{/if}
+
 <style>
+  .row .cell :global(button.link) {
+    padding: 0;
+    font-size: 0.82rem;
+    justify-content: flex-start;
+  }
+
+  .src {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface-2);
+    justify-content: flex-start;
+    justify-self: start;
+  }
+
+  button.src:hover {
+    border-color: var(--accent);
+  }
+
+  .src.none,
+  .src.off {
+    color: var(--muted);
+    background: transparent;
+    border-style: dashed;
+  }
+
+  .src .logo {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+  }
+
+  .src.modrinth .logo {
+    background: #1bd96a;
+  }
+
+  .src.github .logo {
+    border-radius: 50%;
+    background: var(--text);
+  }
+
+  .src-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .src-beta {
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 15%, transparent);
+  }
+
+  .src-auto {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .plain-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 6px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plain-list .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--bad);
+  }
+
+  .plain-list .dot.on {
+    background: var(--good);
+  }
+
   /* Inside the page Server: no card of its own, only the controls (on the right) */
   .head.bare {
     padding: 0;
@@ -541,6 +757,44 @@
   .group {
     display: grid;
     gap: 10px;
+  }
+
+  /* One tile each for the MRtechnology plugins and the other plugins */
+  .tile {
+    padding: 16px 18px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .tile-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tile-title h2 {
+    margin: 0;
+  }
+
+  .count {
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+
+  .count.warn {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+
+  h3 {
+    margin: 8px 0 0;
+    font-size: 0.95rem;
   }
 
   h2 {

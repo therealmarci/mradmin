@@ -5,6 +5,7 @@
   import { dateTime, ago, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
+  import PageHead from '../components/PageHead.svelte';
 
   let { id, me } = $props();
 
@@ -113,7 +114,7 @@
 </script>
 
 <div class="page">
-  <button class="back" onclick={() => go('/tickets')}>← {t('ticket.back')}</button>
+  <PageHead title={'#' + id} crumbs={[{ label: t('tickets.title'), path: '/admin/community/tickets' }]} />
 
   {#if error}<div class="error">{error}</div>{/if}
 
