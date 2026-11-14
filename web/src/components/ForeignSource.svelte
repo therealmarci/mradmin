@@ -18,6 +18,8 @@
   let repo = $state(plugin.source?.type === 'github' ? plugin.source.id : '');
   let preview = $state(null);
   let previewing = $state(false);
+  // Which versions count: stable = only releases, beta = releases and betas (also for a plugin found automatically).
+  let channel = $state(plugin.channel === 'beta' ? 'beta' : 'stable');
   let busy = $state(false);
   let error = $state('');
 
@@ -56,7 +58,7 @@
     if (!source) return;
     previewing = true;
     try {
-      preview = await api('GET', `/plugins/foreign/preview?server=${server}&type=${type}&source=${encodeURIComponent(source)}`);
+      preview = await api('GET', `/plugins/foreign/preview?server=${server}&type=${type}&source=${encodeURIComponent(source)}&channel=${channel}`);
       error = '';
     } catch (e) {
       error = errorText(e);
@@ -75,6 +77,18 @@
     if (plugin.source?.type === 'modrinth' || plugin.source?.type === 'github') look(plugin.source.type, plugin.source.id);
   });
 
+  // The source shown right now (to look again when the channel changes).
+  function current() {
+    if (tab === 'modrinth') return picked ? ['modrinth', picked] : null;
+    return repo.trim() ? ['github', repo.trim()] : null;
+  }
+  function setChannel(next) {
+    if (next === channel) return;
+    channel = next;
+    const c = current();
+    if (c) look(...c);
+  }
+
   function switchTab(next) {
     if (next === tab) return;
     tab = next;
@@ -88,7 +102,7 @@
     busy = true;
     error = '';
     try {
-      await api('POST', '/plugins/foreign', { server, name: plugin.name, type, source });
+      await api('POST', '/plugins/foreign', { server, name: plugin.name, type, source, channel });
       ondone?.();
       close();
     } catch (e) {
@@ -98,7 +112,14 @@
     }
   }
 
-  const canSave = $derived(!busy && preview && (tab === 'modrinth' ? !!picked : !!repo.trim()));
+  // The automatically found project unchanged: only the channel is stored, the plugin stays "automatic".
+  const keepsAuto = $derived(!plugin.manual && plugin.source?.type === 'modrinth' && tab === 'modrinth' && picked === plugin.source.id);
+  const channelChanged = $derived(channel !== (plugin.channel === 'beta' ? 'beta' : 'stable'));
+  const canSave = $derived(!busy && (tab === 'modrinth' ? !!picked : !!repo.trim()) && (keepsAuto ? channelChanged : !!preview));
+  function saveChosen() {
+    if (keepsAuto) save('auto');
+    else save(tab, tab === 'modrinth' ? picked : repo.trim());
+  }
   const fmt = (n) => (n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + ' M' : n >= 1000 ? Math.round(n / 1000) + ' k' : String(n));
 </script>
 
@@ -156,6 +177,15 @@
     <p class="muted small">{t('plugins.src.githubHint', { mc: minecraft })}</p>
   {/if}
 
+  <div class="channel-line">
+    <span class="label">{t('plugins.src.channel')}</span>
+    <div class="seg" role="group" aria-label={t('plugins.src.channel')}>
+      <button class:on={channel === 'stable'} aria-pressed={channel === 'stable'} onclick={() => setChannel('stable')}>{t('plugins.channel.stable')}</button>
+      <button class:on={channel === 'beta'} aria-pressed={channel === 'beta'} onclick={() => setChannel('beta')}>{t('plugins.channel.beta')}</button>
+    </div>
+    <span class="muted small">{t(channel === 'beta' ? 'plugins.src.channelBeta' : 'plugins.src.channelStable')}</span>
+  </div>
+
   <div class="preview">
     {#if previewing}
       <span class="muted small">{t('plugins.foreignChecking')}</span>
@@ -170,7 +200,7 @@
       </span>
       {#if l.mcUnknown}<span class="small warn-text">{t('plugins.src.mcUnknown', { mc: minecraft })}</span>{/if}
     {:else if preview?.state === 'no-version'}
-      <span class="small warn-text">{t('plugins.src.noVersion', { mc: minecraft })}</span>
+      <span class="small warn-text">{t(preview.error === 'no-stable' ? 'plugins.src.onlyBeta' : 'plugins.src.noVersion', { mc: minecraft })}</span>
     {:else if preview?.state === 'unknown'}
       <span class="small bad-text">{t(preview.error === 'not-found' ? 'plugins.src.notFound' : preview.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
     {:else}
@@ -189,7 +219,7 @@
         <button class="secondary" disabled={busy} onclick={() => save('off')}>{t('plugins.src.off')}</button>
       {/if}
     </div>
-    <button disabled={!canSave} onclick={() => save(tab, tab === 'modrinth' ? picked : repo.trim())}>{t('common.save')}</button>
+    <button disabled={!canSave} onclick={saveChosen}>{t('common.save')}</button>
   </div>
 </dialog>
 
@@ -377,6 +407,38 @@
 
   .repo + p {
     margin: 6px 0 0;
+  }
+
+  .channel-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .seg button {
+    padding: 3px 12px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .seg button.on {
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: var(--shadow);
   }
 
   .preview {

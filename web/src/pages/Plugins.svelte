@@ -168,6 +168,21 @@
 {/snippet}
 
 <!-- A plugin of the waiting room that is not from MRtechnology: the same row, without channel and update -->
+{#snippet srcLabel(p)}
+  {#if p.source?.type === 'modrinth' || p.source?.type === 'github'}
+    <span class="logo" aria-hidden="true"></span>
+    <span class="src-name">{p.source.title}</span>
+    {#if !p.manual}<span class="src-auto">{t('plugins.src.autoShort')}</span>{/if}
+    {#if p.channel === 'beta'}<span class="src-beta">{t('plugins.channel.beta')}</span>{/if}
+  {:else if p.source?.type === 'off'}
+    {t('plugins.src.offShort')}
+  {:else if p.state === 'checking'}
+    {t('plugins.foreignChecking')}
+  {:else}
+    {data.may.install ? '+ ' + t('plugins.src.add') : t('plugins.src.none')}
+  {/if}
+{/snippet}
+
 {#snippet foreignRow(p)}
   <li class="row {p.state === 'newer' ? 'warn' : p.enabled ? 'good' : 'bad'}">
     <div class="cell plugin">
@@ -186,20 +201,11 @@
     <div class="cell">
       <span class="label">{t('plugins.col.source')}</span>
       <!-- Where it comes from: found on Modrinth by the JAR's fingerprint, or chosen by hand -->
-      <svelte:element this={data.may.install ? 'button' : 'span'} class="src {p.source?.type ?? 'none'}" disabled={data.may.install ? busy : undefined}
-        title={data.may.install ? t('plugins.src.change') : undefined} onclick={data.may.install ? () => (choosing = p) : undefined}>
-        {#if p.source?.type === 'modrinth' || p.source?.type === 'github'}
-          <span class="logo" aria-hidden="true"></span>
-          <span class="src-name">{p.source.title}</span>
-          {#if !p.manual}<span class="src-auto">{t('plugins.src.autoShort')}</span>{/if}
-        {:else if p.source?.type === 'off'}
-          {t('plugins.src.offShort')}
-        {:else if p.state === 'checking'}
-          {t('plugins.foreignChecking')}
-        {:else}
-          {data.may.install ? '+ ' + t('plugins.src.add') : t('plugins.src.none')}
-        {/if}
-      </svelte:element>
+      {#if data.may.install}
+        <button class="src {p.source?.type ?? 'none'}" disabled={busy} title={t('plugins.src.change')} onclick={() => (choosing = p)}>{@render srcLabel(p)}</button>
+      {:else}
+        <span class="src {p.source?.type ?? 'none'}">{@render srcLabel(p)}</span>
+      {/if}
     </div>
     <div class="cell">
       <span class="label">{t('plugins.col.latestRelease')}</span>
@@ -211,7 +217,7 @@
       {:else if p.state === 'checking' && p.source}
         <span class="muted small">{t('plugins.foreignChecking')}</span>
       {:else if p.state === 'no-version'}
-        <span class="small warn-text">{t('plugins.src.noVersion', { mc: minecraft })}</span>
+        <span class="small warn-text">{t(p.error === 'no-stable' ? 'plugins.src.onlyBeta' : 'plugins.src.noVersion', { mc: minecraft })}</span>
       {:else if p.state === 'unknown'}
         <span class="small bad-text" title={p.error}>{t(p.error === 'not-found' ? 'plugins.src.notFound' : p.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
       {:else}
@@ -485,6 +491,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .src-beta {
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 15%, transparent);
   }
 
   .src-auto {

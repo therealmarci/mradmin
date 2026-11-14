@@ -36,8 +36,9 @@ import java.util.regex.Pattern;
  * Paper-compatible loader, on GitHub the newest release that names the Minecraft version (without any such release the
  * newest one, marked "Minecraft version not stated"). Looked up in the background, at most every 6 hours.
  * <p>
- * Stored in the storage document "foreign-plugins": server -> plugin -> "modrinth:&lt;project&gt;" | "github:owner/repo" |
- * "off" (older files: just "owner/repo" = GitHub).
+ * Stored in the storage document "foreign-plugins": server -&gt; plugin -&gt; "modrinth:&lt;project&gt;" | "github:owner/repo" |
+ * "off" (older files: just "owner/repo" = GitHub), and under "channels" server -&gt; plugin -&gt; "beta" for plugins whose
+ * betas count too (also for plugins found automatically). Without an entry only releases count (stable).
  */
 public final class ForeignPlugins {
 
@@ -79,6 +80,8 @@ public final class ForeignPlugins {
             .followRedirects(HttpClient.Redirect.NORMAL).build();
     private final JarHashes hashes = new JarHashes();
     private final Map<String, Map<String, String>> links = new ConcurrentHashMap<>();
+    /** server -> plugins whose betas count too */
+    private final Map<String, Set<String>> betas = new ConcurrentHashMap<>();
     private final Map<String, Hit> hits = new ConcurrentHashMap<>();
     private final Map<String, Project> projects = new ConcurrentHashMap<>();
     private final Map<String, Latest> latest = new ConcurrentHashMap<>();
@@ -97,9 +100,20 @@ public final class ForeignPlugins {
         }
         loaded = true;
         YamlConfiguration yaml = plugin.storage().loadYaml(DOC, plugin.getLogger());
+        var channels = yaml.getConfigurationSection("channels");
+        if (channels != null) {
+            for (String server : channels.getKeys(false)) {
+                var section = channels.getConfigurationSection(server);
+                if (section != null) {
+                    Set<String> set = ConcurrentHashMap.newKeySet();
+                    section.getKeys(false).stream().filter(n -> "beta".equals(section.getString(n))).forEach(set::add);
+                    betas.put(server, set);
+                }
+            }
+        }
         for (String server : yaml.getKeys(false)) {
             var section = yaml.getConfigurationSection(server);
-            if (section == null) {
+            if (section == null || server.equals("channels")) {
                 continue;
             }
             Map<String, String> map = new ConcurrentHashMap<>();
@@ -115,6 +129,7 @@ public final class ForeignPlugins {
     private void save() {
         YamlConfiguration yaml = new YamlConfiguration();
         links.forEach((server, map) -> map.forEach((name, value) -> yaml.set(server + "." + name, value)));
+        betas.forEach((server, set) -> set.forEach(name -> yaml.set("channels." + server + "." + name, "beta")));
         plugin.storage().saveYaml(DOC, yaml);
     }
 
@@ -144,9 +159,25 @@ public final class ForeignPlugins {
         return null;
     }
 
-    /** Stores the source of a plugin on a server; null = back to the automatic lookup. */
-    public void link(String server, String name, Source source) {
+    /** Whether the betas of a plugin count too (channel beta) - otherwise only releases. */
+    public boolean beta(String server, String name) {
         load();
+        return betas.getOrDefault(server, Set.of()).contains(name);
+    }
+
+    /**
+     * Stores the source of a plugin on a server (null = back to the automatic lookup) and its channel (null = keep).
+     */
+    public void link(String server, String name, Source source, Boolean beta) {
+        load();
+        if (beta != null) {
+            Set<String> set = betas.computeIfAbsent(server, k -> ConcurrentHashMap.newKeySet());
+            if (beta) {
+                set.add(name);
+            } else {
+                set.remove(name);
+            }
+        }
         Map<String, String> map = links.computeIfAbsent(server, k -> new ConcurrentHashMap<>());
         if (source == null) {
             map.remove(name);
@@ -188,6 +219,8 @@ public final class ForeignPlugins {
             Hit hit = info.sha1() == null ? null : hits.get(info.sha1());
             Source source = manual != null ? manual : hit != null && hit.project() != null ? new Source("modrinth", hit.project()) : null;
             m.put("manual", manual != null);
+            boolean beta = beta(server, e.getKey());
+            m.put("channel", beta ? "beta" : "stable");
             if (source == null || source.type().equals("off")) {
                 m.put("source", source == null ? null : Map.of("type", "off"));
                 m.put("state", info.sha1() != null && hit == null && manual == null ? "checking" : "none");
@@ -195,11 +228,11 @@ public final class ForeignPlugins {
                 continue;
             }
             m.put("source", sourceView(source));
-            Latest l = latest(source, minecraft);
+            Latest l = latest(source, minecraft, beta);
             if (l == null) {
                 m.put("state", "checking");
             } else if (l.error() != null) {
-                m.put("state", l.error().equals("no-version") ? "no-version" : "unknown");
+                m.put("state", l.error().equals("no-version") || l.error().equals("no-stable") ? "no-version" : "unknown");
                 m.put("error", l.error());
             } else {
                 m.put("latest", latestView(l));
@@ -216,9 +249,9 @@ public final class ForeignPlugins {
     }
 
     /** The newest fitting version of a source, looked up now if needed (for the preview in the dialog). */
-    public Map<String, Object> preview(Source source, String minecraft) {
-        Latest l = latest(source, minecraft);
-        String key = key(source, minecraft);
+    public Map<String, Object> preview(Source source, String minecraft, boolean beta) {
+        Latest l = latest(source, minecraft, beta);
+        String key = key(source, minecraft, beta);
         for (int i = 0; l == null && i < 40; i++) {
             try {
                 Thread.sleep(250);
@@ -233,7 +266,7 @@ public final class ForeignPlugins {
         if (l == null) {
             m.put("state", "checking");
         } else if (l.error() != null) {
-            m.put("state", l.error().equals("no-version") ? "no-version" : "unknown");
+            m.put("state", l.error().equals("no-version") || l.error().equals("no-stable") ? "no-version" : "unknown");
             m.put("error", l.error());
         } else {
             m.put("state", "found");
@@ -405,19 +438,19 @@ public final class ForeignPlugins {
 
     // ------------------------------------------------------------------ latest
 
-    private static String key(Source source, String minecraft) {
-        return source.type() + ":" + source.id() + "@" + minecraft;
+    private static String key(Source source, String minecraft, boolean beta) {
+        return source.type() + ":" + source.id() + "@" + minecraft + (beta ? "+beta" : "");
     }
 
-    private Latest latest(Source source, String minecraft) {
-        String key = key(source, minecraft);
+    private Latest latest(Source source, String minecraft, boolean beta) {
+        String key = key(source, minecraft, beta);
         Latest l = latest.get(key);
         long now = System.currentTimeMillis();
-        boolean stale = l == null || now - l.checked() > (l.error() == null || l.error().equals("no-version") ? MAX_AGE : RETRY);
+        boolean stale = l == null || now - l.checked() > (l.error() == null || l.error().startsWith("no-") ? MAX_AGE : RETRY);
         if (stale && fetching.add(key)) {
             Thread.ofVirtual().name("MRadmin-ForeignRelease").start(() -> {
                 try {
-                    latest.put(key, source.type().equals("modrinth") ? modrinth(source.id(), minecraft) : github(source.id(), minecraft));
+                    latest.put(key, source.type().equals("modrinth") ? modrinth(source.id(), minecraft, beta) : github(source.id(), minecraft, beta));
                 } finally {
                     fetching.remove(key);
                 }
@@ -426,8 +459,11 @@ public final class ForeignPlugins {
         return l;
     }
 
-    /** Newest version of a Modrinth project for this Minecraft version and a Paper loader - a release if there is one. */
-    private Latest modrinth(String project, String minecraft) {
+    /**
+     * Newest version of a Modrinth project for this Minecraft version and a Paper loader: on stable the newest release
+     * (error no-stable if there are only betas), on beta the newest release or beta (no alphas).
+     */
+    private Latest modrinth(String project, String minecraft, boolean beta) {
         long now = System.currentTimeMillis();
         try {
             String url = MODRINTH + "/project/" + enc(project) + "/version?loaders=" + enc(GSON.toJson(LOADERS))
@@ -440,15 +476,20 @@ public final class ForeignPlugins {
                 return failed("HTTP " + r.statusCode(), now);
             }
             JsonObject pick = null;
+            boolean any = false;
             for (JsonElement e : JsonParser.parseString(r.body()).getAsJsonArray()) {
                 JsonObject o = e.getAsJsonObject();
-                if (pick == null || ("release".equals(string(o, "version_type")) && !"release".equals(string(pick, "version_type")))
-                        || (string(o, "version_type").equals(string(pick, "version_type")) && time(o, "date_published") > time(pick, "date_published"))) {
+                String type = string(o, "version_type");
+                any = true;
+                if (!type.equals("release") && !(beta && type.equals("beta"))) {
+                    continue;
+                }
+                if (pick == null || time(o, "date_published") > time(pick, "date_published")) {
                     pick = o;
                 }
             }
             if (pick == null) {
-                return failed("no-version", now);
+                return failed(any && !beta ? "no-stable" : "no-version", now);
             }
             Project p = projects.get(project);
             String slug = p == null ? project : p.slug();
@@ -467,7 +508,7 @@ public final class ForeignPlugins {
      * Newest GitHub release that names this Minecraft version (tag, title, text or file names). Without any such
      * release the newest one, marked as "Minecraft version not stated".
      */
-    private Latest github(String repo, String minecraft) {
+    private Latest github(String repo, String minecraft, boolean beta) {
         long now = System.currentTimeMillis();
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create("https://api.github.com/repos/" + repo + "/releases?per_page=30"))
@@ -484,7 +525,7 @@ public final class ForeignPlugins {
             JsonObject newest = null;
             for (JsonElement e : JsonParser.parseString(r.body()).getAsJsonArray()) {
                 JsonObject o = e.getAsJsonObject();
-                if (bool(o, "draft") || bool(o, "prerelease")) {
+                if (bool(o, "draft") || (!beta && bool(o, "prerelease"))) {
                     continue;
                 }
                 if (newest == null) {
@@ -515,7 +556,7 @@ public final class ForeignPlugins {
 
     private static Latest githubLatest(JsonObject o, boolean mcUnknown, long now) {
         return new Latest(string(o, "tag_name"), string(o, "tag_name"), string(o, "html_url"), time(o, "published_at"),
-                "release", mcUnknown, null, now);
+                bool(o, "prerelease") ? "beta" : "release", mcUnknown, null, now);
     }
 
     private static Latest failed(String error, long now) {

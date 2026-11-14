@@ -343,8 +343,8 @@ public final class VersionRoutes {
     }
 
     /**
-     * POST /api/plugins/foreign {server, name, type: modrinth|github|off|auto, source} - chooses where a plugin comes
-     * from (auto = back to the lookup by the JAR's fingerprint).
+     * POST /api/plugins/foreign {server, name, type: modrinth|github|off|auto, source, channel: stable|beta} - chooses
+     * where a plugin comes from (auto = back to the lookup by the JAR's fingerprint) and whether betas count.
      */
     private void foreignLink(Http http) throws Exception {
         require(http, may(http, Perms.VERSIONS_INSTALL));
@@ -362,8 +362,11 @@ public final class VersionRoutes {
                 throw new Http.WebException(400, "foreign-repo-invalid");
             }
         }
-        plugin.foreignPlugins().link(target, name.strip(), source);
-        audit(http, "foreign-plugin-link", target + " " + name + " " + (source == null ? "auto" : source.type() + ":" + source.id()));
+        String channel = http.string("channel");
+        Boolean beta = "beta".equals(channel) ? Boolean.TRUE : "stable".equals(channel) ? Boolean.FALSE : null;
+        plugin.foreignPlugins().link(target, name.strip(), source, beta);
+        audit(http, "foreign-plugin-link", target + " " + name + " " + (source == null ? "auto" : source.type() + ":" + source.id())
+                + (beta == null ? "" : " " + channel));
         http.json(200, Map.of("ok", true));
     }
 
@@ -383,14 +386,15 @@ public final class VersionRoutes {
         }
     }
 
-    /** GET /api/plugins/foreign/preview?server=&type=&source= - the newest fitting version of a source before saving. */
+    /** GET /api/plugins/foreign/preview?server=&type=&source=&channel= - the newest fitting version of a source before saving. */
     private void foreignPreview(Http http) throws Exception {
         require(http, may(http, Perms.VERSIONS_INSTALL));
         ForeignPlugins.Source source = ForeignPlugins.parse(http.query().get("type"), http.query().get("source"));
         if (source == null || source.type().equals("off")) {
             throw new Http.WebException(400, "foreign-repo-invalid");
         }
-        http.json(200, plugin.foreignPlugins().preview(source, minecraftOf("room".equals(http.query().get("server")))));
+        http.json(200, plugin.foreignPlugins().preview(source, minecraftOf("room".equals(http.query().get("server"))),
+                "beta".equals(http.query().get("channel"))));
     }
 
     /** The Minecraft version of a server (the waiting room reports its own; it falls back to this one's). */
