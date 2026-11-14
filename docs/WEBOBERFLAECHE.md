@@ -258,14 +258,11 @@ Link „[Lesen]“: sofort, wenn er online ist, sonst beim nächsten Join (`play
 
 **Warnungen aus Uptime Kuma:** Vorfälle, die auf einer Kuma-Statusseite angeheftet sind (`uptime-kuma.status-pages`,
 dafür reicht `uptime-kuma.url`; gelesen alle `uptime-kuma.incident-seconds`, Standard 15), erscheinen auf der
-Spielerseite, im Karussell und oben auf dieser Seite. Der Link im Chat führt zur Spielerseite. Was im Spiel
-passiert, hängt vom Stil in Kuma ab:
-
-| Stil in Kuma | Farbe | Im Spiel |
-|---|---|---|
-| danger | rot | neu: Chat an alle, dazu groß „ACHTUNG / Kritische Warnung“; beim Join im Chat, solange angeheftet |
-| warning | gelb | neu: Chat an alle (kein Titel); beim Join im Chat, solange angeheftet |
-| info, primary, light, dark | blau | einmal pro Spieler im Chat, wie eine Neuigkeit |
+Spielerseite (in der Farbe ihres Stils in Kuma), im Karussell und oben auf dieser Seite. Der Link im Chat führt zur
+Spielerseite. **Im Spiel behandelt MRadmin jeden Vorfall wie eine hier angelegte Warnung**, egal welcher Stil: neu
+Chat an alle und groß „ACHTUNG / Kritische Warnung“, beim Join im Chat, solange er angeheftet ist. Hängt ein
+Warteraum dran, zeigt auch er die Vorfälle (Anzeigetafel und Chat beim Betreten) - wie die Warnungen von hier. Wartungen
+aus Uptime Kuma gelten auf beiden Servern ohnehin wie die in MRadmin angelegten.
 
 Was beim Serverstart schon angeheftet ist, wird nicht noch einmal an alle angekündigt. Geändert und beendet werden die
 Vorfälle in Uptime Kuma. Im Discord-Kanal der Ankündigungen (`discord-announce.kuma`) wird jeder Vorfall einmal gepostet

@@ -547,6 +547,19 @@ public final class WaitingRoom implements Listener {
                     break;
                 }
             }
+            // Uptime Kuma incidents count like warnings written in MRadmin (one text for all languages).
+            if (plugin.newsDelivery() != null) {
+                for (var incident : plugin.newsDelivery().incidents().current()) {
+                    if (alerts.size() >= 5) {
+                        break;
+                    }
+                    Map<String, String> title = new LinkedHashMap<>();
+                    for (String lang : News.LANGS) {
+                        title.put(lang, incident.title());
+                    }
+                    alerts.add(Map.of("id", incident.id(), "title", title));
+                }
+            }
         }
         json.put("alerts", alerts);
         json.put("rights", rights.json());

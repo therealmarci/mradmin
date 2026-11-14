@@ -169,13 +169,7 @@ Three kinds of posts for the players, texts separately in German and English (ev
 
 Every player with `mradmin.web.self` gets new news and changelogs **once as a preview in chat** with a link "[Read]": right away if they are online, otherwise at the next join (`player-web.news.chat-preview`).
 
-**Warnings from Uptime Kuma:** incidents pinned on a Kuma status page (`uptime-kuma.status-pages`, `uptime-kuma.url` is enough for this; read every `uptime-kuma.incident-seconds`, default 15) appear on the player page, in the carousel and at the top of this page. The link in chat leads to the player page. What happens in game depends on the style in Kuma:
-
-| Style in Kuma | Color | In game |
-|---|---|---|
-| danger | red | new: chat to everyone, plus a big "ATTENTION / Critical warning"; on join in chat as long as it is pinned |
-| warning | yellow | new: chat to everyone (no title); on join in chat as long as it is pinned |
-| info, primary, light, dark | blue | once per player in chat, like a news post |
+**Warnings from Uptime Kuma:** incidents pinned on a Kuma status page (`uptime-kuma.status-pages`, `uptime-kuma.url` is enough for this; read every `uptime-kuma.incident-seconds`, default 15) appear on the player page (in the colour of their style in Kuma), in the carousel and at the top of this page. The link in chat leads to the player page. **In game MRadmin treats every incident like a warning created here**, whatever its style: when new a chat line to everyone and a big "ATTENTION / Critical warning", on join in chat as long as it is pinned. With a waiting room it shows the incidents as well (board and chat on joining) - like the warnings from here. Maintenances from Uptime Kuma count on both servers like those created in MRadmin anyway.
 
 What is already pinned at server start is not announced to everyone again. Incidents are changed and ended in Uptime Kuma. In the Discord channel of the announcements (`discord-announce.kuma`) every incident is posted once (red pings the role), with a link "More" to the news page of the player page (not to Kuma), edited when it changes in Kuma and set to "✅ Resolved" at the end.
 
