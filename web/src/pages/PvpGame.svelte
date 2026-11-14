@@ -14,6 +14,7 @@
   import ArenaMap from '../components/ArenaMap.svelte';
   import Hearts from '../components/Hearts.svelte';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
 
   let { id, me } = $props();
 
@@ -280,7 +281,7 @@
 {/snippet}
 
 <div class="page">
-  <button class="back" onclick={() => go('/pvp')}>← {t('pvp.back')}</button>
+  <PageHead title={'#' + id} crumbs={[{ label: t('pvp.title'), path: '/admin/plugins/mrpvp' }]} />
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />

@@ -1,6 +1,7 @@
 <script>
   // MRpvp: running duels live (health of both, time), finished rounds, arenas with their copies, the alerts of the
-  // last 24 hours and conspicuous rounds waiting for a decision. Everything about one round is on /pvp/<id>.
+  // last 24 hours and conspicuous rounds waiting for a decision, the kits. Everything about one round is on /pvp/<id>.
+  // Since the sidebar (1.6) every tab has its own address: /admin/plugins/mrpvp[/games|arenas|alerts|reviews|kits].
   import { untrack } from 'svelte';
   import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
@@ -11,10 +12,13 @@
   import { ICONS } from '../lib/icons.js';
   import Hearts from '../components/Hearts.svelte';
   import Toast from '../components/Toast.svelte';
+  import PageHead from '../components/PageHead.svelte';
+  import PageTabs from '../components/PageTabs.svelte';
+  import FilterChips from '../components/FilterChips.svelte';
+  import PvpKits from './PvpKits.svelte';
 
-  let { me } = $props();
-
-  let tab = $state(sessionStorage.getItem('mradmin.pvp.tab') ?? 'live');
+  // asked: the tab from the address (unknown or not allowed: Live)
+  let { me, tab: asked = 'live' } = $props();
   let overview = $state(null);
   let games = $state(null);
   let reviews = $state(null);
@@ -93,15 +97,6 @@
     }
   });
 
-  function setTab(value) {
-    tab = value;
-    try {
-      sessionStorage.setItem('mradmin.pvp.tab', value);
-    } catch {
-      // fine
-    }
-  }
-
   async function stop(game) {
     if (!confirm(t('pvp.stopConfirm', { id: game.id }))) return;
     busy = true;
@@ -128,74 +123,41 @@
   const resultTone = { win: 'good', draw: 'warn', aborted: '' };
 
   // The tabs this team member may see, with their counter.
+  const BASE = '/admin/plugins/mrpvp';
   const tabs = $derived([
     { id: 'live', n: overview?.games.length },
     me.may.mrpvpGames && { id: 'games' },
-    { id: 'arenas', n: overview?.arenas.length },
-    { id: 'alerts', n: overview?.alerts.length, tone: overview?.alerts.length ? 'warn' : '' },
     me.may.mrpvpReview && overview?.reviews != null && { id: 'reviews', n: overview.reviews, tone: overview.reviews ? 'warn' : '' },
-  ].filter(Boolean));
+    { id: 'alerts', n: overview?.alerts.length, tone: overview?.alerts.length ? 'warn' : '' },
+    { id: 'arenas', n: overview?.arenas.length },
+    me.may.mrpvpKits && { id: 'kits' },
+  ].filter(Boolean).map((x) => ({ ...x, label: t('pvp.tab.' + x.id), path: x.id === 'live' ? BASE : BASE + '/' + x.id })));
+  const tab = $derived(tabs.some((x) => x.id === asked) ? asked : 'live');
+  // The key figures in one line below the title.
+  const stats = $derived(!overview ? [] : [
+    { label: t('pvp.running'), value: overview.games.length, tone: overview.games.length ? 'good' : '' },
+    { label: t('pvp.invites'), value: overview.invites.length },
+    { label: t('pvp.arenasInUse'), value: `${inUse} / ${inUse + ready}` },
+    ...(overview.reviews != null ? [{ label: t('pvp.reviews'), value: overview.reviews, tone: overview.reviews ? 'warn' : '' }] : []),
+    { label: t('pvp.alerts'), value: overview.alerts.length, tone: overview.alerts.length ? 'warn' : '' },
+  ]);
 </script>
 
 <div class="page">
-  <header class="head">
-    <svg class="watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-      stroke-linejoin="round" aria-hidden="true"><path d={ICONS.swords} /></svg>
-    <div class="intro">
-      <span class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round"><path d={ICONS.swords} /></svg>
-      </span>
-      <div>
-        <h1>{t('pvp.title')}</h1>
-        <p class="muted">{t('pvp.subtitle')}</p>
-      </div>
-    </div>
-    {#if me.may.mrpvpKits}
-      <button class="secondary kits" onclick={() => go('/pvp/kits')}>{t('pvp.tab.kits')} →</button>
-    {/if}
-  </header>
+  <PageHead title={t('pvp.title')} {stats} />
+  <PageTabs {tabs} current={tab} />
 
   {#if error}<div class="error">{error}</div>{/if}
   <Toast text={message} />
 
-  {#if overview}
-    <div class="kpis">
-      <div class="kpi" class:good={overview.games.length > 0}><div class="label">{t('pvp.running')}</div>
-        <div class="value">{overview.games.length}</div></div>
-      <div class="kpi"><div class="label">{t('pvp.invites')}</div><div class="value">{overview.invites.length}</div></div>
-      <div class="kpi"><div class="label">{t('pvp.arenasInUse')}</div><div class="value">{inUse}</div>
-        <div class="bar"><span style="width: {inUse + ready ? (inUse / (inUse + ready)) * 100 : 0}%"></span></div>
-        <div class="sub">{t('pvp.slotsReady', { n: ready })}</div></div>
-      <div class="kpi" class:warn={overview.alerts.length > 0}><div class="label">{t('pvp.alerts')}</div>
-        <div class="value">{overview.alerts.length}</div><div class="sub">{t('pvp.bans', { n: overview.bans })}</div></div>
-      {#if overview.reviews != null}
-        <div class="kpi" class:warn={overview.reviews > 0}><div class="label">{t('pvp.reviews')}</div>
-          <div class="value">{overview.reviews}</div><div class="sub">{t('pvp.reviewsSub')}</div></div>
-      {/if}
-    </div>
+  {#if tab === 'kits'}
+    <PvpKits embedded />
+  {:else}
+  {#if tab === 'games'}
+    <FilterChips value={filter} onchange={(f) => { filter = f; offset = 0; }}
+      options={['all', 'win', 'draw', 'aborted'].map((f) => ({ id: f, label: t('pvp.filter.' + f), tone: f === 'all' ? '' : resultTone[f] || 'off' }))} />
   {/if}
-
   <section class="card tile">
-    <div class="tile-head">
-      <div class="switch" role="tablist">
-        {#each tabs as x (x.id)}
-          <button role="tab" aria-selected={tab === x.id} class:active={tab === x.id} onclick={() => setTab(x.id)}>
-            {#if x.tone}<span class="dot {x.tone}"></span>{/if}{t('pvp.tab.' + x.id)}{#if x.n}<span class="n">{x.n}</span>{/if}
-          </button>
-        {/each}
-      </div>
-      {#if tab === 'games'}
-        <div class="switch small-switch" role="tablist">
-          {#each ['all', 'win', 'draw', 'aborted'] as f}
-            <button role="tab" aria-selected={filter === f} class:active={filter === f} onclick={() => { filter = f; offset = 0; }}>
-              {#if f !== 'all'}<span class="dot {resultTone[f]}"></span>{/if}{t('pvp.filter.' + f)}
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </div>
-
     {#if !overview}
       {#if !error}<p class="muted pad">{t('common.loading')}</p>{/if}
     {:else if tab === 'live'}
@@ -372,6 +334,7 @@
       {/if}
     {/if}
   </section>
+  {/if}
 </div>
 
 <style>
@@ -379,174 +342,6 @@
     --pv: var(--accent);
     display: grid;
     gap: 16px;
-  }
-
-  .head {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 24px;
-    padding: 22px 24px;
-    border-radius: var(--radius);
-    border: 1px solid color-mix(in srgb, var(--pv) 30%, var(--border));
-    background:
-      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--pv) 20%, transparent), transparent 60%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .watermark {
-    position: absolute;
-    right: -16px;
-    bottom: -30px;
-    width: 150px;
-    height: 150px;
-    color: var(--pv);
-    opacity: 0.08;
-    transform: rotate(-12deg);
-    pointer-events: none;
-  }
-
-  .intro {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .icon {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    color: var(--pv);
-    background: color-mix(in srgb, var(--pv) 16%, var(--surface-2));
-    border: 1px solid color-mix(in srgb, var(--pv) 35%, transparent);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.45rem;
-  }
-
-  .intro p {
-    margin: 2px 0 0;
-  }
-
-  .kits {
-    position: relative;
-  }
-
-  /* Key figures, like on the health page */
-  .kpis {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
-  }
-
-  .kpi {
-    --tn: var(--pv);
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    padding: 14px 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    border-top: 3px solid var(--tn);
-    background:
-      radial-gradient(140% 120% at 100% 0%, color-mix(in srgb, var(--pv) 10%, transparent), transparent 55%),
-      var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .kpi.good {
-    --tn: var(--good);
-  }
-
-  .kpi.warn {
-    --tn: var(--warn);
-  }
-
-  .kpi.warn .value {
-    color: var(--tn);
-  }
-
-  .label {
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 700;
-  }
-
-  .value {
-    font-size: 1.6rem;
-    font-weight: 800;
-    line-height: 1.15;
-  }
-
-  .sub {
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-
-  .bar {
-    height: 6px;
-    border-radius: 3px;
-    background: color-mix(in srgb, var(--border) 80%, transparent);
-    margin: 4px 0 2px;
-    overflow: hidden;
-  }
-
-  .bar span {
-    display: block;
-    height: 100%;
-    border-radius: 3px;
-    background: var(--tn);
-  }
-
-  /* The tabs */
-  .tile-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .switch {
-    display: inline-flex;
-    flex-wrap: wrap;
-    padding: 4px;
-    gap: 4px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-
-  .switch button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 9px;
-    font-size: 0.88rem;
-  }
-
-  .small-switch button {
-    padding: 4px 10px;
-    font-size: 0.8rem;
-  }
-
-  .switch button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: var(--shadow);
   }
 
   .n {

@@ -1,6 +1,8 @@
 // Tiny router: the path decides the page, links change it without reloading. A "#anchor" or "?query" in the path stays
 // in the address (the page can use it), route.path is without them.
 //
+// Since 1.6 the administration has a sidebar: /admin, /admin/community/…, /admin/content/…, /admin/plugins/<plugin>/…,
+// /admin/server/…, /admin/settings/…
 // Since 1.5 there is one interface: the player area without a prefix (/, /game/…, /map, /stats, /news/…, /inbox, /account)
 // and the administration under /admin/…. Old addresses (bookmarks, links in Discord and mails, links inside older
 // pages) are translated here by canonical() - also go('/tickets/12') from a page lands on /admin/community/tickets/12.
@@ -25,18 +27,25 @@ const ADMIN = [
   [/^\/tickets(\/\d+)?$/, (m) => '/admin/community/tickets' + (m[1] ?? '')],
   [/^\/players(\/[0-9a-f-]{36}(?:\/[a-z]+)?)?$/, (m) => '/admin/community/players' + (m[1] ?? '')],
   [/^\/health$/, () => '/admin/server/performance'],
-  [/^\/chunks(\/\d+)?$/, (m) => '/admin/features/mrchunks' + (m[1] ?? '')],
-  [/^\/sleep$/, () => '/admin/features/mrsleep'],
-  [/^\/pvp((?:\/\d+)|(?:\/(?:kits|new-kit)(?:\/[a-z0-9_-]+)?))?$/, (m) => '/admin/features/mrpvp' + (m[1] ?? '')],
-  [/^\/waypoints$/, () => '/admin/features/map'],
+  [/^\/chunks(\/\d+)?$/, (m) => '/admin/plugins/mrchunks' + (m[1] ?? '')],
+  [/^\/sleep$/, () => '/admin/plugins/mrsleep'],
+  [/^\/pvp((?:\/\d+)|(?:\/(?:kits|new-kit)(?:\/[a-z0-9_-]+)?))?$/, (m) => '/admin/plugins/mrpvp' + (m[1] ?? '')],
+  [/^\/waypoints$/, () => '/admin/plugins/map'],
   [/^\/maintenance$/, () => '/admin/server/maintenance'],
   // first layout of 1.5 (area Communication, tab Settings)
   [/^\/admin\/communication\/maintenance$/, () => '/admin/server/maintenance'],
-  [/^\/admin\/communication\/(news|announce)$/, (m) => '/admin/community/' + m[1]],
-  [/^\/admin\/communication$/, () => '/admin/community'],
-  [/^\/admin\/server\/settings$/, () => '/admin/server/plugins/MRadmin/config'],
+  [/^\/admin\/communication\/(news|announce)$/, (m) => '/admin/content/' + m[1]],
+  [/^\/admin\/communication$/, () => '/admin'],
+  [/^\/admin\/server\/settings$/, () => '/admin/settings/config/MRadmin'],
+  // layout of 1.5 (areas with tabs): since the sidebar (1.6) plugins, contents and settings have their own groups
+  [/^\/admin\/features(\/.*)?$/, (m) => '/admin/plugins' + (m[1] ?? '')],
+  [/^\/admin\/community\/(news|announce)$/, (m) => '/admin/content/' + m[1]],
+  [/^\/admin\/server\/appearance$/, () => '/admin/settings/appearance'],
+  [/^\/admin\/server\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => '/admin/settings/config/' + m[1]],
+  [/^\/admin\/(?:community|content)$/, () => '/admin'],
   [/^\/versions$/, () => '/admin/server/plugins'],
-  [/^\/plugins(\/[A-Za-z0-9_-]+(?:\/config)?)?$/, (m) => '/admin/server/plugins' + (m[1] ?? '')],
+  [/^\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => '/admin/settings/config/' + m[1]],
+  [/^\/plugins(\/[A-Za-z0-9_-]+)?$/, (m) => '/admin/server/plugins' + (m[1] ?? '')],
   [/^\/logs$/, () => '/admin/server/logs'],
   [/^\/console$/, () => '/admin/server/console'],
   [/^\/server$/, () => '/admin/server'],

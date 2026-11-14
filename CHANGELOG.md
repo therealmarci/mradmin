@@ -9,6 +9,11 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Verwaltung mit Seitenleiste (in Arbeit):** Die Verwaltung der Weboberfläche hat links eine Seitenleiste mit allen Seiten in Gruppen (Community, Inhalte, Plugins, Server, Einstellungen) statt der Bereiche oben mit Reitern. Kleine Zähler zeigen, wo etwas wartet (ungelesene Tickets, Plugin-Updates, Hinweise der Plugins), unten stehen Hauptserver und Warteraum mit ihrem Zustand. Die Leiste lässt sich am PC zu Symbolen einklappen, jede Gruppe einzeln zuklappen; am Handy öffnet sie der Menü-Knopf oben links. Die Konfiguration aller Plugins steht jetzt unter **Einstellungen → Konfiguration**, das Aussehen unter **Einstellungen → Aussehen**. Alte Adressen und Lesezeichen leiten weiter.
+- **Server → Steuerung neu:** Hauptserver und Warteraum als zwei gleiche Karten nebeneinander, darunter ein Formular zum Neustarten oder Stoppen (Was, Wann, Grund) mit dem Notfall-Knopf daneben, ein laufender Countdown als Banner über die ganze Breite.
+- **Duelle mit Reitern in der Adresse:** Live, Spiele, Prüfen, Auffälligkeiten, Arenen und neu **Kits** sind Reiter der Seite Duelle, jeder mit eigener Adresse.
+
 ### Behoben & geändert
 - **Warnungen von Uptime Kuma kamen über eine interne Adresse nicht an:** Mit `uptime-kuma.url` ohne HTTPS (z.B. `http://10.0.0.5:3001`) bat MRadmin beim Abruf der Statusseiten um ein HTTP/2-Upgrade, das Kuma abbricht - die Vorfälle blieben leer, ohne Meldung. Jetzt fragt MRadmin mit HTTP/1.1, und eine Statusseite, die sich nicht lesen lässt, steht einmal als Warnung in der Konsole (mit Adresse und Grund), sobald sie wieder geht, eine Zeile dazu.
 

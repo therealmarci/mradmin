@@ -81,6 +81,19 @@ public final class PanelRoutes {
             result.put("server", s);
             result.put("uptime", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime());
             serverAlerts((Map<String, Object>) s, alerts);
+            // The state of the network for the sidebar: a running restart/stop countdown and the waiting room.
+            Map<String, Object> network = new LinkedHashMap<>();
+            server.sync(() -> {
+                network.put("endsAt", plugin.restarts().endsAt());
+                network.put("kind", plugin.restarts().restarting() ? "restart" : "stop");
+                return null;
+            });
+            var room = plugin.waitingRoom().remote().report("MRwaitroom");
+            if (plugin.waitingRoom().active() && room != null) {
+                network.put("room", Map.of("online", room.online() && plugin.waitingRoom().roomUp(),
+                        "restarting", plugin.waitingRoom().roomRestarting()));
+            }
+            result.put("network", network);
         }
         if (status && may(http, Perms.STATUS_HEALTH)) {
             var latest = plugin.health().latest();

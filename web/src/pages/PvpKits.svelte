@@ -2,12 +2,15 @@
   // MRpvp: all kits as a list in the order the game shows them - one row per kit (place, icon and name, hotbar,
   // rules, buttons). The order changes with ↑ ↓ or by dragging the handle. Open one to edit it or copy it.
   // Needs mrpvp.admin.kits (like the kit editor in the game).
+  // embedded: the tab Kits of the page Duelle (since 1.6) - no own head, the buttons in a row above the list.
   import { moduleAction, moduleData } from '../lib/modules.js';
   import { t, errorText } from '../lib/i18n.js';
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
   import ItemIcon from '../components/ItemIcon.svelte';
   import KitTransfer from '../components/KitTransfer.svelte';
+
+  let { embedded = false } = $props();
 
   let kits = $state(null);
   let arenas = $state([]);
@@ -99,6 +102,16 @@
 </script>
 
 <div class="page">
+  {#if embedded}
+    <div class="toolbar">
+      <span class="muted small">{t('pvp.kits.subtitle')}</span>
+      <div class="top-buttons">
+        <button class="secondary" onclick={() => (transfer = 'import')}>{t('pvp.kits.import.button')}</button>
+        <button class="secondary" onclick={() => (transfer = 'export')} disabled={!kits?.length}>{t('pvp.kits.export.button')}</button>
+        <button onclick={() => go('/pvp/new-kit')}>+ {t('pvp.kits.new')}</button>
+      </div>
+    </div>
+  {:else}
   <button class="back" onclick={() => go('/pvp')}>← {t('pvp.back')}</button>
 
   <header class="head">
@@ -120,6 +133,7 @@
       <button onclick={() => go('/pvp/new-kit')}>+ {t('pvp.kits.new')}</button>
     </div>
   </header>
+  {/if}
 
   {#if error}<div class="error">{error}</div>{/if}
 
@@ -184,6 +198,14 @@
 {/if}
 
 <style>
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
   .page {
     --pv: var(--accent);
     display: grid;
