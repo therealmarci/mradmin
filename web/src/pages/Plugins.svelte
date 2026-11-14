@@ -8,6 +8,7 @@
   import { go } from '../lib/router.svelte.js';
   import { ICONS } from '../lib/icons.js';
   import { pluginIcon, pluginDescription, pluginState, pluginError, clock, CHANNELS, versionParts } from '../lib/plugins.js';
+  import ForeignSource from '../components/ForeignSource.svelte';
   import Toast from '../components/Toast.svelte';
 
   // embedded: inside the tab Plugins of the page Server - without its own title.
@@ -87,19 +88,25 @@
   const delayText = (ms) => (ms === 0 ? t('versions.restartNow') : t('versions.restartIn', { time: duration(ms) }));
   const byName = (a, b) => a.name.localeCompare(b.name);
   const pool = $derived(!data ? [] : data.plugins.filter((p) => (server === 'room' ? !!p.remote : server === 'main' ? !p.remote : true)));
-  const installed = $derived(pool.filter((p) => p.installed).sort(byName));
+  // Most to do first: errors, updates (also blocked ones), then waiting for a restart, unknown, current at the bottom.
+  const URGENCY = { bad: 0, warn: 1, info: 2, '': 3, good: 4 };
+  const byUrgency = (a, b) => (URGENCY[pluginState(a).tone] ?? 3) - (URGENCY[pluginState(b).tone] ?? 3) || byName(a, b);
+  const installed = $derived(pool.filter((p) => p.installed).sort(byUrgency));
   // The page of one plugin: under the server it runs on.
   const detail = (name) => (server === 'room' ? '/admin/server/room/plugins/' : '/admin/server/plugins/') + name;
   // The other plugins of this server (not from MRtechnology): only watched - with a GitHub repository stored, MRadmin
   // compares the installed version with its newest release (GET/POST /api/plugins/foreign).
   let foreign = $state(null);
-  let linking = $state(null);
-  let linkText = $state('');
+  let minecraft = $state('');
+  // The plugin whose source is being chosen (window ForeignSource).
+  let choosing = $state(null);
   const foreignServer = $derived(server === 'room' ? 'room' : 'main');
   async function loadForeign() {
     if (server !== 'room' && server !== 'main') return;
     try {
-      foreign = (await api('GET', '/plugins/foreign?server=' + foreignServer)).plugins;
+      const answer = await api('GET', '/plugins/foreign?server=' + foreignServer);
+      foreign = answer.plugins;
+      minecraft = answer.minecraft ?? '';
     } catch {
       foreign = null;
     }
@@ -111,24 +118,10 @@
     const timer = setInterval(() => foreign?.some((f) => f.state === 'checking') && loadForeign(), 3000);
     return () => clearInterval(timer);
   });
-  function editLink(f) {
-    linking = f.name;
-    linkText = f.repo ?? '';
-  }
-  async function saveLink(f) {
-    busy = true;
-    error = '';
-    try {
-      await api('POST', '/plugins/foreign', { server: foreignServer, name: f.name, repo: linkText.trim() });
-      linking = null;
-      await loadForeign();
-    } catch (e) {
-      error = errorText(e);
-    } finally {
-      busy = false;
-    }
-  }
-  const shownForeign = $derived((foreign ?? []).filter((f) => !installed.some((p) => p.name === f.name)));
+  // newer versions first, then the rest by name
+  const FOREIGN_ORDER = { newer: 0, 'no-version': 1, unknown: 1, checking: 2, current: 3, none: 4 };
+  const shownForeign = $derived((foreign ?? []).filter((f) => !installed.some((p) => p.name === f.name))
+    .sort((x, y) => (FOREIGN_ORDER[x.state] ?? 4) - (FOREIGN_ORDER[y.state] ?? 4) || x.name.localeCompare(y.name)));
   const foreignNewer = $derived(shownForeign.filter((f) => f.state === 'newer').length);
   const others = $derived(server === 'room' ? [] : pool.filter((p) => !p.installed).sort(byName));
   // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
@@ -192,31 +185,35 @@
     </div>
     <div class="cell">
       <span class="label">{t('plugins.col.source')}</span>
-      {#if linking === p.name}
-        <form class="link-form" onsubmit={(e) => { e.preventDefault(); saveLink(p); }}>
-          <input type="text" bind:value={linkText} maxlength="200" placeholder="owner/repo" />
-          <button class="act" disabled={busy}>{t('common.save')}</button>
-          <button type="button" class="ghost" onclick={() => (linking = null)}>✕</button>
-        </form>
-      {:else if p.repo}
-        <span class="inst"><a class="mono small" href={'https://github.com/' + p.repo} target="_blank" rel="noopener noreferrer">{p.repo} ↗</a></span>
-        {#if data.may.install}<button class="link small" onclick={() => editLink(p)}>{t('plugins.foreignEdit')}</button>{/if}
-      {:else if data.may.install}
-        <button class="link small" onclick={() => editLink(p)}>+ {t('plugins.foreignLink')}</button>
-      {:else}
-        <span class="muted">–</span>
-      {/if}
+      <!-- Where it comes from: found on Modrinth by the JAR's fingerprint, or chosen by hand -->
+      <svelte:element this={data.may.install ? 'button' : 'span'} class="src {p.source?.type ?? 'none'}" disabled={data.may.install ? busy : undefined}
+        title={data.may.install ? t('plugins.src.change') : undefined} onclick={data.may.install ? () => (choosing = p) : undefined}>
+        {#if p.source?.type === 'modrinth' || p.source?.type === 'github'}
+          <span class="logo" aria-hidden="true"></span>
+          <span class="src-name">{p.source.title}</span>
+          {#if !p.manual}<span class="src-auto">{t('plugins.src.autoShort')}</span>{/if}
+        {:else if p.source?.type === 'off'}
+          {t('plugins.src.offShort')}
+        {:else if p.state === 'checking'}
+          {t('plugins.foreignChecking')}
+        {:else}
+          {data.may.install ? '+ ' + t('plugins.src.add') : t('plugins.src.none')}
+        {/if}
+      </svelte:element>
     </div>
     <div class="cell">
       <span class="label">{t('plugins.col.latestRelease')}</span>
       {#if p.latest}
-        <span class="inst"><a class="mono strong" href={p.url} target="_blank" rel="noopener noreferrer">{p.latest}</a>
+        <span class="inst"><a class="mono strong" href={p.latest.url} target="_blank" rel="noopener noreferrer">{p.latest.version}</a>
           {#if p.state === 'current'}<span class="badge current">{t('plugins.badge.current')}</span>{:else if p.state === 'newer'}<span class="badge newer">{t('plugins.badge.newer')}</span>{/if}</span>
-        {#if p.published}<span class="small muted">{ago(p.published)}</span>{/if}
-      {:else if p.state === 'checking'}
+        <span class="small muted">{[p.latest.published ? ago(p.latest.published) : '', p.latest.channel && p.latest.channel !== 'release' ? p.latest.channel : ''].filter(Boolean).join(' · ')}</span>
+        {#if p.latest.mcUnknown}<span class="small warn-text">{t('plugins.src.mcUnknownShort')}</span>{/if}
+      {:else if p.state === 'checking' && p.source}
         <span class="muted small">{t('plugins.foreignChecking')}</span>
+      {:else if p.state === 'no-version'}
+        <span class="small warn-text">{t('plugins.src.noVersion', { mc: minecraft })}</span>
       {:else if p.state === 'unknown'}
-        <span class="small bad-text" title={p.error}>{t(p.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
+        <span class="small bad-text" title={p.error}>{t(p.error === 'not-found' ? 'plugins.src.notFound' : p.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
       {:else}
         <span class="muted">–</span>
       {/if}
@@ -430,6 +427,10 @@
   {/if}
 </div>
 
+{#if choosing}
+  <ForeignSource plugin={choosing} server={foreignServer} {minecraft} onclose={() => (choosing = null)} ondone={loadForeign} />
+{/if}
+
 <style>
   .row .cell :global(button.link) {
     padding: 0;
@@ -437,17 +438,59 @@
     justify-content: flex-start;
   }
 
-  .link-form {
-    display: flex;
-    gap: 6px;
+  .src {
+    display: inline-flex;
     align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface-2);
+    justify-content: flex-start;
+    justify-self: start;
   }
 
-  .link-form input {
-    width: 150px;
-    margin: 0;
-    padding: 5px 8px;
-    font-size: 0.85rem;
+  button.src:hover {
+    border-color: var(--accent);
+  }
+
+  .src.none,
+  .src.off {
+    color: var(--muted);
+    background: transparent;
+    border-style: dashed;
+  }
+
+  .src .logo {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+  }
+
+  .src.modrinth .logo {
+    background: #1bd96a;
+  }
+
+  .src.github .logo {
+    border-radius: 50%;
+    background: var(--text);
+  }
+
+  .src-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .src-auto {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
   }
 
   .plain-list {

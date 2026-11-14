@@ -96,6 +96,23 @@ public final class PanelRoutes {
                 long roomUpdates = plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())
                         ? plugin.versions().list().stream().filter(e -> e.remote && e.isInstalled() && e.updateAvailable()).count() : 0;
                 network.put("room", Map.of("online", online, "restarting", restarting, "updates", roomUpdates));
+                // The waiting room server for the network dashboard: its tile and its players.
+                Map<String, Object> roomServer = new LinkedHashMap<>();
+                roomServer.put("online", online);
+                roomServer.put("restarting", restarting);
+                var point = plugin.roomAgent().online() ? plugin.roomAgent().health().latest() : null;
+                if (point != null) {
+                    roomServer.put("tps", plugin.roomAgent().tps());
+                    roomServer.put("tpsNow", point.tps());
+                    roomServer.put("mspt", point.mspt());
+                    roomServer.put("ramUsed", point.heapUsed());
+                    roomServer.put("ramMax", point.heapMax());
+                }
+                var roomControl = plugin.roomAgent().control();
+                roomServer.put("startedAt", roomControl.getOrDefault("startedAt", 0));
+                roomServer.put("players", plugin.roomAgent().players());
+                roomServer.put("max", plugin.roomAgent().maxPlayers());
+                result.put("room", roomServer);
                 // Hints of the waiting room for the dashboard and the sidebar: gone, lagging, a countdown.
                 var control = plugin.roomAgent().control();
                 if (!online && !restarting) {
@@ -173,7 +190,11 @@ public final class PanelRoutes {
             long updates = plugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
             long staged = plugin.versions().list().stream().filter(e -> !e.remote && e.waitsForRestart()).count();
             long restartAt = server.sync(() -> plugin.restarts().endsAt());
-            result.put("versions", Map.of("plugins", plugins.size(), "updates", updates, "staged", staged, "restartAt", restartAt));
+            // ... and those of the waiting room server for the dashboard tile (both servers together there)
+            var roomPlugins = plugin.waitingRoom().active() ? plugin.versions().list().stream().filter(e -> e.remote && e.isInstalled()).toList() : List.<at.marcelr.mradmin.versions.VersionManager.Entry>of();
+            long roomUpdates = roomPlugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
+            result.put("versions", Map.of("plugins", plugins.size(), "updates", updates, "staged", staged, "restartAt", restartAt,
+                    "roomPlugins", roomPlugins.size(), "roomUpdates", roomUpdates));
             if (restartAt > 0) {
                 alerts.add(alert("warn", "restartSoon", "versions", Map.of("time", restartAt)));
             } else if (staged > 0) {

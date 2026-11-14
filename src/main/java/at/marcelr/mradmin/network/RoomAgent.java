@@ -43,6 +43,9 @@ public final class RoomAgent {
     /** The newest control state of the waiting room (countdown, pause, starter, Paper ...) and its 1-minute TPS. */
     private volatile java.util.Map<String, Object> control = java.util.Map.of();
     private volatile double tps1m = 20;
+    /** The players on the waiting room server (uuid, name, world, ping) and its slots - for the network dashboard. */
+    private volatile List<java.util.Map<String, Object>> players = List.of();
+    private volatile int maxPlayers;
     /** Source of the waiting room's events in MRadmin's log. */
     public static final String SOURCE = "waitroom";
 
@@ -62,6 +65,15 @@ public final class RoomAgent {
     }
 
     /** The waiting room's 1-minute TPS as of its last answer. */
+    /** The players on the waiting room server right now (empty while it does not answer). */
+    public List<java.util.Map<String, Object>> players() {
+        return online() ? players : List.of();
+    }
+
+    public int maxPlayers() {
+        return maxPlayers;
+    }
+
     public double tps() {
         return tps1m;
     }
@@ -117,6 +129,10 @@ public final class RoomAgent {
             this.tps1m = tps1m;
             if (o.has("control") && o.get("control").isJsonObject()) {
                 control = GSON.fromJson(o.get("control"), new TypeToken<java.util.Map<String, Object>>() { }.getType());
+            }
+            if (o.has("players") && o.get("players").isJsonArray()) {
+                players = GSON.fromJson(o.get("players"), new TypeToken<List<java.util.Map<String, Object>>>() { }.getType());
+                maxPlayers = o.has("maxPlayers") ? o.get("maxPlayers").getAsInt() : 0;
             }
             for (HealthMonitor.Point p : points) {
                 health.accept(p, worlds == null ? List.of() : worlds, tps1m);

@@ -37,4 +37,16 @@ class ForeignPluginsTest {
         assertEquals("unknown", ForeignPlugins.compare("dev", "v1.0"));
         assertEquals("unknown", ForeignPlugins.compare("1.0", "latest"));
     }
+
+    @Test
+    void sourcesAreRead() {
+        assertEquals(new ForeignPlugins.Source("modrinth", "luckperms"), ForeignPlugins.parse("modrinth", "https://modrinth.com/plugin/luckperms/versions"));
+        assertEquals(new ForeignPlugins.Source("modrinth", "luckperms"), ForeignPlugins.parse("github", "modrinth.com/plugin/luckperms"));
+        assertEquals(new ForeignPlugins.Source("modrinth", "Vebnzrzj"), ForeignPlugins.parse("modrinth", "Vebnzrzj"));
+        assertEquals(new ForeignPlugins.Source("github", "A248/LibertyBans"), ForeignPlugins.parse("github", "https://github.com/A248/LibertyBans/releases"));
+        assertEquals(new ForeignPlugins.Source("github", "A248/LibertyBans"), ForeignPlugins.parse("github", "A248/LibertyBans"));
+        assertEquals(new ForeignPlugins.Source("off", ""), ForeignPlugins.parse("off", ""));
+        assertEquals(null, ForeignPlugins.parse("github", "not a repo"));
+        assertEquals(null, ForeignPlugins.parse("modrinth", "a b"));
+    }
 }

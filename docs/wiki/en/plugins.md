@@ -27,7 +27,16 @@ You install plugins that are not installed yet with one click (`mradmin.versions
 Every server has the tab **Configuration** (**Server → Main server → Configuration** or **Server → Waiting room → Configuration**, `mradmin.config`, in `mradmin.groups.admin`), with one tab per plugin of that server: all settings of `config.yml` as a form with explanations (German/English). Saving checks every value, writes the file (comments stay, the old file is kept next to it as `config.backup-web.yml`) and reloads the plugin right away - without a command, without a restart. Editing by hand still works. Available for MRadmin and all MRtechnology plugins in a current version.
 
 ## Watching other plugins
-Under **Plugins** every server has two tiles: **MRtechnology plugins** (managed as above) and **Other plugins** - all remaining plugins of the server (e.g. LuckPerms, LibertyBans), for the main server and the waiting room each on its own. MRadmin does not update them, but can **watch** them: store a **GitHub link** under **Source** (`owner/repo` or the github.com address, permission `mradmin.versions.install`). MRadmin then reads the newest release of the repository every 6 hours and shows it with **Current** or **New** (comparing the version numbers). Without a link only the installed version shows.
+Under **Plugins** every server has two tiles: **MRtechnology plugins** (managed as above) and **Other plugins** - all remaining plugins of the server (e.g. LuckPerms, LibertyBans), for the main server and the waiting room each on its own. MRadmin does not update them, but can **watch** them:
+
+- **Automatically:** MRadmin asks Modrinth with the fingerprint (SHA-1) of every plugin JAR. If Modrinth knows the file, the project shows with "auto" in the column **Source** - and MRadmin knows exactly which version is installed.
+- **By hand:** A click on the source opens a window (permission `mradmin.versions.install`): tab **Modrinth** with a search (results show whether there are versions for your Minecraft version) or **GitHub** (`owner/repo` or the github.com address). Below it shows before saving which version MRadmin would compare with. **Find automatically** goes back to the fingerprint, **Do not watch** switches the lookup off for the plugin.
+- **Matching the Minecraft version:** On Modrinth the newest version is the newest one for the server's Minecraft version and a Paper-compatible loader (Paper, Spigot, Bukkit, Purpur, Folia), a release before betas. On GitHub the newest release that names the Minecraft version (name, text or file names) - if none names it, the newest release with the hint **Minecraft version not stated**. If there is nothing for the version at all, it says **No version for Minecraft …**.
+
+MRadmin checks every 6 hours (after 15 minutes again on errors) and shows **Current** or **New**. Plugins with a newer version are at the top.
+
+## Order
+The MRtechnology plugins are sorted by urgency: errors and updates at the top, then what waits for a restart, current plugins at the bottom.
 
 ## Updates
 - **Download** (`mradmin.versions.install`) gets the new version from the official release on GitHub - only for your Minecraft version and only if the checksum (SHA-256) matches. It goes to `plugins/update/`, **it is installed on the next restart** (Paper does that itself). Nothing is swapped while the server runs.

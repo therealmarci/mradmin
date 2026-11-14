@@ -101,6 +101,7 @@ Widgets ohne Inhalt (leerer Text, kein Bild, keine Links) sind außerhalb des Be
   Wartung. Läuft
   alles rund, stehen dort die wichtigsten aktuellen Werte. Aktualisiert sich alle 2 Sekunden.
 - Darunter Kacheln für Server, Spieler, Tickets, Chunkloader, Schlaf und Wartung mit Klick zur jeweiligen Seite.
+- **Mit Warteraum** zeigt die Übersicht das ganze Netzwerk: je eine Kachel für Hauptserver und Warteraum (TPS, Tick-Zeit, Arbeitsspeicher, wartende Spieler), auf der Leistungsfolie ein Umschalter Hauptserver | Warteraum, die Plugin-Kachel zählt die Updates beider Server, und **Spieler online** listet alle Spieler beider Server (Spieler im Warteraum mit Kennzeichen).
 - Jede Meldung und jede Kachel erscheint nur mit der Permission für ihren Bereich: Server und Spieler mit
   `mradmin.status`, CPU mit `mradmin.status.health`, Tickets mit `mradmin.tickets.view` (zugewiesene mit
   `mradmin.tickets.claim`), Chunkloader mit `mrchunks.admin.gui`, Schlaf mit `mrsleep.admin.gui`, Wartung mit `mradmin.maintenance.view`. Ist ein
