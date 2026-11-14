@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 /**
  * Plugins that are not from MRtechnology, per server (main server and waiting room): only watched, never updated.
  * <p>
- * Where a plugin comes from: MRadmin asks Modrinth with the SHA-1 of its JAR (that finds the project and exactly the
+ * Where a plugin comes from: MRadmin asks Modrinth with the SHA-512 of its JAR (that finds the project and exactly the
  * installed version); the team can also choose a Modrinth project (search) or a GitHub repository by hand, or switch
  * the lookup off. The newest version is the one that fits the server: on Modrinth for its Minecraft version and a
  * Paper-compatible loader, on GitHub the newest release that names the Minecraft version (without any such release the
@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 public final class ForeignPlugins {
 
     /** What MRadmin knows about one plugin of a server. */
-    public record Info(String version, boolean enabled, String sha1) {
+    public record Info(String version, boolean enabled, String hash) {
     }
 
     /** A chosen source: type modrinth | github | off, id = project id/slug or owner/repo. */
@@ -207,7 +207,7 @@ public final class ForeignPlugins {
      */
     public List<Map<String, Object>> view(String server, Map<String, Info> plugins, String minecraft) {
         load();
-        lookUpHashes(plugins.values().stream().map(Info::sha1).filter(h -> h != null).toList());
+        lookUpHashes(plugins.values().stream().map(Info::hash).filter(h -> h != null).toList());
         List<Map<String, Object>> list = new ArrayList<>();
         for (var e : plugins.entrySet()) {
             Info info = e.getValue();
@@ -216,14 +216,14 @@ public final class ForeignPlugins {
             m.put("version", info.version());
             m.put("enabled", info.enabled());
             Source manual = chosen(server, e.getKey());
-            Hit hit = info.sha1() == null ? null : hits.get(info.sha1());
+            Hit hit = info.hash() == null ? null : hits.get(info.hash());
             Source source = manual != null ? manual : hit != null && hit.project() != null ? new Source("modrinth", hit.project()) : null;
             m.put("manual", manual != null);
             boolean beta = beta(server, e.getKey());
             m.put("channel", beta ? "beta" : "stable");
             if (source == null || source.type().equals("off")) {
                 m.put("source", source == null ? null : Map.of("type", "off"));
-                m.put("state", info.sha1() != null && hit == null && manual == null ? "checking" : "none");
+                m.put("state", info.hash() != null && hit == null && manual == null ? "checking" : "none");
                 list.add(m);
                 continue;
             }
@@ -316,11 +316,11 @@ public final class ForeignPlugins {
         return map;
     }
 
-    /** {@link #local()} with the SHA-1 of every JAR (reads the files - not on the server thread). */
+    /** {@link #local()} with the SHA-512 of every JAR (reads the files - not on the server thread). */
     public Map<String, Info> withHashes(Map<String, Object[]> local) {
         Map<String, Info> map = new LinkedHashMap<>();
         local.forEach((name, v) -> map.put(name, new Info(String.valueOf(v[0]), Boolean.TRUE.equals(v[1]),
-                hashes.sha1((org.bukkit.plugin.Plugin) v[2]))));
+                hashes.sha512((org.bukkit.plugin.Plugin) v[2]))));
         return map;
     }
 
@@ -342,7 +342,7 @@ public final class ForeignPlugins {
                 JsonArray array = new JsonArray();
                 missing.forEach(array::add);
                 body.add("hashes", array);
-                body.addProperty("algorithm", "sha1");
+                body.addProperty("algorithm", "sha512");
                 HttpResponse<String> response = http.send(request(MODRINTH + "/version_files")
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(body))).build(), HttpResponse.BodyHandlers.ofString());
