@@ -320,6 +320,13 @@ sections:
         max-length: 200
         name: {de: Schlüssel, en: Key}
         help: {de: "Gemeinsamer Schlüssel - derselbe Wert gehört in die config.yml des Warteraums (main.link-key). Wird beim ersten Start erzeugt. Nach 10 falschen Versuchen pro Minute blockt MRadmin.", en: "Shared key - the same value goes into the config.yml of the waiting room (main.link-key). Created on the first start. After 10 wrong tries per minute MRadmin blocks."}
+      - key: waiting-room.agent-url
+        type: string
+        when: waiting-room.enabled
+        advanced: true
+        max-length: 200
+        name: {de: Adresse des Warteraums, en: Address of the waiting room}
+        help: {de: "Wo MRadmin Leistung, Konsole und Protokoll des Warteraum-Servers liest (dort Abschnitt agent), z.B. http://10.0.0.6:8127. Leer = automatisch: die Adresse, von der seine Berichte kommen, mit dem Port, den er meldet.", en: "Where MRadmin reads performance, console and log of the waiting room server (its section agent), e.g. http://10.0.0.6:8127. Empty = automatic: the address its reports come from with the port it reports."}
 
   - id: versions
     name: {de: Plugins & Neustart, en: Plugins & restart}

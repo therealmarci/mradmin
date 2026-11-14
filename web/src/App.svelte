@@ -274,6 +274,7 @@
   ]);
   const roomTabs = $derived([
     { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
+    ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/room/performance' }] : []),
     { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins' },
   ]);
   // The open page = the entry of the sidebar that is highlighted (the server, not its tab).
@@ -400,8 +401,15 @@
           <Waypoints {me} />
         {:else if area === 'server' && sub[0] === 'room' && may.versions}
           <PageHead title={t('nav.serverRoom')} />
-          <PageTabs tabs={roomTabs} current={sub[1] === 'plugins' ? 'plugins' : 'control'} />
-          {#if sub[1] === 'plugins'}<Plugins embedded server="room" />{:else}<Server {me} tab="overview" bare part="room" />{/if}
+          {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}
+          <PageTabs tabs={roomTabs} current={roomTab} />
+          {#if roomTab === 'plugins'}
+            <Plugins embedded server="room" />
+          {:else if roomTab === 'performance'}
+            {#key 'room'}<Health server="room" />{/key}
+          {:else}
+            <Server {me} tab="overview" bare part="room" />
+          {/if}
         {:else if area === 'server' && mainTabs.length}
           {@const tab = mainTabs.some((x) => x.id === (sub[0] ?? 'control')) ? (sub[0] ?? 'control') : mainTabs[0].id}
           <PageHead title={t('nav.serverMain')} />

@@ -5,6 +5,11 @@
   import { LiveClock, clockStep } from '../lib/liveclock.svelte.js';
   import { ICONS } from '../lib/icons.js';
 
+  // server: null = this server, 'room' = the waiting room server (read through its agent, since 1.6) - same page
+  let { server = null } = $props();
+  const q = $derived(server === 'room' ? 'server=room' : '');
+  const withQ = (path) => (q ? path + (path.includes('?') ? '&' : '?') + q : path);
+
   const RANGES = [
     { key: '1m', ms: 60e3 },
     { key: '1h', ms: 3600e3 },
@@ -41,7 +46,7 @@
     const asked = range;
     if (first) loading = true;
     try {
-      const result = await api('GET', '/health?range=' + asked);
+      const result = await api('GET', withQ('/health?range=' + asked));
       if (asked === range) take(result);
       error = '';
     } catch (e) {
@@ -53,7 +58,7 @@
 
   async function loadLatest() {
     try {
-      const point = await api('GET', '/health/latest');
+      const point = await api('GET', withQ('/health/latest'));
       if (point && point.time) live = point;
     } catch {
       // the charts show the error
@@ -62,7 +67,7 @@
 
   async function loadSystem() {
     try {
-      system = await api('GET', '/health/system');
+      system = await api('GET', withQ('/health/system'));
     } catch {
       // the charts show the error
     }
@@ -71,7 +76,7 @@
   async function loadLag() {
     lagBusy = true;
     try {
-      lag = await api('GET', '/health/lag');
+      lag = await api('GET', withQ('/health/lag'));
     } catch (e) {
       error = errorText(e);
     } finally {
@@ -219,11 +224,14 @@
           <div class="value">{system.serverSize >= 0 ? mb(system.serverSize) : '…'}</div>
           <div class="sub">{t('health.serverSizeHint')}</div>
         </div>
-        <div class="kpi">
-          <div class="label">{t('health.dbSize')}</div>
-          <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
-          <div class="sub">{t('health.storage.' + system.storage)}</div>
-        </div>
+        {#if server !== 'room'}
+          <!-- MRadmin's own data - the waiting room server has none -->
+          <div class="kpi">
+            <div class="label">{t('health.dbSize')}</div>
+            <div class="value">{system.dbSize >= 0 ? size(system.dbSize) : '…'}</div>
+            <div class="sub">{t('health.storage.' + system.storage)}</div>
+          </div>
+        {/if}
       {/if}
     </div>
   {/if}

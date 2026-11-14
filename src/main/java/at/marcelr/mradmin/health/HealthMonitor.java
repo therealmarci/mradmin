@@ -36,6 +36,10 @@ import static at.marcelr.mradmin.Messages.tag;
  * If the TPS (1-minute average, so a single spike does not count) stays below health.alert.below-tps for
  * health.alert.minutes, the team (mradmin.status.health) and the Discord log are told once, and again when it has
  * recovered.
+ * <p>
+ * The same class records the waiting room server (since 1.6): its agent measures there exactly like here, RoomAgent
+ * hands the points in every second ({@link #accept}) - same resolutions, same alarm, the 5-minute points stored as the
+ * module history "waitroom-health" instead of the health table.
  */
 public final class HealthMonitor {
 
@@ -60,6 +64,8 @@ public final class HealthMonitor {
     private static final Gson GSON = new Gson();
 
     private final MRAdmin plugin;
+    /** null = this server (measured here); otherwise the module history its 5-minute points are stored in */
+    private final String remote;
     /** per second, last hour */
     private final Deque<Point> seconds = new ArrayDeque<>();
     /** 10-second points, last 24 hours */
@@ -79,7 +85,13 @@ public final class HealthMonitor {
     private boolean alerted;
 
     public HealthMonitor(MRAdmin plugin) {
+        this(plugin, null);
+    }
+
+    /** A server measured elsewhere (the waiting room): points come through {@link #accept}. */
+    public HealthMonitor(MRAdmin plugin, String remote) {
         this.plugin = plugin;
+        this.remote = remote;
     }
 
     private Settings.HealthSettings settings() {
@@ -94,13 +106,21 @@ public final class HealthMonitor {
         long since = System.currentTimeMillis() - settings().history();
         synchronized (this) {
             coarse.clear();
-            for (String json : plugin.storage().loadHealth(since)) {
+            seconds.clear();
+            tens.clear();
+            tenBucket.clear();
+            coarseBucket.clear();
+            for (String json : remote == null ? plugin.storage().loadHealth(since)
+                    : plugin.storage().loadModuleHistory(remote, since).values()) {
                 try {
                     coarse.add(GSON.fromJson(json, Point.class));
                 } catch (RuntimeException ignored) {
                     // a broken line
                 }
             }
+        }
+        if (remote != null) {
+            return;
         }
         lastSample = System.currentTimeMillis();
         ticks = 0;
@@ -174,6 +194,22 @@ public final class HealthMonitor {
         alert(Math.min(20, Bukkit.getTPS()[0]), now);
     }
 
+    /**
+     * A point measured on the other server (RoomAgent, every second): kept like an own one, the alarm looks at the
+     * other server's 1-minute TPS.
+     */
+    public void accept(Point point, List<WorldInfo> worldsNow, double tps1m) {
+        worlds = List.copyOf(worldsNow);
+        add(point);
+        alert(tps1m, point.time());
+    }
+
+    /** Time of the newest point (0 = none since the start) - the agent is asked for everything after it. */
+    public synchronized long newest() {
+        Point last = seconds.peekLast();
+        return last == null ? 0 : last.time();
+    }
+
     private synchronized void add(Point point) {
         long now = point.time();
         seconds.addLast(point);
@@ -193,14 +229,22 @@ public final class HealthMonitor {
         if (!coarseBucket.isEmpty() && coarseBucket.getFirst().time() / FIVE_MINUTES != now / FIVE_MINUTES) {
             Point combined = combine(coarseBucket);
             coarse.addLast(combined);
-            plugin.storage().addHealth(combined.time(), GSON.toJson(combined));
+            if (remote == null) {
+                plugin.storage().addHealth(combined.time(), GSON.toJson(combined));
+            } else {
+                plugin.storage().addModuleHistory(remote, combined.time(), GSON.toJson(combined));
+            }
             coarseBucket.clear();
         }
         long limit = now - settings().history();
         trim(coarse, limit);
         if (now - lastPrune > HOUR) {
             lastPrune = now;
-            plugin.storage().pruneHealth(limit);
+            if (remote == null) {
+                plugin.storage().pruneHealth(limit);
+            } else {
+                plugin.storage().pruneModuleHistory(remote, limit);
+            }
         }
     }
 
@@ -287,6 +331,12 @@ public final class HealthMonitor {
             if (!alerted && now - lowSince >= s.alertMinutes() * 60_000L) {
                 alerted = true;
                 String value = String.format(Locale.ROOT, "%.1f", tps);
+                if (remote != null) {
+                    plugin.getLogger().warning("Waiting room: TPS has been below " + s.alertTps() + " for " + s.alertMinutes() + " minutes (now " + value + ").");
+                    gameLine("waitroom-health-alert", tag("tps", value), tag("minutes", s.alertMinutes()));
+                    plugin.push("lag", "lag-room", "lag-room", "/admin/server/room/performance", null, "tps", value, "minutes", s.alertMinutes());
+                    return;
+                }
                 plugin.getLogger().warning("TPS has been below " + s.alertTps() + " for " + s.alertMinutes() + " minutes (now " + value + ").");
                 gameLine("health-alert", tag("tps", value), tag("minutes", s.alertMinutes()));
                 plugin.discord().log("health-alert", "tps", value, "minutes", s.alertMinutes(),
@@ -294,7 +344,14 @@ public final class HealthMonitor {
                 plugin.push("lag", "lag", "lag", "/admin/server/performance", null, "tps", value, "minutes", s.alertMinutes());
             }
         } else if (tps >= s.alertTps() + 1) {
-            if (alerted) {
+            if (alerted && remote != null) {
+                String value = String.format(Locale.ROOT, "%.1f", tps);
+                plugin.getLogger().info("Waiting room: TPS has recovered (" + value + ").");
+                gameLine("waitroom-health-recovered", tag("tps", value));
+                if (plugin.notices() != null) {
+                    plugin.notices().resolve("lag-room");
+                }
+            } else if (alerted) {
                 String value = String.format(Locale.ROOT, "%.1f", tps);
                 plugin.getLogger().info("TPS has recovered (" + value + ").");
                 gameLine("health-recovered", tag("tps", value));

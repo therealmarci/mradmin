@@ -134,6 +134,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private final at.marcelr.mradmin.branding.Branding branding = new at.marcelr.mradmin.branding.Branding(this);
     private final at.marcelr.mradmin.branding.Landing landing = new at.marcelr.mradmin.branding.Landing(this);
     private HealthMonitor health;
+    /** The waiting room server read through its agent (performance, since 1.6). */
+    private at.marcelr.mradmin.network.RoomAgent roomAgent;
     private StaffChat staffChat;
     private MenuListener menuListener;
 
@@ -184,6 +186,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         notices.start();
         web.requests().load();
         health = new HealthMonitor(this);
+        roomAgent = new at.marcelr.mradmin.network.RoomAgent(this);
 
         freeze = new FreezeManager(this);
         freeze.load();
@@ -297,6 +300,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         if (health != null) {
             health.stop();
         }
+        if (roomAgent != null) {
+            roomAgent.stop();
+        }
         // Last: everything above may still save something.
         if (storage != null) {
             storage.close();
@@ -333,8 +339,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         items.start();
         if (feature(Feature.SERVER_STATUS)) {
             health.start();
+            roomAgent.start();
         } else {
             health.stop();
+            roomAgent.stop();
         }
         freeze.start();
         maintenance.start();
@@ -533,6 +541,11 @@ public final class MRAdmin extends JavaPlugin implements Listener {
 
     public HealthMonitor health() {
         return health;
+    }
+
+    /** The waiting room server read through its agent (its health, system info, lag chunks). */
+    public at.marcelr.mradmin.network.RoomAgent roomAgent() {
+        return roomAgent;
     }
 
     /** The plugins MRadmin works with (module API and old hooks). */

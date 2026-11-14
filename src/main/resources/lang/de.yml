@@ -40,6 +40,8 @@ storage-status: "<prefix><gray>Speicher: <white><type></white> <dark_gray>(<targ
 storage-pending: "<prefix><hover:show_text:'<gray>Oder die Datenbank war beim Start nicht erreichbar (Konsole).'><yellow><white><type></white> gilt erst nach einem Neustart.</hover>"
 health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Health.'><red>🐢 Server laggt seit <minutes> min <gray>(<tps> TPS)</hover>"
 health-recovered: "<prefix><green>✅ Server läuft wieder flüssig <gray>(<tps> TPS)"
+waitroom-health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Server - Warteraum - Leistung.'><red>🐢 Warteraum laggt seit <minutes> min <gray>(<tps> TPS)</hover>"
+waitroom-health-recovered: "<prefix><green>✅ Warteraum läuft wieder flüssig <gray>(<tps> TPS)"
 
 # --- Weboberfläche (/mradmin web) ----------------------------------------------
 help-web: "<gold>/mradmin web [setup|sessions|logout]</gold> <dark_gray>- <gray>Weboberfläche: Konto einrichten, angemeldete Geräte"
@@ -175,6 +177,8 @@ push-report-title: "Neues Ticket: <subject>"
 push-report-body: "<player> (<plugin>)"
 push-lag-title: "Der Server laggt"
 push-lag-body: "Seit <minutes> Minuten nur <tps> TPS."
+push-lag-room-title: "Der Warteraum laggt"
+push-lag-room-body: "Seit <minutes> Minuten nur <tps> TPS."
 push-maintenance-soon-title: "Wartung angekündigt"
 push-maintenance-soon-body: "<title> - ab <start>"
 push-maintenance-start-title: "Wartung läuft"

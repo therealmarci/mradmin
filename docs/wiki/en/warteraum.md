@@ -40,7 +40,17 @@ Once the waiting room is connected, **MRwaitroom** shows up under **Server → P
 - If the waiting room has not reported for a while, it says "Does not report".
 
 > [!NOTE]
-> The connection always starts at the waiting room - MRadmin never connects to it. You do the first installation by hand ([guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+> The waiting room fetches configuration and updates from MRadmin itself. Only for the performance (below) MRadmin asks the waiting room every second on a port of its own. You do the first installation by hand ([guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+
+## Performance of the waiting room
+Under **Server → Waiting room → Performance** you see the waiting room server exactly like your own under **Server → Main server → Performance**: TPS, milliseconds per tick, CPU, memory, players, worlds and the chunks with the most entities, with the same ranges (1 minute to 30 days). Permission as for the main server (`mradmin.status.health`).
+
+- MRadmin asks the waiting room **every second** and records like for the main server: the last hour per second, 24 hours as 10-second points, longer as 5-minute points that are stored (`health.history`).
+- If the waiting room lags for a while, the same lag warning as for the main server comes, only with "waiting room" in the text (in the game and as push, kind "Lag").
+- MRadmin finds the address by itself: the waiting room reports its port (`agent.port`, default 8127) and MRadmin takes the address its reports come from. To set it fixed, use `waiting-room.agent-url` (e.g. `http://10.0.0.6:8127`).
+
+> [!TIP]
+> The port needs to be allowed in the network between the two servers (firewall) from the main server to the waiting room. Best let it listen only on the internal address (`agent.bind` in MRwaitroom).
 
 ## Restarting the waiting room server
 If the waiting room runs with the starter (`mrserver setup --role waitroom`, see [Starter](starter.md#setting-up-a-waiting-room-server)), **Server → Overview** shows the tile **Waiting room server**: running, since when, Paper build, waiting players, next planned restart. **Restart** (permission `mradmin.server.restart`) restarts it **as soon as it may**:

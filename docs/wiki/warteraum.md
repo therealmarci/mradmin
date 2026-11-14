@@ -40,7 +40,17 @@ Ist der Warteraum verbunden, steht **MRwaitroom** unter **Server → Plugins** -
 - Meldet sich der Warteraum länger nicht, steht dort „Meldet sich nicht“.
 
 > [!NOTE]
-> Die Verbindung geht immer vom Warteraum aus - MRadmin verbindet sich nie zu ihm. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+> Konfiguration und Updates holt sich der Warteraum selbst bei MRadmin ab. Nur für die Leistung (unten) fragt MRadmin den Warteraum jede Sekunde an seinem eigenen Port ab. Die Erstinstallation machst du von Hand ([Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/)).
+
+## Leistung des Warteraums
+Unter **Server → Warteraum → Leistung** siehst du den Warteraum-Server genau wie deinen eigenen unter **Server → Hauptserver → Leistung**: TPS, Millisekunden pro Tick, CPU, Arbeitsspeicher, Spieler, Welten und die Chunks mit den meisten Entities, mit denselben Zeiträumen (1 Minute bis 30 Tage). Permission wie beim Hauptserver (`mradmin.status.health`).
+
+- MRadmin fragt den Warteraum **jede Sekunde** ab und zeichnet genauso auf wie beim Hauptserver: die letzte Stunde pro Sekunde, 24 Stunden als 10-Sekunden-Punkte, länger als 5-Minuten-Punkte, die gespeichert werden (`health.history`).
+- Laggt der Warteraum länger, kommt dieselbe Lag-Warnung wie beim Hauptserver, nur mit „Warteraum“ im Text (im Spiel und als Push, Art „Lag“).
+- Die Adresse findet MRadmin selbst: der Warteraum meldet seinen Port (`agent.port`, Standard 8127) und MRadmin nimmt die Adresse, von der seine Berichte kommen. Fest einstellen geht mit `waiting-room.agent-url` (z.B. `http://10.0.0.6:8127`).
+
+> [!TIP]
+> Der Port braucht im Netz zwischen den beiden Servern eine Freigabe (Firewall) vom Hauptserver zum Warteraum. Am besten lauscht er nur auf der internen Adresse (`agent.bind` in MRwaitroom).
 
 ## Warteraum-Server neu starten
 Läuft der Warteraum mit dem Starter (`mrserver setup --role waitroom`, siehe [Starter](starter.md#warteraum-server-einrichten)), zeigt **Server → Übersicht** die Kachel **Warteraum-Server**: läuft er, seit wann, Paper-Build, wartende Spieler, nächster geplanter Neustart. **Neu starten** (Permission `mradmin.server.restart`) startet ihn neu, **sobald er darf**:
