@@ -80,7 +80,9 @@ Ist etwas davon schon beim Klick nicht erfüllt, ist der Knopf gesperrt und der 
 ## Hinweise und Warnungen
 - Die **Übersicht** (Dashboard) und die Zähler in der Seitenleiste zeigen den Warteraum mit: meldet er sich nicht (rot), laggt er, läuft ein Countdown.
 - Die Lag-Warnung kommt im Spiel, als Push (Art „Lag“) und in den Discord-Log (Ereignisse `waitroom-health-alert` und `waitroom-health-recovered` in `discord.events`).
-- Unter **Server → Warteraum → Plugins** steht MRwaitroom zum Verwalten und darunter - nur zur Ansicht - **alle Plugins** des Warteraum-Servers mit Version.
+- Unter **Server → Warteraum → Plugins** stehen in derselben Tabelle wie beim Hauptserver MRwaitroom (verwaltbar) und alle anderen Plugins des Warteraum-Servers mit Version (nur Anzeige).
+- **Server → Warteraum → Wartung** zeigt dieselbe Netzwerk-Wartung wie beim Hauptserver und lässt sie dort ebenso bedienen.
+- Im **Protokoll** des Warteraums stehen auch die Web-Aktionen zu ihm (Neustart, Stopp, Aussetzen, Befehle in seiner Konsole) - im Protokoll des Hauptservers nicht.
 
 ## Rechte im Warteraum
 Was das Team rund um den Warteraum darf, legst du in einer **Tabelle** fest: Konfiguration von MRadmin → **Warteraum** → **Rechte pro Rolle** (`waiting-room.rights`). Zeilen sind die Team-Rollen **Admin**, **Staff** und **Supporter** (es zählt die höchste von `mradmin.groups.admin`, `.staff`, `.support`), jede Zelle ist **Nein**, **Ja** oder **Nur im Admin-Modus**. Normale Spieler haben keines der Rechte.

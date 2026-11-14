@@ -80,7 +80,9 @@ If one of these is not met already when clicking, the button is locked and the r
 ## Hints and warnings
 - The **overview** (dashboard) and the counters in the sidebar include the waiting room: not reporting (red), lagging, a countdown running.
 - The lag warning comes in the game, as push (kind "Lag") and in the Discord log (events `waitroom-health-alert` and `waitroom-health-recovered` in `discord.events`).
-- Under **Server → Waiting room → Plugins** MRwaitroom can be managed, and below - for viewing only - **all plugins** of the waiting room server with their version.
+- Under **Server → Waiting room → Plugins** the same table as for the main server lists MRwaitroom (manageable) and all other plugins of the waiting room server with their version (view only).
+- **Server → Waiting room → Maintenance** shows the same network maintenance as the main server and lets you operate it there as well.
+- The **log** of the waiting room also has the web actions about it (restart, stop, pause, commands in its console) - the log of the main server does not.
 
 ## Rights around the waiting room
 What the team may do around the waiting room is set in a **table**: MRadmin's configuration → **Waiting room** → **Rights per role** (`waiting-room.rights`). The rows are the team roles **Admin**, **Staff** and **Supporter** (the highest of `mradmin.groups.admin`, `.staff`, `.support` counts), every cell is **No**, **Yes** or **Only in admin mode**. Normal players have none of the rights.

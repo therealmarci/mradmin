@@ -140,6 +140,31 @@
   <span class="small muted">{notes.filter(Boolean).join(' · ')}</span>
 {/snippet}
 
+<!-- A plugin of the waiting room that is not from MRtechnology: the same row, without channel and update -->
+{#snippet foreignRow(p)}
+  <li class="row {p.enabled ? 'good' : 'bad'}">
+    <div class="cell plugin">
+      <span class="r-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round"><path d={ICONS.box} /></svg>
+      </span>
+      <div class="r-name">
+        <span class="name-line"><strong>{p.name}</strong><span class="remote" title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span></span>
+        <span class="small muted desc">{t('plugins.foreign')}</span>
+      </div>
+    </div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.installed')}</span>
+      <span class="mono strong">{p.version}</span>
+    </div>
+    <div class="cell"><span class="label">{t('plugins.col.channel')}</span><span class="muted">–</span></div>
+    <div class="cell"><span class="label">{t('plugins.col.available')}</span><span class="muted">–</span></div>
+    <div class="cell action">
+      <span class="state"><span class="dot"></span>{t(p.enabled ? 'plugins.foreignOn' : 'plugins.foreignOff')}</span>
+    </div>
+  </li>
+{/snippet}
+
 {#snippet row(p)}
   {@const st = pluginState(p)}
   {@const err = pluginError(p)}
@@ -250,7 +275,7 @@
 
   {#if data}
     <div class="numbers">
-      <div class="num"><b>{installed.length}</b><span>{t('plugins.installedOf', { total: pool.length })}</span></div>
+      <div class="num"><b>{installed.length + (server === 'room' && roomAll ? roomAll.filter((f) => !installed.some((p) => p.name === f.name)).length : 0)}</b><span>{server === 'room' ? t('plugins.installedHere') : t('plugins.installedOf', { total: pool.length })}</span></div>
       <div class="num" class:warn={updates.length}><b>{updates.length}</b><span>{t('versions.updates')}</span></div>
       <div class="num" class:info={waiting.length}><b>{waiting.length}</b><span>{t('versions.waiting')}</span></div>
     </div>
@@ -287,30 +312,21 @@
 
     <section class="group">
       <h2>{t('plugins.onServer')}</h2>
-      {#if installed.length}
+      {#if installed.length || (server === 'room' && roomAll?.length)}
         <ul class="table">
           <li class="row headrow" aria-hidden="true">
             <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.channel')}</span>
             <span>{t('plugins.col.available')}</span><span></span>
           </li>
           {#each installed as p (p.name)}{@render row(p)}{/each}
+          {#if server === 'room' && roomAll}
+            {#each roomAll.filter((f) => !installed.some((p) => p.name === f.name)) as f (f.name)}{@render foreignRow(f)}{/each}
+          {/if}
         </ul>
       {:else}
         <p class="muted">{t('versions.none')}</p>
       {/if}
     </section>
-
-    {#if server === 'room' && roomAll}
-      <section class="group">
-        <h2>{t('plugins.roomAll')}</h2>
-        <p class="muted small hint">{t('plugins.roomAllHint')}</p>
-        <ul class="plain-list">
-          {#each roomAll as p (p.name)}
-            <li><span class="dot" class:on={p.enabled}></span><strong>{p.name}</strong> <span class="muted mono small">{p.version}</span></li>
-          {/each}
-        </ul>
-      </section>
-    {/if}
 
     {#if others.length}
       <section class="group">
@@ -341,12 +357,6 @@
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-
-  .plain-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .plain-list .dot {

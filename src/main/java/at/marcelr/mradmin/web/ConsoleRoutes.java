@@ -255,7 +255,7 @@ public final class ConsoleRoutes {
         }
         String blockedBy = at.marcelr.mradmin.util.CommandFilter.blocked(command, plugin.getConfig().getStringList("web.console.blocked"));
         if (blockedBy != null) {
-            audit(http, "console-blocked", command);
+            audit(http, "console-blocked", (room(http) ? "[waitroom] " : "") + command);
             throw new Http.WebException(403, "command-blocked");
         }
         String name = http.account().name();

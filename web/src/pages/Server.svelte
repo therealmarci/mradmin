@@ -121,6 +121,10 @@
   let roomReason = $state('');
   let roomEmergency = $state();
   let roomPlugins = $state(null);
+  // MRtechnology plugins of the waiting room (managed from here): updates and downloaded ones waiting for its restart.
+  const roomManaged = $derived(data ? data.plugins.filter((p) => p.remote && p.installed) : []);
+  const roomUpdates = $derived(roomManaged.filter((p) => p.update && !p.staged));
+  const roomWaiting = $derived(roomManaged.filter((p) => p.staged));
   const roomLeft = $derived(room && room.dueAt > 0 ? Math.max(0, room.dueAt - now) : 0);
   const roomPaused = $derived(room?.pausedUntil > now ? room.pausedUntil : 0);
   const roomPaperNew = $derived(room && room.paperNewest > 0 && room.paper > 0 && room.paperNewest > room.paper ? room.paperNewest : 0);
@@ -172,9 +176,9 @@
   const starterTip = $derived(!r ? '' : r.starter.active ? (r.starter.mode ?? '')
     : t(r.starter.ready ? 'config.status.starter-ready' : 'server.starterHint'));
 
-  const installed = $derived(data ? data.plugins.filter((p) => p.installed) : []);
+  const installed = $derived(data ? data.plugins.filter((p) => p.installed && !p.remote) : []);
   const updates = $derived(installed.filter((p) => p.update && !p.staged));
-  const waiting = $derived(data ? data.plugins.filter((p) => p.staged || (p.pending && !p.notLoaded)) : []);
+  const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
   const uptime = $derived(r ? duration(Math.max(0, now - r.startedAt)) : '');
   const nextText = $derived(r && r.nextPlanned > 0
     ? new Date(r.nextPlanned).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '');
@@ -299,14 +303,11 @@
         <!-- The waiting room server: the same control as the main server (values, restart / stop, emergency, pause) -->
         <section class="card server" class:counting={room.dueAt > 0}>
           <div class="stats">
-            <div class="stat" title={room.error ? t('server.room.blocked.' + room.error) : ''}>
-              <span class="s-label">{t('server.room.state')}</span>
-              <span class="s-value"><span class="dot {roomTone}"></span>{roomState}</span>
-              <span class="s-sub">{t('server.room.players', { n: room.online ? (room.players ?? 0) : 0 })}</span>
-            </div>
-            <div class="stat">
+            <!-- Four values like the main server: the state and the waiting players with "up for" -->
+            <div class="stat" title={room.error ? t('server.room.blocked.' + room.error) : roomState}>
               <span class="s-label">{t('server.uptime')}</span>
-              <span class="s-value">{room.online && room.startedAt ? duration(Math.max(0, now - room.startedAt)) : '–'}</span>
+              <span class="s-value"><span class="dot {roomTone === 'good' ? '' : roomTone}" class:bad={room.dueAt > 0}></span>{room.online && room.startedAt ? duration(Math.max(0, now - room.startedAt)) : roomState}</span>
+              <span class="s-sub" class:warn={roomTone !== 'good'}>{roomTone === 'good' ? t('server.room.players', { n: room.players ?? 0 }) : roomState}</span>
             </div>
             <div class="stat" title={roomPaperNew ? t('server.room.paperNew', { build: roomPaperNew }) : t('server.room.paperTip')}>
               <span class="s-label">{t('server.paper')}</span>
@@ -405,7 +406,9 @@
               <span class="go">→</span>
             </span>
             <span class="big">{roomPlugins ? t('server.pluginsInstalled', { n: roomPlugins.length }) : '–'}</span>
-            {#if roomPlugins}<span class="line muted">{roomPlugins.map((p) => p.name).join(', ')}</span>{/if}
+            {#if roomUpdates.length}<span class="line warn">{t('server.pluginsUpdates', { n: roomUpdates.length })}</span>{/if}
+            {#if roomWaiting.length}<span class="line info">{t('server.pluginsWaiting', { n: roomWaiting.length })}</span>{/if}
+            {#if !roomUpdates.length && !roomWaiting.length}<span class="line good">{t('server.pluginsCurrent')}</span>{/if}
           </button>
           {#if me.may.audit}
             <div class="card tile events">

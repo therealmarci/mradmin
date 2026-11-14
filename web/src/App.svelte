@@ -236,9 +236,11 @@
     return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : 'warn' };
   };
   // The waiting room's hints (gone, lagging, countdown): their number, red if it is gone.
+  const roomUpdates = () => overview?.network?.room?.updates ?? 0;
   const roomCount = () => {
     const list = (overview?.alerts ?? []).filter((a) => a.key?.startsWith('room'));
-    return { n: list.length || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : list.some((a) => a.tone === 'warn') ? 'warn' : 'info' };
+    const n = list.length + roomUpdates();
+    return { n: n || undefined, tone: list.some((a) => a.tone === 'bad') ? 'bad' : list.some((a) => a.tone === 'warn') ? 'warn' : 'info' };
   };
   const adminGroups = $derived(!me ? [] : [
     { id: 'community', label: t('nav.community'), items: [
@@ -282,7 +284,8 @@
   const roomTabs = $derived([
     { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
     ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/room/performance' }] : []),
-    { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins' },
+    ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/room/maintenance' }] : []),
+    { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins', n: roomUpdates() || undefined },
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/room/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/room/console' }] : []),
   ]);
@@ -416,6 +419,8 @@
             {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
           {:else if roomTab === 'plugins'}
             <Plugins embedded server="room" />
+          {:else if roomTab === 'maintenance'}
+            <Maintenance {me} />
           {:else if roomTab === 'performance'}
             {#key 'room'}<Health server="room" />{/key}
           {:else if roomTab === 'logs'}

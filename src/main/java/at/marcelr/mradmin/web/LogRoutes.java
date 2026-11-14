@@ -128,7 +128,11 @@ public final class LogRoutes {
             }
             String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
             kept = 0;
-            for (Storage.AuditRow row : room ? List.<Storage.AuditRow>of() : plugin.storage().recentAudit(2000)) {
+            for (Storage.AuditRow row : plugin.storage().recentAudit(2000)) {
+                // Web actions about the waiting room (its restarts, its console) belong to its log, the rest to this one.
+                if (aboutRoom(row) != room) {
+                    continue;
+                }
                 String text = webText(row);
                 if (row.time() < since || row.time() >= until || (!needle.isEmpty() && !text.toLowerCase(Locale.ROOT).contains(needle))) {
                     continue;
@@ -183,7 +187,7 @@ public final class LogRoutes {
         }
         Set<String> sources = new LinkedHashSet<>();
         if (events && room) {
-            sources.add(roomSource);
+            sources.addAll(List.of(roomSource, "web"));
         } else if (events) {
             sources.addAll(List.of("mradmin", "web"));
             sources.addAll(plugin.eventLog().sources());
@@ -251,6 +255,12 @@ public final class LogRoutes {
         return source.equals("web") || source.equals("mradmin") || source.equals("console")
                 || source.equals(at.marcelr.mradmin.network.RoomAgent.SOURCE) ? source
                 : plugin.modules().displayName(source);
+    }
+
+    /** A web action about the waiting room server: waitroom-* (restart, stop, pause ...) or a command in its console. */
+    private static boolean aboutRoom(Storage.AuditRow row) {
+        return row.action() != null && (row.action().startsWith("waitroom-")
+                || (row.action().startsWith("console-") && row.detail() != null && row.detail().startsWith("[waitroom]")));
     }
 
     private static String webText(Storage.AuditRow row) {

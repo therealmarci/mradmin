@@ -92,7 +92,10 @@ public final class PanelRoutes {
             if (plugin.waitingRoom().active() && room != null) {
                 boolean online = room.online() && plugin.waitingRoom().roomUp();
                 boolean restarting = plugin.waitingRoom().roomRestarting();
-                network.put("room", Map.of("online", online, "restarting", restarting));
+                // Updates of the plugins there (their own counter in the sidebar - not the main server's).
+                long roomUpdates = plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())
+                        ? plugin.versions().list().stream().filter(e -> e.remote && e.isInstalled() && e.updateAvailable()).count() : 0;
+                network.put("room", Map.of("online", online, "restarting", restarting, "updates", roomUpdates));
                 // Hints of the waiting room for the dashboard and the sidebar: gone, lagging, a countdown.
                 var control = plugin.roomAgent().control();
                 if (!online && !restarting) {
@@ -165,9 +168,10 @@ public final class PanelRoutes {
             }
         }
         if (plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())) {
-            var plugins = plugin.versions().list().stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::isInstalled).toList();
+            // This server's plugins only - those of the waiting room count there.
+            var plugins = plugin.versions().list().stream().filter(e -> e.isInstalled() && !e.remote).toList();
             long updates = plugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
-            long staged = plugin.versions().list().stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::waitsForRestart).count();
+            long staged = plugin.versions().list().stream().filter(e -> !e.remote && e.waitsForRestart()).count();
             long restartAt = server.sync(() -> plugin.restarts().endsAt());
             result.put("versions", Map.of("plugins", plugins.size(), "updates", updates, "staged", staged, "restartAt", restartAt));
             if (restartAt > 0) {
