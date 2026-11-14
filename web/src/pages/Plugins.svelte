@@ -184,7 +184,6 @@
       </span>
       <div class="r-name">
         <span class="name-line"><strong>{p.name}</strong>{#if !p.enabled}<span class="remote off">{t('plugins.foreignOff')}</span>{/if}</span>
-        <span class="small muted desc">{t('plugins.foreign')}</span>
       </div>
     </div>
     <div class="cell">
@@ -373,32 +372,53 @@
       </section>
     {/if}
 
-    <section class="group">
-      <h2>{t('plugins.onServer')}</h2>
-      {#if installed.length || shownForeign.length}
+    <!-- Two tiles: the MRtechnology plugins (managed here) and the other plugins of this server (only watched) -->
+    <section class="group tile">
+      <div class="tile-title">
+        <h2>{t('plugins.mrTitle')}</h2>
+        <span class="count">{installed.length}</span>
+      </div>
+      {#if installed.length}
         <ul class="table">
           <li class="row headrow" aria-hidden="true">
             <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.channel')}</span>
             <span>{t('plugins.col.available')}</span><span></span>
           </li>
           {#each installed as p (p.name)}{@render row(p)}{/each}
-          {#each shownForeign as f (f.name)}{@render foreignRow(f)}{/each}
         </ul>
       {:else}
         <p class="muted">{t('versions.none')}</p>
       {/if}
-    </section>
-
-    {#if others.length}
-      <section class="group">
-        <h2>{t('plugins.more')}</h2>
+      {#if others.length}
+        <h3>{t('plugins.more')}</h3>
         <p class="muted small hint">{t('plugins.moreHint')}</p>
         <ul class="table">
           {#each others as p (p.name)}{@render row(p)}{/each}
         </ul>
+      {/if}
+    </section>
+
+    {#if foreign !== null}
+      <section class="group tile">
+        <div class="tile-title">
+          <h2>{t('plugins.otherTitle')}</h2>
+          <span class="count">{shownForeign.length}</span>
+          {#if foreignNewer}<span class="count warn">{t('plugins.otherNewer', { n: foreignNewer })}</span>{/if}
+        </div>
+        <p class="muted small hint">{t('plugins.otherHint')}</p>
+        {#if shownForeign.length}
+          <ul class="table">
+            <li class="row headrow" aria-hidden="true">
+              <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.source')}</span>
+              <span>{t('plugins.col.latestRelease')}</span><span></span>
+            </li>
+            {#each shownForeign as f (f.name)}{@render foreignRow(f)}{/each}
+          </ul>
+        {:else}
+          <p class="muted">{t('plugins.otherNone')}</p>
+        {/if}
       </section>
     {/if}
-
     <p class="muted small legend">
       <b>{t('plugins.channel.stable')}</b> {t('plugins.channel.hint.stable')} ·
       <b>{t('plugins.channel.beta')}</b> {t('plugins.channel.hint.beta')}
@@ -679,6 +699,44 @@
   .group {
     display: grid;
     gap: 10px;
+  }
+
+  /* One tile each for the MRtechnology plugins and the other plugins */
+  .tile {
+    padding: 16px 18px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .tile-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tile-title h2 {
+    margin: 0;
+  }
+
+  .count {
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+
+  .count.warn {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+
+  h3 {
+    margin: 8px 0 0;
+    font-size: 0.95rem;
   }
 
   h2 {
