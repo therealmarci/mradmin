@@ -93,38 +93,55 @@
   const icon = { bad: '✕', warn: '!', info: 'i', good: '✓' };
   const alerts = $derived(data?.alerts ?? []);
   const phaseTone = { none: 'good', planned: 'info', upcoming: 'warn', active: 'bad' };
-  const msptTone = (v) => (v <= 40 ? '' : v <= 50 ? 'warn' : 'bad');
   const share = (a, b) => (b > 0 ? a / b : 0);
 
   // The health monitor's last minute for the first slide (only with the right to see it): every second while the
   // tab is visible. The line reaches up to now and new values glide in, see lib/liveclock.svelte.js.
   const MINUTE = 60_000;
   const clock = new LiveClock();
-  let health = $state(null);
-  // Which server the health slide shows (the waiting room only when it is connected).
+  // Both servers are measured (the waiting room only when it is connected); the slide shows one of them and switches
+  // to the other at half its time on screen. Without a waiting room it is the main server only - as before.
+  let mainHealth = $state(null);
+  let roomHealth = $state(null);
   let healthServer = $state('main');
   const roomShown = $derived(!!data?.room);
+  const health = $derived(healthServer === 'room' && roomHealth ? roomHealth : mainHealth);
   $effect(() => {
     if (!roomShown && healthServer === 'room') healthServer = 'main';
   });
-  function pickHealth(which) {
-    if (which === healthServer) return;
-    healthServer = which;
-    health = null;
-    loadHealth();
-  }
+  let lastShown = null;
   async function loadHealth() {
     try {
-      const result = await api('GET', '/health?range=1m' + (healthServer === 'room' ? '&server=room' : ''));
-      const last = health?.points.at(-1);
-      const next = result.points.at(-1);
-      clock.sync(result.to);
-      health = result;
-      if (last && next && last.time !== next.time) clock.glideFrom(last);
+      const [main, room] = await Promise.all([
+        api('GET', '/health?range=1m'),
+        roomShown ? api('GET', '/health?range=1m&server=room').catch(() => null) : Promise.resolve(null),
+      ]);
+      const before = lastShown;
+      clock.sync(main.to);
+      mainHealth = main;
+      roomHealth = room;
+      const next = health?.points.at(-1);
+      // new values glide in - only within the same server, not when the slide just switched
+      if (before && next && before.server === healthServer && before.point.time !== next.time) clock.glideFrom(before.point);
+      lastShown = next ? { server: healthServer, point: next } : null;
     } catch {
       // the slide just stays as it is
     }
   }
+  // The switch: at half of the slide's time (it moves on after SLIDE_SECONDS), while it is on screen and not held.
+  const SLIDE_SECONDS = 8;
+  let slideIndex = $state(0);
+  let held = $state(false);
+  $effect(() => {
+    if (!roomShown || slideIndex !== 0 || held) return;
+    const timer = setInterval(() => (healthServer = healthServer === 'main' ? 'room' : 'main'), (SLIDE_SECONDS / 2) * 1000);
+    return () => clearInterval(timer);
+  });
+  // Every time the slide comes back it starts with the main server.
+  $effect(() => {
+    if (slideIndex !== 0) healthServer = 'main';
+  });
+  const pickHealth = (which) => (healthServer = which);
   $effect(() => {
     if (!me.may.health) return;
     loadHealth();
@@ -168,7 +185,6 @@
     ...(data?.server?.players ?? []).map((p) => ({ ...p, where: 'main' })),
     ...(data?.room?.players ?? []).map((p) => ({ ...p, where: 'room' })),
   ]);
-  const roomTone = (r) => (!r.online ? (r.restarting ? 'info' : 'bad') : tpsTone(r.tps ?? 20));
   const allUpdates = $derived((data?.versions?.updates ?? 0) + (data?.versions?.roomUpdates ?? 0));
 
   // Beside the health tiles: what else the team wants to know at a glance. Only what this person may see, each
@@ -181,7 +197,9 @@
   }
   const glance = $derived.by(() => {
     const rows = [];
-    if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
+    if (healthServer === 'room' && data?.room) {
+      if (data.room.startedAt) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(Date.now() - data.room.startedAt), page: healthPage });
+    } else if (data?.uptime) rows.push({ key: 'uptime', label: t('home.g.uptime'), value: uptimeText(data.uptime), page: me.may.health ? '/health' : null });
     if (data?.tickets) {
       const { open, unread } = data.tickets;
       rows.push({ key: 'tickets', label: t('overview.tickets'), value: unread ? t('home.g.ticketsNew', { open, unread }) : t('home.g.tickets', { open }),
@@ -290,7 +308,7 @@
   {#if data}
     <!-- The slideshow: the health monitor first (TPS with the key figures and its last minute), then one banner
          per area that has something to do (each warning with its details). -->
-    <Carousel {slides} seconds={8} label={t('home.slides')}>
+    <Carousel {slides} seconds={SLIDE_SECONDS} label={t('home.slides')} bind:index={slideIndex} bind:paused={held}>
       {#snippet slide(s, i, active)}
         {#if s.kind === 'health'}
           <div class="kind">
@@ -366,36 +384,6 @@
     </Carousel>
 
     <div class="tiles">
-      {#if data.server}
-        {@const s = data.server}
-        <!-- Live from the health monitor, every second; without the right to see it from the overview. -->
-        {@const l = shownLatest ?? { tps: s.tps[0], mspt: s.mspt, heapUsed: s.ramUsed, heapMax: s.ramMax }}
-        <DashTile icon="pulse" hue={210} title={data.room ? t('nav.serverMain') : t('overview.server')} value={l.tps.toFixed(1)} unit="TPS" tone={tpsTone(l.tps)}
-          rows={[
-            { label: t('overview.tps'), value: s.tps.map((v) => v.toFixed(1)).join(' / ') },
-            { label: t('overview.mspt'), value: l.mspt.toFixed(1) + ' ms', tone: msptTone(l.mspt), fill: l.mspt / 50 },
-            { label: t('overview.ram'), value: `${mb(l.heapUsed)} / ${mb(l.heapMax)}`, fill: share(l.heapUsed, l.heapMax),
-              tone: share(l.heapUsed, l.heapMax) > 0.9 ? 'warn' : '' },
-          ]}
-          link={me.may.health ? t('home.toHealth') : ''} onclick={me.may.health ? () => go('/health') : null} />
-      {/if}
-
-      {#if data.room}
-        {@const r = data.room}
-        {@const up = r.online && r.tps != null}
-        <!-- The waiting room server (through its agent, every second). -->
-        <DashTile icon="restore" hue={210} title={t('nav.serverRoom')}
-          value={up ? r.tps.toFixed(1) : t(r.restarting ? 'home.roomRestarting' : 'home.roomOffline')}
-          unit={up ? 'TPS' : ''} tone={roomTone(r)} small={!up}
-          rows={up ? [
-            { label: t('overview.mspt'), value: r.mspt.toFixed(1) + ' ms', tone: msptTone(r.mspt), fill: r.mspt / 50 },
-            { label: t('overview.ram'), value: mb(r.ramUsed) + ' / ' + mb(r.ramMax), fill: share(r.ramUsed, r.ramMax),
-              tone: share(r.ramUsed, r.ramMax) > 0.9 ? 'warn' : '' },
-            { label: t('home.roomWaiting'), value: r.players.length },
-          ] : []}
-          link={t('home.toRoom')} onclick={() => go(me.may.health ? '/admin/server/room/performance' : '/admin/server/room')} />
-      {/if}
-
       {#if data.tickets}
         {@const tk = data.tickets}
         <DashTile icon="ticket" hue={210} title={t('overview.tickets')} value={tk.open} unit={t('overview.openTickets')}
