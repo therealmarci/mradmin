@@ -107,3 +107,5 @@ mradmin.appearance:
   de: "Weboberfläche: Aussehen ändern - Name, Logo, Browser-Symbol, Akzentfarbe und Fußzeile (Server → Aussehen)"
 mradmin.applications:
   de: "Weboberfläche: Whitelist-Bewerbungen in ihrem Ticket annehmen (setzt den Spieler auf die Whitelist) oder ablehnen"
+mradmin.groups.bots:
+  de: "Gruppe Bots (Zweitaccounts): keine Rechte in MRadmin - kein `/web`, kein `/report`. Im Warteraum wie normale Spieler. Nur für Zweitaccounts (LuckPerms-Gruppe „bots“), in keiner Team-Gruppe."
