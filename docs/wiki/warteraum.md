@@ -16,7 +16,7 @@ Der Warteraum ist **freiwillig** und standardmäßig aus. Ohne Proxy läuft MRad
 
 ## Einrichten
 1. **Proxy:** In der `velocity.toml` den Hauptserver und den Warteraum unter `[servers]` eintragen, `try = ["main", "waitroom"]` (Hauptserver zuerst) und `bungee-plugin-message-channel = true` setzen. Auf beiden Paper-Servern Velocity-Weiterleitung einschalten - Einzelheiten in der [Anleitung von MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/).
-2. **MRadmin:** in der `config.yml` (oder im Browser unter **Einstellungen → Konfiguration → MRadmin → Warteraum**):
+2. **MRadmin:** in der `config.yml` (oder im Browser unter **Server → Hauptserver → Konfiguration → MRadmin → Warteraum**):
    ```yaml
    waiting-room:
      enabled: true
@@ -80,8 +80,8 @@ Ist etwas davon schon beim Klick nicht erfüllt, ist der Knopf gesperrt und der 
 ## Hinweise und Warnungen
 - Die **Übersicht** (Dashboard) und die Zähler in der Seitenleiste zeigen den Warteraum mit: meldet er sich nicht (rot), laggt er, läuft ein Countdown.
 - Die Lag-Warnung kommt im Spiel, als Push (Art „Lag“) und in den Discord-Log (Ereignisse `waitroom-health-alert` und `waitroom-health-recovered` in `discord.events`).
-- Unter **Server → Warteraum → Plugins** stehen in derselben Tabelle wie beim Hauptserver MRwaitroom (verwaltbar) und alle anderen Plugins des Warteraum-Servers mit Version (nur Anzeige).
-- **Server → Warteraum → Wartung** zeigt dieselbe Netzwerk-Wartung wie beim Hauptserver und lässt sie dort ebenso bedienen.
+- Unter **Server → Warteraum → Plugins** stehen in derselben Tabelle wie beim Hauptserver MRwaitroom (verwaltbar) und alle anderen Plugins des Warteraum-Servers. Für fremde Plugins lässt sich ein **GitHub-Link** hinterlegen - MRadmin zeigt dann das neueste Release und ob die installierte Version aktuell ist (nur Anzeige, keine Updates).
+- Seine Konfiguration steht unter **Server → Warteraum → Konfiguration**. Eine eigene Wartung hat der Warteraum nicht - die Wartung gilt fürs ganze Netzwerk und steht beim Hauptserver.
 - Im **Protokoll** des Warteraums stehen auch die Web-Aktionen zu ihm (Neustart, Stopp, Aussetzen, Befehle in seiner Konsole) - im Protokoll des Hauptservers nicht.
 
 ## Rechte im Warteraum

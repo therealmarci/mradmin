@@ -1,6 +1,6 @@
 # Configuration
 
-Easiest in the browser: web interface → **Settings → Configuration → MRadmin** - every setting with an explanation, saving reloads MRadmin right away (permission `mradmin.config`). Everything is also commented in `plugins/MRadmin/config.yml`, in the same layout as in all MRtechnology plugins; you apply changes by hand with `/mradmin reload`. Only in the file: your own dashboard buttons (`admin-mode.menu.buttons`), `web.roles` / `web.players` and new ticket categories.
+Easiest in the browser: web interface → **Server → Main server → Configuration → MRadmin** - every setting with an explanation, saving reloads MRadmin right away (permission `mradmin.config`). Everything is also commented in `plugins/MRadmin/config.yml`, in the same layout as in all MRtechnology plugins; you apply changes by hand with `/mradmin reload`. Only in the file: your own dashboard buttons (`admin-mode.menu.buttons`), `web.roles` / `web.players` and new ticket categories.
 
 | Section | What for | More |
 |---|---|---|

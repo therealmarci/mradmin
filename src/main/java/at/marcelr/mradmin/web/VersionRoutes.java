@@ -58,6 +58,8 @@ public final class VersionRoutes {
         server.route("POST", "/api/waitroom/restart", r::waitroomRestart);
         server.route("POST", "/api/waitroom/control", r::waitroomControl);
         server.route("GET", "/api/waitroom/plugins", r::waitroomPlugins);
+        server.route("GET", "/api/plugins/foreign", r::foreign);
+        server.route("POST", "/api/plugins/foreign", r::foreignLink);
     }
 
     /** Viewing: mradmin.versions.view, or install (its parent - LuckPerms does not always pass children on offline). */
@@ -288,6 +290,56 @@ public final class VersionRoutes {
         audit(http, "waitroom-" + action, action.equals("restart") || action.equals("stop")
                 ? delay / 1000 + " s" + (emergency ? " (emergency)" : "") : "");
         http.json(200, Map.of());
+    }
+
+    /**
+     * GET /api/plugins/foreign?server=main|room - the plugins of that server MRadmin does not manage, with the newest
+     * release of the GitHub repository stored for them (watching only, no updates).
+     */
+    @SuppressWarnings("unchecked")
+    private void foreign(Http http) throws Exception {
+        require(http, mayView(server, http.account().id()));
+        boolean room = "room".equals(http.query().get("server"));
+        Map<String, Object[]> plugins;
+        if (room) {
+            if (!plugin.waitingRoom().active()) {
+                throw new Http.WebException(404, "no-waitroom");
+            }
+            java.util.Set<String> managed = new java.util.HashSet<>(plugin.versions().list().stream()
+                    .filter(e -> e.remote && e.isInstalled()).map(e -> e.name).toList());
+            plugins = new LinkedHashMap<>();
+            try {
+                Map<String, Object> answer = new com.google.gson.Gson().fromJson(plugin.roomAgent().get("/agent/plugins"), Map.class);
+                for (Object o : (List<Object>) answer.getOrDefault("plugins", List.of())) {
+                    Map<String, Object> p = (Map<String, Object>) o;
+                    String name = String.valueOf(p.get("name"));
+                    if (!managed.contains(name)) {
+                        plugins.put(name, new Object[]{p.get("version"), p.get("enabled")});
+                    }
+                }
+            } catch (java.io.IOException e) {
+                throw new Http.WebException(503, "waitroom-offline");
+            }
+        } else {
+            plugins = server.sync(() -> plugin.foreignPlugins().local());
+        }
+        http.json(200, Map.of("plugins", plugin.foreignPlugins().view(room ? "room" : "main", plugins)));
+    }
+
+    /** POST /api/plugins/foreign {server, name, repo} - stores (empty = removes) the GitHub repository of a plugin. */
+    private void foreignLink(Http http) throws Exception {
+        require(http, may(http, Perms.VERSIONS_INSTALL));
+        String target = "room".equals(http.string("server")) ? "room" : "main";
+        String name = http.string("name");
+        if (name == null || name.isBlank() || name.length() > 64) {
+            throw new Http.WebException(400, "bad-request");
+        }
+        String repo = plugin.foreignPlugins().link(target, name.strip(), http.string("repo"));
+        if (repo == null) {
+            throw new Http.WebException(400, "foreign-repo-invalid");
+        }
+        audit(http, "foreign-plugin-link", target + " " + name + " " + (repo.isEmpty() ? "-" : repo));
+        http.json(200, Map.of("repo", repo));
     }
 
     /** GET /api/waitroom/plugins - all plugins of the waiting room server (name, version, enabled), read only. */

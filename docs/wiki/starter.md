@@ -124,7 +124,7 @@ MRSERVER_LINK_KEY=<waiting-room.link.key> ./mrserver.sh setup --role waitroom \
     --main-server main --main-address 10.0.0.5:25565 --link-url http://10.0.0.5:8126
 ```
 
-Oder einfach den Installer von der Website nehmen und bei der ersten Frage **Warteraum-Server** wählen. Danach funktionieren `mrserver install|start|stop|restart|status|console` wie gewohnt. Arbeitsspeicher, Paper-Updates und geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (Abschnitt `server`) - am bequemsten über **Einstellungen → Konfiguration → MRwaitroom** in deiner Weboberfläche. Neustarts des Warteraums siehe [Warteraum (Proxy)](warteraum.md#warteraum-server-steuern).
+Oder einfach den Installer von der Website nehmen und bei der ersten Frage **Warteraum-Server** wählen. Danach funktionieren `mrserver install|start|stop|restart|status|console` wie gewohnt. Arbeitsspeicher, Paper-Updates und geplante Neustarts stellt man in der Konfiguration von MRwaitroom ein (Abschnitt `server`) - am bequemsten über **Server → Warteraum → Konfiguration** in deiner Weboberfläche. Neustarts des Warteraums siehe [Warteraum (Proxy)](warteraum.md#warteraum-server-steuern).
 
 > [!NOTE]
 > Den Starter selbst aktualisiert auf dem Warteraum niemand automatisch (dort läuft kein MRadmin). Eine neue Starter-Version kommt mit einem erneuten `mrserver setup --role waitroom` - das ist selten nötig.

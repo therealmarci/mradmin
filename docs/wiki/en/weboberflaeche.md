@@ -24,7 +24,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Content** | posts · announcements (`/admin/content/…`) |
 | **Plugins** | one page per installed plugin: chunk loaders · duels · sleep · map (`/admin/plugins/…`) |
 | **Server** | **Main server** (`/admin/server/…`) and **Waiting room** (`/admin/server/room/…`, only when connected) - each with its tabs, see [Server](#server) |
-| **Settings** | configuration (MRadmin and all plugins, one tab per plugin) · appearance (`/admin/settings/…`) |
+| **Settings** | appearance (`/admin/settings/appearance`) |
 
 Every page is built the same way: at the top the title (on sub pages with breadcrumbs, e.g. "Duels › #482") with the main buttons and one slim line of key figures, below tabs (each with its own address), below filters as round chips with a search, then the content.
 
@@ -199,12 +199,15 @@ Under **Server** are the servers themselves: the **main server** and - if one is
 |---|---|---|
 | **Control** | Four values side by side (details on hover): up for, Paper build with a coloured dot (green up to date, yellow newer build available - checked every 15 minutes, also without the starter), [starter](starter.md) active or not, next planned restart. Below **Restart** and **Stop** with a countdown (`versions.restart-delays`, default 15/30/60 minutes), shorter times through the red **Emergency** button (window: first 2FA code or passkey, then restart/stop, a time from `versions.emergency-delays` and a required reason), or the running countdown (with its reason) and **Cancel** (for a planned restart: **Skip this restart**); optionally an own **Reason**, otherwise MRadmin names one. With planned restarts also **Pause planned restarts for 24 h** / **Switch on again**. Below a short view of the plugins and the latest events. For the waiting room the same control with its values (a restart waits there until nobody waits and your server is ready - see [Waiting room](warteraum.md#controlling-the-waiting-room-server)). | `mradmin.versions.view`, buttons `mradmin.server.restart` |
 | **Performance** | see [Health dashboard](#health-dashboard-mradminstatushealth) - for the waiting room the same page with its values | `mradmin.status.health` |
-| **Maintenance** | see [Maintenance](#maintenance) - the maintenance is for the whole network, so both servers show the same one and let you operate it | `mradmin.maintenance.view` |
-| **Plugins** | versions, updates, installing - see [Plugins](#plugins-mradminversionsview); for the waiting room in the same table its MRtechnology plugins (manageable) and all other plugins (view only) | `mradmin.versions.view` |
+| **Maintenance** | see [Maintenance](#maintenance) (main server only - the maintenance is for the whole network) | `mradmin.maintenance.view` |
+| **Plugins** | versions, updates, installing - see [Plugins](#plugins-mradminversionsview); in the same table also all other plugins of the server: with a GitHub link stored, MRadmin checks every 6 hours whether there is a newer release (view only, no updates) | `mradmin.versions.view` |
 | **Log** | events, web actions and console output of this server (web actions about the waiting room - restart, stop, commands - are in its log) - see [Log](#log-mradminwebaudit) | `mradmin.web.audit` or `mradmin.web.console.view` |
 | **Console** | run commands - see [Console](#console-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+| **Configuration** | the `config.yml` of the plugins of this server in the browser, one tab per plugin (main server: MRadmin and its plugins, waiting room: MRwaitroom) | `mradmin.config` |
 
-Restarting only works if something brings the server back: the starter or `versions.restart-method`. Stopping always works - without the starter the server then stays down until someone starts it. The configuration of MRadmin and of all plugins is under **Settings → Configuration**. Old addresses (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) lead to the new ones.
+Switching between main server and waiting room in the sidebar keeps the open tab (e.g. console → console) as long as the other server has it. The sidebar updates its counters on every page change, as soon as the server reports something, and otherwise every 10 seconds.
+
+Restarting only works if something brings the server back: the starter or `versions.restart-method`. Stopping always works - without the starter the server then stays down until someone starts it. The configuration of MRadmin and of all plugins is under **Server → Main server → Configuration**. Old addresses (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) lead to the new ones.
 
 ## Plugins (`mradmin.versions.view`)
 Page "Plugin configuration" under `/plugins` (the old address `/versions` redirects).

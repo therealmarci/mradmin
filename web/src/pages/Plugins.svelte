@@ -90,12 +90,46 @@
   const installed = $derived(pool.filter((p) => p.installed).sort(byName));
   // The page of one plugin: under the server it runs on.
   const detail = (name) => (server === 'room' ? '/admin/server/room/plugins/' : '/admin/server/plugins/') + name;
-  // Every plugin of the waiting room server (read only - MRadmin only manages MRtechnology plugins there).
-  let roomAll = $state(null);
+  // The other plugins of this server (not from MRtechnology): only watched - with a GitHub repository stored, MRadmin
+  // compares the installed version with its newest release (GET/POST /api/plugins/foreign).
+  let foreign = $state(null);
+  let linking = $state(null);
+  let linkText = $state('');
+  const foreignServer = $derived(server === 'room' ? 'room' : 'main');
+  async function loadForeign() {
+    if (server !== 'room' && server !== 'main') return;
+    try {
+      foreign = (await api('GET', '/plugins/foreign?server=' + foreignServer)).plugins;
+    } catch {
+      foreign = null;
+    }
+  }
   $effect(() => {
-    if (server !== 'room') return;
-    api('GET', '/waitroom/plugins').then((d) => (roomAll = d.plugins)).catch(() => (roomAll = null));
+    foreignServer;
+    loadForeign();
+    // a release just asked for at GitHub shows up a moment later
+    const timer = setInterval(() => foreign?.some((f) => f.state === 'checking') && loadForeign(), 3000);
+    return () => clearInterval(timer);
   });
+  function editLink(f) {
+    linking = f.name;
+    linkText = f.repo ?? '';
+  }
+  async function saveLink(f) {
+    busy = true;
+    error = '';
+    try {
+      await api('POST', '/plugins/foreign', { server: foreignServer, name: f.name, repo: linkText.trim() });
+      linking = null;
+      await loadForeign();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+  const shownForeign = $derived((foreign ?? []).filter((f) => !installed.some((p) => p.name === f.name)));
+  const foreignNewer = $derived(shownForeign.filter((f) => f.state === 'newer').length);
   const others = $derived(server === 'room' ? [] : pool.filter((p) => !p.installed).sort(byName));
   // Waiting for a restart of this server (a plugin on the waiting room server restarts that one itself).
   const waiting = $derived(data ? data.plugins.filter((p) => !p.remote && (p.staged || (p.pending && !p.notLoaded))) : []);
@@ -142,14 +176,14 @@
 
 <!-- A plugin of the waiting room that is not from MRtechnology: the same row, without channel and update -->
 {#snippet foreignRow(p)}
-  <li class="row {p.enabled ? 'good' : 'bad'}">
+  <li class="row {p.state === 'newer' ? 'warn' : p.enabled ? 'good' : 'bad'}">
     <div class="cell plugin">
       <span class="r-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
           stroke-linejoin="round"><path d={ICONS.box} /></svg>
       </span>
       <div class="r-name">
-        <span class="name-line"><strong>{p.name}</strong><span class="remote" title={t('plugins.remote.hint')}>{t('plugins.remote.where')}</span></span>
+        <span class="name-line"><strong>{p.name}</strong>{#if !p.enabled}<span class="remote off">{t('plugins.foreignOff')}</span>{/if}</span>
         <span class="small muted desc">{t('plugins.foreign')}</span>
       </div>
     </div>
@@ -157,10 +191,39 @@
       <span class="label">{t('plugins.col.installed')}</span>
       <span class="mono strong">{p.version}</span>
     </div>
-    <div class="cell"><span class="label">{t('plugins.col.channel')}</span><span class="muted">–</span></div>
-    <div class="cell"><span class="label">{t('plugins.col.available')}</span><span class="muted">–</span></div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.source')}</span>
+      {#if linking === p.name}
+        <form class="link-form" onsubmit={(e) => { e.preventDefault(); saveLink(p); }}>
+          <input type="text" bind:value={linkText} maxlength="200" placeholder="owner/repo" />
+          <button class="act" disabled={busy}>{t('common.save')}</button>
+          <button type="button" class="ghost" onclick={() => (linking = null)}>✕</button>
+        </form>
+      {:else if p.repo}
+        <span class="inst"><a class="mono small" href={'https://github.com/' + p.repo} target="_blank" rel="noopener noreferrer">{p.repo} ↗</a></span>
+        {#if data.may.install}<button class="link small" onclick={() => editLink(p)}>{t('plugins.foreignEdit')}</button>{/if}
+      {:else if data.may.install}
+        <button class="link small" onclick={() => editLink(p)}>+ {t('plugins.foreignLink')}</button>
+      {:else}
+        <span class="muted">–</span>
+      {/if}
+    </div>
+    <div class="cell">
+      <span class="label">{t('plugins.col.latestRelease')}</span>
+      {#if p.latest}
+        <span class="inst"><a class="mono strong" href={p.url} target="_blank" rel="noopener noreferrer">{p.latest}</a>
+          {#if p.state === 'current'}<span class="badge current">{t('plugins.badge.current')}</span>{:else if p.state === 'newer'}<span class="badge newer">{t('plugins.badge.newer')}</span>{/if}</span>
+        {#if p.published}<span class="small muted">{ago(p.published)}</span>{/if}
+      {:else if p.state === 'checking'}
+        <span class="muted small">{t('plugins.foreignChecking')}</span>
+      {:else if p.state === 'unknown'}
+        <span class="small bad-text" title={p.error}>{t(p.error === 'no-release' ? 'plugins.foreignNoRelease' : 'plugins.foreignFailed')}</span>
+      {:else}
+        <span class="muted">–</span>
+      {/if}
+    </div>
     <div class="cell action">
-      <span class="state"><span class="dot"></span>{t(p.enabled ? 'plugins.foreignOn' : 'plugins.foreignOff')}</span>
+      <span class="state"><span class="dot"></span>{p.state === 'newer' ? t('plugins.foreignNewer') : t(p.enabled ? 'plugins.foreignOn' : 'plugins.foreignOff')}</span>
     </div>
   </li>
 {/snippet}
@@ -275,7 +338,7 @@
 
   {#if data}
     <div class="numbers">
-      <div class="num"><b>{installed.length + (server === 'room' && roomAll ? roomAll.filter((f) => !installed.some((p) => p.name === f.name)).length : 0)}</b><span>{server === 'room' ? t('plugins.installedHere') : t('plugins.installedOf', { total: pool.length })}</span></div>
+      <div class="num"><b>{installed.length + shownForeign.length}</b><span>{t('plugins.installedHere')}</span></div>
       <div class="num" class:warn={updates.length}><b>{updates.length}</b><span>{t('versions.updates')}</span></div>
       <div class="num" class:info={waiting.length}><b>{waiting.length}</b><span>{t('versions.waiting')}</span></div>
     </div>
@@ -312,16 +375,14 @@
 
     <section class="group">
       <h2>{t('plugins.onServer')}</h2>
-      {#if installed.length || (server === 'room' && roomAll?.length)}
+      {#if installed.length || shownForeign.length}
         <ul class="table">
           <li class="row headrow" aria-hidden="true">
             <span>{t('plugins.col.plugin')}</span><span>{t('plugins.col.installed')}</span><span>{t('plugins.col.channel')}</span>
             <span>{t('plugins.col.available')}</span><span></span>
           </li>
           {#each installed as p (p.name)}{@render row(p)}{/each}
-          {#if server === 'room' && roomAll}
-            {#each roomAll.filter((f) => !installed.some((p) => p.name === f.name)) as f (f.name)}{@render foreignRow(f)}{/each}
-          {/if}
+          {#each shownForeign as f (f.name)}{@render foreignRow(f)}{/each}
         </ul>
       {:else}
         <p class="muted">{t('versions.none')}</p>
@@ -350,6 +411,25 @@
 </div>
 
 <style>
+  .row .cell :global(button.link) {
+    padding: 0;
+    font-size: 0.82rem;
+    justify-content: flex-start;
+  }
+
+  .link-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .link-form input {
+    width: 150px;
+    margin: 0;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+  }
+
   .plain-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

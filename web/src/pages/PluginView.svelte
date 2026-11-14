@@ -52,6 +52,8 @@
   }
 
   const st = $derived(p ? pluginState(p) : null);
+  // The configuration tab of the server this plugin runs on.
+  const configPath = $derived(p ? (p.remote ? '/admin/server/room/config/' : '/admin/server/config/') + p.name : '');
   // What the channel offers: release version, or "Dev abc1234" on the dev channel.
   const offered = $derived(!p ? '' : p.channel === 'dev' ? (p.dev ? t('plugins.devBuild', { commit: p.dev.commit }) : '–') : p.latest ? p.latest.version : '–');
   const published = $derived(!p ? null : p.channel === 'dev' ? p.dev?.date : p.latest?.published);
@@ -78,8 +80,8 @@
       </div>
       <span class="state"><span class="dot"></span>{st.text}</span>
       {#if p.config}
-        <a class="to-config" href={'/admin/settings/config/' + p.name}
-          onclick={(e) => { e.preventDefault(); go('/admin/settings/config/' + p.name); }}>{t('nav.config')} →</a>
+        <a class="to-config" href={configPath}
+          onclick={(e) => { e.preventDefault(); go(configPath); }}>{t('nav.config')} →</a>
       {/if}
     </header>
 

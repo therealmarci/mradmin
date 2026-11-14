@@ -136,6 +136,8 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     private HealthMonitor health;
     /** The waiting room server read through its agent (performance, since 1.6). */
     private at.marcelr.mradmin.network.RoomAgent roomAgent;
+    /** Plugins not from MRtechnology, watched per server (GitHub releases). */
+    private at.marcelr.mradmin.versions.ForeignPlugins foreignPlugins;
     private StaffChat staffChat;
     private MenuListener menuListener;
 
@@ -187,6 +189,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         web.requests().load();
         health = new HealthMonitor(this);
         roomAgent = new at.marcelr.mradmin.network.RoomAgent(this);
+        foreignPlugins = new at.marcelr.mradmin.versions.ForeignPlugins(this);
 
         freeze = new FreezeManager(this);
         freeze.load();
@@ -546,6 +549,10 @@ public final class MRAdmin extends JavaPlugin implements Listener {
     /** The waiting room server read through its agent (its health, system info, lag chunks). */
     public at.marcelr.mradmin.network.RoomAgent roomAgent() {
         return roomAgent;
+    }
+
+    public at.marcelr.mradmin.versions.ForeignPlugins foreignPlugins() {
+        return foreignPlugins;
     }
 
     /** The plugins MRadmin works with (module API and old hooks). */

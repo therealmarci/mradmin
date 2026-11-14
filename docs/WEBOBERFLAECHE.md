@@ -24,7 +24,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Inhalte** | Beiträge · Ankündigungen (`/admin/content/…`) |
 | **Plugins** | eine Seite pro installiertem Plugin: Chunkloader · Duelle · Schlaf · Karte (`/admin/plugins/…`) |
 | **Server** | **Hauptserver** (`/admin/server/…`) und **Warteraum** (`/admin/server/room/…`, nur wenn verbunden) - jeder mit seinen Reitern, siehe [Server](#server) |
-| **Einstellungen** | Konfiguration (MRadmin und alle Plugins, ein Reiter pro Plugin) · Aussehen (`/admin/settings/…`) |
+| **Einstellungen** | Aussehen (`/admin/settings/appearance`) |
 
 Jede Seite ist gleich aufgebaut: oben Titel (bei Unterseiten mit Brotkrumen, z.B. „Duelle › #482“) mit den wichtigsten Knöpfen und einer schmalen Zeile mit Kennzahlen, darunter Reiter (jeder mit eigener Adresse), darunter Filter als runde Chips mit Suche, dann der Inhalt.
 
@@ -303,12 +303,15 @@ Unter **Server** stehen die Server selbst: der **Hauptserver** und - wenn einer 
 |---|---|---|
 | **Steuerung** | Vier Werte nebeneinander (Einzelheiten beim Drüberfahren): läuft seit, Paper-Build mit Farbpunkt (grün aktuell, gelb neuer Build verfügbar - geprüft alle 15 Minuten, auch ohne Starter), [Starter](wiki/starter.md) aktiv oder nicht, nächster geplanter Neustart. Darunter **Neu starten** und **Stoppen** mit Countdown (`versions.restart-delays`, Standard 15/30/60 Minuten), kürzere Zeiten über den roten Knopf **Notfall** (Fenster: erst 2FA-Code oder Passkey, dann Neustart/Stopp, Zeit aus `versions.emergency-delays` und Pflicht-Grund), bzw. der laufende Countdown (mit Grund) und **Abbrechen** (bei einem geplanten Neustart: **Diesen Neustart überspringen**); optional ein eigener **Grund**, sonst nennt MRadmin ihn selbst. Mit geplanten Neustarts zusätzlich **Automatische Neustarts 24 h aussetzen** / **Wieder einschalten**. Darunter Kurzblick auf die Plugins und die letzten Ereignisse. Beim Warteraum dieselbe Steuerung mit seinen Werten (ein Neustart wartet dort, bis niemand mehr wartet und dein Server bereit ist - siehe [Warteraum](wiki/warteraum.md#warteraum-server-steuern)). | `mradmin.versions.view`, Knöpfe `mradmin.server.restart` |
 | **Leistung** | siehe [Health-Dashboard](#health-dashboard-mradminstatushealth) - beim Warteraum dieselbe Seite mit seinen Werten | `mradmin.status.health` |
-| **Wartung** | siehe [Wartung](#wartung) - die Wartung gilt fürs ganze Netzwerk, darum zeigen beide Server dieselbe und lassen sie bedienen | `mradmin.maintenance.view` |
-| **Plugins** | Versionen, Updates, Installieren - siehe [Plugins](#plugins-mradminversionsview); beim Warteraum in derselben Tabelle seine MRtechnology-Plugins (verwaltbar) und alle anderen Plugins (nur Anzeige) | `mradmin.versions.view` |
+| **Wartung** | siehe [Wartung](#wartung) (nur beim Hauptserver - die Wartung gilt fürs ganze Netzwerk) | `mradmin.maintenance.view` |
+| **Plugins** | Versionen, Updates, Installieren - siehe [Plugins](#plugins-mradminversionsview); in derselben Tabelle auch alle anderen Plugins des Servers: mit hinterlegtem GitHub-Link prüft MRadmin alle 6 Stunden, ob es ein neueres Release gibt (nur Anzeige, keine Updates) | `mradmin.versions.view` |
 | **Protokoll** | Ereignisse, Web-Aktionen und Konsolenausgabe dieses Servers (Web-Aktionen zum Warteraum - Neustart, Stopp, Befehle - stehen in seinem Protokoll) - siehe [Protokoll](#protokoll-mradminwebaudit) | `mradmin.web.audit` oder `mradmin.web.console.view` |
 | **Konsole** | Befehle ausführen - siehe [Konsole](#konsole-mradminwebconsoleexecute) | `mradmin.web.console.execute` |
+| **Konfiguration** | die `config.yml` der Plugins dieses Servers im Browser, ein Reiter pro Plugin (beim Hauptserver MRadmin und seine Plugins, beim Warteraum MRwaitroom) | `mradmin.config` |
 
-Neu starten geht nur, wenn etwas den Server zurückbringt: der Starter oder `versions.restart-method`. Stoppen geht immer - ohne Starter bleibt der Server dann aus, bis ihn jemand startet. Die Konfiguration von MRadmin und allen Plugins steht unter **Einstellungen → Konfiguration**. Alte Adressen (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) leiten auf die neuen weiter.
+Wechselt man über die Seitenleiste zwischen Hauptserver und Warteraum, bleibt der offene Reiter (z.B. Konsole → Konsole), solange der andere Server ihn hat. Die Seitenleiste aktualisiert ihre Zähler bei jedem Seitenwechsel, sobald der Server etwas meldet, und sonst alle 10 Sekunden.
+
+Neu starten geht nur, wenn etwas den Server zurückbringt: der Starter oder `versions.restart-method`. Stoppen geht immer - ohne Starter bleibt der Server dann aus, bis ihn jemand startet. Die Konfiguration von MRadmin und allen Plugins steht unter **Server → Hauptserver → Konfiguration**. Alte Adressen (`/plugins`, `/logs`, `/console`, `/admin/features/…`, `/admin/server/appearance` …) leiten auf die neuen weiter.
 
 ## Plugins (`mradmin.versions.view`)
 Seite „Plugin-Konfiguration“ unter `/plugins` (die alte Adresse `/versions` leitet weiter).

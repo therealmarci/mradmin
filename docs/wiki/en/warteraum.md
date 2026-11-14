@@ -16,7 +16,7 @@ The waiting room is **optional** and off by default. Without a proxy MRadmin wor
 
 ## Setting up
 1. **Proxy:** in `velocity.toml` add the main server and the waiting room under `[servers]`, set `try = ["main", "waitroom"]` (main server first) and `bungee-plugin-message-channel = true`. Switch on Velocity forwarding on both Paper servers - details in the [guide of MRwaitroom](https://mrtechnology.marcelr.at/wiki/mrwaitroom/einrichten/).
-2. **MRadmin:** in `config.yml` (or in the browser under **Settings → Configuration → MRadmin → Waiting room**):
+2. **MRadmin:** in `config.yml` (or in the browser under **Server → Main server → Configuration → MRadmin → Waiting room**):
    ```yaml
    waiting-room:
      enabled: true
@@ -80,8 +80,8 @@ If one of these is not met already when clicking, the button is locked and the r
 ## Hints and warnings
 - The **overview** (dashboard) and the counters in the sidebar include the waiting room: not reporting (red), lagging, a countdown running.
 - The lag warning comes in the game, as push (kind "Lag") and in the Discord log (events `waitroom-health-alert` and `waitroom-health-recovered` in `discord.events`).
-- Under **Server → Waiting room → Plugins** the same table as for the main server lists MRwaitroom (manageable) and all other plugins of the waiting room server with their version (view only).
-- **Server → Waiting room → Maintenance** shows the same network maintenance as the main server and lets you operate it there as well.
+- Under **Server → Waiting room → Plugins** the same table as for the main server lists MRwaitroom (manageable) and all other plugins of the waiting room server. For plugins from others a **GitHub link** can be stored - MRadmin then shows the newest release and whether the installed version is current (view only, no updates).
+- Its configuration is under **Server → Waiting room → Configuration**. The waiting room has no maintenance of its own - the maintenance is for the whole network and is with the main server.
 - The **log** of the waiting room also has the web actions about it (restart, stop, pause, commands in its console) - the log of the main server does not.
 
 ## Rights around the waiting room

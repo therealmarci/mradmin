@@ -23,6 +23,9 @@ const PLAYER = [
   [/^\/me\/([a-z0-9_-]+)\/([a-z0-9_-]+)$/, (m) => `/game/${m[1]}/${m[2]}`],
 ];
 
+/** The configuration page of a plugin: under the waiting room for MRwaitroom, otherwise under the main server. */
+const configOf = (name) => (name === 'MRwaitroom' ? '/admin/server/room/config/MRwaitroom' : '/admin/server/config' + (name ? '/' + name : ''));
+
 const ADMIN = [
   [/^\/tickets(\/\d+)?$/, (m) => '/admin/community/tickets' + (m[1] ?? '')],
   [/^\/players(\/[0-9a-f-]{36}(?:\/[a-z]+)?)?$/, (m) => '/admin/community/players' + (m[1] ?? '')],
@@ -36,15 +39,17 @@ const ADMIN = [
   [/^\/admin\/communication\/maintenance$/, () => '/admin/server/maintenance'],
   [/^\/admin\/communication\/(news|announce)$/, (m) => '/admin/content/' + m[1]],
   [/^\/admin\/communication$/, () => '/admin'],
-  [/^\/admin\/server\/settings$/, () => '/admin/settings/config/MRadmin'],
+  [/^\/admin\/server\/settings$/, () => '/admin/server/config/MRadmin'],
+  // the configuration lived under Settings for a while; it belongs to the server the plugin runs on
+  [/^\/admin\/settings\/config(?:\/([A-Za-z0-9_-]+))?$/, (m) => configOf(m[1])],
   // layout of 1.5 (areas with tabs): since the sidebar (1.6) plugins, contents and settings have their own groups
   [/^\/admin\/features(\/.*)?$/, (m) => '/admin/plugins' + (m[1] ?? '')],
   [/^\/admin\/community\/(news|announce)$/, (m) => '/admin/content/' + m[1]],
   [/^\/admin\/server\/appearance$/, () => '/admin/settings/appearance'],
-  [/^\/admin\/server\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => '/admin/settings/config/' + m[1]],
+  [/^\/admin\/server\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => configOf(m[1])],
   [/^\/admin\/(?:community|content)$/, () => '/admin'],
   [/^\/versions$/, () => '/admin/server/plugins'],
-  [/^\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => '/admin/settings/config/' + m[1]],
+  [/^\/plugins\/([A-Za-z0-9_-]+)\/config$/, (m) => configOf(m[1])],
   [/^\/plugins(\/[A-Za-z0-9_-]+)?$/, (m) => '/admin/server/plugins' + (m[1] ?? '')],
   [/^\/logs$/, () => '/admin/server/logs'],
   [/^\/console$/, () => '/admin/server/console'],

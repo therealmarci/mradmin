@@ -226,7 +226,15 @@
   $effect(() => {
     if (!(me?.team && me.teamReady && admin)) return;
     untrack(loadOverview);
-    return poll(loadOverview, 30000);
+    return poll(loadOverview, 10000);
+  });
+  // The counters right away after a page change and whenever the server reports something (ticket, plugin, log).
+  $effect(() => {
+    p;
+    live.ticket.tick;
+    live.plugin.tick;
+    live.log.tick;
+    if (me?.team && me.teamReady && admin) untrack(loadOverview);
   });
   let sidebarOpen = $state(false);
 
@@ -261,14 +269,13 @@
     ] },
     // The servers themselves; each one has its tabs on its page (mainTabs, roomTabs).
     { id: 'server', label: t('nav.server'), items: [
-      ...(mainTabs.length ? [{ id: 'main', label: t('nav.serverMain'), path: mainTabs[0].path, icon: 'server',
+      ...(mainTabs.length ? [{ id: 'main', label: t('nav.serverMain'), path: serverTabNow ? tabPath(mainTabs, serverTabNow) : mainTabs[0].path, icon: 'server',
         n: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? '!' : overview?.versions?.updates || undefined,
         tone: overview?.network?.endsAt > 0 || overview?.maintenance?.phase === 'active' ? 'warn' : 'info' }] : []),
-      ...(may.versions && overview?.network?.room ? [{ id: 'room', label: t('nav.serverRoom'), path: '/admin/server/room', icon: 'restore',
+      ...(may.versions && overview?.network?.room ? [{ id: 'room', label: t('nav.serverRoom'), path: serverTabNow ? tabPath(roomTabs, serverTabNow) : '/admin/server/room', icon: 'restore',
         ...roomCount() }] : []),
     ] },
     { id: 'settings', label: t('nav.group.settings'), items: [
-      ...(may.config && may.versions ? [{ id: 'config', label: t('nav.config'), path: '/admin/settings/config', icon: 'gear' }] : []),
       ...(may.appearance ? [{ id: 'appearance', label: t('server.tab.appearance'), path: '/admin/settings/appearance', icon: 'image' }] : []),
     ] },
   ]);
@@ -280,15 +287,19 @@
     ...(may.versions ? [{ id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/plugins', n: overview?.versions?.updates || undefined }] : []),
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/console' }] : []),
+    ...(may.config && may.versions ? [{ id: 'config', label: t('nav.config'), path: '/admin/server/config' }] : []),
   ]);
   const roomTabs = $derived([
     { id: 'control', label: t('server.tab.control'), path: '/admin/server/room' },
     ...(may.health ? [{ id: 'performance', label: t('server.tab.performance'), path: '/admin/server/room/performance' }] : []),
-    ...(may.maintenance ? [{ id: 'maintenance', label: t('nav.maintenance'), path: '/admin/server/room/maintenance' }] : []),
     { id: 'plugins', label: t('server.tab.plugins'), path: '/admin/server/room/plugins', n: roomUpdates() || undefined },
     ...(may.audit || may.console ? [{ id: 'logs', label: t('server.tab.logs'), path: '/admin/server/room/logs' }] : []),
     ...(may.consoleExecute ? [{ id: 'console', label: t('server.tab.console'), path: '/admin/server/room/console' }] : []),
+    ...(may.config ? [{ id: 'config', label: t('nav.config'), path: '/admin/server/room/config' }] : []),
   ]);
+  // Switching between the servers keeps the open tab (if the other one has it): the entries point there.
+  const serverTabNow = $derived(area !== 'server' ? null : sub[0] === 'room' ? (sub[1] ?? 'control') : (sub[0] ?? 'control'));
+  const tabPath = (tabs, id) => tabs.find((x) => x.id === id)?.path ?? tabs[0]?.path;
   // The open page = the entry of the sidebar that is highlighted (the server, not its tab).
   const adminPage = $derived(area === 'overview' ? 'overview' : area === 'server' ? (sub[0] === 'room' ? 'room' : 'main') : (sub[0] ?? ''));
   // The head tile of the sidebar: the overview with what is open (the hints of the dashboard).
@@ -419,8 +430,8 @@
             {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
           {:else if roomTab === 'plugins'}
             <Plugins embedded server="room" />
-          {:else if roomTab === 'maintenance'}
-            <Maintenance {me} />
+          {:else if roomTab === 'config'}
+            {#key 'room'}<Settings embedded server="room" plugin={sub[2] ?? null} />{/key}
           {:else if roomTab === 'performance'}
             {#key 'room'}<Health server="room" />{/key}
           {:else if roomTab === 'logs'}
@@ -442,6 +453,8 @@
             {#key sub[1]}<PluginView name={sub[1]} />{/key}
           {:else if tab === 'plugins'}
             <Plugins embedded server="main" />
+          {:else if tab === 'config'}
+            {#key 'main'}<Settings embedded server="main" plugin={sub[1] ?? null} />{/key}
           {:else if tab === 'control'}
             <Server {me} tab="overview" bare part="main" />
           {:else}
@@ -449,8 +462,6 @@
           {/if}
         {:else if area === 'settings' && sub[0] === 'appearance' && may.appearance}
           <Appearance />
-        {:else if area === 'settings' && sub[0] === 'config' && may.config}
-          <Settings plugin={sub[1] ?? null} />
         {:else}
           <Home {me} />
         {/if}
