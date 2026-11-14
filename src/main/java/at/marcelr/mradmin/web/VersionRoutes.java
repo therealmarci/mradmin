@@ -333,7 +333,7 @@ public final class VersionRoutes {
                 String name = String.valueOf(p.get("name"));
                 if (!managed.contains(name)) {
                     plugins.put(name, new ForeignPlugins.Info(String.valueOf(p.get("version")), Boolean.TRUE.equals(p.get("enabled")),
-                            p.get("sha1") instanceof String h ? h : null));
+                            p.get("sha512") instanceof String h ? h : null));
                 }
             }
         } catch (java.io.IOException e) {

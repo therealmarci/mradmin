@@ -9,8 +9,6 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
-## [STA-1.6.0-bu001] - 2026-11-15
-
 ### Neu
 - **Gruppe Bots für Zweitaccounts:** `mradmin.groups.bots` (nicht für OPs, in keiner Team-Gruppe) - keine Rechte in MRadmin, im Warteraum wie normale Spieler; Ankündigungs-Vorlagen mit Zielgruppe „Bots“ erreichen auch sie. Fertige LuckPerms-Gruppe „bots“ im MRadmin-Wiki unter Permissions.
 - **`/web` für das eigene Konto:** `/web status` (eigene Anmeldungen und Geräte), `/web devices`, `/web logout` und neu `/web reset` (eigene Anmeldungen entfernen, mit Bestätigung per Klick).
@@ -31,6 +29,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 - **`/mradmin web`:** fällt weg. Sein Konto verwaltet jeder selbst mit `/web` (siehe Neu); fremde Konten ändert auch das Team nicht mehr aus dem Spiel. `mradmin.web.manage` erlaubt nur noch die Testmail (`/mradmin mail test`).
 
 ### Behoben & geändert
+- **Prüfrunde:** Der Fingerabdruck der Plugin-JARs für Modrinth nutzt SHA-512 statt SHA-1 (1.6.0 wurde deshalb nicht veröffentlicht - 1.6.1 enthält alles aus 1.6.0).
 - **Uptime-Kuma-Vorfälle wie eigene Warnungen:** Im Spiel gilt jetzt jeder Vorfall einer Kuma-Statusseite wie eine in MRadmin angelegte Warnung, egal welcher Stil (neu: Chat und Titel an alle, beim Betreten im Chat, solange angeheftet) - vorher je nach Stil nur Chat oder einmal als Hinweis. Mit Warteraum zeigt auch er die Vorfälle (Anzeigetafel, Chat beim Betreten). Kuma-Wartungen galten schon auf beiden Servern wie eigene.
 - **Keine Warnung mehr, wenn der Browser geht:** Bricht der Browser eine laufende Anfrage ab (Seitenwechsel, Tab zu), schreibt MRadmin keine Warnung mit Stacktrace mehr in die Konsole.
 - **Warnungen von Uptime Kuma kamen über eine interne Adresse nicht an:** Mit `uptime-kuma.url` ohne HTTPS (z.B. `http://10.0.0.5:3001`) bat MRadmin beim Abruf der Statusseiten um ein HTTP/2-Upgrade, das Kuma abbricht - die Vorfälle blieben leer, ohne Meldung. Jetzt fragt MRadmin mit HTTP/1.1, und eine Statusseite, die sich nicht lesen lässt, steht einmal als Warnung in der Konsole (mit Adresse und Grund), sobald sie wieder geht, eine Zeile dazu.
