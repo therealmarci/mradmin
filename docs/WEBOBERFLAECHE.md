@@ -15,7 +15,7 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 | **Posteingang** (`/inbox`, Brief oben rechts) | Benachrichtigungen, die neuesten oben mit Tagestrennern: neue Neuigkeit, neuer Changelog, Antwort des Teams auf ein eigenes Ticket (aus den letzten 60 Tagen). Ungelesene sind fett mit blauer Leiste, gelesene grau. Ein Klick öffnet den Inhalt als Fenster über der Seite (mit Link zur ganzen Liste) und markiert ihn als gelesen; **Alle als gelesen markieren** leert die Zahl am Brief. Einzelne oder alle lassen sich **archivieren** (Umschalter Posteingang / Archiv, von dort zurückholbar; Neues holt sie von selbst zurück). Fürs Team kommen hier auch die **Team-Meldungen** dazu (siehe [Team-Meldungen](#team-meldungen)), Umschalter **Alles / Team**. Aktive Warnungen stehen oben |
 | **Konto** (`/account`, Menü unter dem Namen) | Anmeldungen, Geräte, fürs Team Benachrichtigungen |
 
-**Verwaltung:** links eine Seitenleiste mit allen Seiten in Gruppen. Oben eine Kachel mit Logo und Name des Servers und der **Übersicht** (Dashboard) samt Zahl offener Hinweise. Kleine Zähler zeigen, wo etwas wartet (ungelesene Tickets, Hinweise der Plugins, Plugin-Updates, laufender Neustart), unten stehen Hauptserver und Warteraum mit ihrem Zustand. Am PC lässt sich die Leiste zu Symbolen einklappen und jede Gruppe zuklappen (merkt sich der Browser), am Handy öffnet sie der Menü-Knopf oben links.
+**Verwaltung:** links eine Seitenleiste mit allen Seiten in Gruppen. Oben eine Kachel mit Logo und Name des Servers und der **Übersicht** (Dashboard) samt Zahl offener Hinweise. Kleine Zähler zeigen, wo etwas wartet (ungelesene Tickets, Hinweise der Plugins, Plugin-Updates, laufender Neustart), unten stehen Hauptserver und Warteraum mit ihrem Zustand. Am PC lässt sich die Leiste zu Symbolen einklappen und jede Gruppe zuklappen (merkt sich der Browser). Am Handy gibt es statt der Seitenleiste die Leiste unten (siehe [Am Handy](#am-handy)).
 
 | Gruppe | Seiten |
 |---|---|
@@ -29,6 +29,21 @@ Seit 1.5 gibt es **eine** Weboberfläche für Spieler und Team. Wer im Team ist,
 Jede Seite ist gleich aufgebaut: oben Titel (bei Unterseiten mit Brotkrumen, z.B. „Duelle › #482“) mit den wichtigsten Knöpfen und einer schmalen Zeile mit Kennzahlen, darunter Reiter (jeder mit eigener Adresse), darunter Filter als runde Chips mit Suche, dann der Inhalt.
 
 Jeder sieht nur, wofür er die Rechte hat. Alte Adressen (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) leiten auf die neuen weiter - Lesezeichen und alte Links funktionieren also. Wer zuletzt in der Verwaltung war, landet nach dem Anmelden wieder dort.
+
+### Am Handy
+Auf Handys und hochkant gehaltenen Tablets sieht die Weboberfläche aus wie eine App (quer gehaltene Tablets und PCs behalten die Seitenleiste):
+
+- **Leiste unten** mit vier Seiten und **Mehr**. Kleine Zahlen zeigen, wo etwas wartet; die Zahl an **Mehr** zählt, was auf Seiten wartet, die nicht in der Leiste stehen. Ein zweiter Tipp auf die offene Seite scrollt nach oben.
+  - **Verwaltung:** Die vier Seiten wählt jeder selbst unter **Mehr → Leiste anpassen** (gilt für dieses Gerät). Standard: Übersicht, Tickets, Spieler, Hauptserver.
+  - **Spielerbereich:** Start, Mein Spiel, Karte, Neuigkeiten; Statistik, Tickets, Posteingang und Konto stehen unter **Mehr**.
+- **Oben** steht der große Titel der Seite, beim Scrollen wandert er klein in die Leiste. Unterseiten (z.B. ein Ticket) haben links **‹ Zurück**. Rechts: der **Schild-Knopf** (Team: Spieler / Verwaltung mit einem Tipp), der Brief des Posteingangs und der eigene Kopf (Sprache, Konto, Als App installieren, Abmelden).
+- **Reiter** sind runde Segmente; die Seite seitlich wischen öffnet den nächsten bzw. vorigen Reiter.
+- **Fenster** kommen als Blatt von unten - nach unten ziehen oder daneben tippen schließt sie.
+- **Nach unten ziehen** (ganz oben auf der Seite) lädt die Seite neu.
+- **Tickets** stehen als Liste untereinander; ein Ticket nach links wischen zeigt **Übernehmen** und **Schließen** (bzw. im Archiv **Wieder öffnen**).
+
+> [!TIP]
+> **Als App installieren:** Auf den Home-Bildschirm gelegt, startet die Weboberfläche im Vollbild ohne Browserleiste - mit dem Symbol aus **Einstellungen → Aussehen** bzw. der Krone. iPhone/iPad: in Safari **Teilen → Zum Home-Bildschirm**; Android: der Hinweis auf der Startseite oder über den eigenen Kopf → **Als App installieren**. Der Hinweis erscheint einmal und lässt sich wegklicken.
 
 ## Einrichten
 1. In der Config `web.enabled: true` und `web.public-url` auf deine Adresse setzen (z.B. `https://admin.deinserver.de`), dann `/mradmin reload`. Für viele Tickets empfiehlt sich `storage.type: sqlite`.
