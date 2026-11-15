@@ -638,6 +638,31 @@ sections:
         type: strings
         name: {de: An MRtechnology weiterleiten, en: Forward to MRtechnology}
         help: {de: "Kategorien (Ids), bei denen das Team im Browser ein Ticket als GitHub-Issue an die Entwickler der Plugins weiterleiten kann - mit dem ganzen Verlauf, öffentlich. Leer = alle Kategorien.", en: "Categories (ids) for which the team can forward a ticket in the browser as a GitHub issue to the developers of the plugins - with the whole conversation, public. Empty = all categories."}
+      - key: tickets.attach-log.enabled
+        type: bool
+        heading: {de: Log anhängen, en: Attach log}
+        name: {de: Log an neue Tickets anhängen, en: Attach a log to new tickets}
+        help: {de: "Speichert beim Erstellen die letzten Minuten mit dem Ticket: Server-Log, Ereignisse, Leistung pro Sekunde, Serverdaten und die Umgebung des Spielers. Das Team sieht es im Browser (mradmin.tickets.log), an MRtechnology geht es nur verschlüsselt.", en: "Saves the last minutes with the ticket when it is created: server log, events, performance per second, server data and the surroundings of the player. The team sees it in the browser (mradmin.tickets.log), MRtechnology gets it only encrypted."}
+      - key: tickets.attach-log.categories
+        type: strings
+        when: tickets.attach-log.enabled
+        name: {de: Kategorien mit Log, en: Categories with log}
+        help: {de: "Kategorien (Ids), deren neue Tickets das Log bekommen. Leer = alle Kategorien.", en: "Categories (ids) whose new tickets get the log. Empty = all categories."}
+      - key: tickets.attach-log.minutes
+        type: int
+        min: 1
+        max: 120
+        when: tickets.attach-log.enabled
+        name: {de: Zeitraum in Minuten, en: Time span in minutes}
+        help: {de: "Wie weit das Log zurückreicht.", en: "How far back the log goes."}
+      - key: tickets.attach-log.radius
+        type: int
+        min: 8
+        max: 128
+        advanced: true
+        when: tickets.attach-log.enabled
+        name: {de: Umkreis um den Spieler, en: Radius around the player}
+        help: {de: "Blöcke, in denen Entities, Block-Entities und andere Spieler gezählt werden.", en: "Blocks in which entities, block entities and other players are counted."}
       - key: tickets.plugin-reports
         type: bool
         name: {de: Automatische Tickets der Plugins, en: Automatic tickets from plugins}

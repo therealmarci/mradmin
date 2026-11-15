@@ -39,6 +39,15 @@
     if (ticket.source && PLUGINS.some(([n]) => n === ticket.source)) plugin = ticket.source;
   }).catch(() => {});
 
+  // The log of the ticket, sealed for MRtechnology: a link in the issue (only with web.public-url) and the file to
+  // drag into the issue. Only MRtechnology's private key opens it.
+  let withLog = $state(!!ticket.hasLog);
+  let logLink = $state('');
+  if (ticket.hasLog) {
+    api('POST', `/tickets/${ticket.id}/log/share`).then((r) => (logLink = r.url)).catch(() => {});
+  }
+  const logText = $derived(!withLog ? '' : logLink ? t('forward.logLinkText', { url: logLink }) : t('forward.logFileText'));
+
   let version = $state('');
   $effect(() => {
     version = versions[plugin] ?? '';
@@ -57,12 +66,13 @@
     const base = `https://github.com/${repo}/issues/new?template=bug_report.yml`;
     const params = (text) => [['title', title], ['version', version], ['server', server], ['steps', steps], ['what', text]]
       .filter(([, v]) => v).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
+    const tail = logText ? '\n\n' + logText : '';
     let text = what;
-    let url = base + params(text);
-    // too long: shorten the conversation from the end, with a note
+    let url = base + params(text + tail);
+    // too long: shorten the conversation from the end, with a note (the log line stays)
     while (url.length > MAX_URL && text.length > 200) {
       text = text.slice(0, Math.floor(text.length * 0.85)) + '\n\n' + t('forward.cut');
-      url = base + params(text);
+      url = base + params(text + tail);
     }
     return url;
   }
@@ -113,6 +123,15 @@
     <label>{t('forward.issueTitle')}<input bind:value={title} maxlength="200" /></label>
     <label>{t('forward.what')}<textarea bind:value={what} rows="9"></textarea></label>
     <label>{t('forward.steps')}<textarea bind:value={steps} rows="3" placeholder={t('forward.stepsHint')}></textarea></label>
+    {#if ticket.hasLog}
+      <div class="logbox">
+        <label class="check"><input type="checkbox" bind:checked={withLog} /> {t('forward.withLog')}</label>
+        {#if withLog}
+          <p class="muted small">{logLink ? t('forward.logLinkHint') : t('forward.logFileHint')}</p>
+          <a class="button secondary small" href={`/api/tickets/${ticket.id}/log/sealed`} download>{t('forward.logDownload')} ↓</a>
+        {/if}
+      </div>
+    {/if}
     <p class="warn small">⚠ {t('forward.public')}</p>
 
     <button class="block" onclick={open} disabled={!title.trim()}>{t('forward.open', { repo })} ↗</button>
@@ -229,6 +248,30 @@
 
   .warn {
     color: var(--warn);
+  }
+
+  .logbox {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .check input {
+    width: auto;
+    margin: 0;
+  }
+
+  .logbox a.button {
+    text-decoration: none;
   }
 
   .link {

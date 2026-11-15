@@ -57,6 +57,11 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/reopen", r::reopen);
         server.route("POST", "/api/tickets/{id}/issue", r::issue);
         server.route("POST", "/api/tickets/{id}/category", r::category);
+        server.route("GET", "/api/tickets/{id}/log", r::log);
+        server.route("GET", "/api/tickets/{id}/log/sealed", r::sealedLog);
+        server.route("POST", "/api/tickets/{id}/log/share", r::shareLog);
+        // Only the sealed file (no one but MRtechnology can open it), for the viewer on the MRtechnology website.
+        server.open("GET", "/api/public/ticket-log/{token}", r::publicLog);
         server.route("POST", "/api/tickets/{id}/decide", r::decide);
     }
 
@@ -359,6 +364,8 @@ public final class PanelRoutes {
         if (result == null) {
             throw new Http.WebException(404, "not-found");
         }
+        // Outside the server thread: with SQL this asks the database.
+        result.put("hasLog", plugin.storage().hasTicketLog(id));
         http.json(200, result);
     }
 
@@ -403,6 +410,74 @@ public final class PanelRoutes {
         require(http, Perms.TICKETS_FORWARD);
         String url = http.string("url");
         act(http, "ticket-issue", (tickets, t) -> tickets.linkIssue(t, url), url == null ? "" : url);
+    }
+
+    /** The log snapshot of the ticket (JSON), 404 if it has none. */
+    private void log(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_LOG);
+        int id = id(http);
+        byte[] data = plugin.tickets().logs().load(id);
+        if (data == null) {
+            throw new Http.WebException(404, "no-ticket-log");
+        }
+        try (var in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data))) {
+            http.send(200, "application/json; charset=utf-8", in.readAllBytes(), "no-store");
+        }
+    }
+
+    /** The log sealed for MRtechnology as a file to attach to the GitHub issue. */
+    private void sealedLog(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_FORWARD);
+        int id = id(http);
+        Map<String, Object> sealed = plugin.tickets().logs().sealed(id);
+        if (sealed == null) {
+            throw new Http.WebException(404, "no-ticket-log");
+        }
+        http.exchange().getResponseHeaders().set("Content-Disposition",
+                "attachment; filename=\"ticket-" + id + "-log-sealed.json\"");
+        http.send(200, "application/json; charset=utf-8",
+                new com.google.gson.Gson().toJson(sealed).getBytes(java.nio.charset.StandardCharsets.UTF_8), "no-store");
+        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), http.account().id(), http.account().name(),
+                http.storedIp(), "ticket-log-sealed", "#" + id));
+    }
+
+    /**
+     * A link for the GitHub issue: the MRtechnology viewer with the address of the sealed file on this server. Only
+     * with web.public-url (otherwise only the file).
+     */
+    private void shareLog(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_FORWARD);
+        int id = id(http);
+        String base = plugin.settings().web().publicUrl();
+        if (base.isEmpty()) {
+            throw new Http.WebException(400, "no-public-url");
+        }
+        if (plugin.tickets().logs().load(id) == null) {
+            throw new Http.WebException(404, "no-ticket-log");
+        }
+        String token = plugin.tickets().logs().share(id);
+        String file = base.replaceAll("/+$", "") + "/api/public/ticket-log/" + token;
+        http.json(200, Map.of("file", file, "url", at.marcelr.mradmin.ticket.TicketLogs.VIEWER + "#src="
+                + java.net.URLEncoder.encode(file, java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    /** The sealed file behind a share link - readable by the MRtechnology viewer (CORS), useless to anyone else. */
+    private void publicLog(Http http) throws Exception {
+        if (!server.allow("ticket-log:" + http.ip(), 20)) {
+            throw new Http.WebException(429, "rate-limit");
+        }
+        int id = plugin.tickets().logs().byToken(http.param("token"));
+        Map<String, Object> sealed = id < 0 ? null : plugin.tickets().logs().sealed(id);
+        if (sealed == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        http.exchange().getResponseHeaders().set("Access-Control-Allow-Origin", at.marcelr.mradmin.ticket.TicketLogs.VIEWER_ORIGIN);
+        http.exchange().getResponseHeaders().set("Vary", "Origin");
+        http.send(200, "application/json; charset=utf-8",
+                new com.google.gson.Gson().toJson(sealed).getBytes(java.nio.charset.StandardCharsets.UTF_8), "no-store");
     }
 
     /** Moves the ticket to another category of the same kind. */

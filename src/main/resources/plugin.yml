@@ -85,6 +85,7 @@ permissions:
     children:
       mradmin.tickets.forward: true
       mradmin.tickets.category: true
+      mradmin.tickets.log: true
       mradmin.groups.support: true
       mradmin.player.summon: true
       mradmin.player.freeze: true
@@ -173,6 +174,9 @@ permissions:
     default: op
   mradmin.tickets.category:
     description: Move tickets to another category (of the same kind).
+    default: op
+  mradmin.tickets.log:
+    description: "See the log saved with a ticket in the web interface: server log, events, performance, server data and the surroundings of the player."
     default: op
   mradmin.tickets.teleport:
     description: Teleport to the location of a ticket or to the reported player.

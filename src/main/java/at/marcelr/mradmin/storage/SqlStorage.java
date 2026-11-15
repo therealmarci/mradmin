@@ -124,8 +124,8 @@ final class SqlStorage implements Storage {
         // MariaDB / MySQL: data and indexes of MRadmin's tables (shared by all servers using them).
         try (Connection c = pool.getConnection(); PreparedStatement ps = c.prepareStatement(
                 "SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.tables"
-                        + " WHERE table_schema = DATABASE() AND table_name IN (?, ?, ?, ?, ?, ?, ?)")) {
-            String[] tables = {"schema_version", "tickets", "ticket_messages", "state", "audit_log", "health", "module_history"};
+                        + " WHERE table_schema = DATABASE() AND table_name IN (?, ?, ?, ?, ?, ?, ?, ?)")) {
+            String[] tables = {"schema_version", "tickets", "ticket_messages", "state", "audit_log", "health", "module_history", "ticket_logs"};
             for (int i = 0; i < tables.length; i++) {
                 ps.setString(i + 1, p + tables[i]);
             }
@@ -167,6 +167,9 @@ final class SqlStorage implements Storage {
                     + "server VARCHAR(64) NOT NULL, time BIGINT NOT NULL, data TEXT NOT NULL)" + suffix);
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "module_history ("
                     + "server VARCHAR(64) NOT NULL, module VARCHAR(64) NOT NULL, time BIGINT NOT NULL, data TEXT NOT NULL)" + suffix);
+            // Log snapshots of tickets (since 1.7): gzipped JSON, base64 - LONGTEXT in MySQL (TEXT ends at 64 KB).
+            st.execute("CREATE TABLE IF NOT EXISTS " + p + "ticket_logs ("
+                    + "ticket_id INT NOT NULL PRIMARY KEY, data " + (type.equals("mysql") ? "LONGTEXT" : "TEXT") + " NOT NULL)" + suffix);
         }
     }
 
@@ -409,15 +412,57 @@ final class SqlStorage implements Storage {
         List<Integer> copy = List.copyOf(ids);
         write("delete " + copy.size() + " tickets", c -> {
             try (PreparedStatement tickets = c.prepareStatement("DELETE FROM " + p + "tickets WHERE id = ?");
-                 PreparedStatement messages = c.prepareStatement("DELETE FROM " + p + "ticket_messages WHERE ticket_id = ?")) {
+                 PreparedStatement messages = c.prepareStatement("DELETE FROM " + p + "ticket_messages WHERE ticket_id = ?");
+                 PreparedStatement logs = c.prepareStatement("DELETE FROM " + p + "ticket_logs WHERE ticket_id = ?")) {
                 for (int id : copy) {
                     tickets.setInt(1, id);
                     tickets.executeUpdate();
                     messages.setInt(1, id);
                     messages.executeUpdate();
+                    logs.setInt(1, id);
+                    logs.executeUpdate();
                 }
             }
         });
+    }
+
+    @Override
+    public void saveTicketLog(int ticketId, byte[] gzipped) {
+        String data = java.util.Base64.getEncoder().encodeToString(gzipped);
+        write("save the log of ticket #" + ticketId, c -> {
+            try (PreparedStatement ps = c.prepareStatement("REPLACE INTO " + p + "ticket_logs (ticket_id, data) VALUES (?, ?)")) {
+                ps.setInt(1, ticketId);
+                ps.setString(2, data);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    @Override
+    public boolean hasTicketLog(int ticketId) {
+        try (Connection c = pool.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT 1 FROM " + p + "ticket_logs WHERE ticket_id = ?")) {
+            ps.setInt(1, ticketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    @Override
+    public byte[] loadTicketLog(int ticketId) {
+        try (Connection c = pool.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT data FROM " + p + "ticket_logs WHERE ticket_id = ?")) {
+            ps.setInt(1, ticketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? java.util.Base64.getDecoder().decode(rs.getString(1)) : null;
+            }
+        } catch (SQLException | IllegalArgumentException e) {
+            plugin.getLogger().warning("Could not read the log of ticket #" + ticketId + ": " + e.getMessage());
+            return null;
+        }
     }
 
     // ------------------------------------------------------------- audit log

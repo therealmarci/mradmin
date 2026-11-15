@@ -8,6 +8,7 @@
   import PageHead from '../components/PageHead.svelte';
   import ForwardIssue from '../components/ForwardIssue.svelte';
   import Dropdown from '../components/Dropdown.svelte';
+  import TicketLog from '../components/TicketLog.svelte';
 
   let { id, me } = $props();
 
@@ -61,6 +62,25 @@
     if (!text.trim()) return;
     if (await action('reply', { text })) text = '';
   }
+
+  // The log saved with the ticket (tickets.attach-log): loaded only when opened - it can be large.
+  let log = $state(null);
+  let logBusy = $state(false);
+  async function openLog() {
+    if (log) { log = null; return; }
+    logBusy = true;
+    try {
+      log = await api('GET', `/tickets/${id}/log`);
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      logBusy = false;
+    }
+  }
+  $effect(() => {
+    id;
+    untrack(() => (log = null));
+  });
 
   // Forward to MRtechnology: a prefilled GitHub issue, linked to the ticket afterwards
   let forwarding = $state(false);
@@ -320,6 +340,17 @@
         <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
       {/if}
     </section>
+
+    {#if me.may.ticketsLog && ticket.hasLog && !log}
+      <section class="card log-bar">
+        <div>
+          <strong>{t('tlog.title')}</strong>
+          <span class="muted small">{t('tlog.hint')}</span>
+        </div>
+        <button class="secondary small" onclick={openLog} disabled={logBusy}>{logBusy ? t('common.loading') : t('tlog.show')}</button>
+      </section>
+    {/if}
+    {#if log}<TicketLog {log} onclose={() => (log = null)} />{/if}
   {/if}
 {#if forwarding && ticket}
   <ForwardIssue {ticket} onclose={() => (forwarding = false)} onlinked={(url) => { ticket.issue = url || null; forwarding = false; }} />
@@ -410,6 +441,19 @@
     padding: 2px 8px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .log-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .log-bar div {
+    display: grid;
+    gap: 2px;
   }
 
   .cat-pick {

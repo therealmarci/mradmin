@@ -31,14 +31,14 @@ import java.util.zip.GZIPInputStream;
  * asks for "older than key" to load more. The level (info, warn, error) comes from {@code [thread/LEVEL]} or
  * {@code [HH:mm:ss LEVEL]}; lines without one keep the level of the line before.
  */
-final class ServerLogFiles {
+public final class ServerLogFiles {
 
     /** One line: {@code key} for ordering and "load older", {@code time} in epoch ms, level info/warn/error. */
-    record Line(long key, long time, String level, String text) {
+    public record Line(long key, long time, String level, String text) {
     }
 
     /** @param counts lines per level in the time range that match the text (null if not asked for) */
-    record Result(List<Line> lines, boolean more, Map<String, Integer> counts) {
+    public record Result(List<Line> lines, boolean more, Map<String, Integer> counts) {
     }
 
     public static final int MAX_DAYS = 14;
@@ -52,7 +52,7 @@ final class ServerLogFiles {
     private final Path folder;
     private final ZoneId zone;
 
-    ServerLogFiles(Path folder, ZoneId zone) {
+    public ServerLogFiles(Path folder, ZoneId zone) {
         this.folder = folder;
         this.zone = zone;
     }
@@ -77,7 +77,7 @@ final class ServerLogFiles {
      * @param levels levels to return, null or empty = all
      * @param count  also count the lines per level (reads the whole range)
      */
-    Result find(LocalDate today, long since, long before, String query, Set<String> levels, int limit, boolean count,
+    public Result find(LocalDate today, long since, long before, String query, Set<String> levels, int limit, boolean count,
                 boolean links, boolean ips) throws IOException {
         String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         boolean allLevels = levels == null || levels.isEmpty();

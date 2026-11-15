@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 64
+config-version: 65
 
 
 # ------------------------------------------------------------------------------
@@ -295,6 +295,18 @@ tickets:
   # button opens the bug form of the chosen plugin on GitHub, filled with versions and the whole conversation (public!);
   # the issue is then linked to the ticket. Empty list = all categories. Permission mradmin.tickets.forward.
   forward-categories: ["bug"]
+  # Snapshot for new tickets: the last minutes of the server log, the events of all MR plugins, the performance per
+  # second (TPS, tick time, CPU, RAM ...), server data (versions, plugins, worlds) and the surroundings of the player
+  # (position, game mode, entities and block entities nearby). Saved with the ticket for good; the team sees it in the
+  # web interface (permission mradmin.tickets.log). Forwarded to MRtechnology only encrypted - only MRtechnology can open it.
+  attach-log:
+    enabled: true
+    # Categories that get a snapshot. Empty list = all categories.
+    categories: ["bug"]
+    # How far back (1-120 minutes).
+    minutes: 30
+    # Radius around the player for entities, block entities and players nearby (8-128 blocks).
+    radius: 32
   # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
   # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
   # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader

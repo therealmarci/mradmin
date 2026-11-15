@@ -46,6 +46,7 @@ public final class TicketManager {
     public static final UUID SYSTEM = new UUID(0L, 0L);
 
     private final MRAdmin plugin;
+    private final TicketLogs logs;
     private final Map<Integer, Ticket> tickets = new HashMap<>();
     private final Map<UUID, Instant> lastTicket = new HashMap<>();
     private final Map<UUID, Instant> lastReply = new HashMap<>();
@@ -53,6 +54,12 @@ public final class TicketManager {
 
     public TicketManager(MRAdmin plugin) {
         this.plugin = plugin;
+        this.logs = new TicketLogs(plugin);
+    }
+
+    /** Log snapshots saved with new tickets (tickets.attach-log). */
+    public TicketLogs logs() {
+        return logs;
     }
 
     private Settings.TicketSettings settings() {
@@ -207,6 +214,7 @@ public final class TicketManager {
         messages().send(creator, "ticket-created", tag("id", ticket.id()), tag("type", categoryName),
                 Messages.lazy("open", () -> openButton(ticket)));
         notifyNew(ticket);
+        logs.capture(ticket, categoryName(ticket.category()));
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + category.id() + ") by " + creator.getName() + ": "
                 + summary(ticket) + " - " + TicketText.preview(cleanText, 200));
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName, "creator", creator.getName(),
@@ -259,6 +267,7 @@ public final class TicketManager {
 
         notifyReport(ticket, report.player(), subject);
         notifyNew(ticket);
+        logs.capture(ticket, categoryName(ticket.category()));
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + report.kind() + ") for " + ticket.creatorName()
                 + ": " + subject + " (opened by " + source + ").");
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(report.kind()), "creator", ticket.creatorName(),
@@ -298,6 +307,7 @@ public final class TicketManager {
         tickets.put(ticket.id(), ticket);
         save(ticket);
         notifyNew(ticket);
+        logs.capture(ticket, categoryName(ticket.category()));
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + request.kind() + ", web) by " + creatorName + ": "
                 + subject);
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(request.kind()), "creator", creatorName,
@@ -827,6 +837,7 @@ public final class TicketManager {
         tickets.put(ticket.id(), ticket);
         save(ticket);
         notifyNew(ticket);
+        logs.capture(ticket, categoryName(ticket.category()));
         String categoryName = categoryName(category.id());
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + category.id() + ") by " + name + " (web): "
                 + summary(ticket) + " - " + TicketText.preview(cleanText, 200));

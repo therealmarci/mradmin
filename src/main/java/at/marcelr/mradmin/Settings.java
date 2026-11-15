@@ -198,11 +198,22 @@ public record Settings(
                                  boolean notifyCreator, boolean showStaffNames, boolean autoClaim, int shownMessages,
                                  long keepClosed, Key sound, Material icon, Material teamIcon,
                                  List<TicketCategory> categories, boolean moduleReports, int reopenDays,
-                                 List<String> forwardCategories) {
+                                 List<String> forwardCategories, AttachLog attachLog) {
 
         /** The category with this id, or null if it is not (or no longer) configured. */
         public TicketCategory category(String id) {
             return categories.stream().filter(c -> c.id().equals(id)).findFirst().orElse(null);
+        }
+    }
+
+    /**
+     * tickets.attach-log (since 1.7): a snapshot of the last minutes (server log, events, performance, server and
+     * player surroundings) saved with new tickets of these categories (empty = all).
+     */
+    public record AttachLog(boolean enabled, List<String> categories, int minutes, int radius) {
+
+        public boolean wants(String category) {
+            return enabled && (categories.isEmpty() || categories.contains(category));
         }
     }
 
@@ -341,7 +352,11 @@ public record Settings(
                 ticketCategories(c, log),
                 c.getBoolean("tickets.plugin-reports", true),
                 Math.clamp(c.getInt("tickets.reopen-days", 30), 0, 365),
-                c.getStringList("tickets.forward-categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList());
+                c.getStringList("tickets.forward-categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList(),
+                new AttachLog(c.getBoolean("tickets.attach-log.enabled", true),
+                        c.getStringList("tickets.attach-log.categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList(),
+                        Math.clamp(c.getInt("tickets.attach-log.minutes", 30), 1, 120),
+                        Math.clamp(c.getInt("tickets.attach-log.radius", 32), 8, 128)));
 
         Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
         for (Feature feature : Feature.values()) {

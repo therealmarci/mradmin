@@ -26,6 +26,8 @@ public final class Perms {
     public static final String TICKETS_FORWARD = "mradmin.tickets.forward";
     /** Move a ticket to another category. */
     public static final String TICKETS_CATEGORY = "mradmin.tickets.category";
+    /** See the log snapshot saved with a ticket (server log, events, performance, surroundings). */
+    public static final String TICKETS_LOG = "mradmin.tickets.log";
     public static final String TICKETS_TELEPORT = "mradmin.tickets.teleport";
 
     // maintenance

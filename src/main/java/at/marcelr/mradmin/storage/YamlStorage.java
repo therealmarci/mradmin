@@ -140,6 +140,42 @@ final class YamlStorage implements Storage {
         });
     }
 
+    /** Log snapshots of tickets: one gzipped file each, plugins/MRadmin/ticket-logs/<id>.json.gz. */
+    private File ticketLog(int id) {
+        return new File(new File(folder, "ticket-logs"), id + ".json.gz");
+    }
+
+    @Override
+    public void saveTicketLog(int ticketId, byte[] gzipped) {
+        executor.execute(() -> {
+            File file = ticketLog(ticketId);
+            try {
+                Files.createDirectories(file.getParentFile().toPath());
+                File temp = new File(file.getParentFile(), file.getName() + ".tmp");
+                Files.write(temp.toPath(), gzipped);
+                Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Could not save the log of ticket #" + ticketId, e);
+            }
+        });
+    }
+
+    @Override
+    public boolean hasTicketLog(int ticketId) {
+        return ticketLog(ticketId).isFile();
+    }
+
+    @Override
+    public byte[] loadTicketLog(int ticketId) {
+        File file = ticketLog(ticketId);
+        try {
+            return file.isFile() ? Files.readAllBytes(file.toPath()) : null;
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not read the log of ticket #" + ticketId + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     @Override
     public void deleteTickets(Collection<Integer> ids) {
         List<Integer> copy = List.copyOf(ids);
@@ -147,6 +183,11 @@ final class YamlStorage implements Storage {
             copy.forEach(id -> {
                 tickets.remove(id);
                 messages.remove(id);
+                try {
+                    Files.deleteIfExists(ticketLog(id).toPath());
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Could not delete the log of ticket #" + id + ": " + e.getMessage());
+                }
             });
             scheduleWrite();
         });

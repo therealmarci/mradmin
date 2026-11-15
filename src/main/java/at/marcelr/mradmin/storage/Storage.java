@@ -43,8 +43,17 @@ public interface Storage {
     /** Appends a message (its position in the conversation is {@code index}) in the background. */
     void addMessage(int ticketId, int index, MessageRow message);
 
-    /** Removes tickets with all their messages in the background. */
+    /** Removes tickets with all their messages (and their log snapshots) in the background. */
     void deleteTickets(Collection<Integer> ids);
+
+    /** Saves the log snapshot of a ticket (gzipped JSON, see TicketLogs) in the background. */
+    void saveTicketLog(int ticketId, byte[] gzipped);
+
+    /** The log snapshot of a ticket, or null if it has none. Blocking - not on the server thread. */
+    byte[] loadTicketLog(int ticketId);
+
+    /** Whether a ticket has a log snapshot. Blocking - not on the server thread. */
+    boolean hasTicketLog(int ticketId);
 
     // ------------------------------------------------------------- audit log
 
