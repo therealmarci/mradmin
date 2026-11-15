@@ -375,6 +375,21 @@ eigenen Knöpfen) - nur an Mitglieder, für die `teamNoticeInGame` `true` liefer
 Mehrere gleiche Meldungen kurz hintereinander zeigt MRadmin im Posteingang zusammen. Ein Ticket über `report(…)` mit `Report#push()` landet ebenfalls im Posteingang (ohne eigene Zeile im
 Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
 
+## Teil im Ticket-Log (`reportLog`, ab API 16)
+
+Öffnet ein Modul mit `report(...)` ein Ticket, fragt MRadmin sofort `AdminModule#reportLog(report)` (Haupt-Thread). Gibt das Modul eine Map zurück, speichert MRadmin sie mit dem Ticket-Log und zeigt sie in der Weboberfläche **über** dem normalen Log. Der Teil bleibt auf dem Server: im verschlüsselten Log für MRtechnology fehlt er. Mit Teil bekommt das Ticket ein Log, auch wenn seine Kategorie nicht in `tickets.attach-log.categories` steht (nur `tickets.attach-log.enabled: false` schaltet es ab).
+
+| Schlüssel | Inhalt |
+|---|---|
+| `title` | Überschrift, z.B. „Chunkloader Lager“ |
+| `status` | `{tone: good\|warn\|bad, text}` - Farbe und Kennzeichen |
+| `reason` | warum (ein Satz) |
+| `facts` | Liste `[Beschriftung, Wert]` |
+| `charts` | Liste `{title, unit, warn, limit, points: [[epoch ms, Wert], ...]}` - je ein Diagramm mit Warn- und Grenzlinie |
+| `area` | `{x0, z0, x1, z1}` (Blöcke) - wird auf der Karte der Umgebung markiert |
+
+Texte in der Serversprache. MRadmin ergänzt `plugin` (Name des Plugins). Beispiel: MRchunks liefert bei einer Lag-Sperre die Messwerte des Loaders der letzten 30 Minuten gegen seine Grenzen.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -386,7 +401,7 @@ Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`), Version 16 = `api-1.15.0` (`reportLog`: eigener Teil im Ticket-Log).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

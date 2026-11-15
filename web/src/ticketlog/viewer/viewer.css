@@ -1,0 +1,147 @@
+/* Look of MRadmin's web interface for the ticket log viewer on the MRtechnology website: the same colours (app.css)
+   and the few base styles the view relies on, only inside .mr-tlog-root so the website keeps its own look.
+   Dark by default like the website; light when the website is light (system or its switch). */
+.mr-tlog-root {
+  --surface: #181b22;
+  --surface-2: #20242d;
+  --text: #e8eaef;
+  --muted: #9aa3b2;
+  --border: #2a2f3a;
+  --accent: #4d86ff;
+  --accent-text: #ffffff;
+  --good: #3cc47c;
+  --warn: #e6b02e;
+  --bad: #f06363;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --code-bg: #12141a;
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  text-align: left;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .mr-tlog-root {
+    --surface: #ffffff;
+    --surface-2: #eef0f4;
+    --text: #15181e;
+    --muted: #5d6573;
+    --border: #dde1e8;
+    --accent: #2f6fed;
+    --good: #1f9d55;
+    --warn: #c98a07;
+    --bad: #d63c3c;
+    --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 4px 16px rgb(16 24 40 / 6%);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --code-bg: #f3f4f7;
+  }
+}
+
+:root[data-theme='light'] .mr-tlog-root {
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --text: #15181e;
+  --muted: #5d6573;
+  --border: #dde1e8;
+  --accent: #2f6fed;
+  --good: #1f9d55;
+  --warn: #c98a07;
+  --bad: #d63c3c;
+  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 4px 16px rgb(16 24 40 / 6%);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --code-bg: #f3f4f7;
+}
+
+.mr-tlog-root *,
+.mr-tlog-root *::before,
+.mr-tlog-root *::after {
+  box-sizing: border-box;
+}
+
+.mr-tlog-root .muted {
+  color: var(--muted);
+}
+
+.mr-tlog-root .small {
+  font-size: 0.85rem;
+}
+
+.mr-tlog-root .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.mr-tlog-root input {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+.mr-tlog-root input:focus {
+  border-color: var(--accent);
+}
+
+.mr-tlog-root button {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.mr-tlog-root button:hover {
+  filter: brightness(1.08);
+}
+
+.mr-tlog-root button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mr-tlog-root button.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.mr-tlog-root table {
+  border-collapse: collapse;
+}
+
+.mr-tlog-root h2,
+.mr-tlog-root h3,
+.mr-tlog-root h4 {
+  font-family: inherit;
+  text-shadow: none;
+  letter-spacing: normal;
+}

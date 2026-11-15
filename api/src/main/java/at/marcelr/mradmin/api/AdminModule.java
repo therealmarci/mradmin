@@ -115,6 +115,20 @@ public interface AdminModule {
         return -1;
     }
 
+    /**
+     * An own part for the log of a ticket this module opened with {@link MRadminService#report} (e.g. MRchunks' chunk
+     * loader: its measurements against its limits and why it was locked). MRadmin saves it with the ticket log and
+     * shows it above the normal log in the web interface; it stays on this server (never in the sealed log for
+     * MRtechnology). Called on the main thread right when the ticket is opened; null = none. The format is described
+     * in MODULE-API.md ("Teil im Ticket-Log"): {@code title}, {@code status} ({@code tone} good/warn/bad, {@code text}),
+     * {@code reason}, {@code facts} (list of [label, value]), {@code charts} (list of {@code title}, {@code unit},
+     * {@code warn}, {@code limit}, {@code points}: list of [epoch ms, value]) and {@code area} ({@code x0}, {@code z0},
+     * {@code x1}, {@code z1} - a rectangle marked on the map). Texts in the server language. Since API 16.
+     */
+    default @Nullable Map<String, Object> reportLog(Report report) {
+        return null;
+    }
+
     // ------------------------------------------------------------ web map
 
     /**

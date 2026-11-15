@@ -36,9 +36,10 @@ public interface MRadminService {
      * {@link SelfMapLayer.Action#icon}; 10: heights of markers - {@link SelfMapLayer.Marker#y}; 11: a card on a marker -
      * {@link SelfMapLayer.Marker#card}, {@link SelfMapLayer.Marker#area}; 12: the config in the web interface -
      * {@link WebModule#webConfig}, {@link WebConfig}; 13: the log - {@link #log}; 14: restarts - {@link #nextRestart()},
-     * {@link RestartInfo}; 15: team notices - {@link #teamNotice}, {@link #teamNoticeDone}, {@link #teamNoticeInGame}).
+     * {@link RestartInfo}; 15: team notices - {@link #teamNotice}, {@link #teamNoticeDone}, {@link #teamNoticeInGame}; 16: an own part in
+     * the ticket log of a report - {@link AdminModule#reportLog}).
      */
-    int API_VERSION = 15;
+    int API_VERSION = 16;
 
     /** The running MRadmin, or null if it is not enabled. Only call while the MRadmin plugin is installed. */
     static @Nullable MRadminService get() {

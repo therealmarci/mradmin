@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -59,8 +60,16 @@ public final class TicketLogs {
 
     private final MRAdmin plugin;
 
+    private final LogArea area;
+
     TicketLogs(MRAdmin plugin) {
         this.plugin = plugin;
+        this.area = new LogArea(plugin);
+    }
+
+    /** Records despawns, deaths and player positions for the area part (registered as a listener). */
+    public LogArea area() {
+        return area;
     }
 
     private Settings.AttachLog settings() {
@@ -72,8 +81,16 @@ public final class TicketLogs {
      * away, the files (server log, event log) and the saving happen in the background.
      */
     void capture(Ticket ticket, String categoryName) {
+        capture(ticket, categoryName, null);
+    }
+
+    /**
+     * @param module a part delivered by the plugin that opened the ticket (e.g. MRchunks' chunk loader) - kept only
+     *               locally, never in the sealed file for MRtechnology; with it the ticket gets a log in any category
+     */
+    void capture(Ticket ticket, String categoryName, Map<String, Object> module) {
         Settings.AttachLog s = settings();
-        if (!s.wants(ticket.category())) {
+        if (!s.enabled() || (!s.wants(ticket.category()) && module == null)) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -107,6 +124,23 @@ public final class TicketLogs {
         } catch (RuntimeException e) {
             plugin.getLogger().warning("Ticket #" + ticket.id() + ": could not read everything for the log: " + e);
         }
+        if (module != null) {
+            log.put("module", module);
+        }
+        // the area around the creator, otherwise around the place of the ticket
+        CompletableFuture<Map<String, Object>> around = null;
+        try {
+            Player creator = Bukkit.getPlayer(ticket.creator());
+            World world = Bukkit.getWorld(ticket.world());
+            Location place = creator != null ? creator.getLocation()
+                    : world == null ? null : new Location(world, ticket.blockX(), ticket.blockY(), ticket.blockZ());
+            if (place != null) {
+                around = area.capture(place, creator, since);
+            }
+        } catch (RuntimeException e) {
+            plugin.getLogger().warning("Ticket #" + ticket.id() + ": could not read the area for the log: " + e);
+        }
+        CompletableFuture<Map<String, Object>> areaPart = around;
         List<HealthMonitor.Point> points = plugin.health().range(now - since, s.minutes() * 60);
         int id = ticket.id();
         boolean links = plugin.getConfig().getBoolean("web.console.hide-links", true);
@@ -116,6 +150,15 @@ public final class TicketLogs {
                 log.put("health", health(points));
                 log.put("console", console(since, links, ips));
                 log.put("events", events(since));
+                if (areaPart != null) {
+                    try {
+                        log.put("area", areaPart.get(30, java.util.concurrent.TimeUnit.SECONDS));
+                    } catch (java.util.concurrent.TimeoutException | java.util.concurrent.ExecutionException e) {
+                        plugin.getLogger().warning("Ticket #" + id + ": the area for the log took too long: " + e);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 plugin.storage().saveTicketLog(id, gzip(GSON.toJson(log)));
             } catch (IOException | RuntimeException e) {
                 plugin.getLogger().warning("Could not save the log of ticket #" + id + ": " + e);
@@ -333,6 +376,16 @@ public final class TicketLogs {
             return null;
         }
         try {
+            // The part of a plugin (e.g. MRchunks' chunk loader) stays on this server - never sent to MRtechnology.
+            String json;
+            try (var in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data))) {
+                json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
+            com.google.gson.JsonObject object = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (object.has("module")) {
+                object.remove("module");
+                data = gzip(GSON.toJson(object));
+            }
             return LogSeal.seal(data, Map.of("ticket", ticketId, "server", plugin.branding().name(),
                     "sealed", System.currentTimeMillis()));
         } catch (IOException e) {

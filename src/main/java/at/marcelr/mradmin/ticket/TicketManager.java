@@ -238,6 +238,12 @@ public final class TicketManager {
      * if one is still open for the same key, the text as a note in it. The player is told in chat with a link.
      */
     public void report(String source, at.marcelr.mradmin.api.Report report) {
+        report(source, report, () -> null);
+    }
+
+    /** @param logPart the module's own part for the ticket log, asked only when a new ticket is opened */
+    public void report(String source, at.marcelr.mradmin.api.Report report,
+                       java.util.function.Supplier<Map<String, Object>> logPart) {
         if (!settings().moduleReports()) {
             return;
         }
@@ -267,7 +273,7 @@ public final class TicketManager {
 
         notifyReport(ticket, report.player(), subject);
         notifyNew(ticket);
-        logs.capture(ticket, categoryName(ticket.category()));
+        logs.capture(ticket, categoryName(ticket.category()), logPart.get());
         plugin.getLogger().info("Ticket #" + ticket.id() + " (" + report.kind() + ") for " + ticket.creatorName()
                 + ": " + subject + " (opened by " + source + ").");
         plugin.discord().log("ticket", "id", ticket.id(), "type", categoryName(report.kind()), "creator", ticket.creatorName(),

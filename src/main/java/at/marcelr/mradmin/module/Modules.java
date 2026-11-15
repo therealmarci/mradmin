@@ -200,7 +200,27 @@ public final class Modules implements MRadminService {
     @Override
     public void report(String moduleId, Report report) {
         if (plugin.isEnabled() && plugin.feature(Feature.TICKETS) && enabled(moduleId)) {
-            plugin.tickets().report(source(moduleId), report);
+            plugin.tickets().report(source(moduleId), report, () -> logPart(moduleId, report));
+        }
+    }
+
+    /** The module's own part for the ticket log of a report (API 16), or null. */
+    private java.util.Map<String, Object> logPart(String moduleId, Report report) {
+        AdminModule module = registered.get(moduleId.toLowerCase(Locale.ROOT));
+        if (module == null) {
+            return null;
+        }
+        try {
+            java.util.Map<String, Object> part = module.reportLog(report);
+            if (part == null) {
+                return null;
+            }
+            java.util.Map<String, Object> copy = new java.util.LinkedHashMap<>(part);
+            copy.put("plugin", module.plugin().getName());
+            return copy;
+        } catch (RuntimeException | LinkageError e) {
+            plugin.getLogger().warning(module.plugin().getName() + " failed to give its part of the ticket log: " + e);
+            return null;
         }
     }
 

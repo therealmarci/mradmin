@@ -1,0 +1,57 @@
+// Texts of the ticket log view. Kept apart from lib/i18n.js because the same view also runs as its own bundle on
+// the MRtechnology website (viewer for logs forwarded to MRtechnology) - both always show exactly the same.
+
+const TEXTS = {
+  de: {
+    title: 'Log zum Ticket', hide: 'Log ausblenden',
+    span: '{from} bis {to} ({minutes} Minuten vor dem Erstellen)', errors: 'Fehler', warnings: 'Warnungen', events: 'Ereignisse',
+    zoom: 'Zeitraum', min: '{n} Min',
+    tps: 'TPS', mspt: 'Tick-Zeit', cpu: 'CPU', ram: 'RAM', world: 'Welt', entities: 'Entities', tiles: 'Block-Entities', chunks: 'Chunks',
+    players: 'Spieler', avg: 'Durchschnitt', max: 'Maximum', server: 'Server', system: 'System', used: 'belegt',
+    minTps: 'Niedrigste TPS', maxMspt: 'Längster Tick', maxRam: 'Höchster RAM', maxEntities: 'Meiste Entities',
+    noHealth: 'Keine Leistungswerte aus diesem Zeitraum (Server gerade gestartet?).', activity: 'Aktivität', created: 'Ticket erstellt',
+    software: 'Software', cores: 'Kerne', uptime: 'Läuft seit', distances: 'Sicht/Simulation', storage: 'Speicher', jvm: 'JVM',
+    creator: 'Ersteller', target: 'Gemeldet', position: 'Position', chunk: 'Chunk', biome: 'Biom', light: 'Licht',
+    gameMode: 'Spielmodus', flying: 'fliegt', state: 'Zustand', client: 'Client', protocol: 'Protokoll', viewDistance: 'Sichtweite',
+    hand: 'In der Hand', effects: 'Effekte', worlds: 'Welten', hotChunks: 'Chunks mit den meisten Entities', plugins: 'Plugins ({count})',
+    all: 'Alles', console: 'Server-Log', search: 'Im Log suchen ...', older: '{count} ältere Einträge anzeigen',
+    empty: 'Keine Einträge für diesen Filter.', cut: 'Das Server-Log war länger - nur die neuesten Zeilen wurden gespeichert.',
+    area: 'Umgebung', areaHint: '{size} × {size} Blöcke (16 × 16 Chunks) um {who} beim Erstellen', thePlace: 'den Ort des Tickets',
+    layerEntities: 'Entities', layerDespawned: 'Despawnte Items', layerDeaths: 'Tode', layerPath: 'Weg', layerPlayers: 'Spieler',
+    hostile: 'feindlich', passive: 'friedlich', item: 'Item', other: 'Sonstiges',
+    entitiesCut: 'Sehr viele Entities - die Karte zeigt die größten Gruppen.', topEntities: 'Entities nach Art',
+    despawnedTotal: '{count} Items despawnt', deathsTotal: '{count} Tode', inventory: 'Inventar von {name}',
+    noMap: 'Kein Kartenbild (Chunks nicht geladen).', none: 'keine', loaderArea: 'Fläche',
+    module: 'Von {plugin}', pathHint: 'Weg in den {minutes} Minuten davor', slot: 'Platz',
+    nearPlayers: 'Spieler in der Nähe', entitiesNear: 'Entities in der Nähe', tilesNear: 'Block-Entities',
+  },
+  en: {
+    title: 'Log of the ticket', hide: 'Hide log',
+    span: '{from} to {to} ({minutes} minutes before it was created)', errors: 'errors', warnings: 'warnings', events: 'events',
+    zoom: 'Time span', min: '{n} min',
+    tps: 'TPS', mspt: 'Tick time', cpu: 'CPU', ram: 'RAM', world: 'World', entities: 'Entities', tiles: 'Block entities', chunks: 'Chunks',
+    players: 'Players', avg: 'Average', max: 'Maximum', server: 'Server', system: 'System', used: 'used',
+    minTps: 'Lowest TPS', maxMspt: 'Longest tick', maxRam: 'Highest RAM', maxEntities: 'Most entities',
+    noHealth: 'No performance values from this time (server just started?).', activity: 'Activity', created: 'Ticket created',
+    software: 'Software', cores: 'cores', uptime: 'Running for', distances: 'View/simulation', storage: 'Storage', jvm: 'JVM',
+    creator: 'Creator', target: 'Reported', position: 'Position', chunk: 'chunk', biome: 'Biome', light: 'light',
+    gameMode: 'Game mode', flying: 'flying', state: 'State', client: 'Client', protocol: 'protocol', viewDistance: 'view distance',
+    hand: 'In hand', effects: 'Effects', worlds: 'Worlds', hotChunks: 'Chunks with the most entities', plugins: 'Plugins ({count})',
+    all: 'All', console: 'Server log', search: 'Search the log ...', older: 'Show {count} older entries',
+    empty: 'No entries for this filter.', cut: 'The server log was longer - only the newest lines were saved.',
+    area: 'Surroundings', areaHint: '{size} × {size} blocks (16 × 16 chunks) around {who} when it was created', thePlace: 'the place of the ticket',
+    layerEntities: 'Entities', layerDespawned: 'Despawned items', layerDeaths: 'Deaths', layerPath: 'Way', layerPlayers: 'Players',
+    hostile: 'hostile', passive: 'passive', item: 'item', other: 'other',
+    entitiesCut: 'Very many entities - the map shows the biggest groups.', topEntities: 'Entities by kind',
+    despawnedTotal: '{count} items despawned', deathsTotal: '{count} deaths', inventory: 'Inventory of {name}',
+    noMap: 'No map picture (chunks not loaded).', none: 'none', loaderArea: 'Area',
+    module: 'From {plugin}', pathHint: 'Way in the {minutes} minutes before', slot: 'Slot',
+    nearPlayers: 'Players nearby', entitiesNear: 'Entities nearby', tilesNear: 'Block entities',
+  },
+};
+
+/** A text of the ticket log view in the given language ("de" or "en"), {name} parts filled from values. */
+export function tl(lang, key, values = {}) {
+  const text = TEXTS[lang === 'de' ? 'de' : 'en'][key] ?? TEXTS.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, k) => (values[k] ?? `{${k}}`));
+}

@@ -1,14 +1,14 @@
 <script>
   import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
-  import { t, errorText } from '../lib/i18n.js';
+  import { t, errorText, lang } from '../lib/i18n.js';
   import { dateTime, ago, head } from '../lib/format.js';
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
   import PageHead from '../components/PageHead.svelte';
   import ForwardIssue from '../components/ForwardIssue.svelte';
   import Dropdown from '../components/Dropdown.svelte';
-  import TicketLog from '../components/TicketLog.svelte';
+  import TicketLog from '../ticketlog/TicketLog.svelte';
 
   let { id, me } = $props();
 
@@ -350,7 +350,7 @@
         <button class="secondary small" onclick={openLog} disabled={logBusy}>{logBusy ? t('common.loading') : t('tlog.show')}</button>
       </section>
     {/if}
-    {#if log}<TicketLog {log} onclose={() => (log = null)} />{/if}
+    {#if log}<TicketLog {log} {lang} onclose={() => (log = null)} />{/if}
   {/if}
 {#if forwarding && ticket}
   <ForwardIssue {ticket} onclose={() => (forwarding = false)} onlinked={(url) => { ticket.issue = url || null; forwarding = false; }} />

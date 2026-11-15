@@ -234,6 +234,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         pm.registerEvents(web.requests(), this);
         pm.registerEvents(newsDelivery, this);
         pm.registerEvents(waitingRoom, this);
+        // despawns, deaths and player positions for the area part of ticket logs
+        pm.registerEvents(tickets.logs().area(), this);
+        tickets.logs().area().start();
 
         PluginCommand command = Objects.requireNonNull(getCommand("mradmin"), "mradmin");
         MRAdminCommand executor = new MRAdminCommand(this);
