@@ -920,4 +920,70 @@
       gap: 6px;
     }
   }
+
+  /* Phone (since 1.7): one frame - the values as rows (label left, value right), the time buttons evenly in one row,
+     emergency and pausing over the whole width */
+  :global(html.m) .server {
+    gap: 14px;
+    padding: 4px 16px 16px;
+  }
+
+  :global(html.m) .stats {
+    display: block;
+    margin: 0 -16px;
+  }
+
+  :global(html.m) .stat {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  :global(html.m) .stat + .stat {
+    border-top: 1px solid var(--border);
+  }
+
+  :global(html.m) .s-label {
+    font-size: 0.9rem;
+  }
+
+  :global(html.m) .s-value {
+    justify-content: flex-end;
+  }
+
+  :global(html.m) .s-sub {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  :global(html.m) .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  :global(html.m) .choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  :global(html.m) .choices button {
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 6px;
+  }
+
+  :global(html.m) .reason-input {
+    padding: 10px 12px;
+  }
+
+  :global(html.m) .schedule button {
+    width: 100%;
+    min-height: 44px;
+  }
 </style>

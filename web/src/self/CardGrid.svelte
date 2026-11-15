@@ -45,7 +45,7 @@
 
 <svelte:window onkeydown={open ? key : null} />
 
-<section class="card cards-block">
+<section class="card cards-block m-flat">
   {#if block.title}<h2>{block.title}</h2>{/if}
   {#if block.cards.length === 0}
     <p class="muted empty">{block.empty}</p>
