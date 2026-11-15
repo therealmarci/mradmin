@@ -75,7 +75,7 @@
 
   {#if data}
     {#if shown.length}
-      <div class="list">
+      <div class="list m-rows">
         {#each shown as e (e.id)}
           {@const st = stateOf(e)}
           <div class="row card t-{e.type}" class:off={!e.active}>

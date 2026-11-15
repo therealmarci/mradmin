@@ -2670,6 +2670,7 @@ const texts = {
     'mobile.install.never': 'Nicht mehr anzeigen',
     'mobile.group.account': 'Konto',
     'mobile.group.server': 'Server',
+    'news.compose': 'Neuer Beitrag',
   },
   en: {
     'nav.home': 'Overview',
@@ -5319,6 +5320,7 @@ const texts = {
     'mobile.install.never': 'Don\'t show again',
     'mobile.group.account': 'Account',
     'mobile.group.server': 'Server',
+    'news.compose': 'New post',
   },
 };
 

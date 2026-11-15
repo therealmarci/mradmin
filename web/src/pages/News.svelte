@@ -13,6 +13,7 @@
   import Toast from '../components/Toast.svelte';
   import AnnouncePanel from '../components/AnnouncePanel.svelte';
   import PageHead from '../components/PageHead.svelte';
+  import { device } from '../lib/mobile.svelte.js';
 
   // section: posts | announce - since the sidebar (1.6) two pages of their own (Contents -> Posts / Announcements)
   let { me, section = null } = $props();
@@ -34,6 +35,9 @@
     title: { de: '', en: '' }, text: { de: '', en: '' }, entries: [],
   });
   let draft = $state(empty());
+  // Phone: the list first, the editor only after "New post" or "Edit" (otherwise it fills the whole screen)
+  let composing = $state(false);
+  const showEditor = $derived(!device.mobile || composing || draft.id !== 0);
   let tab = $state('de');
 
   async function load() {
@@ -78,6 +82,8 @@
     };
     tab = draft.title.de || draft.entries.some((e) => e.de) || !(draft.title.en || draft.entries.some((e) => e.en)) ? 'de' : 'en';
     message = '';
+    composing = true;
+    if (device.mobile) scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -103,6 +109,7 @@
       await api('POST', '/news', body);
       message = t(draft.id ? 'news.saved' : 'news.posted.' + draft.kind);
       newOf(draft.kind);
+      composing = false;
       await load();
     } catch (e) {
       error = errorText(e);
@@ -185,6 +192,9 @@
     {/if}
 
     <!-- Writing: the kind as tiles, then the texts per language -->
+    {#if !showEditor}
+      <button class="compose" onclick={() => (composing = true)}>+ {t('news.compose')}</button>
+    {:else}
     <form class="card tile editor kind-{draft.kind}" onsubmit={save}>
       <div class="kinds" role="tablist" aria-label={t('news.kind')}>
         {#each KINDS as k}
@@ -306,11 +316,15 @@
           {draft.id ? t('news.save') : t('news.post.' + draft.kind)}
         </button>
       </div>
+      {#if device.mobile}
+        <button type="button" class="secondary compose-cancel" onclick={() => { composing = false; newOf(draft.kind); }}>{t('common.cancel')}</button>
+      {/if}
     </form>
+    {/if}
 
     <!-- Everything written so far -->
     {#if data}
-      <section class="card tile">
+      <section class="card tile m-flat">
         <div class="t-head">
           <h2>{t('news.all')}</h2>
           <div class="seg small" role="tablist">
@@ -325,7 +339,7 @@
         {#if posts.length === 0}
           <p class="muted small">{t('news.none')}</p>
         {:else}
-          <ul class="posts">
+          <ul class="posts m-rows">
             {#each posts as p (p.id)}
               <li class="post k-{p.kind}" class:faded={over(p)}>
                 <div class="meta">
@@ -1026,5 +1040,14 @@
     .knob::after {
       transition: none;
     }
+  }
+
+  .compose {
+    min-height: 48px;
+  }
+
+  .compose-cancel {
+    width: 100%;
+    margin-top: 10px;
   }
 </style>

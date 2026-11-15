@@ -314,3 +314,61 @@ html.m .overlay > .m-dragging {
     opacity: 0;
   }
 }
+
+/* Phone: lists of cards become one list of rows (like a settings list). The page marks them: m-flat on the outer tile
+   (its frame falls away), m-rows on the list (each card a row, a coloured stripe on the left stays). */
+html.m .m-flat {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+html.m .m-rows {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* the entries themselves (when the list item is the card) */
+html.m .m-rows > * {
+  margin: 0;
+  border-top-width: 0;
+  border-right-width: 0;
+  border-bottom-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html.m .m-rows > * + * {
+  border-top: 1px solid var(--border);
+}
+
+html.m .m-rows > * > :is(button, a, div, article),
+html.m .m-rows > :is(button, a, article) {
+  width: 100%;
+  margin: 0;
+  border-top-width: 0;
+  border-right-width: 0;
+  border-bottom-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  transform: none;
+}
+
+html.m .m-rows > * > :is(button, a):active,
+html.m .m-rows > :is(button, a):active {
+  background: var(--surface-2);
+}
+
+/* Phone: the pages are grids with one automatic column - it grew to the widest unbreakable content and pushed the
+   whole page wider than the screen. Never wider than the screen. */
+html.m main.phone .page {
+  grid-template-columns: minmax(0, 1fr);
+}

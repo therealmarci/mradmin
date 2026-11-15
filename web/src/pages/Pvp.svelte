@@ -157,14 +157,14 @@
     <FilterChips value={filter} onchange={(f) => { filter = f; offset = 0; }}
       options={['all', 'win', 'draw', 'aborted'].map((f) => ({ id: f, label: t('pvp.filter.' + f), tone: f === 'all' ? '' : resultTone[f] || 'off' }))} />
   {/if}
-  <section class="card tile">
+  <section class="card tile m-flat">
     {#if !overview}
       {#if !error}<p class="muted pad">{t('common.loading')}</p>{/if}
     {:else if tab === 'live'}
       {#if overview.games.length === 0}
         <div class="empty"><span aria-hidden="true">⚔️</span><p>{t('pvp.noGames')}</p></div>
       {:else}
-        <ul class="list">
+        <ul class="list m-rows">
           {#each overview.games as g (g.id)}
             <li class="game {gameTone(g)}">
               <button class="open" onclick={() => go('/pvp/' + g.id)}>
@@ -198,7 +198,7 @@
       {/if}
       {#if overview.invites.length}
         <h2 class="sub-head">{t('pvp.openInvites')} <span class="n">{overview.invites.length}</span></h2>
-        <ul class="rows">
+        <ul class="rows m-rows">
           {#each overview.invites as i}
             <li>
               <span class="pair">
@@ -217,7 +217,7 @@
       {:else if games.length === 0}
         <div class="empty"><span aria-hidden="true">🗂️</span><p>{t('pvp.noFinished')}</p></div>
       {:else}
-        <ul class="list">
+        <ul class="list m-rows">
           {#each games as g (g.id)}
             <li>
               <button class="round {resultTone[g.result] ?? ''}" onclick={() => go('/pvp/' + g.id)}>
@@ -247,7 +247,7 @@
         </div>
       {/if}
     {:else if tab === 'arenas'}
-      <ul class="list">
+      <ul class="list m-rows">
         {#each overview.arenas as a (a.id)}
           {@const b = building(a.id)}
           {@const total = Math.max(a.pool, a.ready + a.used + b, 1)}
@@ -283,7 +283,7 @@
       {:else if reviews.length === 0}
         <div class="empty"><span aria-hidden="true">✅</span><p>{t('pvp.review.none')}</p></div>
       {:else}
-        <ul class="list">
+        <ul class="list m-rows">
           {#each reviews as r (r.game)}
             <li class="game warn">
               <span class="g-top">
@@ -317,7 +317,7 @@
       {#if overview.alerts.length === 0}
         <div class="empty"><span aria-hidden="true">✅</span><p>{t('pvp.noAlerts')}</p></div>
       {:else}
-        <ul class="list">
+        <ul class="list m-rows">
           {#each overview.alerts as a}
             <li>
               <button class="round warn" disabled={!me.may.mrpvpGames} onclick={() => go('/pvp/' + a.game)}>

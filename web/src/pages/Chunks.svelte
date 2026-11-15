@@ -157,7 +157,7 @@
       ...Object.keys(STATUS).filter((s) => counts[s]).map((s) => ({ id: s, label: t('chunks.status.' + s), n: counts[s], tone: STATUS[s].tone }))]}
     search={search} onsearch={(v) => (search = v)} placeholder={t('chunks.search')} />
 
-  <section class="card tile">
+  <section class="card tile m-flat">
 
     {#if !loaders}
       {#if !error}<p class="muted pad">{t('common.loading')}</p>{/if}
@@ -167,7 +167,7 @@
         <p>{t('chunks.empty')}</p>
       </div>
     {:else}
-      <ul class="list">
+      <ul class="list m-rows">
         {#each shown as l (l.id)}
           <li>
             <button class="loader {STATUS[l.status].tone}" onclick={() => go('/chunks/' + l.id)}>

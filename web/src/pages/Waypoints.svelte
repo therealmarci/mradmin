@@ -297,7 +297,7 @@
         </div>
 
         {#if shown.length}
-          <ul class="list">
+          <ul class="list m-rows">
             {#each shown as w (w.id)}
               {@const c = byId[w.category]}
               <li class="wp" class:chosen={chosen.has(w.id)} style="--cc: {c?.color ?? 'var(--muted)'}">

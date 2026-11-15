@@ -339,7 +339,8 @@
     display: grid;
     gap: 6px;
     min-width: 0;
-    flex: 1;
+    /* never squeezed by the buttons next to it (the title broke letter by letter) - they wrap below instead */
+    flex: 1 1 260px;
   }
 
   .h-actions {
@@ -702,5 +703,52 @@
     .actions button {
       width: 100%;
     }
+  }
+
+  /* Phone (since 1.7): head without frame, buttons over the whole width; the facts as rows (label left, value right) */
+  :global(html.m) .head {
+    padding: 14px 16px;
+  }
+
+  :global(html.m) .head h1 {
+    font-size: 1.3rem;
+  }
+
+  :global(html.m) .h-actions {
+    width: 100%;
+  }
+
+  :global(html.m) .h-actions button {
+    flex: 1 1 auto;
+    min-height: 40px;
+  }
+
+  :global(html.m) .facts {
+    display: block;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  :global(html.m) .fact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  :global(html.m) .fact + .fact {
+    border-top: 1px solid var(--border);
+  }
+
+  :global(html.m) .flabel {
+    font-size: 0.9rem;
+  }
+
+  :global(html.m) .fvalue {
+    text-align: right;
   }
 </style>

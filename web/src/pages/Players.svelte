@@ -79,7 +79,7 @@
   <FilterChips value={filter} onchange={setFilter} options={['all', 'online', 'flagged'].map((f) => ({ id: f, label: t('players.filter.' + f) }))}
     search={search} onsearch={(v) => { search = v; typed(); }} placeholder={t('players.search')} />
 
-  <section class="card tile">
+  <section class="card tile m-flat">
 
     {#if players.length === 0 && !loading}
       <div class="empty">
@@ -87,7 +87,7 @@
         <p>{t('players.empty')}</p>
       </div>
     {:else}
-      <ul class="list">
+      <ul class="list m-rows">
         {#each players as p (p.uuid)}
           <li>
             <button class="player" class:online={p.online} class:flagged={p.flags.length > 0} onclick={() => go('/players/' + p.uuid)}>

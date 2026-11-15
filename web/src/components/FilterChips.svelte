@@ -94,6 +94,7 @@
   }
 
   .phone {
+    min-width: 0;
     flex-direction: column-reverse;
     align-items: stretch;
     gap: 8px;
@@ -102,6 +103,9 @@
   .phone .chips {
     flex-wrap: nowrap;
     overflow-x: auto;
+    /* exactly the width of the screen - without it the row of chips widened the whole page */
+    width: calc(100% + 32px);
+    min-width: 0;
     scrollbar-width: none;
     margin: 0 -16px;
     padding: 0 16px;
