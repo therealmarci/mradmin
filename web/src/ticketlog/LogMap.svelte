@@ -233,7 +233,17 @@
     <div class="split">
       <div class="mapbox">
         <svg viewBox="{view.x} {view.z} {VIEW} {VIEW}" preserveAspectRatio="none" aria-label={T('area')}>
-          <rect x={view.x} y={view.z} width={VIEW} height={VIEW} class="ground" />
+          <defs>
+            <pattern id="tlog-nodata" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" class="nodata-bg" /><line x1="0" y1="0" x2="0" y2="8" class="nodata-line" />
+            </pattern>
+          </defs>
+          <!-- not recorded (chunks were not loaded) - hatched, with a hint -->
+          <rect x={view.x} y={view.z} width={VIEW} height={VIEW} fill="url(#tlog-nodata)"><title>{T('noTerrain')}</title></rect>
+          <!-- the terrain at the moment of the ticket under the recorded squares: fills holes of the same world -->
+          {#if areaImage && area.world === frame.world && frame.kind === 'frame'}
+            <image href={areaImage} x={area.x0} y={area.z0} width={area.size} height={area.size} preserveAspectRatio="none" class="tile" />
+          {/if}
           {#each shownTiles as t}
             <image href={t.image} x={t.x0} y={t.z0} width="256" height="256" preserveAspectRatio="none" class="tile" />
           {/each}
@@ -527,8 +537,13 @@
     height: 100%;
   }
 
-  .ground {
+  .nodata-bg {
     fill: var(--surface-2);
+  }
+
+  .nodata-line {
+    stroke: color-mix(in srgb, var(--muted) 35%, transparent);
+    stroke-width: 2;
   }
 
   .tile {

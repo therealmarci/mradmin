@@ -334,6 +334,27 @@ public final class LogArea implements Listener {
      */
     static String draw(List<ChunkSnapshot> snapshots, int x0, int z0, int size, int fromY, int minY, boolean surface)
             throws IOException {
+        return png(render(snapshots, x0, z0, size, fromY, minY, surface));
+    }
+
+    /** A picture as a PNG data address. */
+    static String png(BufferedImage image) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", out);
+        return "data:image/png;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
+    }
+
+    /** A PNG data address back to a picture, or null. */
+    static BufferedImage image(String png) {
+        try {
+            return ImageIO.read(new java.io.ByteArrayInputStream(Base64.getDecoder().decode(png.substring(png.indexOf(',') + 1))));
+        } catch (IOException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** The area from above as a picture (transparent where no chunk was loaded). */
+    static BufferedImage render(List<ChunkSnapshot> snapshots, int x0, int z0, int size, int fromY, int minY, boolean surface) {
         int[] heights = new int[size * size];
         int[] colors = new int[size * size];
         java.util.Arrays.fill(heights, Integer.MIN_VALUE);
@@ -376,8 +397,6 @@ public final class LogArea implements Listener {
                 image.setRGB(x, z, 0xFF000000 | (r << 16) | (g << 8) | b);
             }
         }
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(image, "png", out);
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
+        return image;
     }
 }

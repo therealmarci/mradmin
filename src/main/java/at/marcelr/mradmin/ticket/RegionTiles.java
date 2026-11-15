@@ -26,10 +26,12 @@ public final class RegionTiles {
     /** Blocks per side of a square. */
     public static final int SIZE = 256;
     private static final long STALE_MS = 10 * 60_000L;
+    /** A square with holes (chunks were not loaded yet, e.g. right after joining) is drawn again this soon. */
+    private static final long INCOMPLETE_MS = 30_000L;
     private static final int MAX_TILES = 300;
     private static final int SNAPSHOTS_PER_TICK = 32;
 
-    private record Tile(long time, String image) {
+    private record Tile(long time, String image, boolean complete) {
     }
 
     private record Job(String key, String world, int rx, int rz, int fromY) {
@@ -76,7 +78,8 @@ public final class RegionTiles {
             synchronized (tiles) {
                 tile = tiles.get(key);
             }
-            if ((tile == null || now - tile.time() > STALE_MS) && queued.add(key)) {
+            boolean stale = tile == null || now - tile.time() > (tile.complete() ? STALE_MS : INCOMPLETE_MS);
+            if (stale && queued.add(key)) {
                 String[] parts = key.split("\\|");
                 queue.addLast(new Job(key, w.getName(), Integer.parseInt(parts[parts.length - 2]),
                         Integer.parseInt(parts[parts.length - 1]), fromY));
@@ -121,9 +124,26 @@ public final class RegionTiles {
                     Thread.ofVirtual().name("MRadmin-RegionTile").start(() -> {
                         try {
                             if (!snapshots.isEmpty()) {
-                                String image = LogArea.draw(snapshots, cx0 << 4, cz0 << 4, SIZE, job.fromY(), minY, surface);
+                                java.awt.image.BufferedImage image = LogArea.render(snapshots, cx0 << 4, cz0 << 4, SIZE, job.fromY(), minY, surface);
+                                // what the last drawing had stays where chunks are not loaded now - holes only fill up
+                                Tile old;
                                 synchronized (tiles) {
-                                    tiles.put(job.key(), new Tile(System.currentTimeMillis(), image));
+                                    old = tiles.get(job.key());
+                                }
+                                java.awt.image.BufferedImage before = old == null ? null : LogArea.image(old.image());
+                                if (before != null && before.getWidth() == SIZE && before.getHeight() == SIZE) {
+                                    for (int y = 0; y < SIZE; y++) {
+                                        for (int x = 0; x < SIZE; x++) {
+                                            if ((image.getRGB(x, y) >>> 24) == 0) {
+                                                image.setRGB(x, y, before.getRGB(x, y));
+                                            }
+                                        }
+                                    }
+                                }
+                                boolean complete = snapshots.size() == 256 || (old != null && old.complete());
+                                String png = LogArea.png(image);
+                                synchronized (tiles) {
+                                    tiles.put(job.key(), new Tile(System.currentTimeMillis(), png, complete));
                                     while (tiles.size() > MAX_TILES) {
                                         tiles.remove(tiles.keySet().iterator().next());
                                     }
