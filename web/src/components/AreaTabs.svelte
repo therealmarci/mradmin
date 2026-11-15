@@ -1,9 +1,20 @@
 <script>
   // The tabs of an area (player area and administration, since 1.5): one row, the current one highlighted. Shown only
   // with more than one tab. tabs: [{id, label, path, badge?}]; current: id of the open tab.
+  // Phone (since 1.7): swiping the page to the side opens the next / previous tab.
   import { go } from '../lib/router.svelte.js';
+  import { device } from '../lib/mobile.svelte.js';
+  import { onSideSwipe } from '../lib/swipe.js';
 
   let { tabs, current } = $props();
+
+  $effect(() => {
+    if (!device.mobile || tabs.length < 2) return;
+    return onSideSwipe((dir) => {
+      const next = tabs[tabs.findIndex((x) => x.id === current) + dir];
+      if (next) go(next.path, true);
+    });
+  });
 </script>
 
 {#if tabs.length > 1}

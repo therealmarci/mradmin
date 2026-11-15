@@ -204,6 +204,8 @@ public final class Branding {
         long icon = stamp("icon") > 0 ? stamp("icon") : stamp("logo");
         if (icon > 0) {
             result = result.replace("href=\"/icon.svg\" type=\"image/svg+xml\"", "href=\"/branding/icon?v=" + icon + "\"");
+            // the home screen symbol of iPhones/iPads (an own picture; SVG is not used there by Apple)
+            result = result.replace("href=\"/icon-180.png\"", "href=\"/branding/icon?v=" + icon + "\"");
         }
         String accent = accent();
         String style = "<style>:root:root{--accent:" + accent + ";--accent-text:" + textOn(accent) + "}</style>";
@@ -216,11 +218,13 @@ public final class Branding {
         long icon = stamp("icon") > 0 ? stamp("icon") : stamp("logo");
         Image image = icon > 0 ? (stamp("icon") > 0 ? image("icon") : image("logo")) : null;
         String iconJson = image == null
-                ? "{\"src\":\"/icon.svg\",\"sizes\":\"any\",\"type\":\"image/svg+xml\"}"
+                ? "{\"src\":\"/icon-192.png\",\"sizes\":\"192x192\",\"type\":\"image/png\"},"
+                        + "{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\"},"
+                        + "{\"src\":\"/icon.svg\",\"sizes\":\"any\",\"type\":\"image/svg+xml\"}"
                 : "{\"src\":\"/branding/icon?v=" + icon + "\",\"sizes\":\"any\",\"type\":\"" + image.type() + "\"}";
-        return "{\"name\":\"" + json(name) + "\",\"short_name\":\"" + json(name.length() > 12 ? name.substring(0, 12) : name)
-                + "\",\"start_url\":\"/\",\"display\":\"standalone\",\"background_color\":\"#0f1115\",\"theme_color\":\""
-                + accent() + "\",\"icons\":[" + iconJson + "]}";
+        return "{\"name\":\"" + json(name) + "\",\"short_name\":\"" + json(name.length() > 12 ? name.substring(0, 12).strip() : name)
+                + "\",\"id\":\"/\",\"scope\":\"/\",\"start_url\":\"/\",\"display\":\"standalone\",\"orientation\":\"any\","
+                + "\"background_color\":\"#0f1115\",\"theme_color\":\"#0f1115\",\"icons\":[" + iconJson + "]}";
     }
 
     // ------------------------------------------------------------------ mails

@@ -58,6 +58,14 @@
   import SelfTickets from './self/SelfTickets.svelte';
   import SelfTicket from './self/SelfTicket.svelte';
   import { poll } from './lib/poll.js';
+  import { device, page, tabChoice, chooseTabs, DEFAULT_ADMIN_TABS } from './lib/mobile.svelte.js';
+  import { brand } from './lib/branding.svelte.js';
+  import MobileBar from './components/mobile/MobileBar.svelte';
+  import TabBar from './components/mobile/TabBar.svelte';
+  import MorePage from './components/mobile/MorePage.svelte';
+  import ProfileSheet from './components/mobile/ProfileSheet.svelte';
+  import PullRefresh from './components/mobile/PullRefresh.svelte';
+  import InstallHint from './components/mobile/InstallHint.svelte';
 
   // null = signed out, undefined = still asking the server
   let me = $state(undefined);
@@ -341,6 +349,75 @@
     onswitch: (m) => go(m === 'admin' ? '/admin' : '/'),
   } : null);
 
+  // ------------------------------------------------------------------ phone layout (since 1.7)
+  // Phones and upright tablets: a bar at the top with the big title, a tab bar at the bottom with four places and
+  // "More" (/admin/more, /more). The administration chooses its four places itself (lib/mobile.svelte.js).
+
+  const adminShell = $derived(admin && !!me?.team && !!me?.teamReady);
+  // Every page of the administration that can be a place in the tab bar.
+  const adminPages = $derived([
+    { id: 'overview', label: t('nav.home'), icon: 'home', path: '/admin', n: homeEntry.n || undefined, tone: homeEntry.tone },
+    ...adminGroups.flatMap((g) => g.items),
+  ]);
+  const adminTabs = $derived.by(() => {
+    const byId = new Map(adminPages.map((x) => [x.id, x]));
+    const ids = tabChoice.ids.filter((id) => byId.has(id));
+    for (const id of [...DEFAULT_ADMIN_TABS, ...byId.keys()]) if (ids.length < 4 && !ids.includes(id)) ids.push(id);
+    return ids.map((id) => byId.get(id));
+  });
+  const playerTabs = $derived([
+    { id: 'start', label: t('self.nav.home'), icon: 'home', path: '/' },
+    ...(player?.areas?.length ? [{ id: 'game', label: t('nav.game'), icon: 'grid', path: gameTabs[0].path }] : []),
+    ...(player?.map ? [{ id: 'map', label: t('self.nav.map'), icon: 'pin', path: '/map' }] : []),
+    ...(newsTabs.length ? [{ id: 'news', label: t('self.nav.news'), icon: 'news', path: newsTabs[0].path }] : []),
+  ]);
+  const moreTab = $derived({ id: 'more', label: t('nav.more'), icon: 'more', path: admin ? '/admin/more' : '/more',
+    // what waits on pages that are not in the bar
+    ...(admin ? (() => {
+      const hidden = adminPages.filter((x) => !adminTabs.includes(x) && x.n);
+      return hidden.length ? { n: hidden.length, tone: hidden.some((x) => x.tone === 'bad') ? 'bad' : 'warn' } : {};
+    })() : {}) });
+  const mobileTabs = $derived(me ? [...(adminShell ? adminTabs : playerTabs), moreTab] : []);
+  const mobileCurrent = $derived(area === 'more' ? 'more'
+    : adminShell ? (adminTabs.some((x) => x.id === adminPage) ? adminPage : 'more')
+    : playerTabs.some((x) => x.id === area) ? area : 'more');
+  // The pages of "More": everything that is not in the tab bar.
+  const moreGroups = $derived(adminShell ? [
+    { id: 'home', label: t('nav.admin'), items: adminPages.filter((x) => x.id === 'overview' && !adminTabs.includes(x)) },
+    ...adminGroups.map((g) => ({ ...g, items: g.items.filter((x) => !adminTabs.includes(x)) })),
+  ] : [
+    { id: 'self', label: t('nav.player'), items: [
+      ...(player?.stats ? [{ id: 'stats', label: t('self.nav.stats'), icon: 'chart', path: '/stats' }] : []),
+      ...(player?.tickets ? [{ id: 'tickets', label: t('nav.tickets'), icon: 'ticket', path: '/news/tickets' }] : []),
+      ...(hasInbox ? [{ id: 'inbox', label: t('inbox.title'), icon: 'mail', path: '/inbox', n: inboxCount || undefined, tone: inboxAlarm ? 'bad' : 'info' }] : []),
+    ] },
+    { id: 'account', label: t('mobile.group.account'), items: [
+      { id: 'account', label: t('nav.account'), icon: 'users', path: '/account' },
+      ...(me?.team ? [{ id: 'admin', label: t('nav.admin'), icon: 'shield', path: '/admin' }] : []),
+    ] },
+  ]);
+  // The title in the bar: the page head of the open page, otherwise the name of the place.
+  const fallbackTitle = $derived(area === 'more' ? t('nav.more')
+    : adminShell ? (adminPages.find((x) => x.id === adminPage)?.label ?? '')
+    : route.path === '/account' ? t('nav.account')
+    : area === 'inbox' ? t('inbox.title')
+    : area === 'stats' ? t('self.nav.stats')
+    : area === 'start' ? brand.name
+    : (playerTabs.find((x) => x.id === area)?.label ?? ''));
+  const mobileTitle = $derived(page.title || fallbackTitle);
+  let profileOpen = $state(false);
+  let installOpen = $state(false);
+  // Pull to refresh: the page is built again (it loads its data), the counters with it.
+  let refreshKey = $state(0);
+  async function refresh() {
+    refreshKey++;
+    await Promise.allSettled([adminShell ? loadOverview() : Promise.resolve(), hasInbox ? loadInbox() : Promise.resolve()]);
+  }
+  function back(b) {
+    if (b.onnav) b.onnav(b.path);
+    else go(b.path);
+  }
+
 
 </script>
 
@@ -367,8 +444,12 @@
   <div class="center muted">{t('common.loading')}</div>
 {:else if me === null}
   <!-- Visitors: the same start page, a sign-in button at the top right -->
+  {#if device.mobile}
+    <MobileBar title={brand.name} large={false} onlogin={() => (loginOpen = true)} loginLabel={t('nav.login')} />
+  {:else}
   <TopBar items={playerNav} current="/" onnav={(path) => go(path)} user={null} moreLabel={t('nav.more')} menu={[]}
-    onlogin={() => (loginOpen = true)} loginLabel={t('nav.login')} />
+      onlogin={() => (loginOpen = true)} loginLabel={t('nav.login')} />
+  {/if}
   <main>
     <StartPage onsignin={() => (loginOpen = true)} />
     <Footer />
@@ -382,137 +463,178 @@
     </div>
   {/if}
 {:else}
-  <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
-    onmenu={admin && me.team && me.teamReady ? () => (sidebarOpen = !sidebarOpen) : null} menuLabel={t('nav.menu')}
-    inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
-    live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
-      { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
-      { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },
-    ]} />
+  <!-- The pages (both frames use them): the administration and the player area -->
+  {#snippet adminContent()}
+    {#if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
+      {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
+    {:else if area === 'community' && sub[0] === 'tickets' && may.tickets}
+      <Tickets {me} />
+    {:else if area === 'community' && sub[0] === 'players' && sub[1] && may.players}
+      {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
+    {:else if area === 'community' && sub[0] === 'players' && may.players}
+      <Players />
+    {:else if area === 'community' && sub[0] === 'punishments' && may.punishments}
+      <Punishments />
+    {:else if area === 'content' && ((sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce))}
+      {#key sub[0]}<News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />{/key}
+    {:else if area === 'plugins' && sub[0] === 'mrchunks' && may.mrchunks}
+      {#if sub[1]}{#key sub[1]}<ChunkView id={sub[1]} {me} />{/key}{:else}<Chunks {me} />{/if}
+    {:else if area === 'plugins' && sub[0] === 'mrpvp' && ((sub[1] === 'kits' && sub[2]) || sub[1] === 'new-kit') && may.mrpvpKits}
+      {#key p}<PvpKit id={sub[1] === 'kits' ? sub[2] : null} copyFrom={sub[1] === 'new-kit' ? (sub[2] ?? null) : null} />{/key}
+    {:else if area === 'plugins' && sub[0] === 'mrpvp' && /^\d+$/.test(sub[1] ?? '') && may.mrpvp}
+      {#key sub[1]}<PvpGame id={sub[1]} {me} />{/key}
+    {:else if area === 'plugins' && sub[0] === 'mrpvp' && may.mrpvp}
+      <Pvp {me} tab={sub[1] ?? 'live'} />
+    {:else if area === 'plugins' && sub[0] === 'mrsleep' && may.mrsleep}
+      <Sleep {me} />
+    {:else if area === 'plugins' && sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
+      <Waypoints {me} tab={sub[1] ?? null} />
+    {:else if area === 'server' && sub[0] === 'room' && may.versions}
+      <PageHead title={t('nav.serverRoom')} />
+      {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}
+      <PageTabs tabs={roomTabs} current={roomTab} />
+      {#if roomTab === 'plugins' && sub[2]}
+        {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
+      {:else if roomTab === 'plugins'}
+        <Plugins embedded server="room" />
+      {:else if roomTab === 'config'}
+        {#key 'room'}<Settings embedded server="room" plugin={sub[2] ?? null} />{/key}
+      {:else if roomTab === 'performance'}
+        {#key 'room'}<Health server="room" />{/key}
+      {:else if roomTab === 'logs'}
+        {#key 'room'}<Logs {me} embedded server="room" />{/key}
+      {:else if roomTab === 'console'}
+        {#key 'room'}<Console {me} embedded server="room" />{/key}
+      {:else}
+        <Server {me} tab="overview" bare part="room" />
+      {/if}
+    {:else if area === 'server' && mainTabs.length}
+      {@const tab = mainTabs.some((x) => x.id === (sub[0] ?? 'control')) ? (sub[0] ?? 'control') : mainTabs[0].id}
+      <PageHead title={t('nav.serverMain')} />
+      <PageTabs tabs={mainTabs} current={tab} />
+      {#if tab === 'performance'}
+        <Health />
+      {:else if tab === 'maintenance'}
+        <Maintenance {me} />
+      {:else if tab === 'plugins' && sub[1]}
+        {#key sub[1]}<PluginView name={sub[1]} />{/key}
+      {:else if tab === 'plugins'}
+        <Plugins embedded server="main" />
+      {:else if tab === 'config'}
+        {#key 'main'}<Settings embedded server="main" plugin={sub[1] ?? null} />{/key}
+      {:else if tab === 'control'}
+        <Server {me} tab="overview" bare part="main" />
+      {:else}
+        <Server {me} tab={tab} bare />
+      {/if}
+    {:else if area === 'settings' && sub[0] === 'appearance' && may.appearance}
+      <Appearance />
+    {:else}
+      <Home {me} />
+    {/if}
+  {/snippet}
+  {#snippet playerContent()}
+    {#if route.path === '/account'}
+      <Account {me} />
+    {:else if admin && !me.team}
+      <div class="gate">
+        <p>{t('signin.noTeam')}</p>
+        <button class="secondary" onclick={() => go('/')}>{t('signin.toPlayerArea')}</button>
+      </div>
+    {:else if admin && !me.teamReady}
+      <!-- Team, but no own sign-in yet (or 2FA required): set it up right here. -->
+      <div class="gate-setup">
+        <h1>{t('signin.teamSetupTitle')}</h1>
+        <p class="muted">{t(me.require2fa ? 'signin.teamSetupText2fa' : 'signin.teamSetupText')}</p>
+        <LoginsCard team require2fa={me.require2fa} onchange={(d) => { if (d.ownLogin) loadMe(); }} />
+      </div>
+    {:else if !player && area !== 'start'}
+      <!-- No player area (switched off, no permission, banned) -->
+      <div class="gate">
+        <p>{playerError || t('signin.noPlayerArea')}</p>
+        {#if me.team}<button onclick={() => go('/admin')}>{t('nav.admin')}</button>{/if}
+      </div>
+    {:else if area === 'game'}
+      <AreaTabs tabs={gameTabs} current={sub.slice(0, 2).join('/')} />
+      {#if sub.length >= 2}
+        {#key p}<SelfArea module={sub[0]} id={sub[1]} onChanged={loadPlayer} />{/key}
+      {/if}
+    {:else if area === 'stats' && player.stats}
+      <SelfStats />
+    {:else if area === 'news' && newsTabs.length}
+      <AreaTabs tabs={newsTabs} current={sub[0] ?? 'news'} />
+      {#if sub[0] === 'tickets' && sub[1] && player.tickets}
+        {#key sub[1]}<SelfTicket id={Number(sub[1])} onread={loadInbox} />{/key}
+      {:else if sub[0] === 'tickets' && player.tickets}
+        <SelfTickets />
+      {:else if player.news}
+        {#key sub[0]}<SelfNews section={sub[0] === 'changelog' ? 'changelog' : 'news'} />{/key}
+      {/if}
+    {:else if area === 'inbox' && hasInbox}
+      <Inbox {player} onseen={loadInbox} />
+    {:else}
+      <StartPage {player} canEdit={!!me.may.appearance} />
+    {/if}
+  {/snippet}
 
-  {#if !admin && area === 'map' && player?.map}
-    <!-- The map fills the screen below the bar. -->
-    <SelfMap />
-  {:else if admin && me.team && me.teamReady}
-    <!-- The administration: the sidebar on the left, the page next to it (Seitenkopf -> Reiter -> Filter -> Inhalt). -->
-    <div class="admin-shell">
-      <AdminSidebar groups={adminGroups} current={adminPage} home={homeEntry} {servers} bind:open={sidebarOpen} />
-      <main class="admin-main">
-        {#if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
-          {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
-        {:else if area === 'community' && sub[0] === 'tickets' && may.tickets}
-          <Tickets {me} />
-        {:else if area === 'community' && sub[0] === 'players' && sub[1] && may.players}
-          {#key sub[1]}<PlayerView uuid={sub[1]} section={sub[2] ?? null} {me} />{/key}
-        {:else if area === 'community' && sub[0] === 'players' && may.players}
-          <Players />
-        {:else if area === 'community' && sub[0] === 'punishments' && may.punishments}
-          <Punishments />
-        {:else if area === 'content' && ((sub[0] === 'news' && may.news) || (sub[0] === 'announce' && may.announce))}
-          {#key sub[0]}<News {me} section={sub[0] === 'announce' ? 'announce' : 'posts'} />{/key}
-        {:else if area === 'plugins' && sub[0] === 'mrchunks' && may.mrchunks}
-          {#if sub[1]}{#key sub[1]}<ChunkView id={sub[1]} {me} />{/key}{:else}<Chunks {me} />{/if}
-        {:else if area === 'plugins' && sub[0] === 'mrpvp' && ((sub[1] === 'kits' && sub[2]) || sub[1] === 'new-kit') && may.mrpvpKits}
-          {#key p}<PvpKit id={sub[1] === 'kits' ? sub[2] : null} copyFrom={sub[1] === 'new-kit' ? (sub[2] ?? null) : null} />{/key}
-        {:else if area === 'plugins' && sub[0] === 'mrpvp' && /^\d+$/.test(sub[1] ?? '') && may.mrpvp}
-          {#key sub[1]}<PvpGame id={sub[1]} {me} />{/key}
-        {:else if area === 'plugins' && sub[0] === 'mrpvp' && may.mrpvp}
-          <Pvp {me} tab={sub[1] ?? 'live'} />
-        {:else if area === 'plugins' && sub[0] === 'mrsleep' && may.mrsleep}
-          <Sleep {me} />
-        {:else if area === 'plugins' && sub[0] === 'map' && (may.mrwaypoints || may.mapAdmin)}
-          <Waypoints {me} tab={sub[1] ?? null} />
-        {:else if area === 'server' && sub[0] === 'room' && may.versions}
-          <PageHead title={t('nav.serverRoom')} />
-          {@const roomTab = roomTabs.some((x) => x.id === sub[1]) ? sub[1] : 'control'}
-          <PageTabs tabs={roomTabs} current={roomTab} />
-          {#if roomTab === 'plugins' && sub[2]}
-            {#key sub[2]}<PluginView name={sub[2]} back="/admin/server/room/plugins" />{/key}
-          {:else if roomTab === 'plugins'}
-            <Plugins embedded server="room" />
-          {:else if roomTab === 'config'}
-            {#key 'room'}<Settings embedded server="room" plugin={sub[2] ?? null} />{/key}
-          {:else if roomTab === 'performance'}
-            {#key 'room'}<Health server="room" />{/key}
-          {:else if roomTab === 'logs'}
-            {#key 'room'}<Logs {me} embedded server="room" />{/key}
-          {:else if roomTab === 'console'}
-            {#key 'room'}<Console {me} embedded server="room" />{/key}
-          {:else}
-            <Server {me} tab="overview" bare part="room" />
-          {/if}
-        {:else if area === 'server' && mainTabs.length}
-          {@const tab = mainTabs.some((x) => x.id === (sub[0] ?? 'control')) ? (sub[0] ?? 'control') : mainTabs[0].id}
-          <PageHead title={t('nav.serverMain')} />
-          <PageTabs tabs={mainTabs} current={tab} />
-          {#if tab === 'performance'}
-            <Health />
-          {:else if tab === 'maintenance'}
-            <Maintenance {me} />
-          {:else if tab === 'plugins' && sub[1]}
-            {#key sub[1]}<PluginView name={sub[1]} />{/key}
-          {:else if tab === 'plugins'}
-            <Plugins embedded server="main" />
-          {:else if tab === 'config'}
-            {#key 'main'}<Settings embedded server="main" plugin={sub[1] ?? null} />{/key}
-          {:else if tab === 'control'}
-            <Server {me} tab="overview" bare part="main" />
-          {:else}
-            <Server {me} tab={tab} bare />
-          {/if}
-        {:else if area === 'settings' && sub[0] === 'appearance' && may.appearance}
-          <Appearance />
-        {:else}
-          <Home {me} />
-        {/if}
+  {#if device.mobile}
+    <!-- Phone and upright tablet: bar with the big title at the top, tab bar at the bottom, sheets from below -->
+    <MobileBar title={mobileTitle} back={page.back} user={me} onback={back} onprofile={() => (profileOpen = true)}
+      large={!(area === 'map' && !admin) && !(area === 'start' && !admin)} profileLabel={t('mobile.profile')}
+      inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
+      oninbox={() => go('/inbox')} live={adminShell ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} />
+    {#if !admin && area === 'map' && player?.map}
+      <SelfMap />
+    {:else}
+      <main class="phone">
+        <InstallHint bind:show={installOpen} here={adminShell ? area === 'overview' : area === 'start'} />
+        <PullRefresh onrefresh={refresh}>
+          {#key refreshKey}
+            {#if area === 'more'}
+              <MorePage groups={moreGroups} onnav={(path) => go(path)} tabs={adminShell ? {
+                all: adminPages, chosen: adminTabs.map((x) => x.id), onchoose: chooseTabs, reset: () => chooseTabs(DEFAULT_ADMIN_TABS),
+              } : null} />
+            {:else if adminShell}
+              {@render adminContent()}
+            {:else}
+              {@render playerContent()}
+            {/if}
+          {/key}
+        </PullRefresh>
         <Footer />
       </main>
-    </div>
+    {/if}
+    {#if mobileTabs.length > 1}<TabBar items={mobileTabs} current={mobileCurrent} onnav={(path) => go(path)} />{/if}
+    <ProfileSheet open={profileOpen} onclose={() => (profileOpen = false)} user={me} {modes}
+      live={adminShell ? live.connected : null} onaccount={() => go('/account')} onlogout={logout}
+      oninstall={device.standalone ? null : () => (installOpen = true)} />
   {:else}
-    <main>
-      {#if route.path === '/account'}
-        <Account {me} />
-      {:else if admin && !me.team}
-        <div class="gate">
-          <p>{t('signin.noTeam')}</p>
-          <button class="secondary" onclick={() => go('/')}>{t('signin.toPlayerArea')}</button>
-        </div>
-      {:else if admin && !me.teamReady}
-        <!-- Team, but no own sign-in yet (or 2FA required): set it up right here. -->
-        <div class="gate-setup">
-          <h1>{t('signin.teamSetupTitle')}</h1>
-          <p class="muted">{t(me.require2fa ? 'signin.teamSetupText2fa' : 'signin.teamSetupText')}</p>
-          <LoginsCard team require2fa={me.require2fa} onchange={(d) => { if (d.ownLogin) loadMe(); }} />
-        </div>
-      {:else if !player && area !== 'start'}
-        <!-- No player area (switched off, no permission, banned) -->
-        <div class="gate">
-          <p>{playerError || t('signin.noPlayerArea')}</p>
-          {#if me.team}<button onclick={() => go('/admin')}>{t('nav.admin')}</button>{/if}
-        </div>
-      {:else if area === 'game'}
-        <AreaTabs tabs={gameTabs} current={sub.slice(0, 2).join('/')} />
-        {#if sub.length >= 2}
-          {#key p}<SelfArea module={sub[0]} id={sub[1]} onChanged={loadPlayer} />{/key}
-        {/if}
-      {:else if area === 'stats' && player.stats}
-        <SelfStats />
-      {:else if area === 'news' && newsTabs.length}
-        <AreaTabs tabs={newsTabs} current={sub[0] ?? 'news'} />
-        {#if sub[0] === 'tickets' && sub[1] && player.tickets}
-          {#key sub[1]}<SelfTicket id={Number(sub[1])} onread={loadInbox} />{/key}
-        {:else if sub[0] === 'tickets' && player.tickets}
-          <SelfTickets />
-        {:else if player.news}
-          {#key sub[0]}<SelfNews section={sub[0] === 'changelog' ? 'changelog' : 'news'} />{/key}
-        {/if}
-      {:else if area === 'inbox' && hasInbox}
-        <Inbox {player} onseen={loadInbox} />
-      {:else}
-        <StartPage {player} canEdit={!!me.may.appearance} />
-      {/if}
-      <Footer />
-    </main>
+    <TopBar items={nav} {current} onnav={(path) => go(path)} user={me} moreLabel={t('nav.more')} {modes}
+      onmenu={admin && me.team && me.teamReady ? () => (sidebarOpen = !sidebarOpen) : null} menuLabel={t('nav.menu')}
+      inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
+      live={admin ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} menu={[
+        { label: t('nav.account'), icon: '👤', active: route.path === '/account', onclick: () => go('/account') },
+        { label: t('nav.logout'), icon: '↩', danger: true, onclick: logout },
+      ]} />
+  
+    {#if !admin && area === 'map' && player?.map}
+      <!-- The map fills the screen below the bar. -->
+      <SelfMap />
+    {:else if admin && me.team && me.teamReady}
+      <!-- The administration: the sidebar on the left, the page next to it (Seitenkopf -> Reiter -> Filter -> Inhalt). -->
+      <div class="admin-shell">
+        <AdminSidebar groups={adminGroups} current={adminPage} home={homeEntry} {servers} bind:open={sidebarOpen} />
+        <main class="admin-main">
+        {@render adminContent()}
+          <Footer />
+        </main>
+      </div>
+    {:else}
+      <main>
+      {@render playerContent()}
+        <Footer />
+      </main>
+    {/if}
   {/if}
 {/if}
 
