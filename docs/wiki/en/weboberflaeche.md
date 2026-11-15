@@ -15,7 +15,7 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 | **Inbox** (`/inbox`, letter at the top right) | notifications, newest first with day separators: a new post, a new changelog, an answer of the team to an own ticket (from the last 60 days). Unread ones are bold with a blue bar, read ones grey. A click opens the content as a window over the page (with a link to the whole list) and marks it read; **Mark all as read** clears the number on the letter. Single ones or all can be **archived** (switch Inbox / Archive, from there they can come back; something new brings them back by itself). For the team the **team notices** come here too (see [Team notices](#team-notices)), switch **All / Team**. Active warnings are on top |
 | **Account** (`/account`, menu under the name) | sign-ins, devices, notifications for the team |
 
-**Administration:** a sidebar on the left with all pages in groups. At the top a tile with the server's logo and name and the **Overview** (dashboard) with the number of open hints. Small counters show where something waits (unread tickets, hints of the plugins, plugin updates, a running restart); at the bottom the main server and the waiting room with their state. On a PC the bar folds to symbols and every group folds (the browser remembers it); on the phone the menu button at the top left opens it.
+**Administration:** a sidebar on the left with all pages in groups. At the top a tile with the server's logo and name and the **Overview** (dashboard) with the number of open hints. Small counters show where something waits (unread tickets, hints of the plugins, plugin updates, a running restart); at the bottom the main server and the waiting room with their state. On a PC the bar folds to symbols and every group folds (the browser remembers it). On the phone the bar at the bottom replaces the sidebar (see [On the phone](#on-the-phone)).
 
 | Group | Pages |
 |---|---|
@@ -29,6 +29,21 @@ Since 1.5 there is **one** web interface for players and team. Team members swit
 Every page is built the same way: at the top the title (on sub pages with breadcrumbs, e.g. "Duels › #482") with the main buttons and one slim line of key figures, below tabs (each with its own address), below filters as round chips with a search, then the content.
 
 Everyone sees only what they have the permissions for. Old addresses (`/me/…`, `/tickets`, `/chunks`, `/server/plugins` …) lead to the new ones - bookmarks and old links keep working. Whoever was in the administration last lands there again after signing in.
+
+### On the phone
+On phones and tablets held upright the web interface looks like an app (tablets held sideways and computers keep the sidebar):
+
+- **Bar at the bottom** with four pages and **More**. Small numbers show where something waits; the number at **More** counts what waits on pages that are not in the bar. Tapping the open page again scrolls to the top.
+  - **Administration:** everyone chooses the four pages under **More → Customise bar** (applies to this device). Default: overview, tickets, players, main server.
+  - **Player area:** start, my game, map, news; statistics, tickets, inbox and account are under **More**.
+- **At the top** stands the big title of the page; while scrolling it moves small into the bar. Sub pages (e.g. a ticket) have **‹ Back** on the left. On the right: the **shield button** (team: player area / administration with one tap), the inbox letter and your own head (language, account, install as app, sign out).
+- **Tabs** are round segments; swiping the page sideways opens the next or previous tab.
+- **Windows** come as a sheet from below - pulling them down or tapping next to them closes them.
+- **Pulling down** (at the very top of the page) reloads the page.
+- **Tickets** are a list; swiping a ticket to the left shows **Claim** and **Close** (in the archive **Reopen**).
+
+> [!TIP]
+> **Install as an app:** put on the home screen, the web interface starts full screen without the browser bar - with the symbol from **Settings → Appearance** or the crown. iPhone/iPad: in Safari **Share → Add to Home Screen**; Android: the hint on the start page or your own head → **Install as app**. The hint appears once and can be dismissed.
 
 ## Setup
 1. In the config set `web.enabled: true` and `web.public-url` to your address (e.g. `https://admin.yourserver.com`), then `/mradmin reload`. For many tickets `storage.type: sqlite` is recommended.

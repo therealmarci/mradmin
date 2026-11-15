@@ -4,10 +4,13 @@
   //
   // options: [{id, label, n?, tone?}] - tone good | warn | bad | info adds a coloured dot; value: chosen id;
   // onchange(id); search: null (no field) or the text, onsearch(text); placeholder for the field.
+  // Phone (since 1.7): the search on top over the whole width, the chips in one row that scrolls sideways.
+  import { device } from '../lib/mobile.svelte.js';
+
   let { options = [], value, onchange, search = null, onsearch = null, placeholder = '' } = $props();
 </script>
 
-<div class="filter-row">
+<div class="filter-row" class:phone={device.mobile}>
   {#if options.length}
     <div class="chips" role="radiogroup">
       {#each options as o (o.id)}
@@ -88,6 +91,32 @@
 
   .dot.info {
     background: var(--accent);
+  }
+
+  .phone {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .phone .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  .phone button {
+    flex: none;
+    padding: 6px 14px;
+    font-size: 0.88rem;
+  }
+
+  .phone .search {
+    width: 100%;
+    padding: 9px 14px;
+    font-size: 16px;
   }
 
   .search {

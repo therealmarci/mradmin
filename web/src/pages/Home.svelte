@@ -842,4 +842,66 @@
   .notice:hover {
     filter: none;
   }
+
+  /* Phone (since 1.7): the tiles as small widgets in two columns (the details are one tap away), the players as a
+     list without tiles, the slideshow with narrower edges. */
+  :global(html.m) .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  :global(html.m) .tiles :global(.tile) {
+    gap: 8px;
+    padding: 14px;
+    min-height: 0;
+    border-radius: 18px;
+  }
+
+  :global(html.m) .tiles :global(.tile .watermark),
+  :global(html.m) .tiles :global(.tile .rows),
+  :global(html.m) .tiles :global(.tile .note),
+  :global(html.m) .tiles :global(.tile .open),
+  :global(html.m) .tiles :global(.tile .arrow) {
+    display: none;
+  }
+
+  :global(html.m) .tiles :global(.tile .icon) {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  :global(html.m) .tiles :global(.tile .title) {
+    font-size: 0.9rem;
+  }
+
+  :global(html.m) .tiles :global(.tile .main strong) {
+    font-size: 1.6rem;
+  }
+
+  :global(html.m) .tiles :global(.tile .main.small strong) {
+    font-size: 1rem;
+  }
+
+  :global(html.m) .players {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin: 0 -16px -16px;
+  }
+
+  :global(html.m) .player {
+    padding: 11px 16px;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  :global(html.m) .player:active {
+    background: var(--surface-2);
+  }
+
+  :global(html.m) .page :global(.hero .slide:not(.plain)) {
+    padding: 18px 16px 46px;
+  }
 </style>

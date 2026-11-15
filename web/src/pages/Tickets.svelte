@@ -11,6 +11,8 @@
   import { ICONS } from '../lib/icons.js';
   import PageHead from '../components/PageHead.svelte';
   import FilterChips from '../components/FilterChips.svelte';
+  import SwipeRow from '../components/mobile/SwipeRow.svelte';
+  import { device } from '../lib/mobile.svelte.js';
 
   let { me } = $props();
 
@@ -71,6 +73,21 @@
   // The colour of a card: new answer from the player (blue), taken by someone (green), open without anyone (yellow),
   // archive (grey).
   const tone = (x) => (state === 'closed' ? 'closed' : x.unread ? 'unread' : x.claimedBy ? 'claimed' : 'waiting');
+
+  // Phone: swipe a ticket to the left - take it over, close it.
+  async function quick(x, path, body) {
+    try {
+      await api('POST', `/tickets/${x.id}/${path}`, body);
+      error = '';
+      load();
+    } catch (e) {
+      error = errorText(e);
+    }
+  }
+  const swipes = (x) => state === 'closed' ? (me.may.ticketsReopen ? [{ label: t('ticket.reopen'), tone: 'accent', onclick: () => quick(x, 'reopen') }] : []) : [
+    ...(me.may.ticketsClose ? [{ label: t('ticket.close'), tone: 'bad', onclick: () => quick(x, 'close', { text: '' }) }] : []),
+    ...(me.may.ticketsClaim && !x.claimedBy ? [{ label: t('ticket.claim'), tone: 'good', onclick: () => quick(x, 'claim') }] : []),
+  ];
 </script>
 
 <div class="page">
@@ -89,6 +106,39 @@
       options={[{ id: '', label: t('tickets.all') }, ...usedCategories.map((c) => ({ id: c.id, label: c.name }))]} />
   {/if}
 
+  {#if device.mobile && tickets?.length && shown.length}
+    <!-- Phone: one list, a row per ticket, swipe to the left for quick actions -->
+    <ul class="rows">
+      {#each shown as x (x.id)}
+        <li>
+          <SwipeRow actions={swipes(x)}>
+            <button class="row {tone(x)}" onclick={() => go('/tickets/' + x.id)}>
+              <img src={head(x.report ? x.targetUuid : x.creatorUuid, 64)} alt="" width="42" height="42" />
+              <span class="r-main">
+                <span class="r-line">
+                  <span class="r-title">{x.summary || x.categoryName}</span>
+                  <span class="r-time">{ago(x.lastActivity)}</span>
+                </span>
+                <span class="r-sub">
+                  <span class="r-id">#{x.id}</span>
+                  {x.creator}{#if x.report} → <b>{x.target}</b>{/if}
+                  · <span class="r-cat" class:auto={!!x.source}>{x.categoryName}</span>
+                </span>
+                {#if x.last}<span class="r-last"><strong>{x.last.name}:</strong> {x.last.text}</span>{/if}
+                <span class="r-state">
+                  {#if state === 'closed'}{t('tickets.closed')}
+                  {:else if x.unread}{t('tickets.unread')}
+                  {:else if x.claimedBy}{t('tickets.claimed', { name: x.claimedBy })}
+                  {:else}{t('tickets.waiting')}{/if}
+                  · {t('tickets.messages', { n: x.count })}
+                </span>
+              </span>
+            </button>
+          </SwipeRow>
+        </li>
+      {/each}
+    </ul>
+  {:else}
   <section class="card tile">
     {#if tickets === null}
       <p class="muted pad">{t('common.loading')}</p>
@@ -132,6 +182,7 @@
       </ul>
     {/if}
   </section>
+  {/if}
 </div>
 
 <style>
@@ -320,6 +371,149 @@
     .search {
       width: 100%;
     }
+  }
+
+  /* Phone: a list without tiles, a coloured dot for the state */
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .rows li + li {
+    border-top: 1px solid var(--border);
+  }
+
+  .rows :global(.swipe),
+  .rows :global(.front) {
+    background: var(--surface);
+  }
+
+  .row {
+    --st: var(--warn);
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 13px 14px 13px 22px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .row:active {
+    transform: none;
+    background: var(--surface-2);
+  }
+
+  .row::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 30px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--st);
+  }
+
+  .row.unread {
+    --st: var(--accent);
+  }
+
+  .row.claimed {
+    --st: var(--good);
+  }
+
+  .row.closed {
+    --st: transparent;
+  }
+
+  .row img {
+    flex: none;
+    border-radius: 10px;
+    image-rendering: pixelated;
+  }
+
+  .r-main {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+  }
+
+  .r-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .r-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .unread .r-title {
+    font-weight: 800;
+  }
+
+  .r-time {
+    flex: none;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .unread .r-time {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .r-sub,
+  .r-last,
+  .r-state {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .r-id {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .r-cat.auto {
+    color: var(--bad);
+  }
+
+  .r-last strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .r-state {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--st);
+  }
+
+  .closed .r-state {
+    color: var(--muted);
   }
 
   @media (prefers-reduced-motion: reduce) {
