@@ -220,7 +220,7 @@ public final class SelfTickets {
             throw new Http.WebException(403, "ticket-close-team-only");
         }
         UUID player = http.player().player();
-        String error = server.sync(() -> plugin.tickets().webClose(player, http.player().name(), ticket));
+        String error = server.sync(() -> plugin.tickets().webClose(player, http.player().name(), ticket, false));
         if (error != null) {
             throw new Http.WebException(400, error);
         }

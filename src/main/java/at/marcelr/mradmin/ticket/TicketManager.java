@@ -517,7 +517,8 @@ public final class TicketManager {
             return;
         }
         boolean staff = asStaff(by, ticket);
-        finish(ticket, by.getName(), staff);
+        // Whoever may close tickets (the team) solves them - also their own ones; the creator closes for good.
+        finish(ticket, by.getName(), by.hasPermission(Perms.TICKETS_CLOSE));
         if (staff) {
             ticket.creatorUnread(true);
             ticket.staffUnread(false);
@@ -761,11 +762,12 @@ public final class TicketManager {
         return error;
     }
 
-    public String webClose(UUID who, String name, Ticket ticket) {
+    /** @param team closed from the administration (solved) instead of the player area (closed for good) */
+    public String webClose(UUID who, String name, Ticket ticket, boolean team) {
         if (!ticket.open()) {
             return "ticket-closed";
         }
-        finish(ticket, name, !ticket.isCreator(who));
+        finish(ticket, name, team);
         ticket.creatorUnread(!ticket.isCreator(who));
         ticket.staffUnread(false);
         save(ticket);

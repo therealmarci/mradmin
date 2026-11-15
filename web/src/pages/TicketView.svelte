@@ -61,7 +61,7 @@
   }
 
   // The team solves tickets (the player may open them again for solveDays days); with 0 days it closes them.
-  const solve = $derived(!!ticket && ticket.solveDays > 0 && ticket.creatorUuid !== me.uuid);
+  const solve = $derived(!!ticket && ticket.solveDays > 0);
 
   async function close() {
     if (!confirm(solve ? t('ticket.solveConfirm', { id, days: ticket.solveDays }) : t('ticket.closeConfirm', { id }))) return;

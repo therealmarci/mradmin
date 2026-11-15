@@ -298,7 +298,7 @@ public final class TicketDialog {
         if (ticket.open()) {
             if (mayClose) {
                 // The team solves (the creator may open it again), the creator closes for good.
-                boolean solve = !creator && reopenDays > 0;
+                boolean solve = viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_CLOSE) && reopenDays > 0;
                 buttons.add(ActionButton.create(messages.get(solve ? "ticket-view-resolve" : "ticket-view-close"),
                         messages.get(solve ? "ticket-view-resolve-hover" : "ticket-view-close-hover"), 150,
                         action(plugin, viewer, response -> confirmClose(plugin, viewer, ticket, text(response.getText(TEXT)), back, solve))));
@@ -311,16 +311,16 @@ public final class TicketDialog {
                             view(plugin, viewer, ticket, text(response.getText(TEXT)), back);
                         })));
             }
-        } else if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REOPEN)) {
-            buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), null, 150, action(plugin, viewer, response -> {
-                tickets.reopen(viewer, ticket);
-                again.run();
-            })));
         } else if (creator && ticket.reopenable(reopenDays)) {
             // A solved ticket: its creator may open it again until reopen-days have run out.
             buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), messages.get("ticket-view-reopen-hover",
                     tag("until", Texts.at(plugin, ticket.reopenUntil(reopenDays)))), 150, action(plugin, viewer, response -> {
                 tickets.reopenAsCreator(viewer, ticket);
+                again.run();
+            })));
+        } else if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REOPEN)) {
+            buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), null, 150, action(plugin, viewer, response -> {
+                tickets.reopen(viewer, ticket);
                 again.run();
             })));
         }

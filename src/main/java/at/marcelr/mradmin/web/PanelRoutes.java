@@ -384,7 +384,7 @@ public final class PanelRoutes {
                     return error;
                 }
             }
-            return tickets.webClose(http.account().id(), http.account().name(), t);
+            return tickets.webClose(http.account().id(), http.account().name(), t, true);
         }, "");
     }
 
