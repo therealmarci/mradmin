@@ -7,6 +7,8 @@
   import { duration } from '../lib/format.js';
   import Dropdown from './Dropdown.svelte';
   import Toast from './Toast.svelte';
+  import Sheet from './mobile/Sheet.svelte';
+  import { device } from '../lib/mobile.svelte.js';
 
   let { plugin } = $props();
 
@@ -149,7 +151,13 @@
   const anyAdvanced = $derived(!!data?.sections.some((s) => s.fields.some((f) => f.advanced)));
 
   let jumping = 0;
+  // Phone: the list of sections as a sheet from below (button "Sections")
+  let sectionsOpen = $state(false);
+  // The explanation behind an "i" that was tapped (iPhones do not focus buttons on a tap, so hover/focus is not enough)
+  let tipFor = $state(null);
+
   function jump(id) {
+    sectionsOpen = false;
     active = id;
     // While the page scrolls there, the marker stays on the chosen section.
     jumping = Date.now() + 900;
@@ -446,6 +454,12 @@
             {t('config.advanced')}
           </label>
         {/if}
+        {#if device.mobile}
+          <button type="button" class="sections-open" onclick={() => (sectionsOpen = true)}>
+            {tx(visible.find((x) => x.id === active)?.name ?? visible[0]?.name ?? { de: '', en: '' }) || t('config.sections')}
+            <span aria-hidden="true">▾</span>
+          </button>
+        {:else}
         {#each visible as s, i}
           {#if tx(s.group) && tx(s.group) !== tx(visible[i - 1]?.group ?? { de: '', en: '' })}
             <span class="nav-group">{tx(s.group)}</span>
@@ -455,6 +469,7 @@
             {#if s.list.some((f) => f.key in draft)}<span class="dirty" title={t('config.changed')}></span>{/if}
           </button>
         {/each}
+        {/if}
         <div class="file" title={t('config.fileHint')}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4" /></svg>
@@ -479,14 +494,15 @@
             </header>
             {#each s.list as f (f.key)}
               {#if f.sub}<h4 class="sub">{f.sub}</h4>{/if}
-              <div class="field" class:wide={f.type === 'table' || f.type === 'text'} class:changed={f.key in draft}
+              <div class="field" class:wide={f.type === 'table' || f.type === 'text'} class:bool={f.type === 'bool'} class:changed={f.key in draft}
                 class:invalid={fieldErrors[f.key]} id={'field-' + f.key}>
                 <div class="label">
                   <span class="name">
                     {tx(f.name)}
                     {#if tx(f.help)}
                       <!-- Explanation behind a small "i": hover or focus (tap on phones) shows it -->
-                      <button type="button" class="info" aria-label={t('config.info')}>
+                      <button type="button" class="info" class:open={tipFor === f.key} aria-label={t('config.info')}
+                        aria-expanded={tipFor === f.key} onclick={() => (tipFor = tipFor === f.key ? null : f.key)} onblur={() => tipFor === f.key && (tipFor = null)}>
                         i<span class="tip" role="tooltip">{tx(f.help)}</span>
                       </button>
                     {/if}
@@ -526,6 +542,24 @@
     <p class="muted">{t('common.loading')}</p>
   {/if}
 </div>
+
+{#if data && device.mobile}
+  <Sheet open={sectionsOpen} onclose={() => (sectionsOpen = false)} title={t('config.sections')}>
+    <ul class="sheet-sections">
+      {#each visible as s, i (s.id)}
+        {#if tx(s.group) && tx(s.group) !== tx(visible[i - 1]?.group ?? { de: '', en: '' })}
+          <li class="sheet-group">{tx(s.group)}</li>
+        {/if}
+        <li>
+          <button type="button" class:on={active === s.id} onclick={() => jump(s.id)}>
+            {tx(s.name)}
+            {#if s.list.some((f) => f.key in draft)}<span class="dirty" title={t('config.changed')}></span>{/if}
+          </button>
+        </li>
+      {/each}
+    </ul>
+  </Sheet>
+{/if}
 
 <style>
   .editor {
@@ -1351,5 +1385,139 @@
     .switch span {
       transition: none;
     }
+  }
+
+  /* Phone (since 1.7): search over the whole width, "Sections" opens a sheet, switches stay in one row with their name
+     (like a settings app) */
+  :global(html.m) .sections {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    position: static;
+    overflow: visible;
+  }
+
+  :global(html.m) .sections .search {
+    grid-column: 1 / -1;
+    flex: none;
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 16px;
+    border-radius: 999px;
+  }
+
+  :global(html.m) .sections-open {
+    justify-content: space-between;
+    min-width: 0;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  :global(html.m) .adv-switch {
+    margin: 0;
+    padding: 6px 4px;
+  }
+
+  :global(html.m) .file {
+    display: none;
+  }
+
+  :global(html.m) .box header {
+    padding: 14px 16px 10px;
+  }
+
+  :global(html.m) .field {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  :global(html.m) .field.bool {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  :global(html.m) .field.bool .input {
+    justify-content: flex-end;
+  }
+
+  :global(html.m) .content {
+    gap: 14px;
+  }
+
+  .sheet-sections {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .sheet-group {
+    margin: 14px 4px 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .sheet-sections button {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 46px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .sheet-sections button.on {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  /* Phone: the explanation of an "i" only while it is tapped, as a box above the tab bar over the whole width (hidden
+     boxes next to the field made the page wider than the screen) */
+  :global(html.m) .info .tip {
+    display: none;
+  }
+
+  :global(html.m) .info.open .tip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  :global(html.m) .info.open .tip,
+  :global(html.m) .info:focus .tip {
+    display: block;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    z-index: 40;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  /* Phone: tables with several columns (e.g. Discord events) scroll sideways inside their field */
+  :global(html.m) .field.wide .input {
+    display: block;
+    min-width: 0;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px 4px;
+  }
+
+  :global(html.m) .table {
+    width: max-content;
+    min-width: 100%;
   }
 </style>

@@ -2,15 +2,23 @@
   // The tab bar at the bottom of the phone layout (since 1.7): four places and "More", within reach of the thumb.
   // items: [{id, label, icon, path, n?, tone?}] - n = counter at the symbol (tone bad | warn | info);
   // current: id of the highlighted place ('more' = More); onnav(path).
+  // A tap on the highlighted place scrolls to the top - but only if its own page is open: "More" is also highlighted
+  // on the pages listed there, a tap then leads back to the list.
   import { ICONS } from '../../lib/icons.js';
+  import { route } from '../../lib/router.svelte.js';
 
   let { items, current, onnav } = $props();
+
+  function tap(item) {
+    if (current === item.id && route.path === item.path) scrollTo({ top: 0, behavior: 'smooth' });
+    else onnav(item.path);
+  }
 </script>
 
 <nav class="tabbar mr-tabbar">
   {#each items as item (item.id)}
     <button class:on={current === item.id} aria-current={current === item.id ? 'page' : undefined}
-      onclick={() => (current === item.id ? scrollTo({ top: 0, behavior: 'smooth' }) : onnav(item.path))}>
+      onclick={() => tap(item)}>
       <span class="glyph">
         {#if ICONS[item.icon]}
           <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width={current === item.id ? 2.3 : 1.8}

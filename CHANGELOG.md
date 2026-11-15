@@ -11,6 +11,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ### Behoben & geändert
 - **Weboberfläche am Handy - weitere Seiten:** Spieler, Chunkloader, Duelle, Beiträge, Strafen und Karte zeigen ihre Einträge am Handy als durchgehende Liste statt Kachel in Kachel. Die Ticket-Ansicht hat einen aufgeräumten Kopf (der Titel brach am Handy Buchstabe für Buchstabe um) und die Angaben als Zeilen. **Server → Steuerung** ist am Handy eine Kachel mit den Werten als Zeilen und gleich breiten Zeitknöpfen; im Spielerbereich stehen die Karten unter **Mein Spiel** direkt auf der Seite. Bei **Beiträge** steht am Handy die Liste oben, das Formular öffnet **+ Neuer Beitrag**. Seiten mit vielen Filtern waren am Handy breiter als der Bildschirm - behoben.
+- **Konfiguration am Handy:** Schalter stehen in einer Zeile mit ihrem Namen, oben die Suche über die ganze Breite, die Abschnitte öffnet ein Knopf als Blatt von unten, Tabellen (z.B. Discord-Ereignisse) scrollen seitlich im Feld. Die Erklärungen hinter dem „i“ erscheinen beim Antippen (auf iPhones kamen sie vorher gar nicht) und machten die Seite nicht mehr breiter als den Bildschirm.
+- **Leiste unten am Handy:** Auf einer Seite aus „Mehr“ führt ein Tipp auf **Mehr** wieder zur Liste (vorher passierte nichts); ein Tipp auf einen anderen aktiven Platz führt zu dessen Startseite.
 
 ## [STA-1.6.2-bu001] - 2026-11-15
 
