@@ -47,6 +47,7 @@ public final class TicketManager {
 
     private final MRAdmin plugin;
     private final TicketLogs logs;
+    private final GitHubIssues github = new GitHubIssues();
     private final Map<Integer, Ticket> tickets = new HashMap<>();
     private final Map<UUID, Instant> lastTicket = new HashMap<>();
     private final Map<UUID, Instant> lastReply = new HashMap<>();
@@ -55,6 +56,11 @@ public final class TicketManager {
     public TicketManager(MRAdmin plugin) {
         this.plugin = plugin;
         this.logs = new TicketLogs(plugin);
+    }
+
+    /** The GitHub issues tickets were forwarded to (state and comments for the team). */
+    public GitHubIssues github() {
+        return github;
     }
 
     /** Log snapshots saved with new tickets (tickets.attach-log). */
@@ -649,10 +655,13 @@ public final class TicketManager {
         return null;
     }
 
-    /** tickets.forward-categories: the categories that can be forwarded to MRtechnology (empty = all). */
+    /**
+     * tickets.forward-categories: the categories that can be forwarded to MRtechnology (empty = all) - only once: a
+     * ticket with a linked issue is not forwarded again.
+     */
     public boolean forwardable(Ticket ticket) {
         List<String> cats = settings().forwardCategories();
-        return ticket.request() == null && (cats.isEmpty() || cats.contains(ticket.category()));
+        return ticket.request() == null && ticket.issue() == null && (cats.isEmpty() || cats.contains(ticket.category()));
     }
 
     /**

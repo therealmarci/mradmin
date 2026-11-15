@@ -255,9 +255,8 @@
     </div>
   </div>
 
-  {#if log.area}
-    <LogMap area={log.area} {lang} minutes={spanMinutes}
-      mark={log.module?.area ? { ...log.module.area, label: T('loaderArea') + ': ' + log.module.title } : null} />
+  {#if log.area || log.timeline}
+    <LogMap {log} {lang} mark={log.module?.area ? { ...log.module.area, label: T('loaderArea') + ': ' + log.module.title } : null} />
   {/if}
 
   <details class="plugins">

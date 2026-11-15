@@ -39,7 +39,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 
 /**
- * Log snapshots of tickets (since 1.7): when a ticket of a category in tickets.attach-log is created, everything that
+ * Log snapshots of tickets (since 1.7): when a ticket is created (any category - it may change later), everything that
  * helps to understand it is saved with it for good - the last minutes of the server log and of the event log, the
  * performance per second, server data (versions, plugins, worlds, busy chunks) and the surroundings of the player
  * (position, state, entities and block entities nearby). The team sees it in the web interface; MRtechnology gets it
@@ -61,10 +61,17 @@ public final class TicketLogs {
     private final MRAdmin plugin;
 
     private final LogArea area;
+    private final PlayerRecorder recorder;
 
     TicketLogs(MRAdmin plugin) {
         this.plugin = plugin;
         this.area = new LogArea(plugin);
+        this.recorder = new PlayerRecorder(plugin);
+    }
+
+    /** The logging service: the last 30 minutes of play of every player (registered as a listener, started on enable). */
+    public PlayerRecorder recorder() {
+        return recorder;
     }
 
     /** Records despawns, deaths and player positions for the area part (registered as a listener). */
@@ -86,11 +93,11 @@ public final class TicketLogs {
 
     /**
      * @param module a part delivered by the plugin that opened the ticket (e.g. MRchunks' chunk loader) - kept only
-     *               locally, never in the sealed file for MRtechnology; with it the ticket gets a log in any category
+     *               locally, never in the sealed file for MRtechnology
      */
     void capture(Ticket ticket, String categoryName, Map<String, Object> module) {
         Settings.AttachLog s = settings();
-        if (!s.enabled() || (!s.wants(ticket.category()) && module == null)) {
+        if (!s.enabled()) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -150,6 +157,11 @@ public final class TicketLogs {
                 log.put("health", health(points));
                 log.put("console", console(since, links, ips));
                 log.put("events", events(since));
+                // the creator's last 30 minutes of play, minute by minute (also when they are offline right now)
+                Map<String, Object> timeline = recorder.timeline(ticket.creator());
+                if (timeline != null) {
+                    log.put("timeline", timeline);
+                }
                 if (areaPart != null) {
                     try {
                         log.put("area", areaPart.get(30, java.util.concurrent.TimeUnit.SECONDS));

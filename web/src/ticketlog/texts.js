@@ -24,6 +24,13 @@ const TEXTS = {
     noMap: 'Kein Kartenbild (Chunks nicht geladen).', none: 'keine', loaderArea: 'Fläche',
     module: 'Von {plugin}', pathHint: 'Weg in den {minutes} Minuten davor', slot: 'Platz',
     nearPlayers: 'Spieler in der Nähe', entitiesNear: 'Entities in der Nähe', tilesNear: 'Block-Entities',
+    playHint: 'Die letzten {n} Minuten Spielzeit von {who} - Minute für Minute abspielbar, zuletzt der Moment des Tickets',
+    prev: 'Vorige Minute', next: 'Nächste Minute', minutes: 'Minuten', offline: 'offline dazwischen', minuteOf: 'Minute {n} von {of}',
+    mActions: 'Aktionen des Spielers', mAround: 'Umgebung', mBroken: 'Abgebaut', mPlaced: 'Platziert', mPicked: 'Aufgehoben',
+    mDropped: 'Fallen gelassen', mTaken: 'Schaden bekommen', mDealt: 'Schaden ausgeteilt', mCommands: 'Befehle',
+    mCame: 'Spieler kamen', mWent: 'Spieler gingen', mNoServer: 'Keine Serverwerte für diese Minute (außerhalb des Logs).',
+    mProblems: '{n} Warnungen/Fehler im Server-Log',
+    ev_join: 'Betreten', ev_quit: 'Verlassen', ev_death: 'Gestorben', ev_teleport: 'Teleport',
   },
   en: {
     title: 'Log of the ticket', hide: 'Hide log',
@@ -47,6 +54,13 @@ const TEXTS = {
     noMap: 'No map picture (chunks not loaded).', none: 'none', loaderArea: 'Area',
     module: 'From {plugin}', pathHint: 'Way in the {minutes} minutes before', slot: 'Slot',
     nearPlayers: 'Players nearby', entitiesNear: 'Entities nearby', tilesNear: 'Block entities',
+    playHint: 'The last {n} minutes of play of {who} - to play minute by minute, at the end the moment of the ticket',
+    prev: 'Previous minute', next: 'Next minute', minutes: 'Minutes', offline: 'offline in between', minuteOf: 'minute {n} of {of}',
+    mActions: 'Actions of the player', mAround: 'Surroundings', mBroken: 'Broken', mPlaced: 'Placed', mPicked: 'Picked up',
+    mDropped: 'Dropped', mTaken: 'Damage taken', mDealt: 'Damage dealt', mCommands: 'Commands',
+    mCame: 'Players came', mWent: 'Players left', mNoServer: 'No server values for this minute (outside the log).',
+    mProblems: '{n} warnings/errors in the server log',
+    ev_join: 'Joined', ev_quit: 'Left', ev_death: 'Died', ev_teleport: 'Teleport',
   },
 };
 

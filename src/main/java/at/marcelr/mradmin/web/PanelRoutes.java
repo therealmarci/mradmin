@@ -56,6 +56,7 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/close", r::close);
         server.route("POST", "/api/tickets/{id}/reopen", r::reopen);
         server.route("POST", "/api/tickets/{id}/issue", r::issue);
+        server.route("GET", "/api/tickets/{id}/github", r::github);
         server.route("POST", "/api/tickets/{id}/category", r::category);
         server.route("GET", "/api/tickets/{id}/log", r::log);
         server.route("GET", "/api/tickets/{id}/log/sealed", r::sealedLog);
@@ -410,6 +411,20 @@ public final class PanelRoutes {
         require(http, Perms.TICKETS_FORWARD);
         String url = http.string("url");
         act(http, "ticket-issue", (tickets, t) -> tickets.linkIssue(t, url), url == null ? "" : url);
+    }
+
+    /** State, labels and comments of the GitHub issue the ticket was forwarded to (?refresh=1: fetch again). */
+    private void github(Http http) throws Exception {
+        requireTickets(http);
+        int id = id(http);
+        String issue = server.sync(() -> {
+            Ticket t = plugin.tickets().get(id);
+            return t == null ? null : t.issue();
+        });
+        if (issue == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        http.json(200, plugin.tickets().github().get(issue, "1".equals(http.query().get("refresh"))));
     }
 
     /** The log snapshot of the ticket (JSON), 404 if it has none. */

@@ -16,10 +16,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.imageio.ImageIO;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.Color;
@@ -45,12 +43,11 @@ import org.bukkit.event.entity.ItemDespawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.scheduler.BukkitTask;
 
 /**
  * The area part of ticket logs (since 1.7): a map of the 16 x 16 chunks around the player with every entity, the
- * items that despawned there, deaths nearby, the player's way and inventory. To have the past at hand it keeps
- * small rolling records of despawns, deaths and player positions (only what the longest log span needs).
+ * items that despawned there, deaths nearby and the inventory - the moment the ticket was created. To have the past
+ * at hand it keeps small rolling records of despawns and deaths (the way of the player comes from PlayerRecorder).
  * Every list is capped and grouped, so a log stays readable even next to a big farm.
  */
 public final class LogArea implements Listener {
@@ -60,7 +57,6 @@ public final class LogArea implements Listener {
     private static final long KEEP_MS = 120 * 60_000L;
     private static final int MAX_DESPAWNS = 50_000;
     private static final int MAX_DEATHS = 20_000;
-    private static final int PATH_TICKS = 100;
     private static final int MAX_ENTITY_GROUPS = 2_500;
     private static final int MAX_DESPAWN_ROWS = 1_500;
     private static final int MAX_DEATH_ROWS = 300;
@@ -72,55 +68,12 @@ public final class LogArea implements Listener {
     private record Death(long time, UUID world, int x, int z, String type, String cause, String killer, String message) {
     }
 
-    private record Spot(long time, UUID world, int x, int z) {
-    }
-
     private final MRAdmin plugin;
     private final Deque<Despawn> despawns = new ArrayDeque<>();
     private final Deque<Death> deaths = new ArrayDeque<>();
-    private final Map<UUID, Deque<Spot>> paths = new ConcurrentHashMap<>();
-    private BukkitTask task;
 
     LogArea(MRAdmin plugin) {
         this.plugin = plugin;
-    }
-
-    /** Starts recording player positions (every 5 seconds). Server thread. */
-    public void start() {
-        stop();
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::recordPaths, PATH_TICKS, PATH_TICKS);
-    }
-
-    public void stop() {
-        if (task != null) {
-            task.cancel();
-            task = null;
-        }
-    }
-
-    // ------------------------------------------------------------- recording
-
-    private void recordPaths() {
-        long now = System.currentTimeMillis();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            Location l = p.getLocation();
-            Deque<Spot> path = paths.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
-            synchronized (path) {
-                Spot last = path.peekLast();
-                // standing still: only every minute a point, so an AFK player does not fill the record
-                if (last == null || last.x() != l.getBlockX() || last.z() != l.getBlockZ() || now - last.time() > 60_000) {
-                    path.addLast(new Spot(now, l.getWorld().getUID(), l.getBlockX(), l.getBlockZ()));
-                }
-                while (!path.isEmpty() && path.peekFirst().time() < now - KEEP_MS) {
-                    path.pollFirst();
-                }
-            }
-        }
-        paths.entrySet().removeIf(e -> {
-            synchronized (e.getValue()) {
-                return e.getValue().isEmpty() || e.getValue().peekLast().time() < now - KEEP_MS;
-            }
-        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -224,9 +177,6 @@ public final class LogArea implements Listener {
         UUID wid = world.getUID();
         area.put("despawned", despawned(wid, since, x0, z0, size));
         area.put("deaths", deaths(wid, since, x0, z0, size));
-        if (player != null) {
-            area.put("path", path(player.getUniqueId(), wid, since));
-        }
 
         // The chunks are copied a few per tick, then drawn off the server thread.
         CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
@@ -262,7 +212,7 @@ public final class LogArea implements Listener {
     }
 
     /** hostile, passive, item, projectile, vehicle or other - the colour of the point on the map. */
-    private static String category(Entity e) {
+    static String category(Entity e) {
         if (e instanceof Item) {
             return "item";
         }
@@ -365,23 +315,6 @@ public final class LogArea implements Listener {
         return Map.of("total", found.size(), "summary", top(summary), "rows", rows);
     }
 
-    private List<List<Object>> path(UUID player, UUID world, long since) {
-        Deque<Spot> path = paths.get(player);
-        List<List<Object>> list = new ArrayList<>();
-        if (path == null) {
-            return list;
-        }
-        synchronized (path) {
-            for (Spot s : path) {
-                if (s.time() >= since) {
-                    // another world: a break in the line
-                    list.add(s.world().equals(world) ? List.of(s.time(), s.x(), s.z()) : List.of(s.time()));
-                }
-            }
-        }
-        return list;
-    }
-
     private static boolean inside(int x, int z, int x0, int z0, int size) {
         return x >= x0 && z >= z0 && x < x0 + size && z < z0 + size;
     }
@@ -399,7 +332,7 @@ public final class LogArea implements Listener {
      * The area from above, one pixel per block, shaded like a Minecraft map. In the Nether from a little above the
      * player downwards (the roof would hide everything). Unloaded chunks stay transparent.
      */
-    private static String draw(List<ChunkSnapshot> snapshots, int x0, int z0, int size, int fromY, int minY, boolean surface)
+    static String draw(List<ChunkSnapshot> snapshots, int x0, int z0, int size, int fromY, int minY, boolean surface)
             throws IOException {
         int[] heights = new int[size * size];
         int[] colors = new int[size * size];

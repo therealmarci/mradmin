@@ -208,13 +208,9 @@ public record Settings(
 
     /**
      * tickets.attach-log (since 1.7): a snapshot of the last minutes (server log, events, performance, server and
-     * player surroundings) saved with new tickets of these categories (empty = all).
+     * player surroundings) saved with every new ticket - its category may still change later.
      */
-    public record AttachLog(boolean enabled, List<String> categories, int minutes, int radius) {
-
-        public boolean wants(String category) {
-            return enabled && (categories.isEmpty() || categories.contains(category));
-        }
+    public record AttachLog(boolean enabled, int minutes, int radius) {
     }
 
     /**
@@ -354,7 +350,6 @@ public record Settings(
                 Math.clamp(c.getInt("tickets.reopen-days", 30), 0, 365),
                 c.getStringList("tickets.forward-categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList(),
                 new AttachLog(c.getBoolean("tickets.attach-log.enabled", true),
-                        c.getStringList("tickets.attach-log.categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList(),
                         Math.clamp(c.getInt("tickets.attach-log.minutes", 30), 1, 120),
                         Math.clamp(c.getInt("tickets.attach-log.radius", 32), 8, 128)));
 

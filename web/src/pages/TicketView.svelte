@@ -9,6 +9,7 @@
   import ForwardIssue from '../components/ForwardIssue.svelte';
   import Dropdown from '../components/Dropdown.svelte';
   import TicketLog from '../ticketlog/TicketLog.svelte';
+  import GitHubIssue from '../components/GitHubIssue.svelte';
 
   let { id, me } = $props();
 
@@ -340,6 +341,10 @@
         <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
       {/if}
     </section>
+
+    {#if ticket.issue}
+      <GitHubIssue {ticket} {me} onlinked={(url) => { ticket.issue = url || null; }} />
+    {/if}
 
     {#if me.may.ticketsLog && ticket.hasLog && !log}
       <section class="card log-bar">
