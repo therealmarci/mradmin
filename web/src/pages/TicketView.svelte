@@ -6,6 +6,7 @@
   import { go } from '../lib/router.svelte.js';
   import { live } from '../lib/live.svelte.js';
   import PageHead from '../components/PageHead.svelte';
+  import ForwardIssue from '../components/ForwardIssue.svelte';
 
   let { id, me } = $props();
 
@@ -59,6 +60,11 @@
     if (!text.trim()) return;
     if (await action('reply', { text })) text = '';
   }
+
+  // Forward to MRtechnology: a prefilled GitHub issue, linked to the ticket afterwards
+  let forwarding = $state(false);
+  // "#123" of a linked issue address
+  const issueNo = (url) => url?.match(/\/issues\/(\d+)$/)?.[1] ?? '';
 
   // The team solves tickets (the player may open them again for solveDays days); with 0 days it closes them.
   const solve = $derived(!!ticket && ticket.solveDays > 0);
@@ -144,6 +150,13 @@
           <button class="secondary small person-btn" onclick={() => go('/players/' + person.uuid)}>
             <img src={head(person.uuid, 32)} alt="" width="18" height="18" /> {t('ticket.toPlayer', { name: person.name })}
           </button>
+        {/if}
+        {#if ticket.issue}
+          <a class="issue-chip" href={ticket.issue} target="_blank" rel="noopener noreferrer"
+            title={ticket.issue}>GitHub #{issueNo(ticket.issue)} ↗</a>
+        {/if}
+        {#if me.may.ticketsForward && ticket.forward}
+          <button class="secondary small" onclick={() => (forwarding = true)}>{t('forward.button')}</button>
         {/if}
         {#if ticket.open && me.may.ticketsClaim}
           <button class="secondary small" onclick={() => action('claim')} disabled={busy}>
@@ -298,6 +311,9 @@
       {/if}
     </section>
   {/if}
+{#if forwarding && ticket}
+  <ForwardIssue {ticket} onclose={() => (forwarding = false)} onlinked={(url) => { ticket.issue = url || null; forwarding = false; }} />
+{/if}
 </div>
 
 <style>
@@ -756,5 +772,19 @@
 
   :global(html.m) .fvalue {
     text-align: right;
+  }
+
+  /* the GitHub issue the ticket was forwarded to */
+  .issue-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
   }
 </style>

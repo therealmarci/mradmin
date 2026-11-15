@@ -55,6 +55,7 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/claim", r::claim);
         server.route("POST", "/api/tickets/{id}/close", r::close);
         server.route("POST", "/api/tickets/{id}/reopen", r::reopen);
+        server.route("POST", "/api/tickets/{id}/issue", r::issue);
         server.route("POST", "/api/tickets/{id}/decide", r::decide);
     }
 
@@ -332,6 +333,8 @@ public final class PanelRoutes {
             detail.put("resolved", t.reopenable(days));
             detail.put("reopenUntil", t.reopenable(days) ? t.reopenUntil(days).toEpochMilli() : 0);
             detail.put("solveDays", days);
+            detail.put("issue", t.issue());
+            detail.put("forward", tickets.forwardable(t));
             detail.put("mine", t.isCreator(http.account().id()));
             List<Map<String, Object>> messages = new ArrayList<>();
             for (Ticket.Message m : t.messages()) {
@@ -386,6 +389,14 @@ public final class PanelRoutes {
             }
             return tickets.webClose(http.account().id(), http.account().name(), t, true);
         }, "");
+    }
+
+    /** Links the GitHub issue the ticket was forwarded to (empty = remove the link). */
+    private void issue(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_FORWARD);
+        String url = http.string("url");
+        act(http, "ticket-issue", (tickets, t) -> tickets.linkIssue(t, url), url == null ? "" : url);
     }
 
     private void reopen(Http http) throws Exception {

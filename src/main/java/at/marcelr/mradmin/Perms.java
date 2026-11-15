@@ -22,6 +22,8 @@ public final class Perms {
     public static final String TICKETS_CLAIM = "mradmin.tickets.claim";
     public static final String TICKETS_CLOSE = "mradmin.tickets.close";
     public static final String TICKETS_REOPEN = "mradmin.tickets.reopen";
+    /** Forward a ticket to MRtechnology (prefilled GitHub issue) and link the issue. */
+    public static final String TICKETS_FORWARD = "mradmin.tickets.forward";
     public static final String TICKETS_TELEPORT = "mradmin.tickets.teleport";
 
     // maintenance

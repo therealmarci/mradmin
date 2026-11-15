@@ -83,6 +83,7 @@ permissions:
     description: "Group staff: support + summon, freeze and kick players, read the console output on the page Log; with LibertyBans kick, mute and warn."
     default: op
     children:
+      mradmin.tickets.forward: true
       mradmin.groups.support: true
       mradmin.player.summon: true
       mradmin.player.freeze: true
@@ -165,6 +166,9 @@ permissions:
     default: op
   mradmin.tickets.reopen:
     description: Reopen closed tickets.
+    default: op
+  mradmin.tickets.forward:
+    description: "Forward tickets to MRtechnology: open a prefilled GitHub issue of the plugin and link it to the ticket."
     default: op
   mradmin.tickets.teleport:
     description: Teleport to the location of a ticket or to the reported player.

@@ -78,6 +78,20 @@
     }
   }
 
+  // Solved and done: archive = closed for good (it can no longer be opened again)
+  async function archive() {
+    if (!confirm(t('self.tickets.archiveConfirm'))) return;
+    busy = true;
+    try {
+      await api('POST', `/self/tickets/${id}/archive`);
+      await load();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function reopen() {
     busy = true;
     try {
@@ -152,7 +166,10 @@
         <!-- Solved by the team: the player can open it again until reopenUntil -->
         <div class="resolved-note">
           <span>✓ {t('self.tickets.resolvedHint', { until: new Date(ticket.reopenUntil).toLocaleDateString() })}</span>
-          <button class="secondary" disabled={busy} onclick={reopen}>{t('self.tickets.reopen')}</button>
+          <span class="r-actions">
+            <button class="secondary" disabled={busy} onclick={archive}>{t('self.tickets.archive')}</button>
+            <button class="secondary" disabled={busy} onclick={reopen}>{t('self.tickets.reopen')}</button>
+          </span>
         </div>
       {:else}
         <div class="closed-note">🔒 {t('self.tickets.closedHint')}</div>
@@ -413,5 +430,11 @@
     color: var(--good);
     background: color-mix(in srgb, var(--good) 10%, transparent);
     border: 1px solid color-mix(in srgb, var(--good) 30%, transparent);
+  }
+
+  .r-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 </style>

@@ -634,6 +634,10 @@ sections:
         unit: {de: Tage, en: days}
         name: {de: Gelöste wieder öffnen, en: Reopen solved ones}
         help: {de: "Das Team löst Tickets statt sie zu schließen. So viele Tage kann der Spieler ein gelöstes Ticket wieder öffnen, danach ist es endgültig geschlossen. 0 = sofort endgültig.", en: "The team solves tickets instead of closing them. For this many days the player can open a solved ticket again, afterwards it is closed for good. 0 = closed for good at once."}
+      - key: tickets.forward-categories
+        type: strings
+        name: {de: An MRtechnology weiterleiten, en: Forward to MRtechnology}
+        help: {de: "Kategorien (Ids), bei denen das Team im Browser ein Ticket als GitHub-Issue an die Entwickler der Plugins weiterleiten kann - mit dem ganzen Verlauf, öffentlich. Leer = alle Kategorien.", en: "Categories (ids) for which the team can forward a ticket in the browser as a GitHub issue to the developers of the plugins - with the whole conversation, public. Empty = all categories."}
       - key: tickets.plugin-reports
         type: bool
         name: {de: Automatische Tickets der Plugins, en: Automatic tickets from plugins}

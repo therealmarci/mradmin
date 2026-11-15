@@ -4,7 +4,7 @@ Du hast einen Regelverstoß gesehen, einen Bug gefunden oder eine Frage ans Team
 
 - **Neues Ticket:** Kategorie wählen (z.B. Cheating, Chat, Griefing, Betrug, Bug, Frage/Sonstiges), dann ein kurzes Formular ausfüllen. Bei einem Spieler-Report wählst du zuerst den Spieler. Dein Standort wird mitgespeichert, damit das Team die Stelle findet.
 - **Offene Tickets:** Neue Antworten des Teams leuchten.
-- **Archiv:** deine geschlossenen Tickets. Tickets, die das Team **gelöst** hat, bleiben noch bei den aktiven: War die Sache doch nicht erledigt, öffnest du sie mit **Wieder öffnen** erneut - das geht 30 Tage lang (je nach Server), danach ist das Ticket endgültig geschlossen.
+- **Archiv:** deine geschlossenen Tickets. Tickets, die das Team **gelöst** hat, bleiben noch bei den aktiven: War die Sache doch nicht erledigt, öffnest du sie mit **Wieder öffnen** erneut - das geht 30 Tage lang (je nach Server), danach ist das Ticket endgültig geschlossen. Ist die Sache für dich erledigt, kannst du ein gelöstes Ticket im Browser mit **Archivieren** sofort endgültig abschließen.
 
 `/report <spieler>` springt direkt zur Auswahl des Grundes.
 

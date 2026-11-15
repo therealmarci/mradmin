@@ -601,6 +601,44 @@ public final class TicketManager {
         return null;
     }
 
+    /**
+     * The creator archives a solved ticket: done for good, it can no longer be opened again (since 1.7). Who solved it
+     * and when stay as they were. Result: null or the key of the reason.
+     */
+    public String creatorArchive(UUID who, Ticket ticket) {
+        if (!ticket.isCreator(who)) {
+            return "no-permission";
+        }
+        if (!ticket.reopenable(settings().reopenDays())) {
+            return "ticket-not-solved";
+        }
+        ticket.close(ticket.closedBy(), ticket.closedAt());
+        ticket.creatorUnread(false);
+        save(ticket);
+        return null;
+    }
+
+    /** Only issues in the repositories of the MRtechnology plugins. */
+    private static final java.util.regex.Pattern ISSUE = java.util.regex.Pattern.compile(
+            "https://github\\.com/therealmarci/(mradmin|mrchunks|mrpvp|mrsleep|mrtoolbar|mrwaypoints|mrwaitroom)/issues/\\d{1,7}");
+
+    /** Links the ticket to the GitHub issue it was forwarded to (empty = remove the link). Result: null or the error key. */
+    public String linkIssue(Ticket ticket, String address) {
+        String clean = address == null ? "" : address.trim();
+        if (!clean.isEmpty() && !ISSUE.matcher(clean).matches()) {
+            return "ticket-issue-invalid";
+        }
+        ticket.issue(clean.isEmpty() ? null : clean);
+        save(ticket);
+        return null;
+    }
+
+    /** tickets.forward-categories: the categories that can be forwarded to MRtechnology (empty = all). */
+    public boolean forwardable(Ticket ticket) {
+        List<String> cats = settings().forwardCategories();
+        return ticket.request() == null && (cats.isEmpty() || cats.contains(ticket.category()));
+    }
+
     /** Opens a closed ticket again (team only). */
     public void reopen(Player staff, Ticket ticket) {
         if (!staff.hasPermission(Perms.TICKETS_REOPEN)) {
@@ -1072,6 +1110,7 @@ public final class TicketManager {
             ticket.source(r.source(), r.sourceId());
         }
         ticket.request(WebRequest.parse(r.extra()));
+        ticket.issue(r.issue());
         ticket.saved(messages.size());
         return ticket;
     }
@@ -1080,7 +1119,7 @@ public final class TicketManager {
         return new Storage.TicketRow(t.id(), t.creator(), t.creatorName(), t.target(), t.targetName(), t.category(),
                 t.subject(), t.created().toEpochMilli(), t.world(), t.x(), t.y(), t.z(), t.claimedBy(), t.claimedByName(),
                 t.closedBy(), t.closedAt() == null ? 0 : t.closedAt().toEpochMilli(), t.creatorUnread(), t.staffUnread(),
-                t.source(), t.sourceId(), t.request() == null ? null : t.request().json(), t.resolved());
+                t.source(), t.sourceId(), t.request() == null ? null : t.request().json(), t.resolved(), t.issue());
     }
 
     /** reports.yml of version 0.1.0: every report becomes a player ticket, the old file is kept as backup. */

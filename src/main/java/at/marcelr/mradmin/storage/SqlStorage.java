@@ -151,7 +151,7 @@ final class SqlStorage implements Storage {
                     + "x DOUBLE NOT NULL, y DOUBLE NOT NULL, z DOUBLE NOT NULL, "
                     + "claimed_by VARCHAR(36), claimed_by_name VARCHAR(64), closed_by VARCHAR(64), closed_at BIGINT, "
                     + "creator_unread INT NOT NULL, staff_unread INT NOT NULL, source VARCHAR(64), source_id VARCHAR(64), extra TEXT, "
-                    + "resolved INT NOT NULL DEFAULT 0)"
+                    + "resolved INT NOT NULL DEFAULT 0, issue VARCHAR(255))"
                     + suffix);
             st.execute("CREATE TABLE IF NOT EXISTS " + p + "ticket_messages ("
                     + "ticket_id INT NOT NULL, seq INT NOT NULL, author VARCHAR(36) NOT NULL, "
@@ -197,6 +197,8 @@ final class SqlStorage implements Storage {
             // 3: tickets solved by the team that the creator may still open again (since 1.7)
             try (Statement st = c.createStatement()) {
                 st.execute("ALTER TABLE " + p + "tickets ADD COLUMN resolved INT NOT NULL DEFAULT 0");
+                // and the linked GitHub issue (forwarded to MRtechnology)
+                st.execute("ALTER TABLE " + p + "tickets ADD COLUMN issue VARCHAR(255)");
             }
         }
         try (Statement st = c.createStatement()) {
@@ -314,7 +316,7 @@ final class SqlStorage implements Storage {
                             uuid(rs.getString("claimed_by")), rs.getString("claimed_by_name"), rs.getString("closed_by"),
                             rs.wasNull() ? 0 : closedAt, rs.getInt("creator_unread") != 0, rs.getInt("staff_unread") != 0,
                             rs.getString("source"), rs.getString("source_id"), rs.getString("extra"),
-                            rs.getInt("resolved") != 0);
+                            rs.getInt("resolved") != 0, rs.getString("issue"));
                     tickets.put(id, new LoadedTicket(row, List.copyOf(messages.getOrDefault(id, List.of()))));
                     next = Math.max(next, id + 1);
                 }
@@ -349,8 +351,8 @@ final class SqlStorage implements Storage {
     private void writeTicket(Connection c, TicketRow t) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("REPLACE INTO " + p + "tickets (id, server, creator, creator_name, "
                 + "target, target_name, category, subject, created, world, x, y, z, claimed_by, claimed_by_name, closed_by, "
-                + "closed_at, creator_unread, staff_unread, source, source_id, extra, resolved) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                + "closed_at, creator_unread, staff_unread, source, source_id, extra, resolved, issue) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             ps.setInt(1, t.id());
             ps.setString(2, server);
             ps.setString(3, t.creator().toString());
@@ -378,6 +380,7 @@ final class SqlStorage implements Storage {
             ps.setString(21, t.sourceId());
             ps.setString(22, t.extra());
             ps.setInt(23, t.resolved() ? 1 : 0);
+            ps.setString(24, t.issue());
             ps.executeUpdate();
         }
     }

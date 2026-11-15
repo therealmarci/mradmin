@@ -100,13 +100,14 @@ public interface Storage {
      * One ticket without its messages. Times in epoch milliseconds; {@code closedAt} is 0 while open.
      * Optional values are null. {@code extra}: JSON with the data of tickets from the public web forms (unban
      * requests, contact) - null for normal tickets. {@code resolved}: closed by the team as solved - the creator may
-     * open it again for tickets.reopen-days (since 1.7).
+     * open it again for tickets.reopen-days (since 1.7). {@code issue}: address of the linked GitHub issue (forwarded
+     * to MRtechnology), otherwise null.
      */
     record TicketRow(int id, UUID creator, String creatorName, UUID target, String targetName, String category,
                      String subject, long created, String world, double x, double y, double z,
                      UUID claimedBy, String claimedByName, String closedBy, long closedAt,
                      boolean creatorUnread, boolean staffUnread, String source, String sourceId,
-                     String extra, boolean resolved) {
+                     String extra, boolean resolved, String issue) {
     }
 
     /** One message of a ticket; time in epoch milliseconds. */

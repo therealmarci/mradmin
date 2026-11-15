@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 63
+config-version: 64
 
 
 # ------------------------------------------------------------------------------
@@ -291,6 +291,10 @@ tickets:
   # good and can no longer be opened. Tickets the player closes themselves are closed for good right away.
   # 0 = solved tickets are closed for good at once. keep-closed only starts counting after this time.
   reopen-days: 30
+  # Ticket categories the team can forward to MRtechnology (the developers of the plugins) in the web interface: the
+  # button opens the bug form of the chosen plugin on GitHub, filled with versions and the whole conversation (public!);
+  # the issue is then linked to the ticket. Empty list = all categories. Permission mradmin.tickets.forward.
+  forward-categories: ["bug"]
   # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
   # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
   # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader

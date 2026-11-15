@@ -41,6 +41,8 @@ public final class Ticket {
     private Instant closedAt;
     /** Closed by the team as solved: the creator may open it again until closedAt + tickets.reopen-days (since 1.7). */
     private boolean resolved;
+    /** Address of the linked GitHub issue (the team forwarded the ticket to MRtechnology), otherwise null. */
+    private String issue;
     /** The team wrote something (or closed it) that the creator has not seen yet. */
     private boolean creatorUnread;
     /** The creator wrote something the team has not seen yet. */
@@ -187,6 +189,15 @@ public final class Ticket {
     /** Closed by the team as solved (the flag - whether it may still be opened again: {@link #reopenable}). */
     public boolean resolved() {
         return resolved;
+    }
+
+    /** Address of the linked GitHub issue, otherwise null. */
+    public String issue() {
+        return issue;
+    }
+
+    void issue(String address) {
+        issue = address;
     }
 
     /** Until when the creator may open the solved ticket again ({@code days} = tickets.reopen-days); null = not at all. */

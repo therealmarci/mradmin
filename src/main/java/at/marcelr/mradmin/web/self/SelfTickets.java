@@ -48,6 +48,7 @@ public final class SelfTickets {
         server.self("POST", "/api/self/tickets/{id}/reply", this::reply);
         server.self("POST", "/api/self/tickets/{id}/close", this::close);
         server.self("POST", "/api/self/tickets/{id}/reopen", this::reopen);
+        server.self("POST", "/api/self/tickets/{id}/archive", this::archive);
     }
 
     /** Tickets are on and the player may open them (also checked offline, with LuckPerms). */
@@ -221,6 +222,17 @@ public final class SelfTickets {
         }
         UUID player = http.player().player();
         String error = server.sync(() -> plugin.tickets().webClose(player, http.player().name(), ticket, false));
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+    }
+
+    /** The player archives a ticket the team solved: done for good, it can no longer be opened again. */
+    private void archive(Http http) throws Exception {
+        require(http);
+        Ticket ticket = own(http);
+        UUID player = http.player().player();
+        String error = server.sync(() -> plugin.tickets().creatorArchive(player, ticket));
         if (error != null) {
             throw new Http.WebException(400, error);
         }

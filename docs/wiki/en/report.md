@@ -4,7 +4,7 @@ You saw a rule violation, found a bug or have a question for the team? **`/repor
 
 - **New ticket:** choose a category (e.g. cheating, chat, griefing, scam, bug, question/other), then fill in a short form. For a player report you choose the player first. Your location is saved with it so the team finds the spot.
 - **Open tickets:** new answers from the team glow.
-- **Archive:** your closed tickets. Tickets the team **solved** stay among the active ones: if the matter is not settled after all, open them again with **Open again** - possible for 30 days (depending on the server), afterwards the ticket is closed for good.
+- **Archive:** your closed tickets. Tickets the team **solved** stay among the active ones: if the matter is not settled after all, open them again with **Open again** - possible for 30 days (depending on the server), afterwards the ticket is closed for good. If the matter is settled for you, you can close a solved ticket for good right away in the browser with **Archive**.
 
 `/report <player>` jumps straight to choosing the reason.
 
