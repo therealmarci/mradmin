@@ -36,13 +36,15 @@ final class TicketItems {
                 tag("summary", TicketText.preview(tickets.summary(ticket), 40)),
                 tag("creator", ticket.creatorName()),
                 tag("claimed", claimed == null ? messages.get("ticket-view-unclaimed") : Component.text(claimed)),
-                tag("status", messages.get(ticket.open() ? "ticket-status-open" : "ticket-status-closed")),
+                tag("status", messages.get(ticket.open() ? "ticket-status-open"
+                        : ticket.reopenable(plugin.settings().tickets().reopenDays()) ? "ticket-status-resolved" : "ticket-status-closed")),
                 tag("count", ticket.messages().size()),
                 tag("last", last == null ? "" : TicketText.preview(last.text(), 40)),
                 tag("ago", Texts.duration(Instant.now().toEpochMilli() - ticket.lastActivity().toEpochMilli())),
                 tag("time", Texts.at(plugin, ticket.created()))};
         Items item = Items.of(plugin.settings().tickets().icon())
-                .name(messages.item(ticket.open() ? "gui-ticket-name" : "gui-ticket-name-closed", resolvers));
+                .name(messages.item(ticket.open() || (!staffView && ticket.reopenable(plugin.settings().tickets().reopenDays()))
+                        ? "gui-ticket-name" : "gui-ticket-name-closed", resolvers));
         if (unread) {
             item.lore(messages.lore(staffView ? "gui-ticket-unread-staff" : "gui-ticket-unread", resolvers));
         }

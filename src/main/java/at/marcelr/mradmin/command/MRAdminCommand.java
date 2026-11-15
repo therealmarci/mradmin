@@ -309,6 +309,14 @@ public final class MRAdminCommand implements TabExecutor {
             }
             switch (args[1].toLowerCase(Locale.ROOT)) {
                 case "close" -> plugin.tickets().close(viewer, ticket);
+                // the creator opens a solved ticket again, the team any closed one
+                case "reopen" -> {
+                    if (ticket.isCreator(viewer.getUniqueId()) && !viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REOPEN)) {
+                        plugin.tickets().reopenAsCreator(viewer, ticket);
+                    } else {
+                        plugin.tickets().reopen(viewer, ticket);
+                    }
+                }
                 case "tp", "teleport" -> plugin.tickets().teleport(viewer, ticket);
                 default -> TicketDialog.view(plugin, viewer, ticket, null);
             }

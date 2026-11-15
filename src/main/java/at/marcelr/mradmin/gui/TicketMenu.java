@@ -38,8 +38,10 @@ public final class TicketMenu extends Menu {
         Messages messages = plugin.messages();
         TicketManager tickets = plugin.tickets();
         List<Ticket> mine = tickets.byCreator(viewer.getUniqueId());
-        List<Ticket> open = mine.stream().filter(Ticket::open).toList();
-        List<Ticket> closed = mine.stream().filter(t -> !t.open()).toList();
+        // Solved tickets the player may still open again stay among the active ones.
+        int reopenDays = plugin.settings().tickets().reopenDays();
+        List<Ticket> open = mine.stream().filter(t -> t.open() || t.reopenable(reopenDays)).toList();
+        List<Ticket> closed = mine.stream().filter(t -> !t.open() && !t.reopenable(reopenDays)).toList();
         long unread = mine.stream().filter(t -> t.creatorUnread()).count();
         long unreadClosed = closed.stream().filter(t -> t.creatorUnread()).count();
 

@@ -261,7 +261,12 @@ public final class TicketDialog {
         for (List<Ticket.Message> group : groups(all.subList(from, all.size()))) {
             body.add(bubble(plugin, viewer, group));
         }
-        if (!ticket.open()) {
+        int reopenDays = s.reopenDays();
+        if (!ticket.open() && ticket.reopenable(reopenDays)) {
+            body.add(DialogBody.plainMessage(messages.get("ticket-chat-resolved",
+                    tag("admin", ticket.closedBy()), tag("time", Texts.at(plugin, ticket.closedAt())),
+                    tag("until", Texts.at(plugin, ticket.reopenUntil(reopenDays)))), WIDTH));
+        } else if (!ticket.open()) {
             body.add(DialogBody.plainMessage(messages.get("ticket-chat-closed",
                     tag("admin", ticket.closedBy()), tag("time", Texts.at(plugin, ticket.closedAt()))), WIDTH));
         }
@@ -292,8 +297,11 @@ public final class TicketDialog {
         }
         if (ticket.open()) {
             if (mayClose) {
-                buttons.add(ActionButton.create(messages.get("ticket-view-close"), messages.get("ticket-view-close-hover"), 150,
-                        action(plugin, viewer, response -> confirmClose(plugin, viewer, ticket, text(response.getText(TEXT)), back))));
+                // The team solves (the creator may open it again), the creator closes for good.
+                boolean solve = !creator && reopenDays > 0;
+                buttons.add(ActionButton.create(messages.get(solve ? "ticket-view-resolve" : "ticket-view-close"),
+                        messages.get(solve ? "ticket-view-resolve-hover" : "ticket-view-close-hover"), 150,
+                        action(plugin, viewer, response -> confirmClose(plugin, viewer, ticket, text(response.getText(TEXT)), back, solve))));
             }
             if (!creator && viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_CLAIM)) {
                 boolean mine = viewer.getUniqueId().equals(ticket.claimedBy());
@@ -306,6 +314,13 @@ public final class TicketDialog {
         } else if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_REOPEN)) {
             buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), null, 150, action(plugin, viewer, response -> {
                 tickets.reopen(viewer, ticket);
+                again.run();
+            })));
+        } else if (creator && ticket.reopenable(reopenDays)) {
+            // A solved ticket: its creator may open it again until reopen-days have run out.
+            buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), messages.get("ticket-view-reopen-hover",
+                    tag("until", Texts.at(plugin, ticket.reopenUntil(reopenDays)))), 150, action(plugin, viewer, response -> {
+                tickets.reopenAsCreator(viewer, ticket);
                 again.run();
             })));
         }
@@ -346,7 +361,8 @@ public final class TicketDialog {
     private static DialogBody header(MRAdmin plugin, Ticket ticket, boolean staff) {
         Messages messages = plugin.messages();
         TicketManager tickets = plugin.tickets();
-        Component status = messages.get(ticket.open() ? "ticket-status-open" : "ticket-status-closed");
+        Component status = messages.get(ticket.open() ? "ticket-status-open"
+                : ticket.reopenable(plugin.settings().tickets().reopenDays()) ? "ticket-status-resolved" : "ticket-status-closed");
         Component claimed = ticket.claimedByName() == null ? messages.get("ticket-view-unclaimed")
                 : Component.text(staff || plugin.settings().tickets().showStaffNames() ? ticket.claimedByName()
                 : messages.plain("ticket-staff-anonymous"));
@@ -422,7 +438,8 @@ public final class TicketDialog {
                 .findFirst().orElse(null);
     }
 
-    private static void confirmClose(MRAdmin plugin, Player viewer, Ticket ticket, String text, Runnable back) {
+    /** @param solve the team solves the ticket (other texts) instead of closing it */
+    private static void confirmClose(MRAdmin plugin, Player viewer, Ticket ticket, String text, Runnable back, boolean solve) {
         Messages messages = plugin.messages();
         TicketManager tickets = plugin.tickets();
         boolean withText = !text.isBlank();
@@ -437,14 +454,15 @@ public final class TicketDialog {
             }
         });
         DialogAction no = action(plugin, viewer, response -> view(plugin, viewer, ticket, text, back));
+        String k = solve ? "ticket-resolve" : "ticket-close";
         Dialog dialog = Dialog.create(factory -> factory.empty()
-                .base(DialogBase.builder(messages.get("ticket-close-title", tag("id", ticket.id())))
+                .base(DialogBase.builder(messages.get(k + "-title", tag("id", ticket.id())))
                         .canCloseWithEscape(true)
-                        .body(List.of(DialogBody.plainMessage(messages.get(withText ? "ticket-close-hint-text" : "ticket-close-hint",
-                                tag("id", ticket.id())), WIDTH)))
+                        .body(List.of(DialogBody.plainMessage(messages.get(withText ? k + "-hint-text" : k + "-hint",
+                                tag("id", ticket.id()), tag("days", plugin.settings().tickets().reopenDays())), WIDTH)))
                         .build())
                 .type(DialogType.confirmation(
-                        ActionButton.create(messages.get("ticket-close-yes"), null, 150, yes),
+                        ActionButton.create(messages.get(k + "-yes"), null, 150, yes),
                         ActionButton.create(messages.get("ticket-close-no"), null, 150, no))));
         show(viewer, dialog);
     }

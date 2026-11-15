@@ -72,7 +72,7 @@
 
   // The colour of a card: new answer from the player (blue), taken by someone (green), open without anyone (yellow),
   // archive (grey).
-  const tone = (x) => (state === 'closed' ? 'closed' : x.unread ? 'unread' : x.claimedBy ? 'claimed' : 'waiting');
+  const tone = (x) => (state === 'closed' ? (x.resolved ? 'resolved' : 'closed') : x.unread ? 'unread' : x.claimedBy ? 'claimed' : 'waiting');
 
   // Phone: swipe a ticket to the left - take it over, close it.
   async function quick(x, path, body) {
@@ -85,7 +85,7 @@
     }
   }
   const swipes = (x) => state === 'closed' ? (me.may.ticketsReopen ? [{ label: t('ticket.reopen'), tone: 'accent', onclick: () => quick(x, 'reopen') }] : []) : [
-    ...(me.may.ticketsClose ? [{ label: t('ticket.close'), tone: 'bad', onclick: () => quick(x, 'close', { text: '' }) }] : []),
+    ...(me.may.ticketsClose ? [{ label: t('ticket.solve'), tone: 'good', onclick: () => quick(x, 'close', { text: '' }) }] : []),
     ...(me.may.ticketsClaim && !x.claimedBy ? [{ label: t('ticket.claim'), tone: 'good', onclick: () => quick(x, 'claim') }] : []),
   ];
 </script>
@@ -126,7 +126,7 @@
                 </span>
                 {#if x.last}<span class="r-last"><strong>{x.last.name}:</strong> {x.last.text}</span>{/if}
                 <span class="r-state">
-                  {#if state === 'closed'}{t('tickets.closed')}
+                  {#if state === 'closed'}{x.resolved ? t('ticket.statusResolved') : t('tickets.closed')}
                   {:else if x.unread}{t('tickets.unread')}
                   {:else if x.claimedBy}{t('tickets.claimed', { name: x.claimedBy })}
                   {:else}{t('tickets.waiting')}{/if}
@@ -156,7 +156,7 @@
                 <span class="id">#{x.id}</span>
                 <span class="chip" class:auto={!!x.source}>{x.categoryName}</span>
                 <span class="status">
-                  {#if state === 'closed'}{t('tickets.closed')}
+                  {#if state === 'closed'}{x.resolved ? t('ticket.statusResolved') : t('tickets.closed')}
                   {:else if x.unread}● {t('tickets.unread')}
                   {:else if x.claimedBy}{t('tickets.claimed', { name: x.claimedBy })}
                   {:else}{t('tickets.waiting')}{/if}
@@ -254,6 +254,11 @@
 
   .ticket.closed {
     --st: var(--muted);
+  }
+
+  /* solved: the player may still open it again */
+  .ticket.resolved {
+    --st: var(--good);
   }
 
   .ticket.closed .t-title {
@@ -436,6 +441,10 @@
 
   .row.closed {
     --st: transparent;
+  }
+
+  .row.resolved {
+    --st: var(--good);
   }
 
   .row img {

@@ -39,6 +39,8 @@ public final class Ticket {
     private String claimedByName;
     private String closedBy;
     private Instant closedAt;
+    /** Closed by the team as solved: the creator may open it again until closedAt + tickets.reopen-days (since 1.7). */
+    private boolean resolved;
     /** The team wrote something (or closed it) that the creator has not seen yet. */
     private boolean creatorUnread;
     /** The creator wrote something the team has not seen yet. */
@@ -182,6 +184,22 @@ public final class Ticket {
         return closedAt;
     }
 
+    /** Closed by the team as solved (the flag - whether it may still be opened again: {@link #reopenable}). */
+    public boolean resolved() {
+        return resolved;
+    }
+
+    /** Until when the creator may open the solved ticket again ({@code days} = tickets.reopen-days); null = not at all. */
+    public Instant reopenUntil(int days) {
+        return open() || !resolved || closedAt == null || days <= 0 ? null : closedAt.plus(java.time.Duration.ofDays(days));
+    }
+
+    /** Solved by the team and the time to open it again has not run out - for the creator it still counts as active. */
+    public boolean reopenable(int days) {
+        Instant until = reopenUntil(days);
+        return until != null && Instant.now().isBefore(until);
+    }
+
     public boolean creatorUnread() {
         return creatorUnread;
     }
@@ -232,11 +250,20 @@ public final class Ticket {
     void close(String by, Instant at) {
         closedBy = by;
         closedAt = at;
+        resolved = false;
+    }
+
+    /** Closed by the team as solved: the creator may open it again for a while. */
+    void markResolved(String by, Instant at) {
+        closedBy = by;
+        closedAt = at;
+        resolved = true;
     }
 
     void reopen() {
         closedBy = null;
         closedAt = null;
+        resolved = false;
         if (request != null && request.decision() != null) {
             request = request.withDecision(null);
         }

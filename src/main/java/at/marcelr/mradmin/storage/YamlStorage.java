@@ -187,6 +187,9 @@ final class YamlStorage implements Storage {
             if (t.closedBy() != null) {
                 y.set(p + "closed-by", t.closedBy());
                 y.set(p + "closed-at", Instant.ofEpochMilli(t.closedAt()).toString());
+                if (t.resolved()) {
+                    y.set(p + "resolved", true);
+                }
             }
             y.set(p + "creator-unread", t.creatorUnread());
             y.set(p + "staff-unread", t.staffUnread());
@@ -252,7 +255,7 @@ final class YamlStorage implements Storage {
                 closedBy.isEmpty() ? 0 : closedAt.isEmpty() ? System.currentTimeMillis() : Instant.parse(closedAt).toEpochMilli(),
                 t.getBoolean("creator-unread", false), t.getBoolean("staff-unread", false),
                 source.isEmpty() ? null : source, source.isEmpty() ? null : t.getString("source-id", ""),
-                t.getString("extra"));
+                t.getString("extra"), t.getBoolean("resolved", false));
         List<MessageRow> list = new ArrayList<>();
         for (Map<?, ?> m : t.getMapList("messages")) {
             list.add(new MessageRow(UUID.fromString(String.valueOf(m.get("author"))), String.valueOf(m.get("name")),

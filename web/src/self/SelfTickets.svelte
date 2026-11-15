@@ -43,12 +43,12 @@
 
   const chosen = $derived(data?.categories.find((c) => c.id === category));
   const counts = $derived({
-    open: data?.tickets.filter((x) => x.open).length ?? 0,
+    open: data?.tickets.filter((x) => x.open || x.resolved).length ?? 0,
     unread: data?.tickets.filter((x) => x.unread).length ?? 0,
-    closed: data?.tickets.filter((x) => !x.open).length ?? 0,
+    closed: data?.tickets.filter((x) => !x.open && !x.resolved).length ?? 0,
   });
   const shown = $derived(
-    (data?.tickets ?? []).filter((x) => filter === 'all' || (filter === 'open' ? x.open : !x.open)),
+    (data?.tickets ?? []).filter((x) => filter === 'all' || (filter === 'open' ? x.open || x.resolved : !x.open && !x.resolved)),
   );
   const ready = $derived(
     chosen && text.trim().length >= Math.max(1, data.minText)
@@ -165,12 +165,12 @@
         <ul class="list">
           {#each shown as x (x.id)}
             <li>
-              <button class="ticket" class:unread={x.unread} class:closed={!x.open} onclick={() => go('/news/tickets/' + x.id)}>
+              <button class="ticket" class:unread={x.unread} class:closed={!x.open && !x.resolved} class:resolved={x.resolved} onclick={() => go('/news/tickets/' + x.id)}>
                 <span class="t-top">
                   <span class="id">#{x.id}</span>
                   <span class="chip">{x.category}</span>
                   {#if x.fromPlugin}<span class="chip auto">{t('self.tickets.auto')}</span>{/if}
-                  <span class="status">{x.open ? t('self.tickets.open') : t('self.tickets.closed')}</span>
+                  <span class="status">{x.open ? t('self.tickets.open') : x.resolved ? t('self.tickets.resolved') : t('self.tickets.closed')}</span>
                 </span>
                 <span class="t-title">{x.summary}</span>
                 <span class="t-bottom">
@@ -583,5 +583,10 @@
     .category {
       transition: none;
     }
+  }
+
+  /* solved by the team: still active (the player may open it again) */
+  .ticket.resolved {
+    --st: var(--good);
   }
 </style>

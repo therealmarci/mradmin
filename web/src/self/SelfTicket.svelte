@@ -78,6 +78,18 @@
     }
   }
 
+  async function reopen() {
+    busy = true;
+    try {
+      await api('POST', `/self/tickets/${id}/reopen`);
+      await load();
+    } catch (e) {
+      error = errorText(e);
+    } finally {
+      busy = false;
+    }
+  }
+
   const author = (m) => (m.own ? t('self.tickets.you') : m.author ?? t('self.tickets.team'));
   // A day line whenever the day changes.
   const day = (ms) => new Date(ms).toDateString();
@@ -94,7 +106,7 @@
         <span class="h-top">
           <span class="id">#{ticket.id}</span>
           <span class="chip">{ticket.category}</span>
-          <span class="status">{ticket.open ? t('self.tickets.open') : t('self.tickets.closed')}</span>
+          <span class="status">{ticket.open ? t('self.tickets.open') : ticket.resolved ? t('self.tickets.resolved') : t('self.tickets.closed')}</span>
         </span>
         <h1>{ticket.summary}</h1>
       </div>
@@ -136,6 +148,12 @@
             <button type="submit" disabled={busy || !text.trim()}>{t('self.tickets.reply')} ➤</button>
           </div>
         </form>
+      {:else if ticket.resolved}
+        <!-- Solved by the team: the player can open it again until reopenUntil -->
+        <div class="resolved-note">
+          <span>✓ {t('self.tickets.resolvedHint', { until: new Date(ticket.reopenUntil).toLocaleDateString() })}</span>
+          <button class="secondary" disabled={busy} onclick={reopen}>{t('self.tickets.reopen')}</button>
+        </div>
       {:else}
         <div class="closed-note">🔒 {t('self.tickets.closedHint')}</div>
       {/if}
@@ -381,5 +399,19 @@
     .avatar {
       display: none;
     }
+  }
+
+  .resolved-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    color: var(--good);
+    background: color-mix(in srgb, var(--good) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--good) 30%, transparent);
   }
 </style>

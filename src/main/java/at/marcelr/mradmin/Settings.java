@@ -197,7 +197,7 @@ public record Settings(
                                  int minSubjectLength, int maxSubjectLength, int minTextLength, int maxTextLength,
                                  boolean notifyCreator, boolean showStaffNames, boolean autoClaim, int shownMessages,
                                  long keepClosed, Key sound, Material icon, Material teamIcon,
-                                 List<TicketCategory> categories, boolean moduleReports) {
+                                 List<TicketCategory> categories, boolean moduleReports, int reopenDays) {
 
         /** The category with this id, or null if it is not (or no longer) configured. */
         public TicketCategory category(String id) {
@@ -338,7 +338,8 @@ public record Settings(
                 item(c, "tickets.icon", Material.NAME_TAG, log),
                 item(c, "tickets.team-icon", Material.NETHER_STAR, log),
                 ticketCategories(c, log),
-                c.getBoolean("tickets.plugin-reports", true));
+                c.getBoolean("tickets.plugin-reports", true),
+                Math.clamp(c.getInt("tickets.reopen-days", 30), 0, 365));
 
         Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
         for (Feature feature : Feature.values()) {

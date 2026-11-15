@@ -40,7 +40,7 @@ Auf Handys und hochkant gehaltenen Tablets sieht die Weboberfläche aus wie eine
 - **Reiter** sind runde Segmente; die Seite seitlich wischen öffnet den nächsten bzw. vorigen Reiter.
 - **Fenster** kommen als Blatt von unten - nach unten ziehen oder daneben tippen schließt sie.
 - **Nach unten ziehen** (ganz oben auf der Seite) lädt die Seite neu.
-- **Tickets** stehen als Liste untereinander; ein Ticket nach links wischen zeigt **Übernehmen** und **Schließen** (bzw. im Archiv **Wieder öffnen**).
+- **Tickets** stehen als Liste untereinander; ein Ticket nach links wischen zeigt **Übernehmen** und **Lösen** (bzw. im Archiv **Wieder öffnen**).
 
 > [!TIP]
 > **Als App installieren:** Auf den Home-Bildschirm gelegt, startet die Weboberfläche im Vollbild ohne Browserleiste - mit dem Symbol aus **Einstellungen → Aussehen** bzw. der Krone. iPhone/iPad: in Safari **Teilen → Zum Home-Bildschirm**; Android: der Hinweis auf der Startseite oder über den eigenen Kopf → **Als App installieren**. Der Hinweis erscheint einmal und lässt sich wegklicken.

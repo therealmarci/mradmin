@@ -60,8 +60,11 @@
     if (await action('reply', { text })) text = '';
   }
 
+  // The team solves tickets (the player may open them again for solveDays days); with 0 days it closes them.
+  const solve = $derived(!!ticket && ticket.solveDays > 0 && ticket.creatorUuid !== me.uuid);
+
   async function close() {
-    if (!confirm(t('ticket.closeConfirm', { id }))) return;
+    if (!confirm(solve ? t('ticket.solveConfirm', { id, days: ticket.solveDays }) : t('ticket.closeConfirm', { id }))) return;
     if (await action('close', { text })) text = '';
   }
 
@@ -127,7 +130,8 @@
           <span class="id">#{ticket.id}</span>
           <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
           <span class="status">
-            {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen')) : t('ticket.statusClosed')}
+            {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen'))
+              : ticket.resolved ? t('ticket.statusResolved') : t('ticket.statusClosed')}
           </span>
         </span>
         <h1>{ticket.summary || ticket.categoryName}</h1>
@@ -255,7 +259,9 @@
       </ol>
 
       {#if !ticket.open}
-        <div class="closed-note">{t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
+        <div class="closed-note">{ticket.resolved
+          ? t('ticket.resolvedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt), until: dateTime(ticket.reopenUntil) })
+          : t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
       {/if}
 
       {#if ticket.open && me.may.ticketsReply}
@@ -277,8 +283,8 @@
                   <span class="muted small">{t('application.noPermission')}</span>
                 {/if}
               {:else if me.may.ticketsClose}
-                <button class="danger" onclick={close} disabled={busy}>
-                  {text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
+                <button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>
+                  {solve ? (text.trim() ? t('ticket.solveWithText') : t('ticket.solve')) : text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
                 </button>
               {/if}
               <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')} ➤</button>
@@ -286,7 +292,7 @@
           </div>
         </div>
       {:else if ticket.open && me.may.ticketsClose}
-        <div class="composer"><button class="danger" onclick={close} disabled={busy}>{t('ticket.close')}</button></div>
+        <div class="composer"><button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>{solve ? t('ticket.solve') : t('ticket.close')}</button></div>
       {:else if !ticket.open && me.may.ticketsReopen}
         <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
       {/if}

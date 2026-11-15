@@ -40,7 +40,7 @@ On phones and tablets held upright the web interface looks like an app (tablets 
 - **Tabs** are round segments; swiping the page sideways opens the next or previous tab.
 - **Windows** come as a sheet from below - pulling them down or tapping next to them closes them.
 - **Pulling down** (at the very top of the page) reloads the page.
-- **Tickets** are a list; swiping a ticket to the left shows **Claim** and **Close** (in the archive **Reopen**).
+- **Tickets** are a list; swiping a ticket to the left shows **Claim** and **Solve** (in the archive **Reopen**).
 
 > [!TIP]
 > **Install as an app:** put on the home screen, the web interface starts full screen without the browser bar - with the symbol from **Settings → Appearance** or the crown. iPhone/iPad: in Safari **Share → Add to Home Screen**; Android: the hint on the start page or your own head → **Install as app**. The hint appears once and can be dismissed.

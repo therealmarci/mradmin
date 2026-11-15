@@ -496,7 +496,10 @@ public final class TicketManager {
         return true;
     }
 
-    /** Closes the ticket (creator or team). The other side is told about it. */
+    /**
+     * The team marks the ticket as solved (the creator may open it again for tickets.reopen-days, since 1.7); the
+     * creator closes it for good. The other side is told about it.
+     */
     public void close(Player by, Ticket ticket) {
         if (!canView(by, ticket)) {
             messages().send(by, "no-permission");
@@ -513,8 +516,8 @@ public final class TicketManager {
             messages().send(by, "no-permission");
             return;
         }
-        ticket.close(by.getName(), Instant.now());
         boolean staff = asStaff(by, ticket);
+        finish(ticket, by.getName(), staff);
         if (staff) {
             ticket.creatorUnread(true);
             ticket.staffUnread(false);
@@ -522,13 +525,11 @@ public final class TicketManager {
             ticket.creatorUnread(false);
         }
         save(ticket);
-        messages().send(by, "ticket-closed", tag("id", ticket.id()));
+        messages().send(by, ticket.resolved() ? "ticket-resolved" : "ticket-closed", tag("id", ticket.id()));
         if (staff) {
             Player creator = Bukkit.getPlayer(ticket.creator());
             if (creator != null && settings().notifyCreator()) {
-                messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
-                        Messages.lazy("summary", () -> summary(ticket)), Messages.lazy("open", () -> openButton(ticket)));
-                sound(creator);
+                tellCreatorClosed(creator, ticket);
             }
         } else if (ticket.claimedBy() != null) {
             Player claimer = Bukkit.getPlayer(ticket.claimedBy());
@@ -538,6 +539,65 @@ public final class TicketManager {
         }
         plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", by.getName(), "summary", messages().server(() -> summary(ticket)));
         requestChanged(ticket, null);
+    }
+
+    /** tickets.reopen-days: how long the creator may open a solved ticket again. */
+    public int reopenDays() {
+        return settings().reopenDays();
+    }
+
+    /** Closing by the team = solved (unless tickets.reopen-days is 0), by the creator = closed for good. */
+    private void finish(Ticket ticket, String by, boolean team) {
+        if (team && settings().reopenDays() > 0) {
+            ticket.markResolved(by, Instant.now());
+        } else {
+            ticket.close(by, Instant.now());
+        }
+    }
+
+    /** The creator learns that the team closed (or solved) their ticket. */
+    private void tellCreatorClosed(Player creator, Ticket ticket) {
+        if (ticket.resolved()) {
+            Instant until = ticket.reopenUntil(settings().reopenDays());
+            messages().send(creator, "ticket-resolved-creator", tag("id", ticket.id()),
+                    Messages.lazy("summary", () -> summary(ticket)), tag("until", Texts.at(plugin, until)),
+                    Messages.lazy("open", () -> openButton(ticket)));
+        } else {
+            messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
+                    Messages.lazy("summary", () -> summary(ticket)), Messages.lazy("open", () -> openButton(ticket)));
+        }
+        sound(creator);
+    }
+
+    /** The creator opens their solved ticket again (in game). */
+    public void reopenAsCreator(Player creator, Ticket ticket) {
+        String error = creatorReopen(creator.getUniqueId(), creator.getName(), ticket);
+        messages().send(creator, error == null ? "ticket-reopened" : error, tag("id", ticket.id()));
+    }
+
+    /**
+     * The creator opens their solved ticket again - only while tickets.reopen-days have not run out (since 1.7). The
+     * team is told like about a new message. Result: null or the key of the reason (also a message key in game).
+     */
+    public String creatorReopen(UUID who, String name, Ticket ticket) {
+        if (!ticket.isCreator(who)) {
+            return "no-permission";
+        }
+        if (ticket.open()) {
+            return "ticket-open";
+        }
+        if (!ticket.reopenable(settings().reopenDays())) {
+            return "ticket-reopen-expired";
+        }
+        ticket.reopen();
+        ticket.creatorUnread(false);
+        ticket.staffUnread(true);
+        save(ticket);
+        notifyStaff(ticket, Bukkit.getPlayer(who), "ticket-notify-reopened", tag("id", ticket.id()), tag("player", name),
+                Messages.lazy("open", () -> openButton(ticket)));
+        pushMessage(ticket, name, messages().server(() -> messages().plain("ticket-reopened-push")), who);
+        plugin.discord().log("ticket-reopened", "id", ticket.id(), "admin", name, "summary", messages().server(() -> summary(ticket)));
+        return null;
     }
 
     /** Opens a closed ticket again (team only). */
@@ -705,15 +765,13 @@ public final class TicketManager {
         if (!ticket.open()) {
             return "ticket-closed";
         }
-        ticket.close(name, Instant.now());
+        finish(ticket, name, !ticket.isCreator(who));
         ticket.creatorUnread(!ticket.isCreator(who));
         ticket.staffUnread(false);
         save(ticket);
         Player creator = Bukkit.getPlayer(ticket.creator());
         if (creator != null && !ticket.isCreator(who) && settings().notifyCreator()) {
-            messages().send(creator, "ticket-closed-creator", tag("id", ticket.id()),
-                    Messages.lazy("summary", () -> summary(ticket)), Messages.lazy("open", () -> openButton(ticket)));
-            sound(creator);
+            tellCreatorClosed(creator, ticket);
         }
         requestChanged(ticket, null);
         plugin.discord().log("ticket-closed", "id", ticket.id(), "admin", name, "summary", messages().server(() -> summary(ticket)));
@@ -1001,7 +1059,9 @@ public final class TicketManager {
         if (r.claimedBy() != null) {
             ticket.claim(r.claimedBy(), r.claimedByName());
         }
-        if (r.closedBy() != null) {
+        if (r.closedBy() != null && r.resolved()) {
+            ticket.markResolved(r.closedBy(), Instant.ofEpochMilli(r.closedAt()));
+        } else if (r.closedBy() != null) {
             ticket.close(r.closedBy(), Instant.ofEpochMilli(r.closedAt()));
         }
         ticket.creatorUnread(r.creatorUnread());
@@ -1018,7 +1078,7 @@ public final class TicketManager {
         return new Storage.TicketRow(t.id(), t.creator(), t.creatorName(), t.target(), t.targetName(), t.category(),
                 t.subject(), t.created().toEpochMilli(), t.world(), t.x(), t.y(), t.z(), t.claimedBy(), t.claimedByName(),
                 t.closedBy(), t.closedAt() == null ? 0 : t.closedAt().toEpochMilli(), t.creatorUnread(), t.staffUnread(),
-                t.source(), t.sourceId(), t.request() == null ? null : t.request().json());
+                t.source(), t.sourceId(), t.request() == null ? null : t.request().json(), t.resolved());
     }
 
     /** reports.yml of version 0.1.0: every report becomes a player ticket, the old file is kept as backup. */
@@ -1065,8 +1125,11 @@ public final class TicketManager {
     /** Closed tickets older than keep-closed are removed. */
     private void cleanup() {
         Instant limit = Instant.now().minusMillis(settings().keepClosed());
+        int days = settings().reopenDays();
+        // A solved ticket counts as closed only once the time to open it again has run out.
         List<Integer> old = tickets.values().stream()
-                .filter(t -> !t.open() && t.closedAt() != null && t.closedAt().isBefore(limit))
+                .filter(t -> !t.open() && t.closedAt() != null && !t.reopenable(days)
+                        && (t.reopenUntil(days) != null ? t.reopenUntil(days) : t.closedAt()).isBefore(limit))
                 .map(Ticket::id).toList();
         if (!old.isEmpty()) {
             old.forEach(tickets::remove);

@@ -627,6 +627,13 @@ sections:
         type: duration
         name: {de: Geschlossene aufheben, en: Keep closed ones}
         help: {de: "So lange bleiben geschlossene Tickets erhalten (auch für den Spieler sichtbar), danach werden sie gelöscht.", en: "Closed tickets are kept this long (also visible to the player), then deleted."}
+      - key: tickets.reopen-days
+        type: int
+        min: 0
+        max: 365
+        unit: {de: Tage, en: days}
+        name: {de: Gelöste wieder öffnen, en: Reopen solved ones}
+        help: {de: "Das Team löst Tickets statt sie zu schließen. So viele Tage kann der Spieler ein gelöstes Ticket wieder öffnen, danach ist es endgültig geschlossen. 0 = sofort endgültig.", en: "The team solves tickets instead of closing them. For this many days the player can open a solved ticket again, afterwards it is closed for good. 0 = closed for good at once."}
       - key: tickets.plugin-reports
         type: bool
         name: {de: Automatische Tickets der Plugins, en: Automatic tickets from plugins}

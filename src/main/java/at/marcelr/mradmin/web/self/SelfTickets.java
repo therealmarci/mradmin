@@ -47,6 +47,7 @@ public final class SelfTickets {
         server.self("POST", "/api/self/tickets", this::create);
         server.self("POST", "/api/self/tickets/{id}/reply", this::reply);
         server.self("POST", "/api/self/tickets/{id}/close", this::close);
+        server.self("POST", "/api/self/tickets/{id}/reopen", this::reopen);
     }
 
     /** Tickets are on and the player may open them (also checked offline, with LuckPerms). */
@@ -91,6 +92,10 @@ public final class SelfTickets {
                 m.put("summary", tickets.summary(t));
                 m.put("category", tickets.categoryName(t.category()));
                 m.put("open", t.open());
+                // solved by the team: still among the player's active tickets while it may be opened again
+                int days = plugin.settings().tickets().reopenDays();
+                m.put("resolved", t.reopenable(days));
+                m.put("reopenUntil", t.reopenable(days) ? t.reopenUntil(days).toEpochMilli() : 0);
                 m.put("unread", t.creatorUnread());
                 m.put("lastActivity", t.lastActivity().toEpochMilli());
                 m.put("fromPlugin", t.source() != null);
@@ -151,6 +156,11 @@ public final class SelfTickets {
             r.put("category", tickets.categoryName(ticket.category()));
             r.put("open", ticket.open());
             r.put("mayClose", ticket.open() && !ticket.teamCloseOnly());
+            int days = plugin.settings().tickets().reopenDays();
+            r.put("resolved", ticket.reopenable(days));
+            r.put("reopenUntil", ticket.reopenable(days) ? ticket.reopenUntil(days).toEpochMilli() : 0);
+            r.put("closedBy", ticket.closedBy());
+            r.put("closedAt", ticket.closedAt() == null ? 0 : ticket.closedAt().toEpochMilli());
             r.put("messages", messages);
             return r;
         });
@@ -211,6 +221,17 @@ public final class SelfTickets {
         }
         UUID player = http.player().player();
         String error = server.sync(() -> plugin.tickets().webClose(player, http.player().name(), ticket));
+        if (error != null) {
+            throw new Http.WebException(400, error);
+        }
+    }
+
+    /** The player opens a ticket the team solved again (while tickets.reopen-days have not run out). */
+    private void reopen(Http http) throws Exception {
+        require(http);
+        Ticket ticket = own(http);
+        UUID player = http.player().player();
+        String error = server.sync(() -> plugin.tickets().creatorReopen(player, http.player().name(), ticket));
         if (error != null) {
             throw new Http.WebException(400, error);
         }

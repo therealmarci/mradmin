@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 62
+config-version: 63
 
 
 # ------------------------------------------------------------------------------
@@ -286,6 +286,11 @@ tickets:
   sound: "BLOCK_NOTE_BLOCK_PLING"
   # Keep closed tickets this long (also visible to the player), afterwards they are deleted.
   keep-closed: "7d"
+  # The team does not close tickets but marks them as solved. For this many days the player can open a solved ticket
+  # again (it still shows among their active tickets, for the team it is in the archive); afterwards it is closed for
+  # good and can no longer be opened. Tickets the player closes themselves are closed for good right away.
+  # 0 = solved tickets are closed for good at once. keep-closed only starts counting after this time.
+  reopen-days: 30
   # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
   # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
   # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader

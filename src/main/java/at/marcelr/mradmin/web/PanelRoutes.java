@@ -327,6 +327,11 @@ public final class PanelRoutes {
             detail.put("z", t.blockZ());
             detail.put("closedBy", t.closedBy());
             detail.put("closedAt", t.closedAt() == null ? 0 : t.closedAt().toEpochMilli());
+            // solved by the team: the creator may still open it again until then (0 = closed for good)
+            int days = plugin.settings().tickets().reopenDays();
+            detail.put("resolved", t.reopenable(days));
+            detail.put("reopenUntil", t.reopenable(days) ? t.reopenUntil(days).toEpochMilli() : 0);
+            detail.put("solveDays", days);
             detail.put("mine", t.isCreator(http.account().id()));
             List<Map<String, Object>> messages = new ArrayList<>();
             for (Ticket.Message m : t.messages()) {
@@ -482,6 +487,7 @@ public final class PanelRoutes {
         s.put("target", t.targetName());
         s.put("targetUuid", t.target() == null ? null : t.target().toString());
         s.put("open", t.open());
+        s.put("resolved", t.reopenable(tickets.reopenDays()));
         s.put("claimedBy", t.claimedByName());
         s.put("unread", t.staffUnread());
         s.put("created", t.created().toEpochMilli());
