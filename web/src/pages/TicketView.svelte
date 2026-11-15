@@ -7,6 +7,7 @@
   import { live } from '../lib/live.svelte.js';
   import PageHead from '../components/PageHead.svelte';
   import ForwardIssue from '../components/ForwardIssue.svelte';
+  import Dropdown from '../components/Dropdown.svelte';
 
   let { id, me } = $props();
 
@@ -110,6 +111,10 @@
 
   const mineClaimed = $derived(ticket?.claimedBy === me.name);
 
+  // The team moves an open ticket to another category of the same kind (not web requests and plugin reports).
+  const categories = $derived(me.may.ticketsCategory && ticket?.open && (ticket.categoryChoices?.length ?? 0) > 1
+    ? ticket.categoryChoices.map((c) => ({ value: c.id, label: c.name })) : null);
+
   // Buttons in the head: a ticket of MRchunks (lock for lag) leads to its chunk loader, a ticket about a player to
   // them - the reported player, otherwise the one who wrote it (not for contact requests from the website).
   const loaderId = $derived(ticket?.source === 'mrchunks' && /^\d+$/.test(ticket?.sourceId ?? '') && me.may.mrchunks ? ticket.sourceId : null);
@@ -134,7 +139,12 @@
       <div class="h-main">
         <span class="h-top">
           <span class="id">#{ticket.id}</span>
-          <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
+          {#if categories}
+            <span class="cat-pick"><Dropdown size="small" options={categories} value={ticket.category} label={t('ticket.category')}
+              disabled={busy} onchange={(c) => action('category', { category: c })} /></span>
+          {:else}
+            <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
+          {/if}
           <span class="status">
             {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen'))
               : ticket.resolved ? t('ticket.statusResolved') : t('ticket.statusClosed')}
@@ -400,6 +410,11 @@
     padding: 2px 8px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .cat-pick {
+    display: inline-flex;
+    min-width: 0;
   }
 
   .chip.auto {

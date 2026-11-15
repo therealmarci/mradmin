@@ -37,6 +37,8 @@ mradmin.tickets.reopen:
   de: "Geschlossene Tickets wieder öffnen"
 mradmin.tickets.forward:
   de: "Tickets an MRtechnology weiterleiten (vorausgefülltes GitHub-Issue des Plugins öffnen und mit dem Ticket verknüpfen)"
+mradmin.tickets.category:
+  de: "Tickets in eine andere Kategorie (derselben Art) verschieben"
 mradmin.tickets.teleport:
   de: "Zum Ort eines Tickets oder zum gemeldeten Spieler teleportieren"
 mradmin.maintenance.view:

@@ -84,6 +84,7 @@ permissions:
     default: op
     children:
       mradmin.tickets.forward: true
+      mradmin.tickets.category: true
       mradmin.groups.support: true
       mradmin.player.summon: true
       mradmin.player.freeze: true
@@ -169,6 +170,9 @@ permissions:
     default: op
   mradmin.tickets.forward:
     description: "Forward tickets to MRtechnology: open a prefilled GitHub issue of the plugin and link it to the ticket."
+    default: op
+  mradmin.tickets.category:
+    description: Move tickets to another category (of the same kind).
     default: op
   mradmin.tickets.teleport:
     description: Teleport to the location of a ticket or to the reported player.

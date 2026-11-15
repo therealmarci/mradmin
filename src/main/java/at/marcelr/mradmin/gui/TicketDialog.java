@@ -311,6 +311,10 @@ public final class TicketDialog {
                             view(plugin, viewer, ticket, text(response.getText(TEXT)), back);
                         })));
             }
+            if (viewer.hasPermission(at.marcelr.mradmin.Perms.TICKETS_CATEGORY) && tickets.categoryChoices(ticket).size() > 1) {
+                buttons.add(ActionButton.create(messages.get("ticket-view-category"), messages.get("ticket-view-category-hover"), 150,
+                        action(plugin, viewer, response -> category(plugin, viewer, ticket, again))));
+            }
         } else if (creator && ticket.reopenable(reopenDays)) {
             // A solved ticket: its creator may open it again until reopen-days have run out.
             buttons.add(ActionButton.create(messages.get("ticket-view-reopen"), messages.get("ticket-view-reopen-hover",
@@ -351,6 +355,31 @@ public final class TicketDialog {
                         .inputs(inputs)
                         .build())
                 .type(type));
+        show(viewer, dialog);
+    }
+
+    /** The team moves a ticket to another category of the same kind; afterwards back to the ticket. */
+    private static void category(MRAdmin plugin, Player viewer, Ticket ticket, Runnable back) {
+        Messages messages = plugin.messages();
+        TicketManager tickets = plugin.tickets();
+        List<ActionButton> buttons = new ArrayList<>();
+        for (Settings.TicketCategory category : tickets.categoryChoices(ticket)) {
+            boolean current = category.id().equals(ticket.category());
+            Component label = messages.get(current ? "ticket-category-current" : "ticket-category-option",
+                    tag("category", tickets.categoryName(category.id())));
+            buttons.add(ActionButton.create(label, null, 260, current ? backAction(plugin, viewer, back)
+                    : action(plugin, viewer, response -> {
+                        tickets.changeCategory(viewer, ticket, category.id());
+                        back.run();
+                    })));
+        }
+        ActionButton cancel = ActionButton.create(messages.get("ticket-form-back"), null, 150, backAction(plugin, viewer, back));
+        Dialog dialog = Dialog.create(factory -> factory.empty()
+                .base(DialogBase.builder(messages.get("ticket-category-title", tag("id", ticket.id())))
+                        .canCloseWithEscape(true)
+                        .body(List.of(DialogBody.plainMessage(messages.get("ticket-category-hint"), WIDTH)))
+                        .build())
+                .type(DialogType.multiAction(buttons).columns(1).exitAction(cancel).build()));
         show(viewer, dialog);
     }
 

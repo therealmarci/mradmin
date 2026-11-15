@@ -56,6 +56,7 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/close", r::close);
         server.route("POST", "/api/tickets/{id}/reopen", r::reopen);
         server.route("POST", "/api/tickets/{id}/issue", r::issue);
+        server.route("POST", "/api/tickets/{id}/category", r::category);
         server.route("POST", "/api/tickets/{id}/decide", r::decide);
     }
 
@@ -334,6 +335,11 @@ public final class PanelRoutes {
             detail.put("reopenUntil", t.reopenable(days) ? t.reopenUntil(days).toEpochMilli() : 0);
             detail.put("solveDays", days);
             detail.put("issue", t.issue());
+            List<Map<String, Object>> choices = new ArrayList<>();
+            for (Settings.TicketCategory c : tickets.categoryChoices(t)) {
+                choices.add(Map.of("id", c.id(), "name", tickets.categoryName(c.id())));
+            }
+            detail.put("categoryChoices", choices);
             detail.put("forward", tickets.forwardable(t));
             detail.put("mine", t.isCreator(http.account().id()));
             List<Map<String, Object>> messages = new ArrayList<>();
@@ -397,6 +403,15 @@ public final class PanelRoutes {
         require(http, Perms.TICKETS_FORWARD);
         String url = http.string("url");
         act(http, "ticket-issue", (tickets, t) -> tickets.linkIssue(t, url), url == null ? "" : url);
+    }
+
+    /** Moves the ticket to another category of the same kind. */
+    private void category(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_CATEGORY);
+        String category = http.string("category");
+        String name = http.account().name();
+        act(http, "ticket-category", (tickets, t) -> tickets.changeCategory(t, category, name), category == null ? "" : category);
     }
 
     private void reopen(Http http) throws Exception {

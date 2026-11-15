@@ -24,8 +24,8 @@ public final class Ticket {
     /** Reported player (player reports only), otherwise null. */
     private final UUID target;
     private final String targetName;
-    /** Category id from tickets.categories (e.g. "cheating", "bug"). */
-    private final String category;
+    /** Category id from tickets.categories (e.g. "cheating", "bug"); the team may change it (since 1.7). */
+    private String category;
     /** Short title of tickets that are not player reports; empty for player reports. */
     private final String subject;
     private final Instant created;
@@ -99,6 +99,10 @@ public final class Ticket {
 
     public String category() {
         return category;
+    }
+
+    void category(String id) {
+        category = id;
     }
 
     public String subject() {

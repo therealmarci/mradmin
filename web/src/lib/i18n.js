@@ -2702,6 +2702,10 @@ const texts = {
     'self.tickets.archiveConfirm': 'Ticket archivieren? Es ist dann endgültig geschlossen und kann nicht mehr geöffnet werden.',
     'error.ticket-issue-invalid': 'Das ist kein Issue-Link eines MRtechnology-Plugins (https://github.com/therealmarci/<plugin>/issues/<Nummer>).',
     'error.ticket-not-solved': 'Nur gelöste Tickets lassen sich archivieren.',
+    'error.ticket-category-locked': 'Die Kategorie dieses Tickets lässt sich nicht ändern (Anträge aus dem Web und Meldungen von Plugins).',
+    'error.ticket-category-unknown': 'Diese Kategorie gibt es nicht.',
+    'error.ticket-category-kind': 'Die Kategorie passt nicht zur Art des Tickets (Spieler-Meldung oder nicht).',
+    'ticket.category': 'Kategorie',
   },
   en: {
     'nav.home': 'Overview',
@@ -5383,6 +5387,10 @@ const texts = {
     'self.tickets.archiveConfirm': 'Archive this ticket? It is then closed for good and can no longer be opened.',
     'error.ticket-issue-invalid': 'This is not an issue link of an MRtechnology plugin (https://github.com/therealmarci/<plugin>/issues/<number>).',
     'error.ticket-not-solved': 'Only solved tickets can be archived.',
+    'error.ticket-category-locked': 'The category of this ticket cannot be changed (web requests and plugin reports).',
+    'error.ticket-category-unknown': 'This category does not exist.',
+    'error.ticket-category-kind': 'The category does not fit the kind of ticket (player report or not).',
+    'ticket.category': 'Category',
   },
 };
 

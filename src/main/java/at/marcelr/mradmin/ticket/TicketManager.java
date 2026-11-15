@@ -639,6 +639,58 @@ public final class TicketManager {
         return ticket.request() == null && (cats.isEmpty() || cats.contains(ticket.category()));
     }
 
+    /**
+     * The categories a ticket of the team may be moved to: the configured ones of the same kind (player report or
+     * not - a report needs its reported player, the others their title). Empty for requests from the web forms and
+     * reports of plugins, which keep their category.
+     */
+    public List<Settings.TicketCategory> categoryChoices(Ticket ticket) {
+        if (ticket.request() != null || ticket.source() != null) {
+            return List.of();
+        }
+        return settings().categories().stream().filter(c -> c.player() == ticket.playerReport()).toList();
+    }
+
+    /**
+     * The team moves a ticket to another category (since 1.7); a note in the conversation says who did it. Result:
+     * null or the error key.
+     */
+    public String changeCategory(Ticket ticket, String category, String by) {
+        if (category == null || category.equals(ticket.category())) {
+            return null;
+        }
+        if (ticket.request() != null || ticket.source() != null) {
+            return "ticket-category-locked";
+        }
+        Settings.TicketCategory target = settings().category(category);
+        if (target == null) {
+            return "ticket-category-unknown";
+        }
+        if (target.player() != ticket.playerReport()) {
+            return "ticket-category-kind";
+        }
+        String before = ticket.category();
+        ticket.category(target.id());
+        ticket.add(new Ticket.Message(SYSTEM, "MRadmin", true, messages().server(() -> messages().plain("ticket-category-note",
+                "admin", by, "from", categoryName(before), "to", categoryName(target.id()))), Instant.now()));
+        save(ticket);
+        return null;
+    }
+
+    /** In game: moves the ticket and tells the team member. */
+    public void changeCategory(Player staff, Ticket ticket, String category) {
+        if (!staff.hasPermission(Perms.TICKETS_CATEGORY)) {
+            messages().send(staff, "no-permission");
+            return;
+        }
+        String error = changeCategory(ticket, category, staff.getName());
+        if (error != null) {
+            messages().send(staff, error);
+            return;
+        }
+        messages().send(staff, "ticket-category-changed", tag("id", ticket.id()), tag("category", categoryName(ticket.category())));
+    }
+
     /** Opens a closed ticket again (team only). */
     public void reopen(Player staff, Ticket ticket) {
         if (!staff.hasPermission(Perms.TICKETS_REOPEN)) {

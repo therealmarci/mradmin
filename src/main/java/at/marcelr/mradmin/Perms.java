@@ -24,6 +24,8 @@ public final class Perms {
     public static final String TICKETS_REOPEN = "mradmin.tickets.reopen";
     /** Forward a ticket to MRtechnology (prefilled GitHub issue) and link the issue. */
     public static final String TICKETS_FORWARD = "mradmin.tickets.forward";
+    /** Move a ticket to another category. */
+    public static final String TICKETS_CATEGORY = "mradmin.tickets.category";
     public static final String TICKETS_TELEPORT = "mradmin.tickets.teleport";
 
     // maintenance
