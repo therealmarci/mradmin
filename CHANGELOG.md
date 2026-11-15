@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [STA-1.6.2-bu001] - 2026-11-15
+
 ### Neu
 - **Weboberfläche fürs Handy:** Auf Handys und hochkant gehaltenen Tablets hat die Weboberfläche einen eigenen Aufbau wie eine App: unten eine Leiste mit vier Seiten und „Mehr“ (mit Zählern, was wartet), oben ein großer Titel, der beim Scrollen in die Leiste wandert, Unterseiten mit Zurück-Knopf. In der Verwaltung lassen sich die vier Seiten unter **Mehr → Leiste anpassen** selbst wählen (Standard: Übersicht, Tickets, Spieler, Hauptserver; gilt pro Gerät), im Spielerbereich sind es Start, Mein Spiel, Karte und Neuigkeiten. Reiter sind wischbare Segmente, Fenster kommen als Blatt von unten (nach unten ziehen schließt), nach unten ziehen lädt die Seite neu, Tickets lassen sich zur Seite wischen (Übernehmen, Schließen). Zwischen Spieler und Verwaltung wechselt der Schild-Knopf oben mit einem Tipp (in der Verwaltung blau gefüllt); Sprache, Konto und Abmelden stecken hinter dem eigenen Kopf oben rechts. Quer gehaltene Tablets und PCs behalten die Seitenleiste.
 - **Als App installieren:** Die Weboberfläche lässt sich auf den Home-Bildschirm legen und startet dann im Vollbild ohne Browserleiste (eigene Symbole für iPhone/Android). Am Handy erscheint auf der Startseite einmal ein Hinweis dazu (wegklickbar), später über den eigenen Kopf → **Als App installieren**.
