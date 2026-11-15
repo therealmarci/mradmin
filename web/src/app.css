@@ -65,6 +65,14 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* With a mouse: the scrollbar's track always (Chrome keeps the gutter only on pages that scroll - short pages sat
+   15 px further right and the page jumped while navigating). Phones have scrollbars over the content anyway. */
+@media (pointer: fine) {
+  html {
+    overflow-y: scroll;
+  }
+}
+
 h1,
 h2,
 h3 {
@@ -221,10 +229,6 @@ code,
 
 /* ------------------------------------------------------------------ phone layout (since 1.7, html.m) */
 /* Phones and upright tablets: lib/mobile.svelte.js sets html.m. Bar at the top, tab bar at the bottom (components/mobile). */
-
-html.m {
-  scrollbar-gutter: auto;
-}
 
 html.m body {
   overscroll-behavior-y: none;

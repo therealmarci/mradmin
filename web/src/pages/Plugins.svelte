@@ -171,7 +171,7 @@
 {#snippet srcLabel(p)}
   {#if p.source?.type === 'modrinth' || p.source?.type === 'github'}
     <span class="logo" aria-hidden="true"></span>
-    <span class="src-name">{p.source.title}</span>
+    <span class="src-name" title={p.source.title}>{p.source.title}</span>
     {#if !p.manual}<span class="src-auto">{t('plugins.src.autoShort')}</span>{/if}
     {#if p.channel === 'beta'}<span class="src-beta">{t('plugins.channel.beta')}</span>{/if}
   {:else if p.source?.type === 'off'}
@@ -191,7 +191,7 @@
           stroke-linejoin="round"><path d={ICONS.box} /></svg>
       </span>
       <div class="r-name">
-        <span class="name-line"><strong>{p.name}</strong>{#if !p.enabled}<span class="remote off">{t('plugins.foreignOff')}</span>{/if}</span>
+        <span class="name-line"><strong title={p.name}>{p.name}</strong>{#if !p.enabled}<span class="remote off">{t('plugins.foreignOff')}</span>{/if}</span>
       </div>
     </div>
     <div class="cell">
@@ -458,6 +458,17 @@
     background: var(--surface-2);
     justify-content: flex-start;
     justify-self: start;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .src > * {
+    flex-shrink: 0;
+  }
+
+  .src > .src-name {
+    flex-shrink: 1;
   }
 
   button.src:hover {
@@ -488,6 +499,7 @@
   }
 
   .src-name {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -909,6 +921,23 @@
 
   .r-name a:hover {
     color: var(--accent);
+  }
+
+  /* Long names (plugins of others) end with … instead of running into the next column; the full name on hover */
+  .name-line strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .name-line > :not(strong) {
+    flex-shrink: 0;
+  }
+
+  .cell .mono {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .desc {

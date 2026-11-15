@@ -579,7 +579,7 @@
 
   {#if device.mobile}
     <!-- Phone and upright tablet: bar with the big title at the top, tab bar at the bottom, sheets from below -->
-    <MobileBar title={mobileTitle} back={page.back} user={me} onback={back} onprofile={() => (profileOpen = true)}
+    <MobileBar title={mobileTitle} back={page.back} user={me} onback={back} onprofile={() => (profileOpen = true)} {modes}
       large={!(area === 'map' && !admin) && !(area === 'start' && !admin)} profileLabel={t('mobile.profile')}
       inbox={hasInbox ? { count: inboxCount, alarm: inboxAlarm, active: !admin && area === 'inbox', label: t('inbox.title') } : null}
       oninbox={() => go('/inbox')} live={adminShell ? live.connected : null} liveTitle={live.connected ? t('common.live') : t('common.offline')} />

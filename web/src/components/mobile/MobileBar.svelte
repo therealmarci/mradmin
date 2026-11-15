@@ -4,13 +4,14 @@
   // letter of the inbox and the own head (opens the profile sheet). Below the bar the big title of the page.
   //
   // title, back: {label, path, onnav?} | null; user: {uuid} | null (visitor: sign-in button); inbox: null |
-  // {count, alarm, active, label}; live: null | true/false; onprofile(); onlogin(); oninbox(); onback(back).
+  // {count, alarm, active, label}; live: null | true/false; onprofile(); onlogin(); oninbox(); onback(back);
+  // modes: null | {current, player, admin, onswitch(mode)} - the team's switch player area / administration, one tap.
   import { head } from '../../lib/format.js';
   import { ICONS } from '../../lib/icons.js';
   import { picture } from '../../lib/branding.svelte.js';
 
   let { title, back = null, user = null, inbox = null, live = null, liveTitle = '', onprofile, onlogin = null,
-    loginLabel = '', oninbox = null, onback = null, profileLabel = '', large = true } = $props();
+    loginLabel = '', oninbox = null, onback = null, profileLabel = '', large = true, modes = null } = $props();
 
   let scrolled = $state(false);
   let barHeight = $state(0);
@@ -40,6 +41,14 @@
   </div>
   <div class="mid" class:show={small}>{title}</div>
   <div class="side right">
+    {#if modes}
+      {@const other = modes.current === 'admin' ? 'player' : 'admin'}
+      <button class="icon mode" class:on={modes.current === 'admin'} aria-pressed={modes.current === 'admin'}
+        aria-label={modes[other]} title={modes[other]} onclick={() => modes.onswitch(other)}>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true"><path d={ICONS.shield} /></svg>
+      </button>
+    {/if}
     {#if inbox}
       <button class="icon" class:active={inbox.active} class:alarm={inbox.alarm} class:has={inbox.count > 0} onclick={oninbox}
         aria-label={inbox.count ? `${inbox.label} (${inbox.count})` : inbox.label}>
@@ -68,7 +77,7 @@
     top: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
     align-items: center;
     gap: 8px;
     min-height: 52px;
@@ -99,7 +108,12 @@
     justify-content: flex-end;
   }
 
+  .side > * {
+    flex: none;
+  }
+
   .mid {
+    min-width: 0;
     max-width: 52vw;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -157,6 +171,13 @@
     height: 42px;
     border-radius: 50%;
     color: var(--muted);
+  }
+
+  /* In the administration the switch is filled - always clear where you are */
+  .mode.on {
+    color: var(--accent-text);
+    background: var(--accent);
+    transform: scale(0.86);
   }
 
   .icon.has {
