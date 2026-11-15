@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 66
+config-version: 67
 
 
 # ------------------------------------------------------------------------------
@@ -305,6 +305,10 @@ tickets:
     minutes: 30
     # Radius around the player for entities, block entities and players nearby (8-128 blocks).
     radius: 32
+    # Largest size of one log in MB (1-100). A bigger one is thinned out: fewer map frames, then less terrain and log.
+    max-megabytes: 100
+    # Commands that are recorded without their arguments - passwords never get into a log (e.g. /login <password>).
+    hidden-commands: ["login", "l", "log", "register", "reg", "changepassword", "changepw", "cp", "unregister", "unreg", "2fa", "totp", "email", "pin", "auth", "password", "passwort"]
   # Automatic tickets from plugins: if a plugin reports a problem of a player, the player automatically gets a ticket
   # with all details (link in the chat) - e.g. MRchunks when a chunk loader is locked because of lag. There they can
   # explain what happened. Only the team can close it; with MRchunks the team can unlock the loader via "Chunk loader

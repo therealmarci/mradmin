@@ -658,6 +658,20 @@ sections:
         when: tickets.attach-log.enabled
         name: {de: Umkreis um den Spieler, en: Radius around the player}
         help: {de: "Blöcke, in denen Entities, Block-Entities und andere Spieler gezählt werden.", en: "Blocks in which entities, block entities and other players are counted."}
+      - key: tickets.attach-log.max-megabytes
+        type: int
+        min: 1
+        max: 100
+        advanced: true
+        when: tickets.attach-log.enabled
+        name: {de: Größte Logdatei in MB, en: Largest log file in MB}
+        help: {de: "Ist ein Log größer, wird es ausgedünnt (weniger Kartenbilder, dann weniger Gelände und Log).", en: "A bigger log is thinned out (fewer map frames, then less terrain and log)."}
+      - key: tickets.attach-log.hidden-commands
+        type: strings
+        advanced: true
+        when: tickets.attach-log.enabled
+        name: {de: Befehle ohne Argumente, en: Commands without arguments}
+        help: {de: "Diese Befehle stehen nur mit Namen im Log, nie mit dem was dahinter steht - Passwörter (z.B. /login) kommen so nie in ein Log.", en: "These commands are logged by name only, never with what follows - passwords (e.g. /login) never get into a log."}
       - key: tickets.plugin-reports
         type: bool
         name: {de: Automatische Tickets der Plugins, en: Automatic tickets from plugins}

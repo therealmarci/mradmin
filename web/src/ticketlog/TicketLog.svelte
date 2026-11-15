@@ -11,6 +11,7 @@
   import LogMap from './LogMap.svelte';
   import ModulePart from './ModulePart.svelte';
   import { tl } from './texts.js';
+  import { safeColor } from './safe.js';
 
   let { log, lang = 'de', onclose = null } = $props();
   const T = (k, v) => tl(lang, k, v);
@@ -73,8 +74,9 @@
   // --------------------------------------------------------------- entries
   const entries = $derived.by(() => {
     const list = [];
-    for (const [time, level, text] of log.console?.lines ?? []) list.push({ time, kind: 'console', level, text });
-    for (const e of log.events ?? []) list.push({ time: e.time, kind: 'event', level: 'event', text: e.text, source: e.source, color: e.color });
+    // values from the file are data: only known levels, only #rrggbb colours (a log may come from anyone)
+    for (const [time, level, text] of log.console?.lines ?? []) list.push({ time: Number(time), kind: 'console', level: ['warn', 'error'].includes(level) ? level : 'info', text: String(text) });
+    for (const e of log.events ?? []) list.push({ time: Number(e.time), kind: 'event', level: 'event', text: String(e.text), source: String(e.source), color: safeColor(e.color) });
     list.sort((a, b) => a.time - b.time);
     return list;
   });

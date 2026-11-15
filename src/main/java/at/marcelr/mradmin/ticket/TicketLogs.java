@@ -55,6 +55,8 @@ public final class TicketLogs {
     private static final int MAX_EVENTS = 5_000;
     private static final int MAX_LINE = 2_000;
     private static final String SHARES = "ticket-log-shares";
+    /** How long a share link for MRtechnology works. */
+    private static final int SHARE_DAYS = 60;
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().serializeSpecialFloatingPointValues().create();
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -157,8 +159,8 @@ public final class TicketLogs {
                 log.put("health", health(points));
                 log.put("console", console(since, links, ips));
                 log.put("events", events(since));
-                // the creator's last 30 minutes of play, minute by minute (also when they are offline right now)
-                Map<String, Object> timeline = recorder.timeline(ticket.creator());
+                // the creator's last 30 minutes of play (also when they are offline right now)
+                Map<String, Object> timeline = recorder.timeline(ticket.creator(), 1);
                 if (timeline != null) {
                     log.put("timeline", timeline);
                 }
@@ -171,11 +173,63 @@ public final class TicketLogs {
                         Thread.currentThread().interrupt();
                     }
                 }
-                plugin.storage().saveTicketLog(id, gzip(GSON.toJson(log)));
+                plugin.storage().saveTicketLog(id, fit(log, ticket.creator(), s.maxMegabytes() * 1024L * 1024L));
             } catch (IOException | RuntimeException e) {
                 plugin.getLogger().warning("Could not save the log of ticket #" + id + ": " + e);
             }
         });
+    }
+
+    /**
+     * The log as gzipped JSON within the size limit (tickets.attach-log.max-megabytes): too big, the map frames are
+     * thinned out (every 2nd, 4th ... frame), then the terrain and the server log go.
+     */
+    private byte[] fit(Map<String, Object> log, java.util.UUID creator, long limit) throws IOException {
+        byte[] data = gzip(GSON.toJson(log));
+        for (int every = 2; data.length > limit && every <= 12 && log.containsKey("timeline"); every *= 2) {
+            log.put("timeline", recorder.timeline(creator, every));
+            data = gzip(GSON.toJson(log));
+        }
+        if (data.length > limit && log.get("timeline") instanceof Map<?, ?> t) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> timeline = (Map<String, Object>) t;
+            timeline.put("tiles", Map.of());
+            data = gzip(GSON.toJson(log));
+        }
+        if (data.length > limit) {
+            log.put("console", Map.of("lines", List.of(), "cut", true));
+            data = gzip(GSON.toJson(log));
+        }
+        if (data.length > limit) {
+            log.remove("timeline");
+            log.remove("area");
+            data = gzip(GSON.toJson(log));
+        }
+        return data;
+    }
+
+    /**
+     * A ticket that is closed for good (closed, or solved and the time to open it again is over): its log is only
+     * handed out as a ZIP file, the web interface no longer shows it.
+     */
+    public boolean archived(Ticket ticket) {
+        return !ticket.open() && !ticket.reopenable(plugin.settings().tickets().reopenDays());
+    }
+
+    /** The log as a ZIP file with one JSON file in it (for the viewer on the MRtechnology website). Blocking. */
+    public byte[] zip(int ticketId) throws IOException {
+        byte[] data = load(ticketId);
+        if (data == null) {
+            return null;
+        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (var in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data));
+             var zip = new java.util.zip.ZipOutputStream(out)) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("ticket-" + ticketId + "-log.json"));
+            in.transferTo(zip);
+            zip.closeEntry();
+        }
+        return out.toByteArray();
     }
 
     /** The stored snapshot as gzipped JSON, or null. Blocking - not on the server thread. */
@@ -360,25 +414,39 @@ public final class TicketLogs {
      */
     public synchronized String share(int ticketId) {
         YamlConfiguration yaml = plugin.storage().loadYaml(SHARES, plugin.getLogger());
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+        String found = null;
         for (String token : yaml.getKeys(false)) {
-            if (yaml.getInt(token) == ticketId) {
-                return token;
+            // expired links are forgotten
+            if (yaml.getLong(token + ".until") < now) {
+                yaml.set(token, null);
+                changed = true;
+            } else if (yaml.getInt(token + ".ticket") == ticketId) {
+                found = token;
             }
         }
-        byte[] random = new byte[24];
-        RANDOM.nextBytes(random);
-        String token = HexFormat.of().formatHex(random);
-        yaml.set(token, ticketId);
-        plugin.storage().saveYaml(SHARES, yaml);
-        return token;
+        if (found == null) {
+            byte[] random = new byte[24];
+            RANDOM.nextBytes(random);
+            found = HexFormat.of().formatHex(random);
+            yaml.set(found + ".ticket", ticketId);
+            yaml.set(found + ".until", now + SHARE_DAYS * 86_400_000L);
+            changed = true;
+        }
+        if (changed) {
+            plugin.storage().saveYaml(SHARES, yaml);
+        }
+        return found;
     }
 
-    /** The ticket of a share token, or -1. */
+    /** The ticket of a share token that has not expired, or -1. */
     public synchronized int byToken(String token) {
         if (token == null || !token.matches("[0-9a-f]{48}")) {
             return -1;
         }
-        return plugin.storage().loadYaml(SHARES, plugin.getLogger()).getInt(token, -1);
+        YamlConfiguration yaml = plugin.storage().loadYaml(SHARES, plugin.getLogger());
+        return yaml.getLong(token + ".until") < System.currentTimeMillis() ? -1 : yaml.getInt(token + ".ticket", -1);
     }
 
     /** The sealed file of a ticket's log (for MRtechnology), or null if the ticket has no log. Blocking. */
@@ -394,8 +462,19 @@ public final class TicketLogs {
                 json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             }
             com.google.gson.JsonObject object = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
-            if (object.has("module")) {
-                object.remove("module");
+            boolean changed = object.remove("module") != null;
+            if (object.has("console") && object.getAsJsonObject("console").has("lines")) {
+                for (com.google.gson.JsonElement line : object.getAsJsonObject("console").getAsJsonArray("lines")) {
+                    com.google.gson.JsonArray row = line.getAsJsonArray();
+                    String text = row.get(2).getAsString();
+                    String clean = at.marcelr.mradmin.web.ConsoleLog.clean(text, true, true);
+                    if (!clean.equals(text)) {
+                        row.set(2, new com.google.gson.JsonPrimitive(clean));
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
                 data = gzip(GSON.toJson(object));
             }
             return LogSeal.seal(data, Map.of("ticket", ticketId, "server", plugin.branding().name(),

@@ -31,6 +31,7 @@ const TEXTS = {
     mCame: 'Spieler kamen', mWent: 'Spieler gingen', mNoServer: 'Keine Serverwerte für diese Minute (außerhalb des Logs).',
     mProblems: '{n} Warnungen/Fehler im Server-Log',
     ev_join: 'Betreten', ev_quit: 'Verlassen', ev_death: 'Gestorben', ev_teleport: 'Teleport',
+    play: 'Abspielen', speed: 'Geschwindigkeit',
   },
   en: {
     title: 'Log of the ticket', hide: 'Hide log',
@@ -61,6 +62,7 @@ const TEXTS = {
     mCame: 'Players came', mWent: 'Players left', mNoServer: 'No server values for this minute (outside the log).',
     mProblems: '{n} warnings/errors in the server log',
     ev_join: 'Joined', ev_quit: 'Left', ev_death: 'Died', ev_teleport: 'Teleport',
+    play: 'Play', speed: 'Speed',
   },
 };
 

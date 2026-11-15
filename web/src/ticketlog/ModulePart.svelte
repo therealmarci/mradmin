@@ -6,6 +6,7 @@
   // part: log.module   lang   from/to: span of the log (charts use the same time axis)
   import LineChart from '../components/LineChart.svelte';
   import { tl } from './texts.js';
+  import { safeTone } from './safe.js';
 
   let { part, lang, from, to } = $props();
 
@@ -17,7 +18,7 @@
   const fmt = (unit) => (v) => (v == null ? '-' : (Math.round(v * 100) / 100).toLocaleString() + (unit ? ' ' + unit : ''));
 </script>
 
-<section class="mpart tone-{part.status?.tone ?? 'none'}">
+<section class="mpart tone-{safeTone(part.status?.tone)}">
   <header>
     <div>
       <span class="from">{tl(lang, 'module', { plugin: part.plugin })}</span>

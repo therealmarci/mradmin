@@ -210,7 +210,7 @@ public record Settings(
      * tickets.attach-log (since 1.7): a snapshot of the last minutes (server log, events, performance, server and
      * player surroundings) saved with every new ticket - its category may still change later.
      */
-    public record AttachLog(boolean enabled, int minutes, int radius) {
+    public record AttachLog(boolean enabled, int minutes, int radius, int maxMegabytes, java.util.Set<String> hiddenCommands) {
     }
 
     /**
@@ -351,7 +351,11 @@ public record Settings(
                 c.getStringList("tickets.forward-categories").stream().map(String::trim).filter(x -> !x.isEmpty()).toList(),
                 new AttachLog(c.getBoolean("tickets.attach-log.enabled", true),
                         Math.clamp(c.getInt("tickets.attach-log.minutes", 30), 1, 120),
-                        Math.clamp(c.getInt("tickets.attach-log.radius", 32), 8, 128)));
+                        Math.clamp(c.getInt("tickets.attach-log.radius", 32), 8, 128),
+                        Math.clamp(c.getInt("tickets.attach-log.max-megabytes", 100), 1, 100),
+                        c.getStringList("tickets.attach-log.hidden-commands").stream().map(x -> x.trim().toLowerCase(java.util.Locale.ROOT))
+                                .map(x -> x.startsWith("/") ? x.substring(1) : x).filter(x -> !x.isEmpty())
+                                .collect(java.util.stream.Collectors.toUnmodifiableSet())));
 
         Set<Feature> features = java.util.EnumSet.noneOf(Feature.class);
         for (Feature feature : Feature.values()) {

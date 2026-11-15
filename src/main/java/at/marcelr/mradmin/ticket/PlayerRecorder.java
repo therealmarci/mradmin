@@ -3,10 +3,12 @@ package at.marcelr.mradmin.ticket;
 import at.marcelr.mradmin.MRAdmin;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -44,37 +46,44 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 /**
- * The logging service of ticket logs (since 1.7): for every player the last 30 minutes of play time, minute by minute -
- * where they were, what they did (blocks, items, damage, deaths, teleports, commands), what happened around them
- * (entities, despawned items, deaths, other players) and the entities around them at the end of each minute. Only
- * minutes the player was online count; a disconnect keeps everything, only a restart empties it (memory only).
- * Every list is capped, so the minutes stay readable.
+ * The logging service of ticket logs (since 1.7): for every player the last 30 minutes of play time - every 5 seconds a
+ * frame (position and the entities in the 16 x 16 chunks around), per minute what they did (blocks, items, damage,
+ * deaths, teleports, commands) and what happened around them (despawned items, deaths, other players), so the map of a
+ * ticket log plays smoothly. Only minutes the player was online count; a disconnect keeps everything, a restart empties
+ * it (memory only).
+ *
+ * <p>Load and memory: every player is sampled once per 5 seconds, spread over the ticks; a chunk is read at most once
+ * per 2.5 seconds and shared by everyone near it, and a chunk whose entities did not change keeps its old copy - an
+ * unchanged farm costs nothing more over time. All lists are capped (also the number of recorded players).
  */
 public final class PlayerRecorder implements Listener {
 
     /** Minutes of play time kept per player. */
     public static final int MINUTES = 30;
     /** Half the side of the area around a player (16 x 16 chunks). */
-    private static final int HALF = 128;
+    static final int HALF = 128;
     private static final int SAMPLE_TICKS = 100;
-    private static final int MAX_GROUPS = 300;
-    private static final int MAX_ROWS = 40;
-    private static final int MAX_COMMANDS = 20;
-    /** Commands whose arguments are never recorded (passwords). */
-    private static final Set<String> SECRET = Set.of("login", "l", "register", "reg", "changepassword", "changepw", "cp",
-            "unregister", "2fa", "totp", "email");
+    private static final long RESCAN_MS = 2_500;
+    /** Entity groups (kind, 2 x 2 blocks) kept per chunk. */
+    private static final int MAX_GROUPS_PER_CHUNK = 48;
+    private static final int MAX_ROWS = 120;
+    private static final int MAX_EVENTS = 60;
+    private static final int MAX_COMMANDS = 30;
+    /** Players kept at most - the ones offline the longest go first. */
+    private static final int MAX_PLAYERS = 500;
+
+    /** The entities of one chunk at one time: groups of {type, category, x, z, count}. Shared, never changed. */
+    record ChunkEntities(int[] groups) {
+    }
+
+    /** One 5-second frame: where the player was and the entities around (non-empty chunks only). */
+    record Frame(long time, String world, int x, int y, int z, ChunkEntities[] chunks) {
+    }
 
     /** One minute of play of one player. */
     static final class Minute {
         final long start;
-        String world;
-        final List<int[]> path = new ArrayList<>();
-        final List<Long> pathTime = new ArrayList<>();
-        int cx;
-        int cz;
-        int y;
-        List<List<Object>> entities = List.of();
-        Map<String, Integer> counts = Map.of();
+        final List<Frame> frames = new ArrayList<>(12);
         final Map<String, Integer> broken = new TreeMap<>();
         final Map<String, Integer> placed = new TreeMap<>();
         final Map<String, Integer> picked = new TreeMap<>();
@@ -83,8 +92,8 @@ public final class PlayerRecorder implements Listener {
         final Map<String, Double> damageDealt = new TreeMap<>();
         final List<Map<String, Object>> events = new ArrayList<>();
         final List<String> commands = new ArrayList<>();
-        final Map<String, Integer> despawned = new TreeMap<>();
         final List<List<Object>> despawnRows = new ArrayList<>();
+        final Map<String, Integer> despawned = new TreeMap<>();
         final List<Map<String, Object>> deaths = new ArrayList<>();
         Set<String> nearby = new HashSet<>();
         final List<String> came = new ArrayList<>();
@@ -95,11 +104,23 @@ public final class PlayerRecorder implements Listener {
         }
     }
 
+    private record Recording(Deque<Minute> minutes, long[] lastOnline) {
+    }
+
+    private record Scan(long time, ChunkEntities entities) {
+    }
+
     private final MRAdmin plugin;
-    private final Map<UUID, Deque<Minute>> players = new ConcurrentHashMap<>();
+    private final Map<UUID, Recording> players = new ConcurrentHashMap<>();
+    /** Last read of every chunk near a player: world|cx|cz -> time and entities (empty ones not kept). */
+    private final Map<String, Scan> scans = new HashMap<>();
+    /** Names of entity kinds and categories by number (the frames only keep numbers). */
+    private final List<String> types = new ArrayList<>();
+    private final Map<String, Integer> typeIds = new HashMap<>();
+    static final List<String> CATEGORIES = List.of("hostile", "passive", "item", "projectile", "vehicle", "other");
     private final RegionTiles tiles;
     private BukkitTask task;
-    private int round;
+    private int tick;
 
     PlayerRecorder(MRAdmin plugin) {
         this.plugin = plugin;
@@ -112,7 +133,7 @@ public final class PlayerRecorder implements Listener {
 
     public void start() {
         stop();
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::sample, SAMPLE_TICKS, SAMPLE_TICKS);
+        task = Bukkit.getScheduler().runTaskTimer(plugin, this::sampleSlice, 1, 1);
     }
 
     public void stop() {
@@ -122,51 +143,70 @@ public final class PlayerRecorder implements Listener {
         }
     }
 
+    /** tickets.attach-log.hidden-commands: commands whose arguments are never recorded (passwords). */
+    private Set<String> hiddenCommands() {
+        return plugin.settings().tickets().attachLog().hiddenCommands();
+    }
+
     // ------------------------------------------------------------- sampling
 
-    /** The minute the player is in right now (a new one when the clock passed a minute); null if not recording. */
+    /** The minute the player is in right now (a new one when the clock passed a minute). */
     private Minute now(Player p) {
         long minute = System.currentTimeMillis() / 60_000L * 60_000L;
-        Deque<Minute> minutes = players.computeIfAbsent(p.getUniqueId(), k -> new ArrayDeque<>());
+        Recording rec = players.computeIfAbsent(p.getUniqueId(), k -> {
+            trimPlayers();
+            return new Recording(new ArrayDeque<>(), new long[1]);
+        });
+        rec.lastOnline()[0] = System.currentTimeMillis();
+        Deque<Minute> minutes = rec.minutes();
         synchronized (minutes) {
             Minute last = minutes.peekLast();
             if (last == null || last.start != minute) {
-                last = new Minute(minute);
-                Location l = p.getLocation();
-                last.world = l.getWorld().getName();
-                last.cx = l.getBlockX();
-                last.cz = l.getBlockZ();
-                last.y = l.getBlockY();
-                Minute before = minutes.peekLast();
-                if (before != null) {
-                    last.nearby = before.nearby;
+                Minute next = new Minute(minute);
+                if (last != null) {
+                    next.nearby = last.nearby;
                 }
-                minutes.addLast(last);
+                minutes.addLast(next);
                 while (minutes.size() > MINUTES) {
                     minutes.pollFirst();
                 }
+                last = next;
             }
             return last;
         }
     }
 
-    /** Every 5 seconds: positions of all players; the entities around a twelfth of them (each player once a minute). */
-    private void sample() {
-        round = (round + 1) % 12;
+    /** More players than kept: the one offline the longest is dropped. */
+    private void trimPlayers() {
+        while (players.size() >= MAX_PLAYERS) {
+            UUID oldest = null;
+            long time = Long.MAX_VALUE;
+            for (Map.Entry<UUID, Recording> e : players.entrySet()) {
+                if (Bukkit.getPlayer(e.getKey()) == null && e.getValue().lastOnline()[0] < time) {
+                    time = e.getValue().lastOnline()[0];
+                    oldest = e.getKey();
+                }
+            }
+            if (oldest == null) {
+                return;
+            }
+            players.remove(oldest);
+        }
+    }
+
+    /** Every tick a slice of the players, so everyone is sampled once per 5 seconds without a spike. */
+    private void sampleSlice() {
+        tick = (tick + 1) % SAMPLE_TICKS;
         long time = System.currentTimeMillis();
         for (Player p : Bukkit.getOnlinePlayers()) {
+            if (Math.floorMod(p.getUniqueId().hashCode(), SAMPLE_TICKS) != tick) {
+                continue;
+            }
             Minute m = now(p);
             Location l = p.getLocation();
+            ChunkEntities[] chunks = scanAround(l, time);
             synchronized (m) {
-                m.world = l.getWorld().getName();
-                m.cx = l.getBlockX();
-                m.cz = l.getBlockZ();
-                m.y = l.getBlockY();
-                int[] last = m.path.isEmpty() ? null : m.path.getLast();
-                if (last == null || last[0] != l.getBlockX() || last[1] != l.getBlockZ()) {
-                    m.path.add(new int[] {l.getBlockX(), l.getBlockZ()});
-                    m.pathTime.add(time);
-                }
+                m.frames.add(new Frame(time, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(), chunks));
                 // other players coming into or leaving the area
                 Set<String> near = new HashSet<>();
                 for (Player o : l.getWorld().getPlayers()) {
@@ -188,52 +228,81 @@ public final class PlayerRecorder implements Listener {
                 m.nearby = near;
             }
             tiles.want(l);
-            if (Math.floorMod(p.getUniqueId().hashCode(), 12) == round) {
-                scanEntities(p, m);
-            }
+        }
+        if (tick == 0) {
+            scans.values().removeIf(s -> time - s.time() > 60_000);
         }
     }
 
-    /** The entities in the 16 x 16 chunks around the player, grouped by kind and 2 x 2 blocks, plus counts per kind. */
-    private static void scanEntities(Player p, Minute m) {
-        Location l = p.getLocation();
+    /** The entities of the 16 x 16 chunks around a place - each chunk read at most every 2.5 seconds, shared. */
+    private ChunkEntities[] scanAround(Location l, long time) {
         World w = l.getWorld();
         int pcx = l.getBlockX() >> 4;
         int pcz = l.getBlockZ() >> 4;
-        Map<String, int[]> groups = new HashMap<>();
-        Map<String, String> cats = new HashMap<>();
-        Map<String, Integer> counts = new HashMap<>();
+        List<ChunkEntities> out = new ArrayList<>();
         for (int cx = pcx - 8; cx < pcx + 8; cx++) {
             for (int cz = pcz - 8; cz < pcz + 8; cz++) {
                 if (!w.isChunkLoaded(cx, cz)) {
                     continue;
                 }
-                Chunk chunk = w.getChunkAt(cx, cz);
-                for (Entity e : chunk.getEntities()) {
-                    if (e instanceof Player) {
-                        continue;
-                    }
-                    String type = e instanceof Item item ? "item:" + item.getItemStack().getType().getKey().getKey()
-                            : e.getType().getKey().getKey();
-                    int n = e instanceof Item item ? item.getItemStack().getAmount() : 1;
-                    cats.putIfAbsent(type, LogArea.category(e));
-                    counts.merge(type, n, Integer::sum);
-                    Location el = e.getLocation();
-                    int gx = el.getBlockX() >> 1 << 1;
-                    int gz = el.getBlockZ() >> 1 << 1;
-                    groups.computeIfAbsent(type + "|" + gx + "|" + gz, k -> new int[] {gx, gz, 0})[2] += n;
+                String key = w.getName() + "|" + cx + "|" + cz;
+                Scan scan = scans.get(key);
+                if (scan == null || time - scan.time() > RESCAN_MS) {
+                    ChunkEntities fresh = read(w.getChunkAt(cx, cz));
+                    // unchanged: keep the old copy, so frames share it
+                    ChunkEntities kept = scan != null && scan.entities() != null && fresh != null
+                            && Arrays.equals(scan.entities().groups(), fresh.groups()) ? scan.entities() : fresh;
+                    scan = new Scan(time, kept);
+                    scans.put(key, scan);
+                }
+                if (scan.entities() != null) {
+                    out.add(scan.entities());
                 }
             }
         }
-        List<List<Object>> list = new ArrayList<>();
-        groups.entrySet().stream().sorted(Comparator.comparingInt((Map.Entry<String, int[]> e) -> e.getValue()[2]).reversed())
-                .limit(MAX_GROUPS).forEach(e -> {
-                    String type = e.getKey().substring(0, e.getKey().indexOf('|'));
-                    list.add(List.of(type, cats.get(type), e.getValue()[0], e.getValue()[1], e.getValue()[2]));
-                });
-        synchronized (m) {
-            m.entities = list;
-            m.counts = counts;
+        return out.toArray(ChunkEntities[]::new);
+    }
+
+    /** One chunk: entities grouped by kind and 2 x 2 blocks, the biggest groups; null if there are none. */
+    private ChunkEntities read(Chunk chunk) {
+        Map<Long, int[]> groups = new HashMap<>();
+        for (Entity e : chunk.getEntities()) {
+            if (e instanceof Player) {
+                continue;
+            }
+            String type = e instanceof Item item ? "item:" + item.getItemStack().getType().getKey().getKey()
+                    : e.getType().getKey().getKey();
+            int id = typeId(type);
+            int cat = CATEGORIES.indexOf(LogArea.category(e));
+            Location el = e.getLocation();
+            int gx = el.getBlockX() >> 1 << 1;
+            int gz = el.getBlockZ() >> 1 << 1;
+            long key = ((long) id << 40) ^ ((long) (gx & 0xFFFFF) << 20) ^ (gz & 0xFFFFF);
+            groups.computeIfAbsent(key, k -> new int[] {id, cat, gx, gz, 0})[4] += e instanceof Item item ? item.getItemStack().getAmount() : 1;
+        }
+        if (groups.isEmpty()) {
+            return null;
+        }
+        List<int[]> list = new ArrayList<>(groups.values());
+        // fixed order (biggest first, then by place) so an unchanged chunk gives the same array
+        list.sort(Comparator.<int[]>comparingInt(g -> -g[4]).thenComparingInt(g -> g[0]).thenComparingInt(g -> g[2]).thenComparingInt(g -> g[3]));
+        int n = Math.min(list.size(), MAX_GROUPS_PER_CHUNK);
+        int[] flat = new int[n * 5];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(list.get(i), 0, flat, i * 5, 5);
+        }
+        return new ChunkEntities(flat);
+    }
+
+    private int typeId(String type) {
+        synchronized (types) {
+            Integer id = typeIds.get(type);
+            if (id == null) {
+                id = types.size();
+                types.add(type);
+                typeIds.put(type, id);
+            }
+            return id;
         }
     }
 
@@ -242,7 +311,7 @@ public final class PlayerRecorder implements Listener {
     private void event(Player p, String kind, String text) {
         Minute m = now(p);
         synchronized (m) {
-            if (m.events.size() < MAX_ROWS) {
+            if (m.events.size() < MAX_EVENTS) {
                 Map<String, Object> e = new LinkedHashMap<>();
                 e.put("time", System.currentTimeMillis());
                 e.put("kind", kind);
@@ -303,10 +372,8 @@ public final class PlayerRecorder implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player p && event.getFinalDamage() > 0) {
-            String cause = event.getCause().name().toLowerCase(Locale.ROOT);
-            if (event instanceof EntityDamageByEntityEvent by) {
-                cause = attacker(by.getDamager());
-            }
+            String cause = event instanceof EntityDamageByEntityEvent by ? attacker(by.getDamager())
+                    : event.getCause().name().toLowerCase(Locale.ROOT);
             Minute m = now(p);
             synchronized (m) {
                 m.damageTaken.merge(cause, event.getFinalDamage(), Double::sum);
@@ -353,9 +420,14 @@ public final class PlayerRecorder implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         String line = event.getMessage().trim();
+        if (line.length() < 2) {
+            return;
+        }
         String label = line.split(" ", 2)[0].substring(1).toLowerCase(Locale.ROOT);
         String name = label.contains(":") ? label.substring(label.indexOf(':') + 1) : label;
-        String shown = SECRET.contains(name) ? "/" + label + " ***" : line.length() > 80 ? line.substring(0, 80) + " ..." : line;
+        // passwords never get into the log: those commands only by name
+        String shown = hiddenCommands().contains(name) ? "/" + label + (line.contains(" ") ? " ***" : "")
+                : line.length() > 80 ? line.substring(0, 80) + " ..." : line;
         Minute m = now(event.getPlayer());
         synchronized (m) {
             if (m.commands.size() < MAX_COMMANDS) {
@@ -417,36 +489,47 @@ public final class PlayerRecorder implements Listener {
     // ---------------------------------------------------------------- output
 
     /**
-     * The recorded minutes of a player (oldest first) with the terrain tiles they need, or null if nothing was
-     * recorded. Any thread.
+     * The recorded play of a player (oldest minute first) with the terrain it needs, or null. Entities are written once
+     * per distinct chunk state ({@code chunks}: id -> flat groups) and the frames name them by id - a log stays small
+     * even with a long, busy recording. {@code every}: only every n-th frame (to keep a log under its size limit).
      */
-    Map<String, Object> timeline(UUID player) {
-        Deque<Minute> minutes = players.get(player);
-        if (minutes == null) {
+    Map<String, Object> timeline(UUID player, int every) {
+        Recording rec = players.get(player);
+        if (rec == null) {
             return null;
         }
         List<Minute> copy;
-        synchronized (minutes) {
-            copy = new ArrayList<>(minutes);
+        synchronized (rec.minutes()) {
+            copy = new ArrayList<>(rec.minutes());
         }
         if (copy.isEmpty()) {
             return null;
         }
+        Map<ChunkEntities, Integer> ids = new IdentityHashMap<>();
+        List<int[]> chunkData = new ArrayList<>();
         List<Map<String, Object>> list = new ArrayList<>();
         Set<String> regions = new java.util.LinkedHashSet<>();
+        int index = 0;
         for (Minute m : copy) {
             synchronized (m) {
                 Map<String, Object> o = new LinkedHashMap<>();
                 o.put("start", m.start);
-                o.put("world", m.world);
-                o.put("center", List.of(m.cx, m.cz));
-                List<List<Object>> path = new ArrayList<>();
-                for (int i = 0; i < m.path.size(); i++) {
-                    path.add(List.of(m.pathTime.get(i), m.path.get(i)[0], m.path.get(i)[1]));
+                List<List<Object>> frames = new ArrayList<>();
+                for (Frame f : m.frames) {
+                    if (index++ % every != 0 && f != m.frames.getLast()) {
+                        continue;
+                    }
+                    List<Integer> refs = new ArrayList<>(f.chunks().length);
+                    for (ChunkEntities c : f.chunks()) {
+                        refs.add(ids.computeIfAbsent(c, k -> {
+                            chunkData.add(k.groups());
+                            return chunkData.size() - 1;
+                        }));
+                    }
+                    frames.add(List.of(f.time(), f.world(), f.x(), f.z(), refs));
+                    regions.addAll(RegionTiles.around(f.world(), f.x(), f.z()));
                 }
-                o.put("path", path);
-                o.put("entities", m.entities);
-                o.put("counts", m.counts);
+                o.put("frames", frames);
                 o.put("broken", m.broken);
                 o.put("placed", m.placed);
                 o.put("picked", m.picked);
@@ -461,11 +544,15 @@ public final class PlayerRecorder implements Listener {
                 o.put("came", m.came);
                 o.put("went", m.went);
                 list.add(o);
-                regions.addAll(RegionTiles.around(m.world, m.cx, m.cz));
             }
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("minutes", list);
+        synchronized (types) {
+            result.put("types", List.copyOf(types));
+        }
+        result.put("categories", CATEGORIES);
+        result.put("chunks", chunkData);
         result.put("tiles", tiles.get(regions));
         return result;
     }

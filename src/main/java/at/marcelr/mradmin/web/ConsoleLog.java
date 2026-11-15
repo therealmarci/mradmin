@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
  * output included) in a background thread and keeps the newest lines. Links and IP addresses are hidden when a line
  * is read (web.console.hide-links / hide-ips) - the raw line is never kept. Starts with the end of the current file.
  */
-final class ConsoleLog {
+public final class ConsoleLog {
 
     /** One line with its running number (the browser asks for "everything after n"). */
     record Line(long seq, String text) {
@@ -152,7 +152,7 @@ final class ConsoleLog {
     }
 
     /** Without colour codes, and with links / IP addresses hidden if asked (also for the older log files). */
-    static String clean(String line, boolean links, boolean ips) {
+    public static String clean(String line, boolean links, boolean ips) {
         String text = ANSI.matcher(line.replace("\r", "")).replaceAll("");
         if (links) {
             text = LINK.matcher(text).replaceAll("[Link]");

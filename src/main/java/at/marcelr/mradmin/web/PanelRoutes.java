@@ -60,6 +60,7 @@ public final class PanelRoutes {
         server.route("POST", "/api/tickets/{id}/category", r::category);
         server.route("GET", "/api/tickets/{id}/log", r::log);
         server.route("GET", "/api/tickets/{id}/log/sealed", r::sealedLog);
+        server.route("GET", "/api/tickets/{id}/log/download", r::downloadLog);
         server.route("POST", "/api/tickets/{id}/log/share", r::shareLog);
         // Only the sealed file (no one but MRtechnology can open it), for the viewer on the MRtechnology website.
         server.open("GET", "/api/public/ticket-log/{token}", r::publicLog);
@@ -367,6 +368,11 @@ public final class PanelRoutes {
         }
         // Outside the server thread: with SQL this asks the database.
         result.put("hasLog", plugin.storage().hasTicketLog(id));
+        Boolean archived = server.sync(() -> {
+            Ticket t = plugin.tickets().get(id);
+            return t != null && plugin.tickets().logs().archived(t);
+        });
+        result.put("logArchived", archived);
         http.json(200, result);
     }
 
@@ -432,6 +438,17 @@ public final class PanelRoutes {
         requireTickets(http);
         require(http, Perms.TICKETS_LOG);
         int id = id(http);
+        // closed for good: only as a ZIP file for the viewer
+        Boolean archived = server.sync(() -> {
+            Ticket t = plugin.tickets().get(id);
+            return t == null ? null : plugin.tickets().logs().archived(t);
+        });
+        if (archived == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        if (archived) {
+            throw new Http.WebException(410, "ticket-log-archived");
+        }
         byte[] data = plugin.tickets().logs().load(id);
         if (data == null) {
             throw new Http.WebException(404, "no-ticket-log");
@@ -439,6 +456,24 @@ public final class PanelRoutes {
         try (var in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data))) {
             http.send(200, "application/json; charset=utf-8", in.readAllBytes(), "no-store");
         }
+    }
+
+    /** The log as a ZIP file (opens in the viewer on the MRtechnology website, in the browser only). */
+    private void downloadLog(Http http) throws Exception {
+        requireTickets(http);
+        require(http, Perms.TICKETS_LOG);
+        int id = id(http);
+        if (server.sync(() -> plugin.tickets().get(id)) == null) {
+            throw new Http.WebException(404, "not-found");
+        }
+        byte[] zip = plugin.tickets().logs().zip(id);
+        if (zip == null) {
+            throw new Http.WebException(404, "no-ticket-log");
+        }
+        http.exchange().getResponseHeaders().set("Content-Disposition", "attachment; filename=\"ticket-" + id + "-log.zip\"");
+        http.send(200, "application/zip", zip, "no-store");
+        plugin.storage().audit(new Storage.AuditRow(System.currentTimeMillis(), http.account().id(), http.account().name(),
+                http.storedIp(), "ticket-log-download", "#" + id));
     }
 
     /** The log sealed for MRtechnology as a file to attach to the GitHub issue. */

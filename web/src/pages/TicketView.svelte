@@ -350,9 +350,16 @@
       <section class="card log-bar">
         <div>
           <strong>{t('tlog.title')}</strong>
-          <span class="muted small">{t('tlog.hint')}</span>
+          <span class="muted small">{ticket.logArchived ? t('tlog.archivedHint') : t('tlog.hint')}</span>
         </div>
-        <button class="secondary small" onclick={openLog} disabled={logBusy}>{logBusy ? t('common.loading') : t('tlog.show')}</button>
+        <div class="log-actions">
+          <a class="button secondary small" href={`/api/tickets/${ticket.id}/log/download`} download>{t('tlog.download')} ↓</a>
+          {#if ticket.logArchived}
+            <a class="button secondary small" href="https://mrtechnology.marcelr.at/log/" target="_blank" rel="noopener noreferrer">{t('tlog.viewer')} ↗</a>
+          {:else}
+            <button class="secondary small" onclick={openLog} disabled={logBusy}>{logBusy ? t('common.loading') : t('tlog.show')}</button>
+          {/if}
+        </div>
       </section>
     {/if}
     {#if log}<TicketLog {log} {lang} onclose={() => (log = null)} />{/if}
@@ -456,9 +463,19 @@
     gap: 10px;
   }
 
-  .log-bar div {
+  .log-bar > div:first-child {
     display: grid;
     gap: 2px;
+  }
+
+  .log-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .log-actions a {
+    text-decoration: none;
   }
 
   .cat-pick {
