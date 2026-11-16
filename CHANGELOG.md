@@ -9,6 +9,8 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+## [BET-1.7.0-bu001] - 2026-11-16
+
 ### Neu
 - **Tickets lösen statt schließen:** Das Team markiert erledigte Tickets als **gelöst** (im Spiel und im Browser heißt der Knopf **Lösen**). Für das Team stehen sie dann im Archiv (gekennzeichnet als „Gelöst“), beim Spieler noch unter den aktiven Tickets: Er kann sie mit **Wieder öffnen** erneut öffnen - im Spiel, im Browser oder mit `/mradmin ticket <nr> reopen`; das Team bekommt dann eine Meldung (Chat und Push). Nach `tickets.reopen-days` (Standard 30 Tage) ist das Ticket endgültig geschlossen und lässt sich nur noch vom Team öffnen. Wer im Team ist (`mradmin.tickets.close`), löst immer - auch eigene Tickets; schließt ein Spieler ohne dieses Recht selbst, ist es sofort endgültig zu. `keep-closed` zählt bei gelösten Tickets erst ab dem Ende dieser Frist. Neue Einstellung `tickets.reopen-days` (0 = gelöste Tickets sofort endgültig schließen). Bei MySQL/SQLite bekommt die Ticket-Tabelle eine neue Spalte (automatisch beim Start).
 - **Tickets archivieren:** Auf der Spielerseite im Browser kann der Spieler ein gelöstes Ticket mit **Archivieren** sofort endgültig abschließen (es lässt sich dann nicht mehr öffnen).
