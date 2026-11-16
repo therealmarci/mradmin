@@ -26,6 +26,8 @@
     from = null, // start and end of the chosen range (ms) - the time axis covers exactly this, otherwise the points
     to = null,
     onClose = null, // set in the full-screen view: a close button instead of the expand button
+    cursor = null, // a moment marked with a line (ms), e.g. the time chosen on the ticket log timeline
+    onpick = null, // a click in the plot: called with the time of the nearest point
   } = $props();
 
   let expanded = $state(false);
@@ -143,6 +145,12 @@
   let dragging = null;
 
   function press(event) {
+    if (onpick && !onpan) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const i = nearest(((event.clientX - rect.left) / rect.width) * width);
+      if (i >= 0) onpick(points[i].time);
+      return;
+    }
     if (!onpan) return;
     dragging = event.clientX;
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -291,6 +299,9 @@
         {#each endLabels as l}
           <text class="end" x={pad.left + innerW + 6} y={l.y + 4}>{format(l.value)}</text>
         {/each}
+        {#if cursor != null && cursor >= t0 && cursor <= t1}
+          <line class="cursor" x1={x(cursor)} x2={x(cursor)} y1={pad.top - 4} y2={pad.top + innerH} />
+        {/if}
         {#if hover}
           <line class="cross" x1={x(hover.time)} x2={x(hover.time)} y1={pad.top} y2={pad.top + innerH} />
           {#each series as s}
@@ -406,6 +417,11 @@
     cursor: grab;
     touch-action: pan-y;
     user-select: none;
+  }
+
+  .cursor {
+    stroke: var(--accent);
+    stroke-width: 2;
   }
 
   .band {

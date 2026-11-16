@@ -8,7 +8,6 @@
   import PageHead from '../components/PageHead.svelte';
   import ForwardIssue from '../components/ForwardIssue.svelte';
   import Dropdown from '../components/Dropdown.svelte';
-  import TicketLog from '../ticketlog/TicketLog.svelte';
   import GitHubIssue from '../components/GitHubIssue.svelte';
 
   let { id, me } = $props();
@@ -64,29 +63,9 @@
     if (await action('reply', { text })) text = '';
   }
 
-  // The log saved with the ticket (tickets.attach-log): loaded only when opened - it can be large.
-  let log = $state(null);
-  let logBusy = $state(false);
-  async function openLog() {
-    if (log) { log = null; return; }
-    logBusy = true;
-    try {
-      log = await api('GET', `/tickets/${id}/log`);
-    } catch (e) {
-      error = errorText(e);
-    } finally {
-      logBusy = false;
-    }
-  }
-  $effect(() => {
-    id;
-    untrack(() => (log = null));
-  });
-
   // Forward to MRtechnology: a prefilled GitHub issue, linked to the ticket afterwards
   let forwarding = $state(false);
   // "#123" of a linked issue address
-  const issueNo = (url) => url?.match(/\/issues\/(\d+)$/)?.[1] ?? '';
 
   // The team solves tickets (the player may open them again for solveDays days); with 0 days it closes them.
   const solve = $derived(!!ticket && ticket.solveDays > 0);
@@ -131,6 +110,7 @@
   });
 
   const mineClaimed = $derived(ticket?.claimedBy === me.name);
+  const logPage = $derived(ticket ? `/admin/community/tickets/${ticket.id}/log` : '');
 
   // The team moves an open ticket to another category of the same kind (not web requests and plugin reports).
   const categories = $derived(me.may.ticketsCategory && ticket?.open && (ticket.categoryChoices?.length ?? 0) > 1
@@ -157,212 +137,200 @@
     {#if !error}<p class="muted">{t('common.loading')}</p>{/if}
   {:else}
     <header class="head" class:closed={!ticket.open} class:claimed={ticket.open && ticket.claimedBy}>
-      <div class="h-main">
-        <span class="h-top">
-          <span class="id">#{ticket.id}</span>
-          {#if categories}
-            <span class="cat-pick"><Dropdown size="small" options={categories} value={ticket.category} label={t('ticket.category')}
-              disabled={busy} onchange={(c) => action('category', { category: c })} /></span>
-          {:else}
-            <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
-          {/if}
-          <span class="status">
-            {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen'))
-              : ticket.resolved ? t('ticket.statusResolved') : t('ticket.statusClosed')}
-          </span>
+      <span class="h-top">
+        <span class="id">#{ticket.id}</span>
+        {#if categories}
+          <span class="cat-pick"><Dropdown size="small" options={categories} value={ticket.category} label={t('ticket.category')}
+            disabled={busy} onchange={(c) => action('category', { category: c })} /></span>
+        {:else}
+          <span class="chip" class:auto={!!ticket.source}>{ticket.categoryName}</span>
+        {/if}
+        <span class="status">
+          {ticket.open ? (ticket.claimedBy ? t('tickets.claimed', { name: ticket.claimedBy }) : t('ticket.statusOpen'))
+            : ticket.resolved ? t('ticket.statusResolved') : t('ticket.statusClosed')}
         </span>
-        <h1>{ticket.summary || ticket.categoryName}</h1>
-      </div>
-      <div class="h-actions">
-        {#if loaderId}
-          <button class="secondary small" onclick={() => go('/chunks/' + loaderId)}>▦ {t('ticket.toLoader')}</button>
-        {/if}
-        {#if person}
-          <button class="secondary small person-btn" onclick={() => go('/players/' + person.uuid)}>
-            <img src={head(person.uuid, 32)} alt="" width="18" height="18" /> {t('ticket.toPlayer', { name: person.name })}
-          </button>
-        {/if}
-        {#if ticket.issue}
-          <a class="issue-chip" href={ticket.issue} target="_blank" rel="noopener noreferrer"
-            title={ticket.issue}>GitHub #{issueNo(ticket.issue)} ↗</a>
-        {/if}
-        {#if me.may.ticketsForward && ticket.forward}
-          <button class="secondary small" onclick={() => (forwarding = true)}>{t('forward.button')}</button>
-        {/if}
-        {#if ticket.open && me.may.ticketsClaim}
-          <button class="secondary small" onclick={() => action('claim')} disabled={busy}>
-            {mineClaimed ? t('ticket.release') : t('ticket.claim')}
-          </button>
-        {/if}
-      </div>
+      </span>
+      <h1>{ticket.summary || ticket.categoryName}</h1>
     </header>
 
-    <!-- The facts as small tiles: label on top, value below. -->
-    <section class="card facts">
-      <div class="fact">
-        <div class="flabel">{t('ticket.by')}</div>
-        {#if request?.kind === 'contact'}
-          <div class="fvalue">{ticket.creator}</div>
-        {:else}
-          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
-            <img src={head(ticket.creatorUuid, 32)} alt="" width="20" height="20" /> {ticket.creator}</button>
+    <!-- Two columns: the conversation is the main thing, everything about the ticket stands beside it. -->
+    <div class="layout">
+      <div class="main">
+        {#if ticket.source}
+          <div class="notice small">{t('ticket.lockHint')}</div>
         {/if}
-      </div>
-      {#if request?.email}
-        <div class="fact">
-          <div class="flabel">{t('request.email')}</div>
-          <a class="fvalue" href={mailto}>{request.email}</a>
-        </div>
-      {/if}
-      {#if ticket.report}
-        <div class="fact">
-          <div class="flabel">{t('ticket.reported')}</div>
-          <button class="fvalue person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.targetUuid)}>
-            <img src={head(ticket.targetUuid, 32)} alt="" width="20" height="20" /> {ticket.target}</button>
-        </div>
-      {/if}
-      <div class="fact">
-        <div class="flabel">{t('ticket.created')}</div>
-        <div class="fvalue">{dateTime(ticket.created)}</div>
-      </div>
-      {#if !request}
-        <div class="fact">
-          <div class="flabel">{t('ticket.location')}</div>
-          <!-- Wrapped only between the values - never inside one. -->
-          <div class="fvalue mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></div>
-        </div>
-      {/if}
-      <div class="fact">
-        <div class="flabel">{t('ticket.claimedBy')}</div>
-        <div class="fvalue">{ticket.claimedBy ?? t('ticket.nobody')}</div>
-      </div>
-    </section>
-
-    {#if ticket.source}
-      <div class="notice small">{t('ticket.lockHint')}</div>
-    {/if}
-    {#if request?.kind === 'unban'}
-      <section class="card ban">
-        <div class="ban-top">
-          <span class="muted small">{t('request.ban', { id: request.banId })}</span>
-          <span class="tag">{request.stage === 'appeal' ? t('request.stageAppeal') : t('request.stageRequest')}</span>
-          {#if request.decision}<span class="tag {request.decision}">{t('request.decision.' + request.decision)}</span>{/if}
-        </div>
-        <div class="reason">{request.banReason}</div>
-        <div class="muted small">{t('request.banFacts', { by: request.banOperator, since: dateTime(request.banStart),
-          until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
-        <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
-      </section>
-    {:else if request?.kind === 'application'}
-      <!-- Whitelist application: who applies, and what accepting does -->
-      <section class="card ban application">
-        <div class="ban-top">
-          <img class="app-head" src={head(request.uuid, 64)} alt="" width="40" height="40" />
-          <div class="app-who">
-            <strong>{request.player}</strong>
-            <span class="muted small">{t('application.label')}</span>
-          </div>
-          {#if request.decision}<span class="tag {request.decision}">{t('application.decision.' + request.decision)}</span>{/if}
-        </div>
-        <div class="notice small">{t('application.hint')}</div>
-      </section>
-    {:else if request?.kind === 'contact'}
-      <div class="notice small">
-        {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
-        {#if !me.may.mail && mailto}<a href={mailto}>{t('request.writeMail')}</a>{/if}
-      </div>
-    {/if}
-
-    <section class="card conversation">
-      <ol class="messages" bind:this={chat}>
-        {#each groups as g, i}
-          {#if i === 0 || day(g.messages[0].time) !== day(groups[i - 1].messages[0].time)}
-            <li class="day"><span>{new Date(g.messages[0].time).toLocaleDateString()}</span></li>
-          {/if}
-          {#if g.system}
-            <li class="system">
-              <span>
-                <b>{g.name}</b> · {time(g.messages[0].time)}
-                {#each g.messages as m}<span class="s-text">{m.text}</span>{/each}
-              </span>
-            </li>
-          {:else}
-            <li class="msg" class:staff={g.staff}>
-              <img class="avatar" src={head(g.uuid, 48)} alt="" width="32" height="32" />
-              <div class="bubble">
-                <div class="meta">
-                  <strong>{g.name}</strong>
-                  {#if g.staff}<span class="team">{t('ticket.team')}</span>{/if}
-                  <span class="muted" title={dateTime(g.messages[0].time)}>{time(g.messages[0].time)} · {ago(g.messages[0].time)}</span>
-                </div>
-                {#each g.messages as m}<div class="text">{m.text}</div>{/each}
+        {#if request?.kind === 'unban'}
+          <section class="card ban">
+            <div class="ban-top">
+              <span class="muted small">{t('request.ban', { id: request.banId })}</span>
+              <span class="tag">{request.stage === 'appeal' ? t('request.stageAppeal') : t('request.stageRequest')}</span>
+              {#if request.decision}<span class="tag {request.decision}">{t('request.decision.' + request.decision)}</span>{/if}
+            </div>
+            <div class="reason">{request.banReason}</div>
+            <div class="muted small">{t('request.banFacts', { by: request.banOperator, since: dateTime(request.banStart),
+              until: request.banEnd ? dateTime(request.banEnd) : t('pub.permanent') })}</div>
+            <div class="notice small">{request.stage === 'appeal' ? t('request.appealHint') : t('request.unbanHint')}</div>
+          </section>
+        {:else if request?.kind === 'application'}
+          <!-- Whitelist application: who applies, and what accepting does -->
+          <section class="card ban application">
+            <div class="ban-top">
+              <img class="app-head" src={head(request.uuid, 64)} alt="" width="40" height="40" />
+              <div class="app-who">
+                <strong>{request.player}</strong>
+                <span class="muted small">{t('application.label')}</span>
               </div>
-            </li>
+              {#if request.decision}<span class="tag {request.decision}">{t('application.decision.' + request.decision)}</span>{/if}
+            </div>
+            <div class="notice small">{t('application.hint')}</div>
+          </section>
+        {:else if request?.kind === 'contact'}
+          <div class="notice small">
+            {me.may.mail ? t('request.contactMail') : t('request.contactNoMail')}
+            {#if !me.may.mail && mailto}<a href={mailto}>{t('request.writeMail')}</a>{/if}
+          </div>
+        {/if}
+
+        <section class="card conversation">
+          <ol class="messages" bind:this={chat}>
+            {#each groups as g, i}
+              {#if i === 0 || day(g.messages[0].time) !== day(groups[i - 1].messages[0].time)}
+                <li class="day"><span>{new Date(g.messages[0].time).toLocaleDateString()}</span></li>
+              {/if}
+              {#if g.system}
+                <li class="system">
+                  <span>
+                    <b>{g.name}</b> · {time(g.messages[0].time)}
+                    {#each g.messages as m}<span class="s-text">{m.text}</span>{/each}
+                  </span>
+                </li>
+              {:else}
+                <li class="msg" class:staff={g.staff}>
+                  <img class="avatar" src={head(g.uuid, 48)} alt="" width="32" height="32" />
+                  <div class="bubble">
+                    <div class="meta">
+                      <strong>{g.name}</strong>
+                      {#if g.staff}<span class="team">{t('ticket.team')}</span>{/if}
+                      <span class="muted" title={dateTime(g.messages[0].time)}>{time(g.messages[0].time)} · {ago(g.messages[0].time)}</span>
+                    </div>
+                    {#each g.messages as m}<div class="text">{m.text}</div>{/each}
+                  </div>
+                </li>
+              {/if}
+            {/each}
+          </ol>
+
+          {#if !ticket.open}
+            <div class="closed-note">{ticket.resolved
+              ? t('ticket.resolvedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt), until: dateTime(ticket.reopenUntil) })
+              : t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
           {/if}
-        {/each}
-      </ol>
 
-      {#if !ticket.open}
-        <div class="closed-note">{ticket.resolved
-          ? t('ticket.resolvedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt), until: dateTime(ticket.reopenUntil) })
-          : t('ticket.closedBy', { name: ticket.closedBy, time: dateTime(ticket.closedAt) })}</div>
-      {/if}
+          {#if ticket.open && me.may.ticketsReply}
+            <div class="composer">
+              <textarea bind:value={text} rows="3" placeholder={t('ticket.reply')} onkeydown={keys} maxlength="2000"></textarea>
+              <div class="c-foot">
+                <span class="muted small">{t('ticket.sendHint')}</span>
+                <div class="actions">
+                  {#if me.may.ticketsClose && request?.kind === 'unban'}
+                    {#if me.may.unban}
+                      <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
+                    {/if}
+                    <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
+                  {:else if me.may.ticketsClose && request?.kind === 'application'}
+                    {#if me.may.applications}
+                      <button class="good" onclick={() => decide(true)} disabled={busy}>{t('application.accept')}</button>
+                      <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('application.reject')}</button>
+                    {:else}
+                      <span class="muted small">{t('application.noPermission')}</span>
+                    {/if}
+                  {:else if me.may.ticketsClose}
+                    <button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>
+                      {solve ? (text.trim() ? t('ticket.solveWithText') : t('ticket.solve')) : text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
+                    </button>
+                  {/if}
+                  <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')} ➤</button>
+                </div>
+              </div>
+            </div>
+          {:else if ticket.open && me.may.ticketsClose}
+            <div class="composer"><button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>{solve ? t('ticket.solve') : t('ticket.close')}</button></div>
+          {:else if !ticket.open && me.may.ticketsReopen}
+            <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
+          {/if}
+        </section>
 
-      {#if ticket.open && me.may.ticketsReply}
-        <div class="composer">
-          <textarea bind:value={text} rows="3" placeholder={t('ticket.reply')} onkeydown={keys} maxlength="2000"></textarea>
-          <div class="c-foot">
-            <span class="muted small">{t('ticket.sendHint')}</span>
-            <div class="actions">
-              {#if me.may.ticketsClose && request?.kind === 'unban'}
-                {#if me.may.unban}
-                  <button class="good" onclick={() => decide(true)} disabled={busy}>{t('request.accept')}</button>
-                {/if}
-                <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('request.reject')}</button>
-              {:else if me.may.ticketsClose && request?.kind === 'application'}
-                {#if me.may.applications}
-                  <button class="good" onclick={() => decide(true)} disabled={busy}>{t('application.accept')}</button>
-                  <button class="danger" onclick={() => decide(false)} disabled={busy}>{t('application.reject')}</button>
-                {:else}
-                  <span class="muted small">{t('application.noPermission')}</span>
-                {/if}
-              {:else if me.may.ticketsClose}
-                <button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>
-                  {solve ? (text.trim() ? t('ticket.solveWithText') : t('ticket.solve')) : text.trim() ? t('ticket.closeWithText') : t('ticket.close')}
+      </div>
+
+      <aside class="side">
+        <section class="card sbox">
+          <h2>{t('ticket.details')}</h2>
+          <dl class="facts">
+            <dt>{t('ticket.by')}</dt>
+            <dd>
+              {#if request?.kind === 'contact'}{ticket.creator}
+              {:else}
+                <button class="person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.creatorUuid)}>
+                  <img src={head(ticket.creatorUuid, 32)} alt="" width="18" height="18" /> {ticket.creator}</button>
+              {/if}
+            </dd>
+            {#if request?.email}<dt>{t('request.email')}</dt><dd><a href={mailto}>{request.email}</a></dd>{/if}
+            {#if ticket.report}
+              <dt>{t('ticket.reported')}</dt>
+              <dd><button class="person" disabled={!me.may.players} onclick={() => go('/players/' + ticket.targetUuid)}>
+                <img src={head(ticket.targetUuid, 32)} alt="" width="18" height="18" /> {ticket.target}</button></dd>
+            {/if}
+            <dt>{t('ticket.created')}</dt><dd>{dateTime(ticket.created)}</dd>
+            {#if !request}
+              <dt>{t('ticket.location')}</dt>
+              <dd class="mono coords"><span>{ticket.world}</span><span>X {ticket.x}</span><span>Y {ticket.y}</span><span>Z {ticket.z}</span></dd>
+            {/if}
+            <dt>{t('ticket.claimedBy')}</dt><dd>{ticket.claimedBy ?? t('ticket.nobody')}</dd>
+          </dl>
+        </section>
+
+        {#if (ticket.open && me.may.ticketsClaim) || loaderId || person || (me.may.ticketsForward && ticket.forward)}
+          <section class="card sbox">
+            <h2>{t('ticket.actions')}</h2>
+            <div class="sactions">
+              {#if ticket.open && me.may.ticketsClaim}
+                <button onclick={() => action('claim')} disabled={busy}>{mineClaimed ? t('ticket.release') : t('ticket.claim')}</button>
+              {/if}
+              {#if person}
+                <button class="secondary person-btn" onclick={() => go('/players/' + person.uuid)}>
+                  <img src={head(person.uuid, 32)} alt="" width="18" height="18" /> {t('ticket.toPlayer', { name: person.name })}
                 </button>
               {/if}
-              <button onclick={send} disabled={busy || !text.trim()}>{t('ticket.send')} ➤</button>
+              {#if loaderId}
+                <button class="secondary" onclick={() => go('/chunks/' + loaderId)}>▦ {t('ticket.toLoader')}</button>
+              {/if}
+              {#if me.may.ticketsForward && ticket.forward}
+                <button class="secondary" onclick={() => (forwarding = true)}>{t('forward.button')}</button>
+              {/if}
             </div>
-          </div>
-        </div>
-      {:else if ticket.open && me.may.ticketsClose}
-        <div class="composer"><button class={solve ? 'good' : 'danger'} onclick={close} disabled={busy}>{solve ? t('ticket.solve') : t('ticket.close')}</button></div>
-      {:else if !ticket.open && me.may.ticketsReopen}
-        <div class="composer"><button class="secondary" onclick={() => action('reopen')} disabled={busy}>{t('ticket.reopen')}</button></div>
-      {/if}
-    </section>
+          </section>
+        {/if}
 
-    {#if ticket.issue}
-      <GitHubIssue {ticket} {me} onlinked={(url) => { ticket.issue = url || null; }} />
-    {/if}
+        {#if me.may.ticketsLog && ticket.hasLog}
+          <section class="card sbox">
+            <h2>{t('tlog.title')}</h2>
+            <p class="muted small">{ticket.logArchived ? t('tlog.archivedHint') : t('tlog.hint')}</p>
+            <div class="sactions">
+              {#if ticket.logArchived}
+                <a class="button secondary" href="https://mrtechnology.marcelr.at/log/" target="_blank" rel="noopener noreferrer">{t('tlog.viewer')} ↗</a>
+              {:else}
+                <button onclick={() => go(logPage)}>{t('tlog.open')} →</button>
+              {/if}
+              <a class="button secondary" href={`/api/tickets/${ticket.id}/log/download`} download>{t('tlog.download')} ↓</a>
+            </div>
+          </section>
+        {/if}
 
-    {#if me.may.ticketsLog && ticket.hasLog && !log}
-      <section class="card log-bar">
-        <div>
-          <strong>{t('tlog.title')}</strong>
-          <span class="muted small">{ticket.logArchived ? t('tlog.archivedHint') : t('tlog.hint')}</span>
-        </div>
-        <div class="log-actions">
-          <a class="button secondary small" href={`/api/tickets/${ticket.id}/log/download`} download>{t('tlog.download')} ↓</a>
-          {#if ticket.logArchived}
-            <a class="button secondary small" href="https://mrtechnology.marcelr.at/log/" target="_blank" rel="noopener noreferrer">{t('tlog.viewer')} ↗</a>
-          {:else}
-            <button class="secondary small" onclick={openLog} disabled={logBusy}>{logBusy ? t('common.loading') : t('tlog.show')}</button>
-          {/if}
-        </div>
-      </section>
-    {/if}
-    {#if log}<TicketLog {log} {lang} onclose={() => (log = null)} />{/if}
+        {#if ticket.issue}
+          <GitHubIssue {ticket} {me} onlinked={(url) => { ticket.issue = url || null; }} />
+        {/if}
+      </aside>
+    </div>
   {/if}
 {#if forwarding && ticket}
   <ForwardIssue {ticket} onclose={() => (forwarding = false)} onlinked={(url) => { ticket.issue = url || null; forwarding = false; }} />
@@ -374,7 +342,70 @@
     --tk: var(--accent);
     display: grid;
     gap: 14px;
-    max-width: 960px;
+    max-width: 1240px;
+  }
+
+  /* conversation left, details right; on narrow screens the details come first */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .main,
+  .side {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .side {
+    position: sticky;
+    top: calc(var(--topbar-h, 60px) + 14px);
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .side {
+      position: static;
+      order: -1;
+    }
+  }
+
+  .sbox {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .sbox h2 {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  .sbox p {
+    margin: 0;
+  }
+
+  .sactions {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sactions > button,
+  .sactions > a {
+    justify-content: flex-start;
+    width: 100%;
+    text-align: left;
+    text-decoration: none;
   }
 
   .back {
@@ -387,11 +418,8 @@
   /* Head: number, category, status and title; the colour on the left as in the list. */
   .head {
     --st: var(--warn);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
+    display: grid;
+    gap: 6px;
     padding: 18px 22px;
     border-radius: var(--radius);
     border: 1px solid color-mix(in srgb, var(--tk) 25%, var(--border));
@@ -408,20 +436,6 @@
 
   .head.closed {
     --st: var(--muted);
-  }
-
-  .h-main {
-    display: grid;
-    gap: 6px;
-    min-width: 0;
-    /* never squeezed by the buttons next to it (the title broke letter by letter) - they wrap below instead */
-    flex: 1 1 260px;
-  }
-
-  .h-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
   }
 
   .person-btn {
@@ -455,29 +469,6 @@
     background: color-mix(in srgb, var(--muted) 15%, transparent);
   }
 
-  .log-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .log-bar > div:first-child {
-    display: grid;
-    gap: 2px;
-  }
-
-  .log-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .log-actions a {
-    text-decoration: none;
-  }
-
   .cat-pick {
     display: inline-flex;
     min-width: 0;
@@ -505,31 +496,19 @@
   /* Facts */
   .facts {
     display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
-    padding: 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 14px;
+    margin: 0;
+    font-size: 0.86rem;
   }
 
-  .fact {
-    display: grid;
-    gap: 3px;
-    align-content: start;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--surface-2);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    min-width: 0;
-  }
-
-  .flabel {
-    font-size: 0.74rem;
-    font-weight: 600;
+  .facts dt {
     color: var(--muted);
   }
 
-  .fvalue {
-    font-weight: 700;
-    font-size: 0.92rem;
+  .facts dd {
+    margin: 0;
+    font-weight: 600;
     overflow-wrap: anywhere;
   }
 
@@ -817,55 +796,8 @@
     font-size: 1.3rem;
   }
 
-  :global(html.m) .h-actions {
-    width: 100%;
-  }
-
-  :global(html.m) .h-actions button {
-    flex: 1 1 auto;
+  :global(html.m) .sactions > button,
+  :global(html.m) .sactions > a {
     min-height: 40px;
-  }
-
-  :global(html.m) .facts {
-    display: block;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  :global(html.m) .fact {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-
-  :global(html.m) .fact + .fact {
-    border-top: 1px solid var(--border);
-  }
-
-  :global(html.m) .flabel {
-    font-size: 0.9rem;
-  }
-
-  :global(html.m) .fvalue {
-    text-align: right;
-  }
-
-  /* the GitHub issue the ticket was forwarded to */
-  .issue-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--text);
-    text-decoration: none;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
   }
 </style>

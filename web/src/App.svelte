@@ -26,6 +26,7 @@
   import Account from './pages/Account.svelte';
   import Tickets from './pages/Tickets.svelte';
   import TicketView from './pages/TicketView.svelte';
+  import TicketLogPage from './pages/TicketLogPage.svelte';
   import Legal from './pages/Legal.svelte';
   import Health from './pages/Health.svelte';
   import Chunks from './pages/Chunks.svelte';
@@ -465,7 +466,9 @@
 {:else}
   <!-- The pages (both frames use them): the administration and the player area -->
   {#snippet adminContent()}
-    {#if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
+    {#if area === 'community' && sub[0] === 'tickets' && sub[1] && sub[2] === 'log' && may.ticketsLog}
+      {#key sub[1]}<TicketLogPage id={sub[1]} />{/key}
+    {:else if area === 'community' && sub[0] === 'tickets' && sub[1] && may.tickets}
       {#key sub[1]}<TicketView id={sub[1]} {me} />{/key}
     {:else if area === 'community' && sub[0] === 'tickets' && may.tickets}
       <Tickets {me} />

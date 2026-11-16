@@ -46,10 +46,11 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 /**
- * The logging service of ticket logs (since 1.7): for every player the last 30 minutes of play time - every 5 seconds a
- * frame (position and the entities in the 16 x 16 chunks around), per minute what they did (blocks, items, damage,
- * deaths, teleports, commands) and what happened around them (despawned items, deaths, other players), so the map of a
- * ticket log plays smoothly. Only minutes the player was online count; a disconnect keeps everything, a restart empties
+ * The logging service of ticket logs (since 1.7): for every player the last 30 minutes of play time - every second the
+ * position, health and food (track), every 5 seconds a frame (the entities in the 16 x 16 chunks around and the item in
+ * hand), what they did with a time (blocks, items, damage, commands - same things within 5 seconds as one row), events
+ * (deaths, teleports, joins) and what happened around them (despawned items, deaths, other players), so the map of a
+ * ticket log plays smoothly and its chronicle has a time for everything. Only minutes the player was online count; a disconnect keeps everything, a restart empties
  * it (memory only).
  *
  * <p>Load and memory: every player is sampled once per 5 seconds, spread over the ticks; a chunk is read at most once
@@ -63,6 +64,10 @@ public final class PlayerRecorder implements Listener {
     /** Half the side of the area around a player (16 x 16 chunks). */
     static final int HALF = 128;
     private static final int SAMPLE_TICKS = 100;
+    private static final int TRACK_TICKS = 20;
+    /** Same action on the same thing within this time is one row of the chronicle. */
+    private static final long MERGE_MS = 5_000;
+    private static final int MAX_ACTIONS = 240;
     private static final long RESCAN_MS = 2_500;
     /** Entity groups (kind, 2 x 2 blocks) kept per chunk. */
     private static final int MAX_GROUPS_PER_CHUNK = 48;
@@ -77,13 +82,17 @@ public final class PlayerRecorder implements Listener {
     }
 
     /** One 5-second frame: where the player was and the entities around (non-empty chunks only). */
-    record Frame(long time, String world, int x, int y, int z, ChunkEntities[] chunks) {
+    record Frame(long time, String world, int x, int y, int z, ChunkEntities[] chunks, String hand) {
     }
 
     /** One minute of play of one player. */
     static final class Minute {
         final long start;
         final List<Frame> frames = new ArrayList<>(12);
+        /** Every second: time, world, x, y, z, health, food. */
+        final List<List<Object>> track = new ArrayList<>(60);
+        /** What the player did, with a time: time, kind, what, amount (rows within 5 s merged). */
+        final List<Object[]> actions = new ArrayList<>();
         final Map<String, Integer> broken = new TreeMap<>();
         final Map<String, Integer> placed = new TreeMap<>();
         final Map<String, Integer> picked = new TreeMap<>();
@@ -199,14 +208,28 @@ public final class PlayerRecorder implements Listener {
         tick = (tick + 1) % SAMPLE_TICKS;
         long time = System.currentTimeMillis();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (Math.floorMod(p.getUniqueId().hashCode(), SAMPLE_TICKS) != tick) {
+            int slot = Math.floorMod(p.getUniqueId().hashCode(), SAMPLE_TICKS);
+            if (slot % TRACK_TICKS == tick % TRACK_TICKS) {
+                // the track: once per second, cheap (no chunk reads)
+                Location tl = p.getLocation();
+                Minute tm = now(p);
+                synchronized (tm) {
+                    if (tm.track.size() < 90) {
+                        tm.track.add(List.of(time, tl.getWorld().getName(), tl.getBlockX(), tl.getBlockY(), tl.getBlockZ(),
+                                Math.round(p.getHealth() * 10) / 10.0, p.getFoodLevel()));
+                    }
+                }
+            }
+            if (slot != tick) {
                 continue;
             }
             Minute m = now(p);
             Location l = p.getLocation();
             ChunkEntities[] chunks = scanAround(l, time);
             synchronized (m) {
-                m.frames.add(new Frame(time, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(), chunks));
+                var held = p.getInventory().getItemInMainHand();
+                m.frames.add(new Frame(time, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(), chunks,
+                        held.getType().isAir() ? null : key(held.getType())));
                 // other players coming into or leaving the area
                 Set<String> near = new HashSet<>();
                 for (Player o : l.getWorld().getPlayers()) {
@@ -218,11 +241,13 @@ public final class PlayerRecorder implements Listener {
                 for (String n : near) {
                     if (!m.nearby.contains(n) && m.came.size() < MAX_ROWS) {
                         m.came.add(n);
+                        act(m, time, "came", n, 1);
                     }
                 }
                 for (String n : m.nearby) {
                     if (!near.contains(n) && m.went.size() < MAX_ROWS) {
                         m.went.add(n);
+                        act(m, time, "went", n, 1);
                     }
                 }
                 m.nearby = near;
@@ -308,6 +333,26 @@ public final class PlayerRecorder implements Listener {
 
     // ------------------------------------------------------------- actions
 
+    /** One row of the chronicle; the same kind and thing within 5 seconds adds up. Call inside synchronized (m). */
+    private static void act(Minute m, long time, String kind, String what, double amount) {
+        Object[] same = null;
+        for (int i = m.actions.size() - 1; i >= 0 && i >= m.actions.size() - 6; i--) {
+            Object[] a = m.actions.get(i);
+            if ((long) a[0] < time - MERGE_MS) {
+                break;
+            }
+            if (a[1].equals(kind) && a[2].equals(what)) {
+                same = a;
+                break;
+            }
+        }
+        if (same != null) {
+            same[3] = Math.round(((double) same[3] + amount) * 10) / 10.0;
+        } else if (m.actions.size() < MAX_ACTIONS) {
+            m.actions.add(new Object[] {time, kind, what, Math.round(amount * 10) / 10.0});
+        }
+    }
+
     private void event(Player p, String kind, String text) {
         Minute m = now(p);
         synchronized (m) {
@@ -340,6 +385,7 @@ public final class PlayerRecorder implements Listener {
         Minute m = now(event.getPlayer());
         synchronized (m) {
             m.broken.merge(key(event.getBlock().getType()), 1, Integer::sum);
+            act(m, System.currentTimeMillis(), "broken", key(event.getBlock().getType()), 1);
         }
     }
 
@@ -348,6 +394,7 @@ public final class PlayerRecorder implements Listener {
         Minute m = now(event.getPlayer());
         synchronized (m) {
             m.placed.merge(key(event.getBlockPlaced().getType()), 1, Integer::sum);
+            act(m, System.currentTimeMillis(), "placed", key(event.getBlockPlaced().getType()), 1);
         }
     }
 
@@ -357,6 +404,7 @@ public final class PlayerRecorder implements Listener {
             Minute m = now(p);
             synchronized (m) {
                 m.picked.merge(key(event.getItem().getItemStack().getType()), event.getItem().getItemStack().getAmount(), Integer::sum);
+                act(m, System.currentTimeMillis(), "picked", key(event.getItem().getItemStack().getType()), event.getItem().getItemStack().getAmount());
             }
         }
     }
@@ -366,6 +414,7 @@ public final class PlayerRecorder implements Listener {
         Minute m = now(event.getPlayer());
         synchronized (m) {
             m.dropped.merge(key(event.getItemDrop().getItemStack().getType()), event.getItemDrop().getItemStack().getAmount(), Integer::sum);
+            act(m, System.currentTimeMillis(), "dropped", key(event.getItemDrop().getItemStack().getType()), event.getItemDrop().getItemStack().getAmount());
         }
     }
 
@@ -377,6 +426,7 @@ public final class PlayerRecorder implements Listener {
             Minute m = now(p);
             synchronized (m) {
                 m.damageTaken.merge(cause, event.getFinalDamage(), Double::sum);
+                act(m, System.currentTimeMillis(), "taken", cause, event.getFinalDamage());
             }
         }
         if (event instanceof EntityDamageByEntityEvent by && shooter(by.getDamager()) instanceof Player p
@@ -385,6 +435,7 @@ public final class PlayerRecorder implements Listener {
             Minute m = now(p);
             synchronized (m) {
                 m.damageDealt.merge(target, event.getFinalDamage(), Double::sum);
+                act(m, System.currentTimeMillis(), "dealt", target, event.getFinalDamage());
             }
         }
     }
@@ -432,6 +483,7 @@ public final class PlayerRecorder implements Listener {
         synchronized (m) {
             if (m.commands.size() < MAX_COMMANDS) {
                 m.commands.add(shown);
+                act(m, System.currentTimeMillis(), "command", shown, 1);
             }
         }
     }
@@ -526,10 +578,18 @@ public final class PlayerRecorder implements Listener {
                             return chunkData.size() - 1;
                         }));
                     }
-                    frames.add(List.of(f.time(), f.world(), f.x(), f.z(), refs));
+                    List<Object> row = new ArrayList<>(List.of(f.time(), f.world(), f.x(), f.z(), refs));
+                    row.add(f.hand());
+                    frames.add(row);
                     regions.addAll(RegionTiles.around(f.world(), f.x(), f.z()));
                 }
                 o.put("frames", frames);
+                o.put("track", every > 1 ? thin(m.track, every) : new ArrayList<>(m.track));
+                List<List<Object>> actions = new ArrayList<>(m.actions.size());
+                for (Object[] a : m.actions) {
+                    actions.add(List.of(a));
+                }
+                o.put("actions", actions);
                 o.put("broken", m.broken);
                 o.put("placed", m.placed);
                 o.put("picked", m.picked);
@@ -555,6 +615,16 @@ public final class PlayerRecorder implements Listener {
         result.put("chunks", chunkData);
         result.put("tiles", tiles.get(regions));
         return result;
+    }
+
+    private static List<List<Object>> thin(List<List<Object>> rows, int every) {
+        List<List<Object>> out = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            if (i % every == 0 || i == rows.size() - 1) {
+                out.add(rows.get(i));
+            }
+        }
+        return out;
     }
 
     private static Map<String, Double> rounded(Map<String, Double> values) {
