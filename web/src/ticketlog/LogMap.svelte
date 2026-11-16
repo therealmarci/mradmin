@@ -6,11 +6,12 @@
   // Part of the shared ticket log view (MRadmin and the MRtechnology website show the same).
   //
   // log: the whole snapshot   lang: "de"/"en"   mark: optional rectangle {x0, z0, x1, z1, label}
+  // seek: {time} - jump to the frame at that time (from the overview)   onlog(from, to): show that span in the log tab
   import { onDestroy } from 'svelte';
   import { tl } from './texts.js';
-  import { safeImage, safeColor, num } from './safe.js';
+  import { safeImage, num } from './safe.js';
 
-  let { log, lang, mark = null } = $props();
+  let { log, lang, mark = null, seek = null, onlog = null } = $props();
   const T = (k, v) => tl(lang, k, v);
 
   const VIEW = 256;
@@ -67,6 +68,11 @@
   onDestroy(stop);
   const go = (i) => { stop(); index = Math.max(0, Math.min(frames.length - 1, i)); };
   const firstOf = (mi) => frames.findIndex((f) => f.mi === mi);
+  $effect(() => {
+    if (!seek) return;
+    const i = frames.findIndex((f) => f.kind === 'frame' && f.time >= seek.time);
+    go(i < 0 ? frames.length - 1 : i);
+  });
 
   // ------------------------------------------------------------------ layers
   let layers = $state({ entities: true, despawned: true, deaths: true, path: true, players: true });
@@ -149,8 +155,8 @@
         .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 4);
     }
     const pts = health.filter((p) => p.time >= from && p.time < to);
-    const lines = (log.console?.lines ?? []).filter(([t, l]) => t >= from && t < to && (l === 'warn' || l === 'error'));
-    const evts = (log.events ?? []).filter((e) => e.time >= from && e.time < to);
+    const problems = (log.console?.lines ?? []).filter(([t, l]) => t >= from && t < to && (l === 'warn' || l === 'error')).length;
+    const evts = (log.events ?? []).filter((e) => e.time >= from && e.time < to).length;
     const dmg = (map) => `${Math.round(sum(map) * 10) / 10} (${Object.entries(map).map(([k, v]) => `${name(k)} ${v}`).join(', ')})`;
     return {
       actions: [
@@ -174,9 +180,10 @@
         ['TPS', `${Math.min(...pts.map((p) => p.tps)).toFixed(1)} – ${(pts.reduce((a, p) => a + p.tps, 0) / pts.length).toFixed(1)}`],
         [T('mspt'), `Ø ${(pts.reduce((a, p) => a + p.mspt, 0) / pts.length).toFixed(1)} ms · max ${Math.max(...pts.map((p) => p.msptMax)).toFixed(0)} ms`],
       ] : [],
-      lines: lines.slice(0, 4),
-      lineCount: lines.length,
-      evts: evts.slice(0, 4),
+      problems,
+      evts,
+      from,
+      to,
     };
   });
 
@@ -196,7 +203,6 @@
   <div class="lmap">
     <div class="lhead">
       <div>
-        <h3>{T('area')}</h3>
         <p class="muted small">{minutes.length ? T('playHint', { n: minutes.length, who: area?.player ?? log.ticket?.creator ?? '' }) : T('areaHint', { size: VIEW, who: area?.player ?? T('thePlace') })}</p>
       </div>
       <div class="layers">
@@ -298,9 +304,9 @@
           <section>
             <h5>{T('server')}</h5>
             {#each details.server as [label, value]}<div class="row"><b>{label}</b> {value}</div>{:else}<div class="row muted">{T('mNoServer')}</div>{/each}
-            {#if details.lineCount}<div class="row"><b>{T('mProblems', { n: details.lineCount })}</b></div>{/if}
-            {#each details.lines as [, level, text]}<div class="row line {level === 'error' ? 'error' : 'warn'}">{text}</div>{/each}
-            {#each details.evts as e}<div class="row"><span style="color: {safeColor(e.color)}">{e.source}</span> {e.text}</div>{/each}
+            {#if (details.problems || details.evts) && onlog}
+              <button class="tolog" class:warn={details.problems} onclick={() => onlog(details.from, details.to)}>{T('mToLog', { problems: details.problems, events: details.evts })} →</button>
+            {/if}
           </section>
         {:else}
           <h4 class="t-title">{T('created')} {hm(frame.time)}</h4>
@@ -357,11 +363,6 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 10px;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 0.95rem;
   }
 
   h4 {
@@ -653,17 +654,25 @@
     color: var(--bad);
   }
 
-  .row.line {
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 0.74rem;
+  .tolog {
+    justify-content: flex-start;
+    width: 100%;
+    margin-top: 4px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--accent);
+    text-align: left;
   }
 
-  .row.line.warn {
+  .tolog.warn {
     color: var(--warn);
   }
 
-  .row.line.error {
-    color: var(--bad);
+  .tolog:hover {
+    border-color: var(--accent);
   }
 
   .legend {
