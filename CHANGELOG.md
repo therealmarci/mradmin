@@ -9,6 +9,10 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/), veröffen
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Stream Deck verbinden (Vorbereitung für das MRadmin-Plugin fürs Stream Deck):** Ein Stream Deck zeigt beim Verbinden einen Code. Bestätigt wird er im Spiel mit `/web link <Code>` (Klick auf **[Verbinden]**) oder im Browser unter **Konto → Geräte → Stream Deck** (der Link des Stream Decks führt direkt dorthin). Alternativ erzeugt man dort einen **Schlüssel** und fügt ihn ins Stream Deck ein. Verbundene Stream Decks stehen unter Konto → Geräte (einzeln abmelden), `/web devices` zählt sie mit, `/web reset` meldet sie mit ab. Die Tasten zeigen nur, was der Spieler auch in der Weboberfläche sieht; Team-Tasten brauchen wie die Verwaltung eine eigene Anmeldung. Ein Neustart über das Stream Deck geht nur mit den normalen Zeiten (Notfall bleibt im Browser). Neue Permission `mradmin.deck` (in `mradmin.player`), neuer Abschnitt `stream-deck` in der config.yml (`enabled`, `max-devices`).
+- **Modul-API 17 (`api-1.16.0`):** Plugins liefern eigene Stream-Deck-Tasten (`WebModule#deckTiles`, `deckPress`, `DeckTile`) - z.B. Chunkloader an/aus oder das letzte Duell.
+
 ## [BET-1.7.0-bu001] - 2026-11-16
 
 ### Neu

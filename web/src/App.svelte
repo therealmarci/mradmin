@@ -537,8 +537,8 @@
     {/if}
   {/snippet}
   {#snippet playerContent()}
-    {#if route.path === '/account'}
-      <Account {me} />
+    {#if route.path === '/account' || route.path === '/link'}
+      <Account {me} deckCode={route.path === '/link' ? (new URLSearchParams(location.search).get('code') ?? '') : ''} />
     {:else if admin && !me.team}
       <div class="gate">
         <p>{t('signin.noTeam')}</p>

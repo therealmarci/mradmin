@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 67
+config-version: 68
 
 
 # ------------------------------------------------------------------------------
@@ -724,6 +724,14 @@ player-web:
     alerts:
       chat: true
       title: true
+
+# Stream Deck plugin of MRadmin (needs the web interface): players with mradmin.deck connect their Stream Deck with a
+# code (confirmed in game with /web link <code> or in the browser) or with a key made under Account -> Devices. Every
+# key only shows what the player may see in the web interface as well.
+stream-deck:
+  enabled: true
+  # Stream Decks per player at most. Connecting one more signs out the one used longest ago.
+  max-devices: 5
 
 # Sending mail (SMTP) for replies to unban requests and contact requests. Everything works without sending
 # mail too: requesters see replies via their status link, and for contact requests a button in the ticket opens

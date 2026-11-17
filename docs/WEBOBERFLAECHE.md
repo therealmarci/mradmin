@@ -56,7 +56,8 @@ Auf Handys und hochkant gehaltenen Tablets sieht die Weboberfläche aus wie eine
 | `/web status` | Eigenes Konto: Adresse, eigene Anmeldungen (Passwort, Passkeys, Discord, 2FA), angemeldete Geräte | wie `/web` |
 | `/web devices` | Wie viele Geräte angemeldet sind, mit Knopf zum Abmelden | wie `/web` |
 | `/web logout` | Alle eigenen Geräte abmelden | wie `/web` |
-| `/web reset` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte abmelden - z.B. verlorenes Handy; fragt per Klick nach | wie `/web` |
+| `/web reset` | Eigene Anmeldungen entfernen (Passwort, 2FA, Passkeys, Discord, E-Mail) und alle Geräte samt Stream Decks abmelden - z.B. verlorenes Handy; fragt per Klick nach | wie `/web` |
+| `/web link <Code>` | Stream Deck verbinden (Code zeigt das Stream Deck unter „Verbinden“) | `mradmin.deck` |
 
 `/web` verwaltet nur das **eigene** Konto - auch das Team ändert keine fremden Konten aus dem Spiel. `/mradmin web` gibt es nicht mehr.
 

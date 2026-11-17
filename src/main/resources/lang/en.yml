@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Do not change - lets the plugin know which texts must be renewed on updates.
-lang-version: 24
+lang-version: 25
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -44,7 +44,7 @@ waitroom-health-alert: "<prefix><hover:show_text:'<gray>Details on the web under
 waitroom-health-recovered: "<prefix><green>✅ Waiting room runs smoothly again <gray>(<tps> TPS)"
 
 # --- Web interface (/mradmin web) ----------------------------------------------
-help-web: "<gold>/web [status|devices|logout|reset]</gold> <dark_gray>- <gray>your page on the web and your account"
+help-web: "<gold>/web [status|devices|link|logout|reset]</gold> <dark_gray>- <gray>your page on the web, your account and your Stream Deck"
 # The player's own page in the web interface (/web). Placeholders: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Your page: <link> <gray>· code: <code> <hover:show_text:'<gray>Works <seconds> seconds and only once.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -64,6 +64,13 @@ web-self-login-none: "only /web"
 web-self-reset-ask: "<prefix><hover:show_text:'<gray>Removes password, 2FA, passkeys, Discord and e-mail and signs out every device. Afterwards only /web gets you in.'><yellow>Really remove your own sign-ins?</hover> <button>"
 web-self-reset-button: "<red><u>[Yes, remove]</u></red>"
 web-self-reset-done: "<prefix><hover:show_text:'<gray>Get back in with /web. Set up new sign-ins on the page under Sign-ins.'><green>Your sign-ins are removed, every device is signed out.</hover>"
+web-deck-usage: "<prefix><hover:show_text:'<gray>Your Stream Deck shows the code in the MRadmin plugin under Connect. It works for 5 minutes.'><gray>Connect a Stream Deck: <gold>/web link [code]</gold></hover>"
+web-deck-off: "<prefix><red>Stream Decks are switched off on this server."
+web-deck-invalid: "<prefix><hover:show_text:'<gray>A code works for 5 minutes and only once. Simply connect again on the Stream Deck.'><red>Unknown or expired code.</hover>"
+web-deck-ask: "<prefix><hover:show_text:'<gray>Name: <name><newline>Asked from: <ip><newline>The Stream Deck then sees what you see in the web interface.'><yellow>Connect Stream Deck <white><name></white> to your account?</hover> <button>"
+web-deck-button: "<green><u>[Connect]</u></green>"
+web-deck-done: "<prefix><hover:show_text:'<gray>Sign it out in the browser under Account, Devices - or all of them with /web reset.'><green>Stream Deck <white><name></white> connected.</hover>"
+web-deck-devices: "<prefix><gray>Plus <white><count></white> Stream Deck(s) connected."
 web-self-reset-none: "<prefix><gray>You have no web account yet."
 web-moved: "<prefix><hover:show_text:'<gray>/web status, /web devices, /web logout, /web reset'><gray>You manage your web account with <white>/web</white> now.</hover>"
 news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"

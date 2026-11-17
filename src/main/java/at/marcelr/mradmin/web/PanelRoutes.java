@@ -78,15 +78,21 @@ public final class PanelRoutes {
      * every alert only for those with the permission for its area (server state, health, tickets, MRchunks,
      * maintenance), so nobody learns more through the dashboard than through the pages themselves.
      */
-    @SuppressWarnings("unchecked")
     private void overview(Http http) throws Exception {
+        http.json(200, overview(server, http.account().id()));
+    }
+
+    /** The overview of {@link #overview(Http)} for a member (also for the Stream Deck). */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> overview(WebServer server, java.util.UUID account) throws Exception {
+        MRAdmin plugin = server.plugin();
         Map<String, Object> snapshot = server.snapshot();
         Map<String, Object> result = new LinkedHashMap<>();
         List<Map<String, Object>> alerts = new ArrayList<>();
         result.put("time", snapshot.getOrDefault("time", System.currentTimeMillis()));
         boolean status = plugin.feature(Feature.SERVER_STATUS);
 
-        if (status && may(http, Perms.STATUS) && snapshot.get("server") instanceof Map<?, ?> s) {
+        if (status && server.permissions().has(account, Perms.STATUS) && snapshot.get("server") instanceof Map<?, ?> s) {
             result.put("server", s);
             result.put("uptime", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime());
             serverAlerts((Map<String, Object>) s, alerts);
@@ -102,7 +108,7 @@ public final class PanelRoutes {
                 boolean online = room.online() && plugin.waitingRoom().roomUp();
                 boolean restarting = plugin.waitingRoom().roomRestarting();
                 // Updates of the plugins there (their own counter in the sidebar - not the main server's).
-                long roomUpdates = plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())
+                long roomUpdates = plugin.versions().enabled() && VersionRoutes.mayView(server, account)
                         ? plugin.versions().list().stream().filter(e -> e.remote && e.isInstalled() && e.updateAvailable()).count() : 0;
                 network.put("room", Map.of("online", online, "restarting", restarting, "updates", roomUpdates));
                 // The waiting room server for the network dashboard: its tile and its players.
@@ -136,15 +142,15 @@ public final class PanelRoutes {
             }
             result.put("network", network);
         }
-        if (status && may(http, Perms.STATUS_HEALTH)) {
+        if (status && server.permissions().has(account, Perms.STATUS_HEALTH)) {
             var latest = plugin.health().latest();
             if (latest != null && latest.cpu() >= 90) {
                 alerts.add(alert("warn", "cpu", "health", Map.of("value", Math.round(latest.cpu()))));
             }
         }
-        if (snapshot.get("tickets") instanceof Map<?, ?> t && may(http, Perms.TICKETS_VIEW)) {
+        if (snapshot.get("tickets") instanceof Map<?, ?> t && server.permissions().has(account, Perms.TICKETS_VIEW)) {
             int unread = ((Number) t.get("unread")).intValue();
-            Object mine = ((Map<String, Object>) t.get("claimed")).getOrDefault(http.account().id().toString(), 0);
+            Object mine = ((Map<String, Object>) t.get("claimed")).getOrDefault(account.toString(), 0);
             result.put("tickets", Map.of("open", t.get("open"), "unread", unread, "mine", mine));
             if (unread > 0) {
                 alerts.add(alert("warn", "ticketsUnread", "tickets", Map.of("n", unread)));
@@ -157,20 +163,20 @@ public final class PanelRoutes {
         List<Object> tiles = new ArrayList<>();
         if (snapshot.get("tiles") instanceof Map<?, ?> all) {
             all.forEach((id, tile) -> {
-                if (ModuleRoutes.may(server, http.account().id(), String.valueOf(id), "view")) {
+                if (ModuleRoutes.may(server, account, String.valueOf(id), "view")) {
                     tiles.add(tile);
                 }
             });
         }
         result.put("tiles", tiles);
-        if (snapshot.get("mrsleep") instanceof Map<?, ?> s && ModuleRoutes.may(server, http.account().id(), "mrsleep", "view")) {
+        if (snapshot.get("mrsleep") instanceof Map<?, ?> s && ModuleRoutes.may(server, account, "mrsleep", "view")) {
             result.put("mrsleep", s);
         }
         // Hints of the modules (texts from the module itself), for those who may see the module.
         if (snapshot.get("moduleAlerts") instanceof Map<?, ?> moduleAlerts) {
             for (Map.Entry<?, ?> entry : moduleAlerts.entrySet()) {
                 String id = String.valueOf(entry.getKey());
-                if (!(entry.getValue() instanceof List<?> list) || !ModuleRoutes.may(server, http.account().id(), id, "view")) {
+                if (!(entry.getValue() instanceof List<?> list) || !ModuleRoutes.may(server, account, id, "view")) {
                     continue;
                 }
                 int index = 0;
@@ -184,7 +190,7 @@ public final class PanelRoutes {
                 }
             }
         }
-        if (snapshot.get("maintenance") instanceof Map<?, ?> m && may(http, Perms.MAINTENANCE_VIEW)) {
+        if (snapshot.get("maintenance") instanceof Map<?, ?> m && server.permissions().has(account, Perms.MAINTENANCE_VIEW)) {
             result.put("maintenance", m);
             Object phase = m.get("phase");
             if ("active".equals(phase)) {
@@ -193,7 +199,7 @@ public final class PanelRoutes {
                 alerts.add(alert("info", "maintenanceSoon", "maintenance", Map.of("start", m.get("start") instanceof Number n ? n : 0)));
             }
         }
-        if (plugin.versions().enabled() && VersionRoutes.mayView(server, http.account().id())) {
+        if (plugin.versions().enabled() && VersionRoutes.mayView(server, account)) {
             // This server's plugins only - those of the waiting room count there.
             var plugins = plugin.versions().list().stream().filter(e -> e.isInstalled() && !e.remote).toList();
             long updates = plugins.stream().filter(at.marcelr.mradmin.versions.VersionManager.Entry::updateAvailable).count();
@@ -215,7 +221,7 @@ public final class PanelRoutes {
         List<String> order = List.of("bad", "warn", "info");
         alerts.sort(java.util.Comparator.comparingInt(a -> order.indexOf((String) a.get("tone"))));
         result.put("alerts", alerts);
-        http.json(200, result);
+        return result;
     }
 
     /** TPS, tick time, memory, disk and ping - the same thresholds as the colours on the health page. */

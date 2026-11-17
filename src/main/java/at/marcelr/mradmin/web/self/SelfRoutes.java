@@ -52,7 +52,7 @@ public final class SelfRoutes {
         this.plugin = server.plugin();
     }
 
-    public static void register(WebServer server) {
+    public static SelfRoutes register(WebServer server) {
         SelfRoutes r = new SelfRoutes(server);
         server.open("POST", "/api/self/login", r::login);
         server.account("POST", "/api/me/player-page", r::fromTeam);
@@ -72,6 +72,22 @@ public final class SelfRoutes {
         r.inbox.register();
         r.map = new SelfMap(server, r);
         r.map.register();
+        return r;
+    }
+
+    /** Unread notifications of the player's inbox and whether one of them is an alarm (Stream Deck). */
+    public Map<String, Object> inboxSummary(UUID player, String lang) throws Exception {
+        return inbox.summary(player, lang);
+    }
+
+    /** All game statistics of the player, formatted for the language: [{key, value}] (Stream Deck). */
+    public List<Map<String, Object>> allStats(UUID player, String lang) throws Exception {
+        return stats.all(player, lang);
+    }
+
+    /** Whether the statistics page is on. */
+    public boolean statsAvailable() {
+        return stats.available();
     }
 
     private PlayerSessions sessions() {
@@ -141,7 +157,7 @@ public final class SelfRoutes {
     }
 
     /** Banned through LibertyBans (also by IP)? Asked at most once a minute per player; without LibertyBans never. */
-    private boolean banned(UUID player, String ip) {
+    public boolean banned(UUID player, String ip) {
         long now = System.currentTimeMillis();
         long[] cached = banCache.get(player);
         if (cached != null && cached[1] > now) {
@@ -254,7 +270,7 @@ public final class SelfRoutes {
     }
 
     /** Who looks, in which language ("lang" of the query or body), with the module's permissions resolved here. */
-    SelfViewer viewer(Http http, String moduleId) throws java.io.IOException {
+    public SelfViewer viewer(Http http, String moduleId) throws java.io.IOException {
         PlayerSessions.Session s = http.player();
         String lang = http.query().getOrDefault("lang", http.method().equals("POST") ? http.string("lang") : null);
         AdminModule module = plugin.modules().module(moduleId);

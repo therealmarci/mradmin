@@ -168,4 +168,25 @@ public interface WebModule {
     default @Nullable WebConfig webConfig() {
         return null;
     }
+
+    // ------------------------------------------------------ Stream Deck keys (since API 17)
+
+    /**
+     * The module's keys for the Stream Deck of {@code viewer.player()} - only what they may see in the player area or
+     * (team) on the module's pages, texts in {@code viewer.lang()}. Main thread, asked every few seconds while a
+     * Stream Deck is connected - keep it cheap. {@link SelfViewer#permissions()} holds the granted ones of
+     * {@link #selfPermissions()}.
+     */
+    default List<DeckTile> deckTiles(SelfViewer viewer) {
+        return List.of();
+    }
+
+    /**
+     * A key with {@link DeckTile#pressable()} was pressed. Check everything again - the same rules and permissions as
+     * in game. Main thread.
+     * @return null if done, otherwise the reason in the viewer's language (shown on the key)
+     */
+    default @Nullable String deckPress(SelfViewer viewer, String tile) {
+        return "?";
+    }
 }

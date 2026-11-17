@@ -37,12 +37,13 @@ permissions:
   # The same in every MRtechnology plugin: <plugin>.player for players, <plugin>.groups.support / staff / admin for
   # the team - each group contains the one below. The single permissions further down stay usable on their own.
   mradmin.player:
-    description: "Player: /report - open tickets and view, answer and close your own; /web - own page in the web interface; /mradmin map - link to the web map, other players on it; /mradmin version."
+    description: "Player: /report - open tickets and view, answer and close your own; /web - own page in the web interface; Stream Deck; /mradmin map - link to the web map, other players on it; /mradmin version."
     default: op
     children:
       mradmin.version: true
       mradmin.tickets.create: true
       mradmin.web.self: true
+      mradmin.deck: true
       mradmin.map: true
       mradmin.map.players: true
   mradmin.groups.bots:
@@ -144,6 +145,9 @@ permissions:
   # -------------------------------------------------------------- Tickets
   mradmin.web.self:
     description: "/web - link and sign-in code for the own player page in the web interface (needs player-web.enabled)."
+    default: op
+  mradmin.deck:
+    description: "Connect an own Stream Deck to MRadmin (/web link <code>, Account -> Devices; needs stream-deck.enabled). The keys show only what the player may see in the web interface."
     default: op
   mradmin.tickets.create:
     description: /report - open tickets and view, answer and close your own.

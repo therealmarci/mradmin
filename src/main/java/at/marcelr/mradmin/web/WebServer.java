@@ -48,7 +48,8 @@ public final class WebServer {
         void handle(Http http) throws Exception;
     }
 
-    private record Route(String method, String[] parts, Handler handler, boolean open, boolean self, boolean account) {
+    private record Route(String method, String[] parts, Handler handler, boolean open, boolean self, boolean account,
+                         boolean deck) {
     }
 
     private final MRAdmin plugin;
@@ -78,6 +79,7 @@ public final class WebServer {
         this.requests = new PublicRequests(plugin, this);
         this.applications = new Applications(plugin, this);
         this.playerSessions = new at.marcelr.mradmin.web.self.PlayerSessions(plugin);
+        this.deckDevices = new at.marcelr.mradmin.web.deck.DeckDevices(plugin);
         auth.useSessions(playerSessions);
         this.news = new at.marcelr.mradmin.news.News(plugin);
     }
@@ -157,17 +159,17 @@ public final class WebServer {
 
     /** A route of the administration: a session, the team permission and an own sign-in; {name} parts allowed. */
     public void route(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false, false, false));
+        routes.add(new Route(method, path.split("/"), handler, false, false, false, false));
     }
 
     /** A route of the own account (sign-ins, browsers): any signed-in browser, also without the team permission. */
     public void account(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false, false, true));
+        routes.add(new Route(method, path.split("/"), handler, false, false, true, false));
     }
 
     /** A route anyone may call (sign-in, setup). */
     public void open(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, true, false, false));
+        routes.add(new Route(method, path.split("/"), handler, true, false, false, false));
     }
 
     /**
@@ -175,7 +177,23 @@ public final class WebServer {
      * {@link at.marcelr.mradmin.web.self.PlayerSessions}) and player-web.enabled. {@link Http#player()} is the player.
      */
     public void self(String method, String path, Handler handler) {
-        routes.add(new Route(method, path.split("/"), handler, false, true, false));
+        routes.add(new Route(method, path.split("/"), handler, false, true, false, false));
+    }
+
+    /**
+     * A route of the Stream Deck: the device's own key in the header {@code Authorization: Bearer <key>} (see
+     * {@link at.marcelr.mradmin.web.deck.DeckDevices}), stream-deck.enabled and mradmin.deck. {@link Http#player()} is
+     * the player the Stream Deck belongs to; its id is the device's.
+     */
+    public void deck(String method, String path, Handler handler) {
+        routes.add(new Route(method, path.split("/"), handler, false, false, false, true));
+    }
+
+    private final at.marcelr.mradmin.web.deck.DeckDevices deckDevices;
+
+    /** Connected Stream Decks. */
+    public at.marcelr.mradmin.web.deck.DeckDevices deckDevices() {
+        return deckDevices;
     }
 
     private final at.marcelr.mradmin.web.self.PlayerSessions playerSessions;
@@ -341,7 +359,30 @@ public final class WebServer {
                 continue;
             }
             http.params(params);
-            if (route.self()) {
+            if (route.deck()) {
+                if (!plugin.settings().deck().enabled()) {
+                    throw new Http.WebException(404, "deck-off");
+                }
+                String header = http.header("Authorization");
+                String token = header != null && header.regionMatches(true, 0, "Bearer ", 0, 7) ? header.substring(7) : null;
+                var device = token == null ? null : deckDevices.device(token, http.storedIp());
+                if (device == null) {
+                    // A wrong key: few tries per address, then a pause (keys are long - this only stops floods).
+                    if (!allow("deck-wrong:" + http.ip(), 20)) {
+                        throw new Http.WebException(429, "rate-limit");
+                    }
+                    throw new Http.WebException(401, "deck-signed-out");
+                }
+                if (!permissions.has(device.player(), at.marcelr.mradmin.Perms.DECK)) {
+                    throw new Http.WebException(403, "no-deck-permission");
+                }
+                var session = new at.marcelr.mradmin.web.self.PlayerSessions.Session(device.id(), device.hash(),
+                        device.player(), device.playerName(), device.created(), device.created(), device.lastSeen(),
+                        Long.MAX_VALUE, device.ip(), "Stream Deck");
+                http.player = session;
+                http.session = session;
+                http.account = auth.ensure(device.player(), device.playerName());
+            } else if (route.self()) {
                 if (!plugin.settings().playerWeb().enabled()) {
                     throw new Http.WebException(404, "player-web-off");
                 }

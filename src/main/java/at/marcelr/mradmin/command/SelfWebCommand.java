@@ -44,6 +44,10 @@ public final class SelfWebCommand implements TabExecutor {
                 messages.send(sender, "players-only");
                 return true;
             }
+            if (args.length > 0 && args[0].equalsIgnoreCase("link")) {
+                link(player, args);
+                return true;
+            }
             // The one way into the web interface without an own sign-in: players with the player page, and the team.
             boolean team = sender.hasPermission(at.marcelr.mradmin.web.auth.WebPermissions.PERM_WEB);
             if (!team && !sender.hasPermission(Perms.WEB_SELF)) {
@@ -66,6 +70,10 @@ public final class SelfWebCommand implements TabExecutor {
                     int count = web.playerSessions().devices(player.getUniqueId()).size();
                     var button = messages.get("web-self-logout-button").clickEvent(ClickEvent.runCommand("/web logout"));
                     messages.send(sender, "web-self-devices", tag("count", count), tag("button", button));
+                    int decks = web.deckDevices().list(player.getUniqueId()).size();
+                    if (decks > 0) {
+                        messages.send(sender, "web-deck-devices", tag("count", decks));
+                    }
                 }
                 case "status" -> {
                     var account = web.auth().account(player.getUniqueId());
@@ -91,7 +99,8 @@ public final class SelfWebCommand implements TabExecutor {
                     if (!sure) {
                         var button = messages.get("web-self-reset-button").clickEvent(ClickEvent.runCommand("/web reset confirm"));
                         messages.send(sender, "web-self-reset-ask", tag("button", button));
-                    } else if (web.auth().resetLogins(player.getUniqueId())) {
+                    } else if (web.auth().resetLogins(player.getUniqueId())
+                            | web.deckDevices().revokeAll(player.getUniqueId()) > 0) {
                         web.playerSessions().revokeAll(player.getUniqueId());
                         messages.send(sender, "web-self-reset-done");
                         plugin.getLogger().info(player.getName() + " removed all own sign-ins of the web interface.");
@@ -121,9 +130,55 @@ public final class SelfWebCommand implements TabExecutor {
         });
     }
 
+    /**
+     * /web link &lt;code&gt; - shows which Stream Deck asks (name, address) with a button to confirm;
+     * /web link &lt;code&gt; confirm - connects it to the own account. Needs mradmin.deck, not the player page.
+     */
+    private void link(Player player, String[] args) {
+        var messages = plugin.messages();
+        var web = plugin.web();
+        if (!player.hasPermission(Perms.DECK)) {
+            messages.send(player, "no-permission");
+            return;
+        }
+        if (web == null || !web.running() || !plugin.settings().deck().enabled()) {
+            messages.send(player, "web-deck-off");
+            return;
+        }
+        if (args.length < 2) {
+            messages.send(player, "web-deck-usage");
+            return;
+        }
+        var devices = web.deckDevices();
+        if (!web.allow("deck-confirm:" + player.getUniqueId(), 20)) {
+            messages.send(player, "web-deck-invalid");
+            return;
+        }
+        if (args.length > 2 && args[2].equalsIgnoreCase("confirm")) {
+            var device = devices.confirm(args[1], player.getUniqueId(), player.getName());
+            if (device == null) {
+                messages.send(player, "web-deck-invalid");
+                return;
+            }
+            messages.send(player, "web-deck-done", tag("name", device.name()));
+            plugin.getLogger().info(player.getName() + " connected a Stream Deck (" + device.name() + ") in game.");
+            plugin.storage().audit(new at.marcelr.mradmin.storage.Storage.AuditRow(System.currentTimeMillis(),
+                    player.getUniqueId(), player.getName(), "in game", "deck-linked", device.name() + " (/web link)"));
+            return;
+        }
+        var pending = devices.byCode(args[1]);
+        if (pending == null) {
+            messages.send(player, "web-deck-invalid");
+            return;
+        }
+        var button = messages.get("web-deck-button")
+                .clickEvent(ClickEvent.runCommand("/web link " + pending.code() + " confirm"));
+        messages.send(player, "web-deck-ask", tag("name", pending.name()), tag("ip", pending.ip()), tag("button", button));
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        return args.length == 1 ? List.of("status", "devices", "logout", "reset").stream()
+        return args.length == 1 ? List.of("status", "devices", "link", "logout", "reset").stream()
                 .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT))).toList() : List.of();
     }
 }

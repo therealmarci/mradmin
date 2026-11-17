@@ -1311,6 +1311,24 @@ sections:
         name: {de: Kritische Warnungen als Titel, en: Critical warnings as a title}
         help: {de: "Kritische Warnungen zusätzlich als Titel auf dem Bildschirm.", en: "Critical warnings also as a title on the screen."}
 
+  - id: stream-deck
+    name: {de: Stream Deck, en: Stream Deck}
+    group: {de: "Weboberfläche & Karte", en: "Web interface & map"}
+    help: {de: "Spieler mit mradmin.deck verbinden ihr Stream Deck mit dem MRadmin-Plugin für das Stream Deck. Jede Taste zeigt nur, was der Spieler auch in der Weboberfläche sehen darf.", en: "Players with mradmin.deck connect their Stream Deck with the MRadmin plugin for the Stream Deck. Every key only shows what the player may see in the web interface as well."}
+    fields:
+      - key: stream-deck.enabled
+        type: bool
+        name: {de: Stream Deck erlaubt, en: Stream Deck allowed}
+        help: {de: "Braucht die Weboberfläche. Aus = verbundene Stream Decks bekommen keine Daten mehr, neue lassen sich nicht verbinden.", en: "Needs the web interface. Off = connected Stream Decks get no data any more, new ones cannot be connected."}
+      - key: stream-deck.max-devices
+        advanced: true
+        type: int
+        when: stream-deck.enabled
+        min: 1
+        max: 20
+        name: {de: Stream Decks pro Spieler, en: Stream Decks per player}
+        help: {de: "Höchstens so viele Stream Decks pro Spieler. Ein weiteres meldet das am längsten ungenutzte ab.", en: "At most this many Stream Decks per player. One more signs out the one used longest ago."}
+
   - id: requests
     name: {de: Öffentliche Formulare, en: Public forms}
     group: {de: "Weboberfläche & Karte", en: "Web interface & map"}

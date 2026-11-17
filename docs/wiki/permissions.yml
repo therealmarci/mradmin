@@ -19,6 +19,8 @@ mradmin.status.health:
   de: "Health-Seite - Verlauf von TPS, MSPT, CPU, RAM und Lag-Quellen"
 mradmin.web.self:
   de: "`/web` - Link und Anmeldecode für die eigene Spielerseite (braucht `player-web.enabled`)"
+mradmin.deck:
+  de: "Eigenes Stream Deck mit MRadmin verbinden (`/web link <Code>`, Konto → Geräte; braucht `stream-deck.enabled`) - die Tasten zeigen nur, was der Spieler auch in der Weboberfläche sieht"
 mradmin.tickets.create:
   de: "`/report` - Tickets erstellen, die eigenen ansehen, beantworten und schließen"
 mradmin.tickets.notify:

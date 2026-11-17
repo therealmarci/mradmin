@@ -6,12 +6,14 @@
   import LoginsCard from '../components/LoginsCard.svelte';
   import NotificationsCard from '../components/NotificationsCard.svelte';
   import Toast from '../components/Toast.svelte';
+  import DeckCard from '../components/DeckCard.svelte';
 
-  let { me } = $props();
+  // deckCode: opened as /link?code=… (Stream Deck) - straight to the devices with the code.
+  let { me, deckCode = '' } = $props();
 
   // Push notifications are for the team (new tickets, alerts) - players see sign-ins and devices.
   const TABS = me.team ? ['security', 'notifications', 'devices'] : ['security', 'devices'];
-  let tab = $state(TABS.includes(sessionStorage.getItem('mradmin.account.tab')) ? sessionStorage.getItem('mradmin.account.tab') : 'security');
+  let tab = $state(deckCode ? 'devices' : TABS.includes(sessionStorage.getItem('mradmin.account.tab')) ? sessionStorage.getItem('mradmin.account.tab') : 'security');
 
   let sessions = $state(null);
   let error = $state('');
@@ -161,6 +163,7 @@
           </ul>
         {/if}
       </section>
+      <DeckCard code={deckCode} />
     {/if}
     <p class="muted small foot">{t('account.reset')} · MRadmin {me.version}</p>
   </div>

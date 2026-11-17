@@ -390,6 +390,21 @@ Spiel - die schickt das Modul selbst). Vorher `apiVersion() >= 15` prüfen.
 
 Texte in der Serversprache. MRadmin ergänzt `plugin` (Name des Plugins). Beispiel: MRchunks liefert bei einer Lag-Sperre die Messwerte des Loaders der letzten 30 Minuten gegen seine Grenzen.
 
+## Stream-Deck-Tasten (`deckTiles`, ab API 17)
+
+Das MRadmin-Plugin für das Stream Deck fragt alle paar Sekunden `GET /api/deck/state`. Dabei holt MRadmin von jedem Modul `WebModule#deckTiles(viewer)` (Haupt-Thread, günstig halten): Tasten für **genau diesen Spieler** (`viewer.player()`, Texte in `viewer.lang()`, Rechte aus `selfPermissions()` in `viewer.permissions()`). Ein `DeckTile` hat:
+
+| Feld | Inhalt |
+|---|---|
+| `id` | eindeutig im Modul und gleichbleibend (die Taste merkt sie sich), z.B. `loader:4` |
+| `kind` | Art für die Auswahl im Stream Deck, z.B. `chunkloader`, `duel`, `review` |
+| `title`, `value`, `detail` | Überschrift (klein), Wert (groß), Zeile darunter - kurz halten, eine Taste ist 144 px breit |
+| `tone` | `good`, `warn`, `bad`, `off` (grau) oder `info` - Streifen unten |
+| `link` | Seite der Weboberfläche (Pfad, z.B. `/game/mrchunks/loaders`) oder null |
+| `pressable`, `confirm` | Drücken ruft `deckPress(viewer, id)` (sonst öffnet es `link`); `confirm` = zweimal drücken |
+
+`deckPress` prüft alles neu wie im Spiel und gibt `null` (erledigt) oder den Grund in `viewer.lang()` zurück. Team-Tasten zeigt ein Modul nur, wenn der Spieler das Recht dafür hat.
+
 ## Versionen
 
 - API-Version im Code: `MRadminService.API_VERSION` (beim Bauen), `service.apiVersion()` (des laufenden MRadmin).
@@ -401,7 +416,7 @@ Texte in der Serversprache. MRadmin ergänzt `plugin` (Name des Plugins). Beispi
   SQLite oder MySQL je nach `storage.type`; eine Zeile Text im eigenen Format, Schreiben im Hintergrund, Lesen nur beim
   Aktivieren. So nutzt es MRchunks für den Verlauf der Chunkloader), Version 7 = `api-1.6.0` (Webkarte: `mapLayers`,
   `mapIcons`, `MapLayer`, `MapMarker`, `mapChanged` - nach MRadmin 1.1 ohne Wirkung; `mapUrl`), Version 8 = `api-1.7.0` (Karte der Spielerseite: `selfMap`,
-  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`), Version 16 = `api-1.15.0` (`reportLog`: eigener Teil im Ticket-Log).
+  `selfMapAction`, `SelfMapLayer`), Version 9 = `api-1.8.0` (`SelfMapLayer.group`, `Action.choice`, `Action.icon`), Version 10 = `api-1.9.0` (`Marker.y`), Version 11 = `api-1.10.0` (`Marker.card`, `Marker.area`), Version 12 = `api-1.11.0` (`webConfig`, `WebConfig`: Konfiguration im Browser), Version 13 = `api-1.12.0` (`log`: Protokoll), Version 14 = `api-1.13.0` (`nextRestart`, `RestartInfo`), Version 15 = `api-1.14.0` (`teamNotice`, `teamNoticeDone`, `teamNoticeInGame`), Version 16 = `api-1.15.0` (`reportLog`: eigener Teil im Ticket-Log), Version 17 = `api-1.16.0` (`deckTiles`, `deckPress`, `DeckTile`: Tasten für das Stream Deck).
 - Neue Methoden kommen nur als `default`-Methoden mit einer höheren Version dazu – ein Modul für eine ältere API läuft
   weiter. Wer neuere Methoden nutzt, prüft vorher `apiVersion()`.
 - Veröffentlicht wird die API über **JitPack** mit einem Git-Tag `api-<version>` im MRadmin-Repo (z.B. `api-1.0.0`);

@@ -5,6 +5,7 @@
 | `/mradmin` (`/mra`) | Admin-Dashboard · `/mradmin help` zeigt alle Befehle | `mradmin.dashboard` |
 | `/report [spieler]` (`/melden`, `/ticket`, `/support`) | Ticket-Menü: Spieler melden, Fehler melden, sonstige Anliegen, eigene Tickets | `mradmin.tickets.create` |
 | `/web [status\|devices\|logout\|reset]` (`/me`) | Link und 6-stelliger Code für die eigene Seite · eigenes Konto (Anmeldungen, Geräte) · alle Geräte abmelden · eigene Anmeldungen entfernen (mit Bestätigung) | `mradmin.web.self` oder `mradmin.web` |
+| `/web link <Code>` | Stream Deck mit dem eigenen Konto verbinden - zeigt Name und Adresse des Stream Decks, Klick auf **[Verbinden]** bestätigt | `mradmin.deck` |
 | `/sc [nachricht]` | Staff-Chat (ohne Nachricht: an/aus) | `mradmin.staffchat` |
 | `/mradmin mode [on\|off\|toggle] [spieler]` · `mode list` | Admin-Modus für dich · für andere · wer ist drin | `mradmin.mode` · `.mode.others` |
 | `/mradmin announce [-d] [-q] <text\|vorlage> [werte]` | Ankündigung als Titel, Chat und Actionbar (`-d` auch in Discord, `-q` ohne Ton) | `mradmin.announce` |

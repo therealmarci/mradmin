@@ -56,7 +56,8 @@ On phones and tablets held upright the web interface looks like an app (tablets 
 | `/web status` | Own account: address, own sign-ins (password, passkeys, Discord, 2FA), signed-in devices | like `/web` |
 | `/web devices` | How many devices are signed in, with a button to sign them out | like `/web` |
 | `/web logout` | Sign out all own devices | like `/web` |
-| `/web reset` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices - e.g. lost phone; asks with a click first | like `/web` |
+| `/web reset` | Remove own sign-ins (password, 2FA, passkeys, Discord, e-mail) and sign out all devices including Stream Decks - e.g. lost phone; asks with a click first | like `/web` |
+| `/web link <code>` | Connect a Stream Deck (the Stream Deck shows the code under "Connect") | `mradmin.deck` |
 
 `/web` only manages the **own** account - the team does not change other players' accounts from the game either. `/mradmin web` is gone.
 

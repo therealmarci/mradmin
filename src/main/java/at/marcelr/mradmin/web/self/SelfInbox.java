@@ -104,6 +104,15 @@ final class SelfInbox {
         http.json(200, result);
     }
 
+    /** Unread notifications and whether one of them is an alarm (crash) - for the Stream Deck. */
+    Map<String, Object> summary(UUID player, String lang) throws Exception {
+        List<Map<String, Object>> items = items(player, lang);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("unread", items.stream().filter(SelfInbox::counts).count());
+        result.put("alarm", items.stream().anyMatch(m -> counts(m) && Boolean.TRUE.equals(m.get("alarm"))));
+        return result;
+    }
+
     /** Unread, not archived and (team notices) not done. */
     private static boolean counts(Map<String, Object> m) {
         return !(Boolean) m.get("read") && !(Boolean) m.get("archived") && !Boolean.TRUE.equals(m.get("done"));

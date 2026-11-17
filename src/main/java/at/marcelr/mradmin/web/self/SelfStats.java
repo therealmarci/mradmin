@@ -92,6 +92,16 @@ public final class SelfStats {
         return result;
     }
 
+    /** All of the game's statistics of the player (Stream Deck): [{key, value}] with the value formatted. */
+    List<Map<String, Object>> all(UUID player, String lang) throws Exception {
+        live(player);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (VanillaStats.Kind kind : VanillaStats.Kind.values()) {
+            result.add(Map.of("key", kind.key, "value", VanillaStats.format(kind, vanilla.of(player, kind), lang)));
+        }
+        return result;
+    }
+
     private void stats(Http http) throws Exception {
         routes.check(http);
         if (!available()) {

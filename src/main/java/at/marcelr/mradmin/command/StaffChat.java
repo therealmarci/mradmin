@@ -71,8 +71,28 @@ public final class StaffChat implements TabExecutor, Listener {
         return on;
     }
 
+    /** A message of the staff chat (kept in memory for the Stream Deck). */
+    public record Line(long time, String from, String text) {
+    }
+
+    private static final int KEEP = 50;
+    private final java.util.Deque<Line> recent = new java.util.ArrayDeque<>();
+
+    /** The last messages (at most 50, since the server started), oldest first. Thread-safe. */
+    public List<Line> recent() {
+        synchronized (recent) {
+            return List.copyOf(recent);
+        }
+    }
+
     /** Sends a message to every staff member and the console. */
     public void send(String from, String message) {
+        synchronized (recent) {
+            recent.addLast(new Line(System.currentTimeMillis(), from, message));
+            while (recent.size() > KEEP) {
+                recent.pollFirst();
+            }
+        }
         plugin.messages().broadcastTo(PERM, "staffchat-format", tag("player", from), tag("message", message));
         plugin.getLogger().info("[Staff] " + from + ": " + message);
         plugin.discord().log("staff-chat", "player", from, "text", message);

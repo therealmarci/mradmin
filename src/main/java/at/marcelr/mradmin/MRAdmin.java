@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(24, Map.ofEntries(
+    private final Messages messages = new Messages(25, Map.ofEntries(
+            // 25: /web link connects a Stream Deck.
+            Map.entry(25, Set.of("help-web")),
             // 24: /mradmin web is gone - the own account is managed with /web.
             Map.entry(24, Set.of("help-web")),
             // 23: "now" needs no waiting room hint - the waiting room greets right after.
@@ -176,11 +178,13 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         at.marcelr.mradmin.web.DiscordRoutes.register(web);
         at.marcelr.mradmin.web.PublicRoutes.register(web);
         at.marcelr.mradmin.web.ItemRoutes.register(web);
-        at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        var selfRoutes = at.marcelr.mradmin.web.self.SelfRoutes.register(web);
+        at.marcelr.mradmin.web.deck.DeckRoutes.register(web, selfRoutes);
         at.marcelr.mradmin.web.BrandingRoutes.register(web);
         // Every mail also as HTML in the look of the server.
         web.requests().mailer().useHtml(branding::mail);
         web.playerSessions().load();
+        web.deckDevices().load();
         webAuth.takeOverOldSessions();
         landing.load();
         newsDelivery = new at.marcelr.mradmin.news.NewsDelivery(this, web.news());
@@ -297,6 +301,7 @@ public final class MRAdmin extends JavaPlugin implements Listener {
         }
         if (web != null) {
             web.playerSessions().flush();
+            web.deckDevices().flush();
         }
         discord.shutdown();
         if (discordAnnounce != null) {

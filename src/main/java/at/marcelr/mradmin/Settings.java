@@ -36,6 +36,7 @@ public record Settings(
         RequestSettings requests,
         VersionsSettings versions,
         PlayerWebSettings playerWeb,
+        DeckSettings deck,
         BrandingSettings branding
 ) {
 
@@ -366,6 +367,7 @@ public record Settings(
 
         return new Settings(zone, maintenance, kuma, announce, adminMode, update, gui, tickets, Set.copyOf(features),
                 storage(c, log), web(c, log), health(c, log), mail(c, log), requests(c), versions(c, log), playerWeb(c),
+                new DeckSettings(c.getBoolean("stream-deck.enabled", true), Math.clamp(c.getInt("stream-deck.max-devices", 5), 1, 20)),
                 branding(c, log));
     }
 
@@ -393,6 +395,13 @@ public record Settings(
 
     private static String cut(String text, int max) {
         return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    /**
+     * The Stream Deck plugin of MRadmin (section stream-deck): whether players may connect a Stream Deck (with
+     * mradmin.deck) and how many per player.
+     */
+    public record DeckSettings(boolean enabled, int maxDevices) {
     }
 
     /**

@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 24
+lang-version: 25
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -44,7 +44,7 @@ waitroom-health-alert: "<prefix><hover:show_text:'<gray>Details im Web unter Ser
 waitroom-health-recovered: "<prefix><green>✅ Warteraum läuft wieder flüssig <gray>(<tps> TPS)"
 
 # --- Weboberfläche (/mradmin web) ----------------------------------------------
-help-web: "<gold>/web [status|devices|logout|reset]</gold> <dark_gray>- <gray>deine Seite im Web und dein Konto"
+help-web: "<gold>/web [status|devices|link|logout|reset]</gold> <dark_gray>- <gray>deine Seite im Web, dein Konto und dein Stream Deck"
 # Eigene Seite des Spielers im Web (/web). Platzhalter: <link>, <minutes>, <count>, <button>
 web-self-link: "<prefix><green>Deine Seite: <link> <gray>· Code: <code> <hover:show_text:'<gray>Gilt <seconds> Sekunden und nur einmal.'><dark_gray>(<seconds> s)</hover>"
 web-self-code: "<yellow><b><code></b></yellow>"
@@ -64,6 +64,13 @@ web-self-login-none: "nur /web"
 web-self-reset-ask: "<prefix><hover:show_text:'<gray>Entfernt Passwort, 2FA, Passkeys, Discord und E-Mail und meldet alle Geräte ab. Danach kommst du nur noch mit /web rein.'><yellow>Eigene Anmeldungen wirklich entfernen?</hover> <button>"
 web-self-reset-button: "<red><u>[Ja, entfernen]</u></red>"
 web-self-reset-done: "<prefix><hover:show_text:'<gray>Rein geht es wieder mit /web. Neue Anmeldungen richtest du auf der Seite unter Anmeldungen ein.'><green>Deine Anmeldungen sind entfernt, alle Geräte abgemeldet.</hover>"
+web-deck-usage: "<prefix><hover:show_text:'<gray>Dein Stream Deck zeigt den Code im MRadmin-Plugin unter Verbinden. Er gilt 5 Minuten.'><gray>Stream Deck verbinden: <gold>/web link [Code]</gold></hover>"
+web-deck-off: "<prefix><red>Stream Decks sind auf diesem Server ausgeschaltet."
+web-deck-invalid: "<prefix><hover:show_text:'<gray>Ein Code gilt 5 Minuten und nur einmal. Am Stream Deck einfach neu verbinden.'><red>Code unbekannt oder abgelaufen.</hover>"
+web-deck-ask: "<prefix><hover:show_text:'<gray>Name: <name><newline>Angefragt von: <ip><newline>Das Stream Deck sieht danach, was du in der Weboberfläche siehst.'><yellow>Stream Deck <white><name></white> mit deinem Konto verbinden?</hover> <button>"
+web-deck-button: "<green><u>[Verbinden]</u></green>"
+web-deck-done: "<prefix><hover:show_text:'<gray>Abmelden kannst du es im Browser unter Konto, Geräte - oder alle mit /web reset.'><green>Stream Deck <white><name></white> verbunden.</hover>"
+web-deck-devices: "<prefix><gray>Dazu <white><count></white> Stream Deck(s) verbunden."
 web-self-reset-none: "<prefix><gray>Du hast noch kein Web-Konto."
 web-moved: "<prefix><hover:show_text:'<gray>/web status, /web devices, /web logout, /web reset'><gray>Dein Web-Konto verwaltest du jetzt mit <white>/web</white>.</hover>"
 news-preview: "<prefix><aqua>📣 <b><title></b></aqua> <gray><preview></gray> <link>"
