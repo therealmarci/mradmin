@@ -80,7 +80,9 @@ public final class PushService {
             new Kind("update-available", Perms.VERSIONS_VIEW, null, false, Game.OWN),
             new Kind("update-ready", Perms.VERSIONS_VIEW, null, false, Game.LINE),
             new Kind("lag", Perms.STATUS_HEALTH, Feature.SERVER_STATUS, true, Game.OWN),
-            new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true, Game.NONE));
+            new Kind("maintenance", Perms.MAINTENANCE_VIEW, Feature.MAINTENANCE, true, Game.NONE),
+            // restart, admin mode, announcement started from a Stream Deck - for those who see the log
+            new Kind("deck-action", Perms.WEB_AUDIT, null, false, Game.NONE));
 
     /** A browser that receives pushes. */
     public record Subscription(String endpoint, String p256dh, String auth, String session, String device, long created) {

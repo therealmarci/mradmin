@@ -1687,6 +1687,7 @@ sections:
           server-schedule-resumed: {de: Automatische Neustarts wieder an, en: Planned restarts on again}
           server-stop: {de: Stopp geplant, en: Stop planned}
           server-stop-cancelled: {de: Stopp abgebrochen, en: Stop cancelled}
+          deck-action: {de: Aktion am Stream Deck, en: Action on a Stream Deck}
           server-crash: {de: Server abgestürzt (Starter), en: Server crashed (starter)}
           server-hang: {de: Server hing (Starter), en: Server hung (starter)}
           server-gave-up: {de: Starter gibt auf, en: Starter gave up}

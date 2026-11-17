@@ -17,7 +17,7 @@
 # ==============================================================================
 
 # Do not change - used for automatic config updates.
-config-version: 68
+config-version: 69
 
 
 # ------------------------------------------------------------------------------
@@ -976,6 +976,10 @@ discord:
     server-stop-cancelled:
       enabled: true
       color: "#95A5A6"
+    # A restart, the admin mode or an announcement started from a Stream Deck.
+    deck-action:
+      enabled: true
+      color: "#9B59B6"
     # Reported by the starter (section server): crash, hang, giving up after crashes, Paper updates.
     server-crash:
       enabled: true

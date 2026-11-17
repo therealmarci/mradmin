@@ -15,6 +15,9 @@
   let asking = $state(null);
   let keyName = $state('');
   let newKey = $state('');
+  // May the Stream Deck also switch things (restart, admin mode, announcement, chunk loaders) - off unless chosen.
+  let control = $state(false);
+  let keyControl = $state(false);
   let busy = $state(false);
 
   async function load() {
@@ -47,10 +50,11 @@
     busy = true;
     error = '';
     try {
-      const result = await api('POST', '/deck/link/confirm', { code: asking.code });
+      const result = await api('POST', '/deck/link/confirm', { code: asking.code, control: control ? 'true' : 'false' });
       message = t('deck.connected', { name: result.name });
       asking = null;
       code = '';
+      control = false;
       load();
     } catch (e) {
       error = errorText(e);
@@ -64,9 +68,10 @@
     busy = true;
     error = '';
     try {
-      const result = await api('POST', '/deck/keys', { name: keyName.trim() });
+      const result = await api('POST', '/deck/keys', { name: keyName.trim(), control: keyControl ? 'true' : 'false' });
       newKey = result.key;
       keyName = '';
+      keyControl = false;
       load();
     } catch (e) {
       error = errorText(e);
@@ -81,6 +86,16 @@
       message = t('deck.copied');
     } catch {
       // the key stays selectable
+    }
+  }
+
+  async function setControl(d) {
+    try {
+      await api('POST', '/deck/devices/' + encodeURIComponent(d.id) + '/control', { on: d.control ? 'false' : 'true' });
+      message = t(d.control ? 'deck.nowViewOnly' : 'deck.nowControl');
+      load();
+    } catch (e) {
+      error = errorText(e);
     }
   }
 
@@ -123,8 +138,12 @@
               <div class="dev-name">{d.name}</div>
               <div class="muted small">{t('deck.lastSeen')}: {ago(d.lastSeen)} · <span class="mono">{d.ip}</span></div>
               <div class="muted small">{t('deck.via.' + d.via)} · {dateTime(d.created)}</div>
+              <div class="mode" class:on={d.control}>{t(d.control ? 'deck.mode.control' : 'deck.mode.view')}</div>
             </div>
-            <button class="danger mini" onclick={() => revoke(d.id)}>{t('deck.revoke')}</button>
+            <div class="dev-actions">
+              <button class="secondary mini" onclick={() => setControl(d)}>{t(d.control ? 'deck.makeViewOnly' : 'deck.allowControl')}</button>
+              <button class="danger mini" onclick={() => revoke(d.id)}>{t('deck.revoke')}</button>
+            </div>
           </li>
         {/each}
       </ul>
@@ -147,6 +166,7 @@
               <strong>{t('deck.ask', { name: asking.name })}</strong>
               <span class="muted small">{t('deck.askFrom', { ip: asking.ip, time: ago(asking.created) })}</span>
               <span class="muted small">{t('deck.askHint')}</span>
+              <label class="check"><input type="checkbox" bind:checked={control} /> {t('deck.controlLabel')}</label>
               <div class="buttons">
                 <button onclick={connect} disabled={busy}>{t('deck.connect')}</button>
                 <button class="secondary" onclick={() => (asking = null)}>{t('deck.cancel')}</button>
@@ -177,6 +197,7 @@
               <input bind:value={keyName} maxlength="40" placeholder={t('deck.keyName')} />
               <button type="submit" disabled={busy}>{t('deck.keyCreate')}</button>
             </form>
+            <label class="check"><input type="checkbox" bind:checked={keyControl} /> {t('deck.controlLabel')}</label>
             <p class="muted small">{t('deck.keyHint')}</p>
           {/if}
         </div>
@@ -323,6 +344,46 @@
 
   .mono {
     font-family: ui-monospace, monospace;
+  }
+
+  .dev-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .mode {
+    justify-self: start;
+    margin-top: 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
+  }
+
+  .mode.on {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 15%, transparent);
+  }
+
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .check input {
+    width: auto;
+    margin: 2px 0 0;
+    padding: 0;
+    flex-shrink: 0;
   }
 
   .mini {

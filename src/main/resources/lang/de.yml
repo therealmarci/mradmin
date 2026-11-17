@@ -10,7 +10,7 @@
 # ==============================================================================
 
 # Nicht ändern - damit erkennt das Plugin bei Updates, welche Texte erneuert werden müssen.
-lang-version: 25
+lang-version: 26
 
 prefix: "<dark_gray>[<gold>MRadmin</gold>]</dark_gray> "
 
@@ -67,8 +67,16 @@ web-self-reset-done: "<prefix><hover:show_text:'<gray>Rein geht es wieder mit /w
 web-deck-usage: "<prefix><hover:show_text:'<gray>Dein Stream Deck zeigt den Code im MRadmin-Plugin unter Verbinden. Er gilt 5 Minuten.'><gray>Stream Deck verbinden: <gold>/web link [Code]</gold></hover>"
 web-deck-off: "<prefix><red>Stream Decks sind auf diesem Server ausgeschaltet."
 web-deck-invalid: "<prefix><hover:show_text:'<gray>Ein Code gilt 5 Minuten und nur einmal. Am Stream Deck einfach neu verbinden.'><red>Code unbekannt oder abgelaufen.</hover>"
-web-deck-ask: "<prefix><hover:show_text:'<gray>Name: <name><newline>Angefragt von: <ip><newline>Das Stream Deck sieht danach, was du in der Weboberfläche siehst.'><yellow>Stream Deck <white><name></white> mit deinem Konto verbinden?</hover> <button>"
-web-deck-button: "<green><u>[Verbinden]</u></green>"
+web-deck-ask: "<prefix><hover:show_text:'<gray>Name: <name><newline>Angefragt von: <ip><newline>Nur anzeigen: sieht, was du in der Weboberfläche siehst.<newline>Anzeigen und schalten: darf auch Neustart, Admin-Modus, Ankündigungen und Chunkloader auslösen.'><yellow>Stream Deck <white><name></white> verbinden?</hover> <button>"
+deck-action-restart: "Neustart in <minutes> min gestartet"
+deck-action-restart-cancel: "Neustart abgebrochen"
+deck-action-admin-on: "Admin-Modus an"
+deck-action-admin-off: "Admin-Modus aus"
+deck-action-announce: "Ankündigung „<name>“ gesendet"
+push-deck-action-title: "Stream Deck: <player>"
+push-deck-action-body: "<action> (Gerät „<device>“)"
+web-deck-button-view: "<gray><u>[Nur anzeigen]</u></gray>"
+web-deck-button-control: "<green><u>[Anzeigen und schalten]</u></green>"
 web-deck-done: "<prefix><hover:show_text:'<gray>Abmelden kannst du es im Browser unter Konto, Geräte - oder alle mit /web reset.'><green>Stream Deck <white><name></white> verbunden.</hover>"
 web-deck-devices: "<prefix><gray>Dazu <white><count></white> Stream Deck(s) verbunden."
 web-self-reset-none: "<prefix><gray>Du hast noch kein Web-Konto."
@@ -734,6 +742,7 @@ discord:
   server-schedule-resumed: "▶️ **{admin}** hat die automatischen Neustarts wieder eingeschaltet."
   server-stop: "🛑 **{admin}** fährt den Server herunter (Countdown: {time}, Grund: {reason})."
   server-stop-cancelled: "❎ **{admin}** hat den Server-Stopp abgebrochen."
+  deck-action: "🎛️ **{player}** am Stream Deck „{device}“: {action}"
   server-crash: "💥 Der Server ist um {time} abgestürzt ({reason}) - der Starter hat ihn neu gestartet."
   server-hang: "🧊 Der Server hing um {time} ({seconds} s ohne Tick) - der Starter hat ihn beendet und neu gestartet."
   server-gave-up: "⛔ Der Server ist {count}-mal in {minutes} Minuten abgestürzt - der Starter hat aufgegeben. Prüfen, dann: mrserver start"

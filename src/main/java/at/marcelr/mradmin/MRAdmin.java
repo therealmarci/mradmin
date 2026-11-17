@@ -55,7 +55,9 @@ public final class MRAdmin extends JavaPlugin implements Listener {
      * 10: shift-click hint of the player list and right-click hint of the ticket list as their own texts (hidden while teleporting is switched off).
      * Raise it and list the keys whenever a default text changes.
      */
-    private final Messages messages = new Messages(25, Map.ofEntries(
+    private final Messages messages = new Messages(26, Map.ofEntries(
+            // 26: connecting a Stream Deck asks view only or view and switch.
+            Map.entry(26, Set.of("web-deck-ask")),
             // 25: /web link connects a Stream Deck.
             Map.entry(25, Set.of("help-web")),
             // 24: /mradmin web is gone - the own account is managed with /web.

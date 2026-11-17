@@ -50,10 +50,11 @@ permissions:
     description: "Group bots (second accounts): no rights in MRadmin - no /web, no /report. In the waiting room they count as normal players. Not in the team groups; give it to second accounts only (LuckPerms group \"bots\")."
     default: false
   mradmin.groups.support:
-    description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, admin mode, web interface, view maintenance and join during it, view versions."
+    description: "Group support: overview, server status, handle tickets, view players and their inventory, teleport, staff chat, admin mode, web interface, view maintenance and join during it, view versions, team keys on the Stream Deck."
     default: op
     children:
       mradmin.player: true
+      mradmin.deck.team: true
       mradmin.dashboard: true
       mradmin.status: true
       mradmin.status.health: true
@@ -148,6 +149,9 @@ permissions:
     default: op
   mradmin.deck:
     description: "Connect an own Stream Deck to MRadmin (/web link <code>, Account -> Devices; needs stream-deck.enabled). The keys show only what the player may see in the web interface."
+    default: op
+  mradmin.deck.team:
+    description: "Team keys on the Stream Deck (performance, warnings, restart ...) - in addition to the permission of the matching page and an own sign-in to the web interface."
     default: op
   mradmin.tickets.create:
     description: /report - open tickets and view, answer and close your own.

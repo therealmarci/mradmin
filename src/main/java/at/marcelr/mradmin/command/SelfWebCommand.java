@@ -131,8 +131,9 @@ public final class SelfWebCommand implements TabExecutor {
     }
 
     /**
-     * /web link &lt;code&gt; - shows which Stream Deck asks (name, address) with a button to confirm;
-     * /web link &lt;code&gt; confirm - connects it to the own account. Needs mradmin.deck, not the player page.
+     * /web link &lt;code&gt; - shows which Stream Deck asks (name, address) with two buttons: view only, or view and
+     * switch; /web link &lt;code&gt; view|control - connects it to the own account. Needs mradmin.deck, not the player
+     * page.
      */
     private void link(Player player, String[] args) {
         var messages = plugin.messages();
@@ -154,8 +155,9 @@ public final class SelfWebCommand implements TabExecutor {
             messages.send(player, "web-deck-invalid");
             return;
         }
-        if (args.length > 2 && args[2].equalsIgnoreCase("confirm")) {
-            var device = devices.confirm(args[1], player.getUniqueId(), player.getName());
+        if (args.length > 2 && (args[2].equalsIgnoreCase("view") || args[2].equalsIgnoreCase("control"))) {
+            boolean control = args[2].equalsIgnoreCase("control");
+            var device = devices.confirm(args[1], player.getUniqueId(), player.getName(), control);
             if (device == null) {
                 messages.send(player, "web-deck-invalid");
                 return;
@@ -163,7 +165,8 @@ public final class SelfWebCommand implements TabExecutor {
             messages.send(player, "web-deck-done", tag("name", device.name()));
             plugin.getLogger().info(player.getName() + " connected a Stream Deck (" + device.name() + ") in game.");
             plugin.storage().audit(new at.marcelr.mradmin.storage.Storage.AuditRow(System.currentTimeMillis(),
-                    player.getUniqueId(), player.getName(), "in game", "deck-linked", device.name() + " (/web link)"));
+                    player.getUniqueId(), player.getName(), "in game", "deck-linked",
+                    device.name() + (control ? " (/web link, may switch)" : " (/web link, view only)")));
             return;
         }
         var pending = devices.byCode(args[1]);
@@ -171,8 +174,11 @@ public final class SelfWebCommand implements TabExecutor {
             messages.send(player, "web-deck-invalid");
             return;
         }
-        var button = messages.get("web-deck-button")
-                .clickEvent(ClickEvent.runCommand("/web link " + pending.code() + " confirm"));
+        var button = messages.get("web-deck-button-view")
+                .clickEvent(ClickEvent.runCommand("/web link " + pending.code() + " view"))
+                .append(net.kyori.adventure.text.Component.space())
+                .append(messages.get("web-deck-button-control")
+                        .clickEvent(ClickEvent.runCommand("/web link " + pending.code() + " control")));
         messages.send(player, "web-deck-ask", tag("name", pending.name()), tag("ip", pending.ip()), tag("button", button));
     }
 

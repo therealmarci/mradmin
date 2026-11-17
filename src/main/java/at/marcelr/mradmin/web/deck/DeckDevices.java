@@ -26,7 +26,9 @@ import java.util.UUID;
  *   ({@link #poll}) and picks up its key once.</li>
  *   <li>Key: made under Account -> Devices ({@link #createKey}), shown once, pasted into the Stream Deck.</li>
  * </ul>
- * Thread-safe (web threads and the server thread).
+ * Every Stream Deck either only shows things or may also switch them ({@code control}: restart, admin mode,
+ * announcement, chunk loaders ...) - chosen when it is confirmed, changeable in the device list. Thread-safe (web
+ * threads and the server thread).
  */
 public final class DeckDevices {
 
@@ -42,10 +44,10 @@ public final class DeckDevices {
 
     /**
      * A connected Stream Deck. {@code id} is public (device list), the key only stored hashed. {@code via}: "code" or
-     * "key".
+     * "key". {@code control}: may it switch things, or only show them.
      */
     public record Device(String id, String hash, UUID player, String playerName, String name, long created,
-                         long lastSeen, String ip, String via) {
+                         long lastSeen, String ip, String via, boolean control) {
     }
 
     /** A Stream Deck waiting for its code to be confirmed. */
@@ -123,13 +125,13 @@ public final class DeckDevices {
      * Confirms a code for the player: the Stream Deck becomes theirs and gets its key at its next poll.
      * @return the new device, or null if the code is unknown, run out or already used
      */
-    public synchronized Device confirm(String raw, UUID player, String playerName) {
+    public synchronized Device confirm(String raw, UUID player, String playerName, boolean control) {
         Pending p = byCode(raw);
         if (p == null) {
             return null;
         }
         String token = Secrets.token(32);
-        Device device = add(token, player, playerName, p.name(), p.ip(), "code");
+        Device device = add(token, player, playerName, p.name(), p.ip(), "code", control);
         pending.put(p.code(), new Pending(p.code(), p.poll(), p.name(), p.ip(), p.created(),
                 System.currentTimeMillis() + PICKUP_MILLIS, player, playerName, token));
         return device;
@@ -152,16 +154,16 @@ public final class DeckDevices {
     }
 
     /** A key made in the browser (Account -> Devices): shown once. */
-    public synchronized String createKey(UUID player, String playerName, String name, String ip) {
+    public synchronized String createKey(UUID player, String playerName, String name, String ip, boolean control) {
         String token = "mrd_" + Secrets.token(32);
-        add(token, player, playerName, clean(name), ip, "key");
+        add(token, player, playerName, clean(name), ip, "key", control);
         return token;
     }
 
-    private Device add(String token, UUID player, String playerName, String name, String ip, String via) {
+    private Device add(String token, UUID player, String playerName, String name, String ip, String via, boolean control) {
         long now = System.currentTimeMillis();
         Device device = new Device(Secrets.token(9), Secrets.sha256(token), player, playerName, name, now, now,
-                ip == null ? "" : ip, via);
+                ip == null ? "" : ip, via, control);
         devices.put(device.hash(), device);
         List<Device> own = list(player);
         int max = plugin.settings().deck().maxDevices();
@@ -197,7 +199,7 @@ public final class DeckDevices {
         }
         long now = System.currentTimeMillis();
         boolean moved = !d.ip().equals(ip);
-        d = new Device(d.id(), d.hash(), d.player(), d.playerName(), d.name(), d.created(), now, ip, d.via());
+        d = new Device(d.id(), d.hash(), d.player(), d.playerName(), d.name(), d.created(), now, ip, d.via(), d.control());
         devices.put(d.hash(), d);
         if (moved || now - seenSaved >= SEEN_EVERY) {
             seenSaved = now;
@@ -216,6 +218,29 @@ public final class DeckDevices {
         }
         result.sort(Comparator.comparingLong(Device::lastSeen).reversed());
         return result;
+    }
+
+    /** The device with this public id, or null. */
+    public synchronized Device byId(String id) {
+        for (Device d : devices.values()) {
+            if (d.id().equals(id)) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    /** Allows one Stream Deck of the player to switch things, or takes that back. @return whether it existed */
+    public synchronized boolean setControl(UUID player, String id, boolean control) {
+        for (Device d : devices.values()) {
+            if (d.player().equals(player) && d.id().equals(id)) {
+                devices.put(d.hash(), new Device(d.id(), d.hash(), d.player(), d.playerName(), d.name(), d.created(),
+                        d.lastSeen(), d.ip(), d.via(), control));
+                save();
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Signs one Stream Deck of the player out. @return whether it existed */
@@ -252,7 +277,8 @@ public final class DeckDevices {
             try {
                 devices.put(hash, new Device(s.getString("id"), hash, UUID.fromString(s.getString("player")),
                         s.getString("player-name", "?"), s.getString("name", "Stream Deck"), s.getLong("created"),
-                        s.getLong("last-seen"), s.getString("ip", ""), s.getString("via", "code")));
+                        s.getLong("last-seen"), s.getString("ip", ""), s.getString("via", "code"),
+                        s.getBoolean("control", false)));
             } catch (RuntimeException ignored) {
                 // broken entry - that Stream Deck simply connects again
             }
@@ -277,6 +303,7 @@ public final class DeckDevices {
             y.set(p + "last-seen", d.lastSeen());
             y.set(p + "ip", d.ip());
             y.set(p + "via", d.via());
+            y.set(p + "control", d.control());
         }
         plugin.storage().saveYaml(FILE, y);
     }

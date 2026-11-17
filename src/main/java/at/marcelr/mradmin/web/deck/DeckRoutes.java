@@ -37,7 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *   /api/deck/logout}.</li>
  * </ul>
  * Effects check the same permissions as the web interface; team keys need the team permission and an own sign-in
- * like the administration of the web interface.
+ * like the administration of the web interface, plus mradmin.deck.team. Only Stream Decks the player allowed to
+ * switch things (control, chosen when confirming) may press keys with an effect; restarts, admin mode and
+ * announcements from a Stream Deck go into the Discord admin log and to the team's inbox.
  */
 public final class DeckRoutes {
 
@@ -67,6 +69,7 @@ public final class DeckRoutes {
         server.account("POST", "/api/deck/link/confirm", r::confirm);
         server.account("GET", "/api/deck/devices", r::devices);
         server.account("POST", "/api/deck/devices/{id}/revoke", r::revoke);
+        server.account("POST", "/api/deck/devices/{id}/control", r::setControl);
         server.account("POST", "/api/deck/keys", r::key);
         server.deck("GET", "/api/deck/state", r::state);
         server.deck("POST", "/api/deck/press", r::press);
@@ -81,9 +84,22 @@ public final class DeckRoutes {
         return server.permissions().has(player, permission);
     }
 
-    /** Team keys: the team permission plus an own sign-in, like the administration of the web interface. */
+    /**
+     * Team keys: the team permission plus an own sign-in, like the administration of the web interface, and the
+     * extra permission for team keys on the Stream Deck.
+     */
     private boolean team(UUID player) {
-        return may(player, WebPermissions.PERM_WEB) && server.auth().teamReady(player);
+        return may(player, Perms.DECK_TEAM) && may(player, WebPermissions.PERM_WEB) && server.auth().teamReady(player);
+    }
+
+    /** May the Stream Deck of this request switch things (approved when it was confirmed)? */
+    private boolean control(Http http) {
+        DeckDevices.Device device = devices().byId(http.player().id());
+        return device != null && device.control();
+    }
+
+    private static boolean flag(Http http, String name) throws java.io.IOException {
+        return "true".equals(http.string(name));
     }
 
     private void requireOn() throws Http.WebException {
@@ -157,11 +173,13 @@ public final class DeckRoutes {
         if (!server.allow("deck-confirm:" + http.account().id(), 20)) {
             throw new Http.WebException(429, "rate-limit");
         }
-        DeckDevices.Device d = devices().confirm(http.string("code"), http.account().id(), http.account().name());
+        boolean control = flag(http, "control");
+        DeckDevices.Device d = devices().confirm(http.string("code"), http.account().id(), http.account().name(), control);
         if (d == null) {
             throw new Http.WebException(404, "deck-code-invalid");
         }
-        audit(http.account().id(), http.account().name(), http.storedIp(), "deck-linked", d.name() + " (web)");
+        audit(http.account().id(), http.account().name(), http.storedIp(), "deck-linked",
+                d.name() + (control ? " (web, may switch)" : " (web, view only)"));
         plugin.getLogger().info(http.account().name() + " connected a Stream Deck (" + d.name() + ") in the browser.");
         http.json(200, Map.of("name", d.name()));
     }
@@ -176,6 +194,7 @@ public final class DeckRoutes {
             m.put("lastSeen", d.lastSeen());
             m.put("ip", d.ip());
             m.put("via", d.via());
+            m.put("control", d.control());
             list.add(m);
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -192,6 +211,16 @@ public final class DeckRoutes {
         audit(http.account().id(), http.account().name(), http.storedIp(), "deck-revoked", http.param("id"));
     }
 
+    /** Allows a Stream Deck to switch things, or makes it view only. Body: {on: true|false}. */
+    private void setControl(Http http) throws Exception {
+        boolean on = flag(http, "on");
+        if (!devices().setControl(http.account().id(), http.param("id"), on)) {
+            throw new Http.WebException(404, "not-found");
+        }
+        audit(http.account().id(), http.account().name(), http.storedIp(), on ? "deck-control-on" : "deck-control-off",
+                http.param("id"));
+    }
+
     private void key(Http http) throws Exception {
         requireOn();
         requireDeck(http);
@@ -199,8 +228,10 @@ public final class DeckRoutes {
             throw new Http.WebException(429, "rate-limit");
         }
         String name = http.string("name");
-        String token = devices().createKey(http.account().id(), http.account().name(), name, http.storedIp());
-        audit(http.account().id(), http.account().name(), http.storedIp(), "deck-key", name == null ? "" : name);
+        boolean control = flag(http, "control");
+        String token = devices().createKey(http.account().id(), http.account().name(), name, http.storedIp(), control);
+        audit(http.account().id(), http.account().name(), http.storedIp(), "deck-key",
+                (name == null ? "" : name) + (control ? " (may switch)" : " (view only)"));
         plugin.getLogger().info(http.account().name() + " made a key for a Stream Deck in the browser.");
         http.json(200, Map.of("key", token));
     }
@@ -261,6 +292,7 @@ public final class DeckRoutes {
         me.put("uuid", player.toString());
         me.put("online", where[0]);
         me.put("team", team);
+        me.put("control", control(http));
         result.put("me", me);
 
         // The server for everyone: players online (like the start page), restart and maintenance (also in game).
@@ -333,6 +365,9 @@ public final class DeckRoutes {
             List<DeckTile> list = server.sync(() -> plugin.modules().call(module,
                     () -> entry.getValue().deckTiles(v), List.<DeckTile>of()));
             for (DeckTile t : list) {
+                if (t.team() && !team) {
+                    continue; // team keys of the plugins only with the team rights and mradmin.deck.team
+                }
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("module", entry.getKey());
                 m.put("id", t.id());
@@ -344,6 +379,7 @@ public final class DeckRoutes {
                 m.put("link", t.link());
                 m.put("pressable", t.pressable());
                 m.put("confirm", t.confirm());
+                m.put("team", t.team());
                 tiles.add(m);
             }
         }
@@ -424,7 +460,13 @@ public final class DeckRoutes {
             throw new Http.WebException(403, "player-banned");
         }
         String action = String.valueOf(http.string("action"));
-        String by = name + " (Stream Deck)";
+        DeckDevices.Device device = devices().byId(http.player().id());
+        String deviceName = device == null ? "?" : device.name();
+        String by = name + " (Stream Deck " + deviceName + ")";
+        // Only "staffchat-seen" changes nothing on the server - everything else needs the approval to switch.
+        if (!"staffchat-seen".equals(action) && (device == null || !device.control())) {
+            throw new Http.WebException(403, "deck-view-only");
+        }
         cache.keySet().removeIf(k -> k.startsWith(http.player().id() + ":"));
         switch (action) {
             case "module" -> {
@@ -436,6 +478,14 @@ public final class DeckRoutes {
                     throw new Http.WebException(404, "not-found");
                 }
                 SelfViewer viewer = self.viewer(http, moduleId);
+                // Only a key the module offers this player right now and that can be pressed - team keys only with
+                // the team rights (the module checks its own rules again in deckPress).
+                boolean team = team(player);
+                DeckTile offered = server.sync(() -> plugin.modules().call(module, () -> web.deckTiles(viewer), List.<DeckTile>of()))
+                        .stream().filter(t -> t.id().equals(tile)).findFirst().orElse(null);
+                if (offered == null || !offered.pressable() || (offered.team() && !team)) {
+                    throw new Http.WebException(403, "no-permission");
+                }
                 String refused = server.sync(() -> plugin.modules().attempt(module, () -> web.deckPress(viewer, tile)));
                 if (refused != null) {
                     http.json(400, Map.of("error", "module", "message", refused));
@@ -459,15 +509,16 @@ public final class DeckRoutes {
                     }
                     if (plugin.adminMode().active(p)) {
                         plugin.adminMode().disable(p, false);
-                    } else {
-                        plugin.adminMode().enable(p);
+                        return "off";
                     }
-                    return null;
+                    plugin.adminMode().enable(p);
+                    return plugin.adminMode().active(p) ? "on" : "deck-offline";
                 });
-                if (error != null) {
+                if ("deck-offline".equals(error)) {
                     throw new Http.WebException(409, error);
                 }
-                audit(player, name, http.storedIp(), "deck-admin-mode", "");
+                audit(player, name, http.storedIp(), "deck-admin-mode", error);
+                report(name, deviceName, "deck-action-admin-" + error);
             }
             case "restart" -> {
                 requireTeam(player, Perms.SERVER_RESTART);
@@ -493,6 +544,7 @@ public final class DeckRoutes {
                     throw new Http.WebException(409, "restart-running");
                 }
                 audit(player, name, http.storedIp(), "server-restart", delay / 1000 + " s (Stream Deck)");
+                report(name, deviceName, "deck-action-restart", "minutes", delay / 60_000);
             }
             case "restart-cancel" -> {
                 requireTeam(player, Perms.SERVER_RESTART);
@@ -500,6 +552,7 @@ public final class DeckRoutes {
                     throw new Http.WebException(409, "restart-none");
                 }
                 audit(player, name, http.storedIp(), "server-restart-cancelled", "Stream Deck");
+                report(name, deviceName, "deck-action-restart-cancel");
             }
             case "announce" -> {
                 requireTeam(player, Perms.ANNOUNCE);
@@ -523,10 +576,22 @@ public final class DeckRoutes {
                     throw new Http.WebException(error.equals("not-found") ? 404 : 400, error);
                 }
                 audit(player, name, http.storedIp(), "announce", preset + " (Stream Deck)");
+                report(name, deviceName, "deck-action-announce", "name", preset);
             }
             default -> throw new Http.WebException(400, "unknown-action");
         }
         http.json(200, Map.of("ok", true));
+    }
+
+    /**
+     * A restart, the admin mode or an announcement from a Stream Deck: into the Discord admin log and as a notice to
+     * the team's inbox (those who may see the log of the web interface). {@code key} is the text of the action.
+     */
+    private void report(String player, String device, String key, Object... values) {
+        String text = plugin.messages().server(() -> plugin.messages().plain(key, values));
+        plugin.discord().log("deck-action", "player", player, "device", device, "action", text);
+        plugin.push("deck-action", null, "deck-action", "/admin/server/logs", null,
+                "player", player, "device", device, "action", text);
     }
 
     private void requireTeam(UUID player, String permission) throws Http.WebException {
