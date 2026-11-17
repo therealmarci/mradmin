@@ -15,6 +15,7 @@ Ohne MRadmin bekommen die anderen Plugins voneinander nichts mit:
 | Spieler im Duell zählen nicht zur Schlafquote | MRsleep + MRpvp |
 | Die Werkzeugleiste pausiert im Duell, die Gürtel werden mitgesichert | MRtoolbar + MRpvp |
 | In der Arena-Welt lassen sich keine Chunkloader setzen | MRchunks + MRpvp |
+| Server, Tickets, Chunkloader, Duelle, Leistung und Neustarts auf dem Stream Deck ([MRstreamdeck](https://mrtechnology.marcelr.at/wiki/mrstreamdeck/)) | MRstreamdeck auf dem Rechner |
 | Chunkloader und Wegpunkte auf der Karte der Spielerseite, die Arena-Welt nicht | MRchunks / MRwaypoints / MRpvp |
 | Spieler im Admin-Modus zählen nicht zur Schlafquote, haben die Werkzeugleiste pausiert und können kein Duell starten | MRsleep / MRtoolbar / MRpvp |
 

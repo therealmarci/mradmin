@@ -16,6 +16,7 @@ Without MRadmin the other plugins know nothing about each other:
 | Players in a duel are not counted for the sleep quota | MRsleep + MRpvp |
 | The tool bar pauses during a duel, the belts are saved along | MRtoolbar + MRpvp |
 | No chunk loaders can be placed in the arena world | MRchunks + MRpvp |
+| Server, tickets, chunk loaders, duels, performance and restarts on the Stream Deck ([MRstreamdeck](https://mrtechnology.marcelr.at/wiki/mrstreamdeck/)) | MRstreamdeck on the computer |
 | Chunk loaders and waypoints on the map of the player page, the arena world not | MRchunks / MRwaypoints / MRpvp |
 | Players in admin mode are not counted for the sleep quota, have the tool bar paused and cannot start a duel | MRsleep / MRtoolbar / MRpvp |
 
