@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The browser loads them from MRadmin only - no head service sees the visitors' addresses (privacy). Skins come
  * from Mojang (as for the server itself) and are cached for 6 hours. Runs on web threads (it may download).
  */
-final class Heads {
+public final class Heads {
 
     private static final int SIZE = 64;
     private static final long CACHE_MILLIS = 6 * 3_600_000L;
@@ -39,7 +39,7 @@ final class Heads {
             .followRedirects(HttpClient.Redirect.NEVER).build();
     private byte[] fallback;
 
-    byte[] head(UUID uuid) {
+    public byte[] head(UUID uuid) {
         long now = System.currentTimeMillis();
         Cached cached = cache.get(uuid);
         if (cached != null && cached.until() > now) {

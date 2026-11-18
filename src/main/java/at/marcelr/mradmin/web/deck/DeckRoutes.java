@@ -74,7 +74,11 @@ public final class DeckRoutes {
         server.deck("GET", "/api/deck/state", r::state);
         server.deck("POST", "/api/deck/press", r::press);
         server.deck("POST", "/api/deck/logout", r::logout);
+        server.deck("GET", "/api/deck/head/{uuid}", r::head);
     }
+
+    /** Heads of the players online (for the player list on the dial of the Stream Deck +). */
+    private final at.marcelr.mradmin.web.Heads heads = new at.marcelr.mradmin.web.Heads();
 
     private DeckDevices devices() {
         return server.deckDevices();
@@ -244,6 +248,17 @@ public final class DeckRoutes {
 
     // ------------------------------------------------------------- the deck
 
+    /** The head of a player who is online right now (only those - the route does not look up anyone else). */
+    private void head(Http http) throws Exception {
+        String id = http.param("uuid");
+        boolean online = server.snapshot().get("server") instanceof Map<?, ?> s && s.get("players") instanceof List<?> list
+                && list.stream().anyMatch(p -> p instanceof Map<?, ?> m && id.equals(m.get("uuid")));
+        if (!online) {
+            throw new Http.WebException(404, "not-found");
+        }
+        http.send(200, "image/png", heads.head(UUID.fromString(id)), "private, max-age=3600");
+    }
+
     private void logout(Http http) throws Exception {
         devices().revoke(http.player().player(), http.player().id());
         staffSeen.remove(http.player().id());
@@ -301,6 +316,22 @@ public final class DeckRoutes {
             srv.put("online", s.get("online"));
             srv.put("max", s.get("max"));
             result.put("server", srv);
+            // Who is online (like the online widget of the start page); the team also sees ping and world.
+            List<Map<String, Object>> players = new ArrayList<>();
+            if (s.get("players") instanceof List<?> list) {
+                for (Object o : list) {
+                    Map<?, ?> p = (Map<?, ?>) o;
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("name", p.get("name"));
+                    entry.put("uuid", p.get("uuid"));
+                    if (team) {
+                        entry.put("ping", p.get("ping"));
+                        entry.put("world", p.get("world"));
+                    }
+                    players.add(entry);
+                }
+            }
+            result.put("players", players);
         }
         var next = plugin.modules().nextRestart();
         if (next != null) {
@@ -407,11 +438,13 @@ public final class DeckRoutes {
         if (plugin.feature(Feature.SERVER_STATUS) && may(player, Perms.STATUS_HEALTH)) {
             List<Double> tps = new ArrayList<>();
             List<Double> mspt = new ArrayList<>();
+            List<Double> ram = new ArrayList<>();
             for (var point : plugin.health().range(10 * 60_000L, 30)) {
                 tps.add(Math.round(point.tps() * 10) / 10.0);
                 mspt.add(Math.round(point.mspt() * 10) / 10.0);
+                ram.add(point.heapMax() > 0 ? Math.round(point.heapUsed() * 1000.0 / point.heapMax()) / 10.0 : 0);
             }
-            team.put("history", Map.of("tps", tps, "mspt", mspt));
+            team.put("history", Map.of("tps", tps, "mspt", mspt, "ram", ram));
         }
         if (plugin.feature(Feature.STAFF_CHAT) && may(player, Perms.STAFFCHAT)) {
             long seen = staffSeen.getOrDefault(http.player().id(), 0L);
